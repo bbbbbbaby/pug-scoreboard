@@ -1,11 +1,6 @@
 import { sb } from "./supabase.js";
 import { useState, useEffect, useCallback } from "react";
 
-
-
-
-
-
 const LEVELS = [
   {id:1,name:"Seme",emoji:"🌱",xp:0},{id:2,name:"Germoglio",emoji:"🌿",xp:50},
   {id:3,name:"Foglia",emoji:"🍃",xp:100},{id:4,name:"Fiore",emoji:"🌸",xp:150},
@@ -51,7 +46,6 @@ const css = `
     --radius: 12px; --radius-sm: 8px;
   }
   .app { display: flex; min-height: 100vh; }
-  /* LOGIN */
   .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; width: 100%; background: #0f1412; }
   .login-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; }
   .login-logo { text-align: center; margin-bottom: 32px; }
@@ -72,7 +66,6 @@ const css = `
   .btn-sm { padding: 6px 12px; font-size: 12px; }
   .btn-icon { width: 32px; height: 32px; padding: 0; border-radius: 50%; }
   .err-msg { font-size: 12px; color: var(--danger); margin-top: 10px; text-align: center; }
-  /* SIDEBAR */
   .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
   .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
   .sidebar-logo-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
@@ -85,12 +78,10 @@ const css = `
   .sidebar-user { padding: 14px 18px; border-top: 1px solid var(--border); }
   .sidebar-user-name { font-size: 12px; font-weight: 500; color: var(--text); }
   .sidebar-user-role { font-size: 11px; color: var(--text3); margin-top: 2px; }
-  /* MAIN */
   .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
   .topbar { padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
   .topbar h2 { font-size: 16px; font-weight: 600; color: var(--text); margin-right: auto; }
   .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
-  /* CARDS */
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
   .card-sm { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
@@ -98,7 +89,6 @@ const css = `
   .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
   .stat-value { font-size: 24px; font-weight: 600; color: var(--text); }
   .stat-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
-  /* PLAYER GRID */
   .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
   .player-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 10px; text-align: center; cursor: pointer; transition: all .15s; position: relative; }
   .player-card:hover { border-color: var(--border2); transform: translateY(-1px); }
@@ -116,7 +106,6 @@ const css = `
   .pts-btn.add { color: var(--accent2); border-color: rgba(99,201,58,.3); }
   .pts-btn.rem { color: var(--danger); border-color: rgba(226,75,74,.3); }
   .badge-indicator { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--warning); }
-  /* LEADERBOARD */
   .lb-list { display: flex; flex-direction: column; gap: 6px; }
   .lb-row { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; transition: border-color .12s; }
   .lb-row:hover { border-color: var(--border2); }
@@ -130,19 +119,16 @@ const css = `
   .lb-bar { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
   .lb-xp { font-size: 12px; font-weight: 500; color: var(--accent2); width: 55px; text-align: right; flex-shrink: 0; }
   .lb-coin { font-size: 11px; color: var(--amber); width: 45px; text-align: right; flex-shrink: 0; }
-  /* FILTER BAR */
   .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
   .search-inp { padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; flex: 1; min-width: 160px; transition: border-color .15s; }
   .search-inp:focus { border-color: var(--accent); }
   .chip { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border2); background: transparent; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; transition: all .12s; font-weight: 500; }
   .chip:hover { background: var(--surface2); color: var(--text); }
   .chip.active { background: rgba(74,158,42,.15); color: var(--accent2); border-color: rgba(74,158,42,.4); }
-  /* BATCH PANEL */
   .batch-panel { background: rgba(74,158,42,.06); border: 1px solid rgba(74,158,42,.2); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .batch-info { font-size: 13px; color: var(--accent2); font-weight: 500; flex: 1; }
   .batch-inp { width: 80px; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; text-align: center; }
   .batch-inp:focus { border-color: var(--accent); }
-  /* PRESENZE TABLE */
   .pres-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .pres-table th { padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 600; color: var(--text3); border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .05em; position: sticky; top: 0; background: #0f1412; }
   .pres-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
@@ -152,7 +138,6 @@ const css = `
   .pd-partial { background: rgba(239,159,39,.2); color: var(--warning); }
   .pd-completed { background: rgba(74,158,42,.35); color: #63c93a; }
   .pd-none { background: var(--surface3); color: var(--text3); }
-  /* ACTIVITIES */
   .act-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .act-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; transition: border-color .12s; }
   .act-card:hover { border-color: var(--border2); }
@@ -163,7 +148,6 @@ const css = `
   .xp-tag { background: rgba(74,158,42,.15); color: var(--accent2); }
   .coin-tag { background: rgba(239,159,39,.15); color: var(--warning); }
   .day-tag { background: var(--surface3); color: var(--text2); }
-  /* BADGES */
   .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
   .badge-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 10px; text-align: center; cursor: pointer; transition: all .15s; }
   .badge-card:hover { border-color: var(--accent); transform: translateY(-1px); }
@@ -171,7 +155,6 @@ const css = `
   .badge-emoji { font-size: 32px; display: block; margin: 0 auto 8px; }
   .badge-name { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1.3; }
   .badge-pts { font-size: 10px; color: var(--text2); margin-top: 3px; }
-  /* MESSAGES */
   .msg-layout { display: flex; gap: 12px; height: 500px; }
   .msg-list { width: 180px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex-shrink: 0; }
   .msg-thread { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: border-color .12s; }
@@ -192,19 +175,16 @@ const css = `
   .msg-inp-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
   .msg-inp { flex: 1; padding: 8px 12px; background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px; outline: none; }
   .msg-inp:focus { border-color: var(--accent); }
-  /* NOTIFICATIONS */
   .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: inline-block; margin-left: 4px; vertical-align: middle; }
   .notif-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
   .notif-icon { font-size: 20px; flex-shrink: 0; }
   .notif-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
   .notif-body { font-size: 12px; color: var(--text2); }
   .notif-time { font-size: 10px; color: var(--text3); margin-top: 3px; }
-  /* MODAL */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
   .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 24px; width: 100%; max-width: 460px; max-height: 80vh; overflow-y: auto; }
   .modal-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
   .section-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin: 14px 0 8px; }
-  /* PLAYER PROFILE (giocatore) */
   .profile-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; text-align: center; margin-bottom: 16px; }
   .profile-avatar { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 14px; border: 3px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 40px; overflow: hidden; }
   .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -213,7 +193,6 @@ const css = `
   .xp-bar-wrap { height: 6px; background: var(--surface3); border-radius: 99px; overflow: hidden; margin: 8px 0; }
   .xp-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width .6s; }
   .xp-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); }
-  /* QR */
   .qr-wrap { text-align: center; padding: 24px; }
   .qr-code { font-family: 'DM Mono', monospace; font-size: 48px; font-weight: 500; color: var(--accent2); letter-spacing: 8px; margin: 16px 0; }
   .qr-date { font-size: 13px; color: var(--text2); }
@@ -237,6 +216,12 @@ const css = `
     .player-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   }
 `;
+
+// ─── HELPER: crea profilo fallback da sessione ─────────────
+// Usato quando il profilo non esiste ancora nel DB
+function makeFallbackProfile(userId, email) {
+  return { id: userId, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 };
+}
 
 // ─── COMPONENTS ───────────────────────────────────────────
 
@@ -275,7 +260,8 @@ function Login({ onLogin }) {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
     if (error) { setErr(error.message); setLoading(false); return; }
     const { data: profile } = await sb.from("profiles").select("*").eq("id", data.user.id).single();
-    onLogin(profile || { id: data.user.id, role: "player", display_name: email });
+    // ✅ FIX 1: se il profilo non esiste usa educator come fallback (non player)
+    onLogin(profile || makeFallbackProfile(data.user.id, email));
     setLoading(false);
   }
 
@@ -1142,7 +1128,8 @@ export default function App() {
     sb.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-        setProfile(p || null);
+        // ✅ FIX 2: se il profilo non esiste nel DB, usa fallback educator invece di null
+        setProfile(p || makeFallbackProfile(session.user.id, session.user.email));
       }
       setChecking(false);
     });
