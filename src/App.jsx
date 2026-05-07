@@ -520,7 +520,7 @@ function Login({ onLogin }) {
 
         <div className="login-tabs">
           <button className={`login-tab ${mode === "player" ? "active" : ""}`} onClick={() => setMode("player")}>🌿 Sono un giocatore</button>
-          <button className={`login-tab ${mode === "educator" ? "active" : ""}`} onClick={() => setMode("educator")}>👑 Educatore</button>
+          <button className={`login-tab ${mode === "educator" ? "active" : ""}`} onClick={() => setMode("educator")}>🌱 Giardiniere</button>
         </div>
 
         {mode === "player" && (
@@ -841,33 +841,61 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 function LeaderboardView({ sectionColors, setSectionColors }) {
   const [players, setPlayers] = useState([]);
   const [squadFilter, setSquadFilter] = useState("all");
+  const [timeFilter, setTimeFilter] = useState("generale"); // "generale" | "oggi" | "mese"
   const [squads, setSquads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [customizing, setCustomizing] = useState(false);
+  const [xpToday, setXpToday] = useState({});
+  const [xpMonth, setXpMonth] = useState({});
 
   useEffect(() => {
     async function load() {
-      const { data } = await sb.from("profiles").select("*, squads(name)").eq("role", "player").order("xp", { ascending: false });
-      const { data: sq } = await sb.from("squads").select("*");
-      setPlayers(data || []); setSquads(sq || []); setLoading(false);
+      const today = new Date().toISOString().split("T")[0];
+      const monthStart = today.slice(0, 7) + "-01";
+      const [{ data }, { data: sq }, { data: attToday }, { data: attMonth }] = await Promise.all([
+        sb.from("profiles").select("*, squads(name)").eq("role", "player").order("xp", { ascending: false }),
+        sb.from("squads").select("*"),
+        sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
+        sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
+      ]);
+      setPlayers(data || []); setSquads(sq || []);
+      // Aggregate XP today
+      const td = {}; (attToday || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_awarded || 0); });
+      setXpToday(td);
+      // Aggregate XP this month
+      const mt = {}; (attMonth || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_awarded || 0); });
+      setXpMonth(mt);
+      setLoading(false);
     }
     load();
   }, []);
 
-  const visible = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
+  let ranked = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
+  if (timeFilter === "oggi") {
+    ranked = [...ranked].sort((a, b) => (xpToday[b.id] || 0) - (xpToday[a.id] || 0)).slice(0, 3);
+  } else if (timeFilter === "mese") {
+    ranked = [...ranked].sort((a, b) => (xpMonth[b.id] || 0) - (xpMonth[a.id] || 0)).slice(0, 10);
+  }
 
   return (
     <div>
-      <SectionBanner sectionKey="classifica" title="Classifica" sub={`${visible.length} giocatori`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="classifica" title="Classifica" sub={`${ranked.length} giocatori`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <div className="filter-bar" style={{ marginBottom: 8 }}>
+        <button className={`chip ${timeFilter === "generale" ? "active" : ""}`} onClick={() => setTimeFilter("generale")}>🏆 Generale</button>
+        <button className={`chip ${timeFilter === "oggi" ? "active" : ""}`} style={{ borderColor: timeFilter === "oggi" ? "var(--giallo)" : undefined, background: timeFilter === "oggi" ? "var(--giallo)" : undefined, color: timeFilter === "oggi" ? "#101010" : undefined }} onClick={() => setTimeFilter("oggi")}>⚡ Top 3 Oggi</button>
+        <button className={`chip ${timeFilter === "mese" ? "active" : ""}`} style={{ borderColor: timeFilter === "mese" ? "var(--rosa)" : undefined, background: timeFilter === "mese" ? "var(--rosa)" : undefined, color: timeFilter === "mese" ? "#101010" : undefined }} onClick={() => setTimeFilter("mese")}>📅 Top 10 Mese</button>
+      </div>
       <div className="filter-bar">
         <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
         {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
       </div>
       {loading ? <div className="loading">⏳</div> : (
         <div className="lb-list">
-          {visible.map((p, i) => {
+          {ranked.map((p, i) => {
             const lv = getLevel(p.xp);
             const medals = ["gold","silver","bronze"];
+            const xpShown = timeFilter === "oggi" ? xpToday[p.id] || 0 : timeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
+            const xpLabel = timeFilter === "oggi" ? "XP oggi" : timeFilter === "mese" ? "XP mese" : "XP";
             return (
               <div key={p.id} className="lb-row">
                 <span className={`lb-rank ${i < 3 ? medals[i] : ""}`}>{i < 3 ? ["1°","2°","3°"][i] : (i+1)+"°"}</span>
@@ -876,10 +904,14 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
                   <div className="lb-name">{p.display_name}</div>
                   <div className="lb-level">{lv.emoji} {lv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
                 </div>
-                <span className="lb-xp">{p.xp} XP</span>
+                <div style={{ textAlign: "right" }}>
+                  <span className="lb-xp">{xpShown}</span>
+                  <div style={{ fontSize: 9, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>{xpLabel}</div>
+                </div>
               </div>
             );
           })}
+          {ranked.length === 0 && <div className="empty">Nessun dato disponibile.</div>}
         </div>
       )}
       {customizing && <BannerCustomizer sectionKey="classifica" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
@@ -1049,20 +1081,24 @@ function AttendanceView({ sectionColors, setSectionColors }) {
 
 function ActivitiesView({ sectionColors, setSectionColors }) {
   const [activities, setActivities] = useState([]);
+  const [educators, setEducators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [customizing, setCustomizing] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" });
+  const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" });
 
   const load = useCallback(async () => {
-    const { data } = await sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false });
-    setActivities(data || []); setLoading(false);
+    const [{ data }, { data: edu }] = await Promise.all([
+      sb.from("activities").select("*, profiles(display_name)").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("profiles").select("id,display_name").eq("role","educator").order("display_name"),
+    ]);
+    setActivities(data || []); setEducators(edu || []); setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function createActivity() {
-    await sb.from("activities").insert({ ...form, max_participants: form.max_participants || null });
+    await sb.from("activities").insert({ ...form, educator_id: form.educator_id || null, max_participants: form.max_participants || null });
     setShowForm(false); load();
   }
 
@@ -1085,6 +1121,8 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <button className="delete-btn" onClick={() => deleteActivity(a.id)}>✕</button>
               <div className="act-title">{a.name}</div>
               <div className="act-meta">{a.description} · {a.duration_days}g</div>
+              {a.profiles?.display_name && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Giardiniere: {a.profiles.display_name}</div>}
+              {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "var(--azzurro)", display: "block", marginBottom: 6, wordBreak: "break-all" }}>🔗 {a.link}</a>}
               <div className="act-rewards">
                 <span className="reward-tag xp-tag">Max {a.xp_completed} XP</span>
                 <span className="reward-tag coin-tag">🪙 {a.coin_cost}</span>
@@ -1098,7 +1136,16 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         <div className="modal-bg" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Nuova attività</div>
-            {[["name","Nome","text"],["description","Descrizione","text"],["duration_days","Durata (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
+            <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+            <div className="form-group"><label className="form-label">Descrizione</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
+            <div className="form-group"><label className="form-label">Link (opzionale)</label><input className="form-input" type="url" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://…" /></div>
+            <div className="form-group"><label className="form-label">🌱 Giardiniere presente</label>
+              <select value={form.educator_id} onChange={e => setForm(f => ({ ...f, educator_id: e.target.value }))}>
+                <option value="">Nessuno assegnato</option>
+                {educators.map(e => <option key={e.id} value={e.id}>{e.display_name}</option>)}
+              </select>
+            </div>
+            {[["duration_days","Durata (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
               <div className="form-group" key={k}><label className="form-label">{l}</label><input className="form-input" type={t} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} /></div>
             ))}
             <div className="section-label">XP per livello</div>
@@ -1129,7 +1176,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
   const [assignTarget, setAssignTarget] = useState("");
   const [assignXp, setAssignXp] = useState(0);
   const [assignCoin, setAssignCoin] = useState(0);
-  const [newBadge, setNewBadge] = useState({ name: "", xp_default: 20, coin_default: 10, image_url: null });
+  const [newBadge, setNewBadge] = useState({ name: "", description: "", link: "", xp_default: 20, coin_default: 10, image_url: null });
   const [uploadingBadge, setUploadingBadge] = useState(false);
   const badgeFileRef = useRef();
 
@@ -1166,7 +1213,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
 
   async function createBadge() {
     await sb.from("badges").insert(newBadge);
-    load(); setShowCreate(false); setNewBadge({ name: "", xp_default: 20, coin_default: 10, image_url: null });
+    load(); setShowCreate(false); setNewBadge({ name: "", description: "", link: "", xp_default: 20, coin_default: 10, image_url: null });
   }
 
   async function deleteBadge(id) {
@@ -1233,6 +1280,8 @@ function BadgesView({ sectionColors, setSectionColors }) {
               <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploadingBadge ? "Caricamento…" : "Carica immagine badge"}</div>
             </div>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={newBadge.name} onChange={e => setNewBadge(f => ({ ...f, name: e.target.value }))} /></div>
+            <div className="form-group"><label className="form-label">Descrizione</label><textarea value={newBadge.description} onChange={e => setNewBadge(f => ({ ...f, description: e.target.value }))} placeholder="Racconta questo badge…" /></div>
+            <div className="form-group"><label className="form-label">Link (opzionale)</label><input className="form-input" type="url" value={newBadge.link} onChange={e => setNewBadge(f => ({ ...f, link: e.target.value }))} placeholder="https://…" /></div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div className="form-group"><label className="form-label">XP</label><input className="form-input" type="number" value={newBadge.xp_default} onChange={e => setNewBadge(f => ({ ...f, xp_default: Number(e.target.value) }))} /></div>
               <div className="form-group"><label className="form-label">Coin</label><input className="form-input" type="number" value={newBadge.coin_default} onChange={e => setNewBadge(f => ({ ...f, coin_default: Number(e.target.value) }))} /></div>
@@ -1360,32 +1409,137 @@ function DiaryView() {
 }
 
 function MessagesView({ profile }) {
-  const threads = [{ id: "verde", name: "Squadra Verde" }, { id: "gialla", name: "Squadra Gialla" }, { id: "azzurra", name: "Squadra Azzurra" }, { id: "tutti", name: "Tutti" }];
-  const [active, setActive] = useState(threads[0]);
-  const [msgs, setMsgs] = useState([{ id: 1, body: "Benvenuto nella chat! 🌿", mine: false }]);
-  const [input, setInput] = useState("");
+  const [squads, setSquads] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [msgs, setMsgs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [destType, setDestType] = useState("tutti"); // tutti | squad | player | activity
+  const [destSquad, setDestSquad] = useState("");
+  const [destPlayer, setDestPlayer] = useState("");
+  const [destActivity, setDestActivity] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState("");
 
-  function send() {
-    if (!input.trim()) return;
-    setMsgs(prev => [...prev, { id: Date.now(), body: input, mine: true }]);
-    setInput("");
+  useEffect(() => {
+    async function load() {
+      const [{ data: sq }, { data: pl }, { data: act }, { data: m }] = await Promise.all([
+        sb.from("squads").select("*").order("name"),
+        sb.from("profiles").select("id,display_name").eq("role","player").order("display_name"),
+        sb.from("activities").select("id,name").eq("is_active",true).order("name"),
+        sb.from("messages").select("*, profiles(display_name)").order("created_at", { ascending: false }).limit(50),
+      ]);
+      setSquads(sq || []); setPlayers(pl || []); setActivities(act || []); setMsgs(m || []); setLoading(false);
+    }
+    load();
+  }, []);
+
+  async function sendMessage() {
+    if (!body.trim()) return;
+    setSending(true);
+    const msgData = { sender_id: profile.id, body: body.trim(), is_broadcast: false, squad_id: null, recipient_id: null };
+    if (destType === "tutti") msgData.is_broadcast = true;
+    else if (destType === "squad") msgData.squad_id = destSquad || null;
+    else if (destType === "player") msgData.recipient_id = destPlayer || null;
+    else if (destType === "activity") {
+      // Send to all confirmed bookings for this activity
+      const { data: bookings } = await sb.from("bookings").select("player_id").eq("activity_id", destActivity).eq("status","confirmed");
+      if (bookings?.length) {
+        for (const bk of bookings) {
+          await sb.from("messages").insert({ ...msgData, recipient_id: bk.player_id });
+          await sb.from("notifications").insert({ user_id: bk.player_id, type: "new_message", title: "Nuovo messaggio dal Giardiniere", body: body.trim() });
+        }
+        setBody(""); setSent(`Inviato a ${bookings.length} partecipanti ✅`); setTimeout(() => setSent(""), 3000); setSending(false); return;
+      } else { setSent("Nessun partecipante confermato"); setTimeout(() => setSent(""), 3000); setSending(false); return; }
+    }
+    await sb.from("messages").insert(msgData);
+    // Notify recipients
+    if (destType === "tutti") {
+      const { data: allPlayers } = await sb.from("profiles").select("id").eq("role","player");
+      for (const p of (allPlayers || [])) {
+        await sb.from("notifications").insert({ user_id: p.id, type: "new_message", title: "Nuovo messaggio dal Giardiniere", body: body.trim() });
+      }
+    } else if (destType === "squad" && destSquad) {
+      const { data: squadPlayers } = await sb.from("profiles").select("id").eq("squad_id", destSquad);
+      for (const p of (squadPlayers || [])) {
+        await sb.from("notifications").insert({ user_id: p.id, type: "new_message", title: "Nuovo messaggio dal Giardiniere", body: body.trim() });
+      }
+    } else if (destType === "player" && destPlayer) {
+      await sb.from("notifications").insert({ user_id: destPlayer, type: "new_message", title: "Nuovo messaggio dal Giardiniere", body: body.trim() });
+    }
+    setBody(""); setSent("Messaggio inviato ✅"); setTimeout(() => setSent(""), 3000);
+    // Reload messages
+    const { data: m } = await sb.from("messages").select("*, profiles(display_name)").order("created_at", { ascending: false }).limit(50);
+    setMsgs(m || []); setSending(false);
   }
 
+  const destLabel = destType === "tutti" ? "📢 Tutti i giocatori" : destType === "squad" ? `🛡️ Squadra` : destType === "player" ? "👤 Giocatore singolo" : "⚡ Partecipanti attività";
+
   return (
-    <div className="msg-layout">
-      <div className="msg-list">
-        {threads.map(t => <div key={t.id} className={`msg-thread ${active.id === t.id ? "active" : ""}`} onClick={() => setActive(t)}><div className="mt-name">{t.name}</div></div>)}
-      </div>
-      <div className="msg-main">
-        <div className="msg-hdr">{active.name}</div>
-        <div className="msg-body">
-          {msgs.map(m => <div key={m.id} className={`bubble-wrap ${m.mine ? "mine" : ""}`}><div className="bubble-av">{m.mine ? "👑" : "🌿"}</div><div className={`bubble ${m.mine ? "mine" : "them"}`}>{m.body}</div></div>)}
+    <div>
+      <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginBottom: 16 }}>💬 Messaggi</div>
+
+      {/* Compose */}
+      <div className="card" style={{ marginBottom: 18 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Nuovo messaggio</div>
+
+        {/* Destinatario */}
+        <div className="form-group">
+          <label className="form-label">Destinatario</label>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatore"],["activity","⚡ Attività"]].map(([k,l]) => (
+              <button key={k} className={`chip ${destType === k ? "active" : ""}`} onClick={() => setDestType(k)}>{l}</button>
+            ))}
+          </div>
+          {destType === "squad" && (
+            <select value={destSquad} onChange={e => setDestSquad(e.target.value)}>
+              <option value="">Seleziona squadra…</option>
+              {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}
+          {destType === "player" && (
+            <select value={destPlayer} onChange={e => setDestPlayer(e.target.value)}>
+              <option value="">Seleziona giocatore…</option>
+              {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+            </select>
+          )}
+          {destType === "activity" && (
+            <select value={destActivity} onChange={e => setDestActivity(e.target.value)}>
+              <option value="">Seleziona attività…</option>
+              {activities.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          )}
         </div>
-        <div className="msg-inp-row">
-          <input className="msg-inp" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Scrivi…" />
-          <button className="btn btn-yellow btn-sm" onClick={send}>Invia</button>
+        <div className="form-group">
+          <label className="form-label">Testo</label>
+          <textarea value={body} onChange={e => setBody(e.target.value)} placeholder={`Scrivi un messaggio per ${destLabel}…`} />
         </div>
+        {sent && <div style={{ fontSize: 13, color: "var(--verde)", fontWeight: 700, marginBottom: 8 }}>{sent}</div>}
+        <button className="btn btn-primary" onClick={sendMessage} disabled={sending || !body.trim() || (destType === "squad" && !destSquad) || (destType === "player" && !destPlayer) || (destType === "activity" && !destActivity)}>
+          {sending ? "Invio…" : "Invia messaggio"}
+        </button>
       </div>
+
+      {/* Storico */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Storico messaggi</div>
+      {loading ? <div className="loading">⏳</div> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {msgs.map(m => {
+            const dest = m.is_broadcast ? "📢 Tutti" : m.squad_id ? "🛡️ Squadra" : m.recipient_id ? "👤 Diretto" : "—";
+            return (
+              <div key={m.id} className="card-sm">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--azzurro)" }}>{dest}</span>
+                  <span style={{ fontSize: 10, color: "var(--text3)" }}>{new Date(m.created_at).toLocaleDateString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text)" }}>{m.body}</div>
+              </div>
+            );
+          })}
+          {msgs.length === 0 && <div className="empty">Nessun messaggio inviato.</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -1495,28 +1649,41 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [activities, setActivities] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [xpToday, setXpToday] = useState({});
+  const [xpMonth, setXpMonth] = useState({});
   const [qrInput, setQrInput] = useState("");
   const [qrMsg, setQrMsg] = useState("");
   const [loading, setLoading] = useState(true);
-  const [editingName, setEditingName] = useState(false);
-  const [newName, setNewName] = useState("");
+  const [editingFirstName, setEditingFirstName] = useState(false);
+  const [newFirstName, setNewFirstName] = useState("");
+  const [lbTimeFilter, setLbTimeFilter] = useState("generale");
+  const [selectedBadge, setSelectedBadge] = useState(null);
 
   const load = useCallback(async () => {
-    const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }] = await Promise.all([
+    const today = new Date().toISOString().split("T")[0];
+    const monthStart = today.slice(0, 7) + "-01";
+    const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }] = await Promise.all([
       sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single(),
-      sb.from("player_badges").select("*, badges(name,image_url,xp_default)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
-      sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("player_badges").select("*, badges(name,image_url,xp_default,description,link)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
+      sb.from("activities").select("*, profiles(display_name)").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("bookings").select("*, activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
-      sb.from("notifications").select("*").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
+      sb.from("notifications").select("*").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(30),
+      sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)").eq("role","player").order("xp", { ascending: false }),
+      sb.from("messages").select("*, profiles(display_name)").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at", { ascending: false }).limit(30),
+      sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
+      sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
     ]);
     if (p) setFullProfile(p);
-    setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []);
+    setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
+    const td = {}; (attToday || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpToday(td);
+    const mt = {}; (attMonth || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpMonth(mt);
     setLoading(false);
   }, [profile.id]);
 
   useEffect(() => {
     load();
-    // Realtime updates
     const channel = sb.channel("player_notifs_" + profile.id)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, load)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` }, load)
@@ -1542,20 +1709,34 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     await sb.from("profiles").update({ coin: (fullProfile?.coin || 0) - cost }).eq("id", profile.id);
     setFullProfile(prev => ({ ...prev, coin: (prev?.coin || 0) - cost }));
     alert("✅ Prenotazione inviata!");
+    load();
   }
 
-  async function saveName() {
-    if (!newName.trim() || newName.length > 30) return;
-    await sb.from("profiles").update({ display_name: newName.trim() }).eq("id", profile.id);
-    setFullProfile(prev => ({ ...prev, display_name: newName.trim() }));
-    localStorage.setItem("pug_player", JSON.stringify({ ...fullProfile, display_name: newName.trim(), _playerSession: true }));
-    setEditingName(false);
+  async function saveFirstName() {
+    const v = newFirstName.trim().slice(0, 30);
+    await sb.from("profiles").update({ first_name: v }).eq("id", profile.id);
+    setFullProfile(prev => ({ ...prev, first_name: v }));
+    setEditingFirstName(false);
   }
 
   const lv = getLevel(fullProfile?.xp || 0);
   const unread = notifications.filter(n => !n.read_at).length;
+  const unreadMsgs = messages.filter(m => !m.read_at).length;
+
+  // Leaderboard ranked
+  let lbRanked = [...players];
+  if (lbTimeFilter === "oggi") lbRanked = lbRanked.sort((a, b) => (xpToday[b.id] || 0) - (xpToday[a.id] || 0)).slice(0, 3);
+  else if (lbTimeFilter === "mese") lbRanked = lbRanked.sort((a, b) => (xpMonth[b.id] || 0) - (xpMonth[a.id] || 0)).slice(0, 10);
 
   if (loading) return <div className="loading" style={{ minHeight: "100vh" }}>🌿 Caricamento…</div>;
+
+  const BOTTOM_TABS = [
+    ["profilo","👤","Profilo"],
+    ["classifica","🏆","Classifica"],
+    ["attivita","⚡","Attività"],
+    ["messaggi","💬","Messaggi"],
+    ["notifiche","🔔","Notifiche"],
+  ];
 
   return (
     <div style={{ background: "var(--nero)", minHeight: "100vh" }}>
@@ -1567,6 +1748,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           </div>
           <div>
             <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", lineHeight: 1 }}>{fullProfile?.display_name}</div>
+            {fullProfile?.first_name && <div style={{ fontSize: 11, color: "var(--text2)" }}>{fullProfile.first_name}</div>}
             <div style={{ fontSize: 11, color: "var(--azzurro)", fontWeight: 600 }}>{lv.emoji} {lv.name}</div>
           </div>
         </div>
@@ -1576,46 +1758,56 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       {/* Contenuto */}
       <div style={{ paddingTop: 70, paddingBottom: "calc(70px + env(safe-area-inset-bottom,0px))", padding: "70px 14px calc(70px + env(safe-area-inset-bottom,0px))" }}>
 
+        {/* ── PROFILO ── */}
         {tab === "profilo" && fullProfile && (
           <>
             <div className="profile-hero">
               <div className="profile-avatar"><Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={90} /></div>
               <div className="profile-name">{fullProfile.display_name}</div>
+              {fullProfile.first_name && <div style={{ fontSize: 15, color: "var(--text2)", marginBottom: 4 }}>{fullProfile.first_name}</div>}
               <div className="profile-level">{lv.emoji} {lv.name}</div>
               {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name} />}
               <div style={{ marginTop: 16 }}><XpBar xp={fullProfile.xp} /></div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 18 }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: 28, marginTop: 18 }}>
                 <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--azzurro)" }}>{fullProfile.xp}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>XP</div></div>
                 <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--giallo)" }}>🪙 {fullProfile.coin}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>Coin</div></div>
                 <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--rosa)" }}>{badges.length}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>Badge</div></div>
               </div>
             </div>
 
-            {/* Modifica nome */}
+            {/* Nome di battesimo */}
             <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Il tuo nome in gioco</div>
-              {editingName ? (
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Il tuo nome di battesimo</div>
+              {editingFirstName ? (
                 <div style={{ display: "flex", gap: 8 }}>
-                  <input className="form-input" value={newName} onChange={e => setNewName(e.target.value.slice(0, 30))} placeholder="Inserisci nome…" style={{ flex: 1 }} maxLength={30} autoFocus />
-                  <button className="btn btn-yellow btn-sm" onClick={saveName} disabled={!newName.trim()}>Salva</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setEditingName(false)}>✕</button>
+                  <input className="form-input" value={newFirstName} onChange={e => setNewFirstName(e.target.value.slice(0, 30))} placeholder="Inserisci il tuo nome…" style={{ flex: 1 }} maxLength={30} autoFocus />
+                  <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setEditingFirstName(false)}>✕</button>
                 </div>
               ) : (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 22, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{fullProfile.display_name}</span>
-                  <button className="btn btn-ghost btn-xs" onClick={() => { setNewName(fullProfile.display_name); setEditingName(true); }}>✏️ Modifica</button>
+                  <span style={{ fontSize: 15, color: "var(--text)", fontWeight: 600 }}>{fullProfile.first_name || <span style={{ color: "var(--text3)" }}>Non impostato</span>}</span>
+                  <button className="btn btn-ghost btn-xs" onClick={() => { setNewFirstName(fullProfile.first_name || ""); setEditingFirstName(true); }}>✏️ Modifica</button>
                 </div>
               )}
-              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>Solo il nome è modificabile · Max 30 caratteri</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>Il nickname è gestito dal Giardiniere · Max 30 caratteri</div>
             </div>
 
-            {/* Badge nel profilo */}
+            {/* Check-in */}
+            <div className="card" style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>📍 Check-in giornaliero</div>
+              <input className="form-input" value={qrInput} onChange={e => setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{ textAlign: "center", fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, letterSpacing: 8, marginBottom: 10 }} maxLength={6} />
+              <button className="btn btn-primary" onClick={doCheckin}>Conferma presenza</button>
+              {qrMsg && <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: qrMsg.includes("✅") ? "var(--verde)" : "var(--danger)", textAlign: "center" }}>{qrMsg}</div>}
+            </div>
+
+            {/* Badge */}
             {badges.length > 0 && (
               <div className="card" style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>I tuoi badge</div>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   {badges.map(pb => (
-                    <div key={pb.id} style={{ textAlign: "center", width: 64 }}>
+                    <div key={pb.id} style={{ textAlign: "center", width: 64, cursor: "pointer" }} onClick={() => setSelectedBadge(pb)}>
                       {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2.5px solid var(--rosa)", display: "block", margin: "0 auto 4px" }} alt={pb.badges?.name} /> : <div style={{ fontSize: 36, marginBottom: 4 }}>🎖️</div>}
                       <div style={{ fontSize: 10, color: "var(--text2)", lineHeight: 1.2, fontWeight: 600 }}>{pb.badges?.name}</div>
                     </div>
@@ -1624,6 +1816,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               </div>
             )}
 
+            {/* Prenotazioni */}
             {bookings.length > 0 && (
               <>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Prenotazioni</div>
@@ -1637,25 +1830,45 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           </>
         )}
 
-        {tab === "checkin" && (
-          <div className="card" style={{ marginTop: 8 }}>
-            <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <div style={{ fontSize: 60, marginBottom: 12 }}>📍</div>
-              <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginBottom: 6 }}>Check-in</div>
-              <div style={{ fontSize: 14, color: "var(--text2)", marginBottom: 28 }}>Inserisci il codice mostrato in loco</div>
-              <input className="form-input" value={qrInput} onChange={e => setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{ textAlign: "center", fontFamily: "'Barlow Condensed'", fontSize: 36, fontWeight: 900, letterSpacing: 10, marginBottom: 16 }} maxLength={6} />
-              <button className="btn btn-primary" onClick={doCheckin}>Conferma presenza</button>
-              {qrMsg && <div style={{ marginTop: 16, fontSize: 15, fontWeight: 700, color: qrMsg.includes("✅") ? "var(--verde)" : "var(--danger)" }}>{qrMsg}</div>}
-              <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 20 }}>
-                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--azzurro)" }}>+10</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>XP</div></div>
-                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--giallo)" }}>+5</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>Coin</div></div>
-              </div>
+        {/* ── CLASSIFICA ── */}
+        {tab === "classifica" && (
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)", marginBottom: 14 }}>🏆 Classifica</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              <button className={`chip ${lbTimeFilter === "generale" ? "active" : ""}`} onClick={() => setLbTimeFilter("generale")}>🏆 Generale</button>
+              <button className={`chip ${lbTimeFilter === "oggi" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, background: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, color: lbTimeFilter === "oggi" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("oggi")}>⚡ Top 3 Oggi</button>
+              <button className={`chip ${lbTimeFilter === "mese" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "mese" ? "var(--rosa)" : undefined, background: lbTimeFilter === "mese" ? "var(--rosa)" : undefined, color: lbTimeFilter === "mese" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("mese")}>📅 Top 10 Mese</button>
+            </div>
+            <div className="lb-list">
+              {lbRanked.map((p, i) => {
+                const plv = getLevel(p.xp);
+                const medals = ["gold","silver","bronze"];
+                const xpShown = lbTimeFilter === "oggi" ? xpToday[p.id] || 0 : lbTimeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
+                const isMe = p.id === profile.id;
+                return (
+                  <div key={p.id} className="lb-row" style={{ border: isMe ? "1.5px solid var(--azzurro)" : undefined, background: isMe ? "rgba(163,207,254,.06)" : undefined }}>
+                    <span className={`lb-rank ${i < 3 ? medals[i] : ""}`}>{i < 3 ? ["1°","2°","3°"][i] : (i+1)+"°"}</span>
+                    <div className="lb-av"><Avatar url={p.avatar_url} emoji={plv.emoji} size={38} /></div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="lb-name">{p.display_name}{isMe && <span style={{ fontSize: 10, color: "var(--azzurro)", marginLeft: 6, fontWeight: 700 }}>TU</span>}</div>
+                      <div className="lb-level">{plv.emoji} {plv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <span className="lb-xp">{xpShown}</span>
+                      <div style={{ fontSize: 9, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>XP</div>
+                    </div>
+                  </div>
+                );
+              })}
+              {lbRanked.length === 0 && <div className="empty">Nessun dato.</div>}
             </div>
           </div>
         )}
 
+        {/* ── ATTIVITÀ ── */}
         {tab === "attivita" && (
           <div style={{ marginTop: 8 }}>
+            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--verde)", marginBottom: 14 }}>⚡ Attività</div>
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
               <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
                 <div className="sfida-label">⚡ Sfida del giorno</div>
@@ -1664,33 +1877,50 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
               </div>
             ))}
-            {activities.filter(a => !a.description?.includes("SFIDA")).map(a => (
-              <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
-                <div className="act-title">{a.name}</div>
-                <div className="act-meta">{a.description} · {a.duration_days} giorni</div>
-                <div className="act-rewards">
-                  <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
-                  <span className="reward-tag coin-tag">🪙 {a.coin_cost}</span>
+            {activities.filter(a => !a.description?.includes("SFIDA")).map(a => {
+              const booked = bookings.find(b => b.activities?.name === a.name || b.activity_id === a.id);
+              return (
+                <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
+                  <div className="act-title">{a.name}</div>
+                  <div className="act-meta">{a.description} · {a.duration_days} giorni</div>
+                  {a.profiles?.display_name && <div style={{ fontSize: 12, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Giardiniere: {a.profiles.display_name}</div>}
+                  {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--azzurro)", display: "block", marginBottom: 8 }}>🔗 Scopri di più</a>}
+                  <div className="act-rewards" style={{ marginBottom: 10 }}>
+                    <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
+                    <span className="reward-tag coin-tag">🪙 {a.coin_cost} costo</span>
+                  </div>
+                  {booked ? (
+                    <div className={`tag ${booked.status === "confirmed" ? "tag-green" : booked.status === "rejected" ? "tag-red" : "tag-amber"}`}>
+                      {booked.status === "confirmed" ? "✅ Prenotato" : booked.status === "rejected" ? "❌ Rifiutata" : "⏳ In attesa"}
+                    </div>
+                  ) : (
+                    <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={() => bookActivity(a.id, a.coin_cost)} disabled={a.coin_cost > (fullProfile?.coin || 0)}>
+                      {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti" : "Prenota"}
+                    </button>
+                  )}
                 </div>
-                <button className="btn btn-ghost btn-sm" style={{ marginTop: 12, width: "100%" }} onClick={() => bookActivity(a.id, a.coin_cost)} disabled={a.coin_cost > (fullProfile?.coin || 0)}>
-                  {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti" : "Prenota"}
-                </button>
-              </div>
-            ))}
-            {activities.length === 0 && <div className="empty">Nessuna attività.</div>}
+              );
+            })}
+            {activities.length === 0 && <div className="empty">Nessuna attività attiva.</div>}
           </div>
         )}
 
-        {tab === "badge" && (
-          <div style={{ marginTop: 8 }}>
-            <SectionBanner sectionKey="badge" title="I tuoi badge" sub={`${badges.length} conquistati`} sectionColors={sectionColors} />
-            {badges.length === 0 ? <div className="empty">Nessun badge ancora. Continua così!</div> : (
-              <div className="badge-grid">
-                {badges.map(pb => (
-                  <div key={pb.id} className="badge-card">
-                    {pb.badges?.image_url ? <img className="badge-img" src={pb.badges.image_url} alt={pb.badges?.name} /> : <span className="badge-emoji">🎖️</span>}
-                    <div className="badge-name">{pb.badges?.name}</div>
-                    <div className="badge-pts">+{pb.xp_awarded} XP</div>
+        {/* ── MESSAGGI ── */}
+        {tab === "messaggi" && (
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--rosa)", marginBottom: 14 }}>💬 Messaggi</div>
+            {messages.length === 0 ? <div className="empty">Nessun messaggio ricevuto.</div> : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {messages.map(m => (
+                  <div key={m.id} className="card-sm">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 18 }}>🌱</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--verde)" }}>Giardiniere</span>
+                      </div>
+                      <span style={{ fontSize: 10, color: "var(--text3)" }}>{new Date(m.created_at).toLocaleDateString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                    <div style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.5 }}>{m.body}</div>
                   </div>
                 ))}
               </div>
@@ -1698,10 +1928,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           </div>
         )}
 
+        {/* ── NOTIFICHE ── */}
         {tab === "notifiche" && (
           <div style={{ marginTop: 8 }}>
+            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginBottom: 14 }}>🔔 Notifiche</div>
             {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
-              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙" };
+              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬" };
               return (
                 <div key={n.id} className="notif-item">
                   <div className="notif-icon">{icons[n.type] || "🔔"}</div>
@@ -1717,13 +1949,31 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
       </div>
 
+      {/* Badge detail modal */}
+      {selectedBadge && (
+        <div className="modal-bg" onClick={() => setSelectedBadge(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)", margin: "0 auto 10px", display: "block" }} alt="" /> : <div style={{ fontSize: 56, marginBottom: 10 }}>🎖️</div>}
+              <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{selectedBadge.badges?.name}</div>
+              <div style={{ fontSize: 13, color: "var(--azzurro)", fontWeight: 700, marginTop: 4 }}>+{selectedBadge.xp_awarded} XP · 🪙 +{selectedBadge.coin_awarded}</div>
+            </div>
+            {selectedBadge.badges?.description && <p style={{ fontSize: 14, color: "var(--text2)", lineHeight: 1.6, marginBottom: 12 }}>{selectedBadge.badges.description}</p>}
+            {selectedBadge.badges?.link && <a href={selectedBadge.badges.link} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ width: "100%", marginBottom: 8 }}>🔗 Scopri di più</a>}
+            <div style={{ fontSize: 11, color: "var(--text3)", textAlign: "center", marginBottom: 12 }}>Assegnato il {new Date(selectedBadge.assigned_at).toLocaleDateString("it-IT")}</div>
+            <button className="btn btn-ghost" style={{ width: "100%" }} onClick={() => setSelectedBadge(null)}>Chiudi</button>
+          </div>
+        </div>
+      )}
+
       {/* Bottom nav */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--nero)", borderTop: "1px solid var(--border)", zIndex: 20, display: "flex", paddingBottom: "env(safe-area-inset-bottom,0px)" }}>
-        {[["profilo","👤","Profilo"],["checkin","📍","Check-in"],["attivita","⚡","Attività"],["badge","🎖️","Badge"],["notifiche","🔔","Notifiche"]].map(([id, icon, label]) => (
+        {BOTTOM_TABS.map(([id, icon, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: "10px 0", background: "none", border: "none", cursor: "pointer", color: tab === id ? "var(--azzurro)" : "var(--text3)", fontFamily: "'Funnel Display'", position: "relative" }}>
-            <span style={{ fontSize: 22 }}>{icon}</span>
+            <span style={{ fontSize: 20 }}>{icon}</span>
             {id === "notifiche" && unread > 0 && <span style={{ position: "absolute", top: 6, right: "calc(50% - 18px)", background: "var(--rosa)", color: "#fff", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px" }}>{unread}</span>}
-            <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</span>
+            {id === "messaggi" && unreadMsgs > 0 && <span style={{ position: "absolute", top: 6, right: "calc(50% - 18px)", background: "var(--verde)", color: "#fff", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px" }}>{unreadMsgs}</span>}
+            <span style={{ fontSize: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</span>
           </button>
         ))}
       </div>
@@ -1763,7 +2013,7 @@ function EducatorShell({ profile, onLogout }) {
       <div className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-title">Per·You Garden</div>
-          <div className="sidebar-logo-sub">Pannello educatore</div>
+          <div className="sidebar-logo-sub">Pannello Giardiniere</div>
         </div>
         <nav className="nav">
           {EDUCATOR_TABS.map(([id, icon, label]) => (
@@ -1779,7 +2029,7 @@ function EducatorShell({ profile, onLogout }) {
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{profile.display_name}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)" }}>{profile.role}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>{profile.role === "educator" ? "Giardiniere" : profile.role}</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
