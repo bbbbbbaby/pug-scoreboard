@@ -25,24 +25,17 @@ function getLevel(xp) {
   return LEVELS[0];
 }
 
-// ─── BRAND PALETTE ────────────────────────────────────────
 const BRAND = {
-  azzurro: "#A3CFFE",
-  rosa:    "#FF6DEC",
-  giallo:  "#FDEF26",
-  verde:   "#339966",
-  rosso:   "#D41323",
-  nero:    "#101010",
-  bianco:  "#FFFFFF",
+  azzurro: "#A3CFFE", rosa: "#FF6DEC", giallo: "#FDEF26",
+  verde: "#339966", rosso: "#D41323", nero: "#101010", bianco: "#FFFFFF",
 };
 
 const SQUAD_STYLE = {
-  Verde:   { bg: "#339966", text: "#fff", border: "#339966" },
-  Gialla:  { bg: "#FDEF26", text: "#101010", border: "#FDEF26" },
-  Azzurra: { bg: "#A3CFFE", text: "#101010", border: "#A3CFFE" },
+  Verde:   { bg: "#339966", text: "#fff" },
+  Gialla:  { bg: "#FDEF26", text: "#101010" },
+  Azzurra: { bg: "#A3CFFE", text: "#101010" },
 };
 
-// Colori di default per le sezioni personalizzabili
 const DEFAULT_SECTION_COLORS = {
   classifica: { color: "#A3CFFE", image: null },
   badge:      { color: "#FF6DEC", image: null },
@@ -54,75 +47,66 @@ const DEFAULT_SECTION_COLORS = {
 // ─── CSS ──────────────────────────────────────────────────
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Funnel+Display:wght@300;400;500;600;700;800&display=swap');
-
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
-  body {
-    font-family: 'Funnel Display', sans-serif;
-    background: #101010;
-    color: #f0f0f0;
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
-
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { font-family:'Funnel Display',sans-serif; background:#101010; color:#f0f0f0; min-height:100vh; -webkit-font-smoothing:antialiased; }
   :root {
-    /* Brand */
-    --azzurro: #A3CFFE; --rosa: #FF6DEC; --giallo: #FDEF26;
-    --verde: #339966; --rosso: #D41323;
-    --nero: #101010; --bianco: #FFFFFF;
-    /* UI surfaces */
-    --surface: #1c1c1c; --surface2: #252525; --surface3: #303030;
-    --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
-    --text: #f0f0f0; --text2: #999; --text3: #555;
-    /* Accents (remap to brand) */
-    --accent: #339966; --accent2: #4db880;
-    --danger: #D41323; --warning: #FDEF26;
-    --radius: 14px; --radius-sm: 10px; --radius-lg: 20px;
+    --azzurro:#A3CFFE; --rosa:#FF6DEC; --giallo:#FDEF26; --verde:#339966; --rosso:#D41323;
+    --nero:#101010; --bianco:#FFFFFF;
+    --surface:#1c1c1c; --surface2:#252525; --surface3:#303030;
+    --border:rgba(255,255,255,0.09); --border2:rgba(255,255,255,0.16);
+    --text:#f0f0f0; --text2:#999; --text3:#555;
+    --accent:#339966; --accent2:#4db880;
+    --danger:#D41323; --warning:#FDEF26;
+    --radius:14px; --radius-sm:10px; --radius-lg:20px;
   }
-
-  /* LIGHT THEME */
   body.light {
-    background: #f5f5f5; color: #101010;
-    --surface: #ffffff; --surface2: #f0f0f0; --surface3: #e5e5e5;
-    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
-    --text: #101010; --text2: #555; --text3: #999;
+    background:#f5f5f5; color:#101010;
+    --surface:#ffffff; --surface2:#f0f0f0; --surface3:#e5e5e5;
+    --border:rgba(0,0,0,0.08); --border2:rgba(0,0,0,0.14);
+    --text:#101010; --text2:#555; --text3:#999;
   }
 
-  /* TYPOGRAPHY */
-  .font-display { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; }
-  .font-ui { font-family: 'Funnel Display', sans-serif; }
-
-  /* ── LOGIN ── */
-  .login-wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background: var(--nero); }
+  /* LOGIN */
+  .login-wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:#101010; }
   .login-card { background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius-lg); padding:36px 28px; width:100%; max-width:420px; }
-  .login-logo { text-align:center; margin-bottom:32px; }
-  .login-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:52px; text-transform:uppercase; letter-spacing:-1px; line-height:1; color:var(--azzurro); }
-  .login-sub { font-size:13px; color:var(--text2); margin-top:6px; }
+  .login-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:52px; text-transform:uppercase; letter-spacing:-1px; line-height:1; color:var(--azzurro); text-align:center; margin-bottom:6px; }
+  .login-sub { font-size:13px; color:var(--text2); text-align:center; margin-bottom:28px; }
+  .login-tabs { display:flex; background:var(--surface2); border-radius:var(--radius-sm); padding:4px; margin-bottom:24px; gap:4px; }
+  .login-tab { flex:1; padding:10px; border-radius:8px; border:none; cursor:pointer; font-family:'Funnel Display'; font-size:13px; font-weight:700; background:transparent; color:var(--text2); transition:all .15s; }
+  .login-tab.active { background:var(--azzurro); color:#101010; }
   .form-group { margin-bottom:14px; }
   .form-label { font-size:10px; font-weight:700; color:var(--text2); margin-bottom:5px; display:block; text-transform:uppercase; letter-spacing:.1em; }
   .form-input { width:100%; padding:13px 14px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display',sans-serif; font-size:16px; outline:none; transition:border-color .15s; }
   .form-input:focus { border-color:var(--azzurro); }
+  .pin-input { text-align:center; font-family:'Barlow Condensed',sans-serif; font-size:36px; font-weight:900; letter-spacing:12px; }
   .remember-row { display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer; }
-  .remember-row input[type=checkbox] { width:18px; height:18px; accent-color:var(--azzurro); }
+  .remember-row input { width:18px; height:18px; accent-color:var(--azzurro); }
   .remember-row span { font-size:14px; color:var(--text2); }
-  .err-msg { font-size:12px; color:var(--danger); margin-top:10px; text-align:center; }
+  .err-msg { font-size:12px; color:var(--danger); margin-top:10px; text-align:center; font-weight:600; }
 
-  /* ── BUTTONS ── */
+  /* NICKNAME SEARCH */
+  .nickname-list { max-height:200px; overflow-y:auto; border:1.5px solid var(--border2); border-radius:var(--radius-sm); margin-top:6px; }
+  .nickname-item { padding:12px 14px; cursor:pointer; font-size:14px; font-weight:600; color:var(--text); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  .nickname-item:hover { background:var(--surface2); }
+  .nickname-item:last-child { border-bottom:none; }
+
+  /* BUTTONS */
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 18px; border-radius:var(--radius-sm); border:none; cursor:pointer; font-family:'Funnel Display',sans-serif; font-size:14px; font-weight:600; transition:all .15s; white-space:nowrap; min-height:44px; }
-  .btn-primary { background:var(--azzurro); color:var(--nero); width:100%; padding:14px; font-size:15px; font-weight:700; }
+  .btn-primary { background:var(--azzurro); color:#101010; width:100%; padding:14px; font-size:15px; font-weight:700; }
   .btn-primary:active { opacity:.85; }
   .btn-ghost { background:transparent; color:var(--text2); border:1.5px solid var(--border2); }
   .btn-ghost:active { background:var(--surface2); }
   .btn-danger { background:rgba(212,19,35,.15); color:var(--danger); border:1px solid rgba(212,19,35,.3); }
-  .btn-yellow { background:var(--giallo); color:var(--nero); font-weight:700; border:none; }
+  .btn-yellow { background:var(--giallo); color:#101010; font-weight:700; border:none; }
   .btn-sm { padding:7px 14px; font-size:13px; min-height:38px; }
   .btn-xs { padding:5px 10px; font-size:12px; min-height:32px; border-radius:8px; }
 
-  /* ── EDUCATOR DESKTOP ── */
+  /* EDUCATOR DESKTOP */
   .edu-layout { display:flex; min-height:100vh; }
-  .sidebar { width:230px; background:var(--nero); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; z-index:10; }
+  .sidebar { width:230px; background:var(--nero); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; z-index:10; }
   .sidebar-logo { padding:22px 20px 18px; border-bottom:1px solid var(--border); }
-  .sidebar-logo-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:28px; text-transform:uppercase; color:var(--azzurro); letter-spacing:-0.5px; line-height:1; }
+  .sidebar-logo-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:26px; text-transform:uppercase; color:var(--azzurro); line-height:1; }
   .sidebar-logo-sub { font-size:11px; color:var(--text3); margin-top:3px; }
   .nav { flex:1; padding:10px 0; }
   .nav-item { display:flex; align-items:center; gap:12px; padding:10px 20px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text2); border-left:3px solid transparent; transition:all .12s; min-height:44px; }
@@ -131,39 +115,38 @@ const css = `
   .nav-icon { font-size:17px; width:22px; text-align:center; flex-shrink:0; }
   .sidebar-user { padding:16px 20px; border-top:1px solid var(--border); }
   .edu-main { margin-left:230px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
-  .topbar { padding:14px 26px; background:var(--nero); border-bottom:1px solid var(--border); display:flex; align-items:center; position:sticky; top:0; z-index:5; gap:12px; }
-  .topbar-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:26px; text-transform:uppercase; color:var(--text); letter-spacing:-0.5px; }
+  .topbar { padding:14px 26px; background:var(--nero); border-bottom:1px solid var(--border); display:flex; align-items:center; position:sticky; top:0; z-index:5; }
+  .topbar-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:26px; text-transform:uppercase; color:var(--text); }
   .content { flex:1; padding:22px 26px; }
 
-  /* ── MOBILE EDUCATOR ── */
+  /* MOBILE EDUCATOR */
   .mob-header { display:none; position:fixed; top:0; left:0; right:0; height:58px; background:var(--nero); border-bottom:1px solid var(--border); z-index:20; align-items:center; padding:0 16px; gap:12px; }
-  .mob-header-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:22px; text-transform:uppercase; color:var(--azzurro); flex:1; letter-spacing:-0.3px; }
+  .mob-header-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:22px; text-transform:uppercase; color:var(--azzurro); flex:1; }
   .mob-drawer-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:30; }
   .mob-drawer { position:fixed; top:0; left:0; bottom:0; width:270px; background:var(--nero); z-index:40; transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; }
   .mob-drawer.open { transform:translateX(0); }
   .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; background:var(--nero); border-top:1px solid var(--border); z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); }
   .mob-bottom-nav-inner { display:flex; height:62px; }
-  .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:var(--text3); font-family:'Funnel Display'; padding:0; transition:color .12s; }
+  .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:var(--text3); font-family:'Funnel Display'; padding:0; }
   .mob-nav-btn.active { color:var(--azzurro); }
 
-  /* ── SECTION BANNERS ── */
+  /* SECTION BANNERS */
   .section-banner { border-radius:var(--radius-lg); padding:20px; margin-bottom:18px; position:relative; overflow:hidden; min-height:80px; display:flex; align-items:flex-end; }
   .section-banner-bg { position:absolute; inset:0; background-size:cover; background-position:center; }
-  .section-banner-overlay { position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,.55) 0%, rgba(0,0,0,.1) 100%); }
-  .section-banner-content { position:relative; z-index:1; }
+  .section-banner-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.55),rgba(0,0,0,.1)); }
+  .section-banner-content { position:relative; z-index:1; flex:1; }
   .section-banner-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:32px; text-transform:uppercase; color:#fff; letter-spacing:-0.5px; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,.4); }
   .section-banner-sub { font-size:12px; color:rgba(255,255,255,.75); margin-top:2px; }
 
-  /* ── CARDS ── */
+  /* CARDS */
   .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; }
   .card-sm { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; }
   .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
   .stat-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
   .stat-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; font-weight:600; }
   .stat-value { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; color:var(--text); line-height:1; }
-  .stat-sub { font-size:11px; color:var(--text2); margin-top:2px; }
 
-  /* ── PLAYER GRID ── */
+  /* PLAYER GRID */
   .player-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
   .player-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px 10px; text-align:center; cursor:pointer; position:relative; transition:border-color .15s; }
   .player-card.selected { border-color:var(--azzurro); background:rgba(163,207,254,.06); }
@@ -175,14 +158,13 @@ const css = `
   .p-coin { font-size:10px; color:var(--giallo); margin-top:1px; }
   .squad-pill { font-size:9px; padding:2px 8px; border-radius:99px; display:inline-block; margin-top:5px; font-weight:700; }
   .pts-row { display:flex; gap:4px; justify-content:center; margin-top:8px; }
-  .pts-btn { width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border2); background:var(--surface3); cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; color:var(--text2); font-family:'Funnel Display'; line-height:1; transition:all .1s; }
+  .pts-btn { width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border2); background:var(--surface3); cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; color:var(--text2); line-height:1; }
   .pts-btn.add { color:var(--verde); border-color:rgba(51,153,102,.4); }
   .pts-btn.rem { color:var(--danger); border-color:rgba(212,19,35,.3); }
 
-  /* ── LEADERBOARD ── */
+  /* LEADERBOARD */
   .lb-list { display:flex; flex-direction:column; gap:6px; }
-  .lb-row { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; transition:border-color .15s; cursor:pointer; }
-  .lb-row:hover { border-color:var(--border2); }
+  .lb-row { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; }
   .lb-rank { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; width:30px; text-align:center; color:var(--text3); flex-shrink:0; }
   .lb-rank.gold { color:var(--giallo); } .lb-rank.silver { color:#ccc; } .lb-rank.bronze { color:#e8956d; }
   .lb-av { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; overflow:hidden; border:1.5px solid var(--border2); }
@@ -191,42 +173,42 @@ const css = `
   .lb-level { font-size:10px; color:var(--text3); margin-top:1px; }
   .lb-xp { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; color:var(--azzurro); flex-shrink:0; }
 
-  /* ── PLAYER DETAIL PANEL ── */
+  /* PLAYER DETAIL */
   .player-detail { background:var(--surface); border:1.5px solid var(--azzurro); border-radius:var(--radius-lg); padding:20px; margin-top:12px; }
   .player-detail-header { display:flex; gap:16px; align-items:center; margin-bottom:16px; }
   .player-detail-av { width:64px; height:64px; border-radius:50%; overflow:hidden; border:3px solid var(--azzurro); display:flex; align-items:center; justify-content:center; font-size:30px; flex-shrink:0; }
   .player-detail-av img { width:100%; height:100%; object-fit:cover; }
   .detail-tabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
   .detail-tab { padding:6px 14px; border-radius:99px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:600; cursor:pointer; min-height:32px; }
-  .detail-tab.active { background:var(--azzurro); color:var(--nero); border-color:var(--azzurro); }
+  .detail-tab.active { background:var(--azzurro); color:#101010; border-color:var(--azzurro); }
 
-  /* ── FILTER ── */
+  /* FILTER */
   .filter-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
   .search-inp { padding:10px 14px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:16px; outline:none; flex:1; min-width:140px; }
   .search-inp:focus { border-color:var(--azzurro); }
-  .chip { padding:8px 16px; border-radius:99px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:600; cursor:pointer; min-height:36px; transition:all .12s; }
-  .chip.active { background:var(--azzurro); color:var(--nero); border-color:var(--azzurro); }
+  .chip { padding:8px 16px; border-radius:99px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:600; cursor:pointer; min-height:36px; }
+  .chip.active { background:var(--azzurro); color:#101010; border-color:var(--azzurro); }
 
-  /* ── BATCH ── */
+  /* BATCH */
   .batch-panel { background:rgba(163,207,254,.06); border:1.5px solid rgba(163,207,254,.25); border-radius:var(--radius); padding:12px 16px; margin-bottom:14px; }
   .batch-info { font-size:13px; color:var(--azzurro); font-weight:700; margin-bottom:10px; }
   .batch-inp { width:70px; padding:8px 10px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Barlow Condensed'; font-size:18px; font-weight:700; outline:none; text-align:center; }
 
-  /* ── PRESENZE ── */
+  /* PRESENZE */
   .pres-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius); border:1px solid var(--border); }
   .pres-table { width:100%; border-collapse:collapse; font-size:13px; min-width:420px; }
   .pres-table th { padding:10px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--text3); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.08em; background:var(--nero); }
   .pres-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text); }
-  .pres-dot { width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center; font-family:'Funnel Display'; font-weight:700; transition:opacity .12s; }
+  .pres-dot { width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; }
   .pd-yes { background:rgba(51,153,102,.25); color:var(--verde); }
   .pd-partial { background:rgba(253,239,38,.2); color:#b8a000; }
   .pd-completed { background:rgba(51,153,102,.45); color:#4db880; }
   .pd-none { background:var(--surface3); color:var(--text3); }
 
-  /* ── ACTIVITIES ── */
+  /* ACTIVITIES */
   .act-grid { display:grid; grid-template-columns:1fr; gap:10px; }
   .act-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:16px; position:relative; }
-  .act-title { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; letter-spacing:-0.3px; }
+  .act-title { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; }
   .act-meta { font-size:12px; color:var(--text2); margin-bottom:10px; }
   .act-rewards { display:flex; gap:6px; flex-wrap:wrap; }
   .reward-tag { font-size:10px; padding:4px 10px; border-radius:99px; font-weight:700; }
@@ -234,7 +216,7 @@ const css = `
   .coin-tag { background:rgba(253,239,38,.15); color:#b8a000; }
   .delete-btn { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:50%; border:1px solid rgba(212,19,35,.3); background:rgba(212,19,35,.1); color:var(--danger); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; }
 
-  /* ── BADGES ── */
+  /* BADGES */
   .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; }
   .badge-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:12px 10px; text-align:center; cursor:pointer; position:relative; transition:border-color .15s; }
   .badge-card:hover { border-color:var(--rosa); }
@@ -243,14 +225,69 @@ const css = `
   .badge-name { font-size:11px; font-weight:700; color:var(--text); line-height:1.3; }
   .badge-pts { font-size:10px; color:var(--text2); margin-top:3px; }
 
-  /* ── SQUAD ── */
+  /* SFIDA */
+  .sfida-card { border-radius:var(--radius-lg); padding:18px; margin-bottom:14px; position:relative; overflow:hidden; border:2px solid var(--rosso); background:rgba(212,19,35,.06); }
+  .sfida-label { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:900; text-transform:uppercase; color:var(--rosso); letter-spacing:.1em; margin-bottom:4px; }
+  .sfida-title { font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:6px; }
+  .sfida-desc { font-size:13px; color:var(--text2); margin-bottom:12px; line-height:1.5; }
+  .sfida-reward { display:inline-flex; align-items:center; gap:6px; background:rgba(253,239,38,.15); border:1px solid rgba(253,239,38,.3); border-radius:99px; padding:4px 12px; font-size:12px; font-weight:700; color:var(--giallo); }
+
+  /* DIARIO */
+  .diary-day { margin-bottom:18px; }
+  .diary-date { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--azzurro); margin-bottom:8px; }
+  .diary-entry { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:5px; }
+  .diary-icon { font-size:18px; flex-shrink:0; }
+  .diary-text { flex:1; font-size:13px; color:var(--text); line-height:1.4; }
+  .diary-pts { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; color:var(--azzurro); flex-shrink:0; }
+
+  /* MODAL */
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:flex; align-items:flex-end; justify-content:center; }
+  .modal { background:var(--surface); border:1px solid var(--border2); border-radius:20px 20px 0 0; padding:24px 20px; padding-bottom:calc(24px + env(safe-area-inset-bottom,0px)); width:100%; max-width:560px; max-height:92vh; overflow-y:auto; }
+  .modal-title { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:18px; }
+  .section-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.1em; margin:16px 0 8px; }
+
+  /* PROFILE */
+  .profile-hero { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; text-align:center; margin-bottom:14px; }
+  .profile-avatar { width:90px; height:90px; border-radius:50%; margin:0 auto 14px; border:3px solid var(--azzurro); display:flex; align-items:center; justify-content:center; font-size:42px; overflow:hidden; }
+  .profile-avatar img { width:100%; height:100%; object-fit:cover; }
+  .profile-name { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; }
+  .profile-level { font-size:14px; color:var(--azzurro); margin-bottom:10px; font-weight:600; }
+  .xp-bar-wrap { height:7px; background:var(--surface3); border-radius:99px; overflow:hidden; margin:8px 0; }
+  .xp-bar { height:100%; background:linear-gradient(90deg,var(--azzurro),var(--rosa)); border-radius:99px; transition:width .5s; }
+  .xp-label { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); }
+
+  /* QR */
+  .qr-code { font-family:'Barlow Condensed',sans-serif; font-size:52px; font-weight:900; color:var(--azzurro); letter-spacing:10px; margin:16px 0; }
+
+  /* AVATAR UPLOAD */
+  .avatar-upload-area { border:2px dashed var(--border2); border-radius:var(--radius); padding:20px; text-align:center; cursor:pointer; margin-bottom:12px; }
+  .avatar-upload-area:hover { border-color:var(--azzurro); }
+  .avatar-preview { width:80px; height:80px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:block; border:2.5px solid var(--azzurro); }
+
+  /* THEME TOGGLE */
+  .theme-toggle { width:44px; height:24px; border-radius:99px; border:none; cursor:pointer; position:relative; transition:background .2s; display:flex; align-items:center; padding:0 3px; }
+  .theme-toggle-knob { width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+
+  /* MISC */
+  .tag { font-size:11px; padding:3px 9px; border-radius:99px; display:inline-block; font-weight:700; }
+  .tag-green { background:rgba(51,153,102,.15); color:var(--verde); }
+  .tag-blue { background:rgba(163,207,254,.15); color:var(--azzurro); }
+  .tag-amber { background:rgba(253,239,38,.15); color:#b8a000; }
+  .tag-red { background:rgba(212,19,35,.15); color:var(--danger); }
+  .tag-gray { background:var(--surface3); color:var(--text2); }
+  .loading { display:flex; align-items:center; justify-content:center; min-height:160px; color:var(--text2); font-size:14px; gap:8px; }
+  .empty { text-align:center; padding:40px 20px; color:var(--text3); font-size:14px; }
+  select { padding:10px 12px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:16px; outline:none; width:100%; }
+  textarea { width:100%; padding:10px 12px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; resize:vertical; min-height:80px; }
+  .color-swatch-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .color-swatch { width:36px; height:36px; border-radius:50%; border:3px solid transparent; cursor:pointer; transition:border-color .12s; }
+  .color-swatch.active { border-color:var(--text); }
   .squad-list { display:flex; flex-direction:column; gap:8px; }
   .squad-row { display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; }
   .squad-color-dot { width:16px; height:16px; border-radius:50%; flex-shrink:0; }
   .squad-name { flex:1; font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--text); }
-  .squad-count { font-size:12px; color:var(--text3); }
 
-  /* ── MESSAGES ── */
+  /* MESSAGES */
   .msg-layout { display:flex; gap:12px; height:440px; }
   .msg-list { width:150px; display:flex; flex-direction:column; gap:4px; overflow-y:auto; flex-shrink:0; }
   .msg-thread { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; cursor:pointer; }
@@ -267,8 +304,6 @@ const css = `
   .bubble.mine { background:rgba(163,207,254,.2); color:var(--azzurro); }
   .msg-inp-row { padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:8px; }
   .msg-inp { flex:1; padding:10px 12px; background:var(--surface3); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; }
-
-  /* ── NOTIFICATIONS ── */
   .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--rosa); display:inline-block; margin-left:4px; vertical-align:middle; }
   .notif-item { display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); }
   .notif-icon { font-size:24px; flex-shrink:0; }
@@ -276,66 +311,10 @@ const css = `
   .notif-body { font-size:13px; color:var(--text2); }
   .notif-time { font-size:11px; color:var(--text3); margin-top:3px; }
 
-  /* ── MODAL ── */
-  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:flex; align-items:flex-end; justify-content:center; }
-  .modal { background:var(--surface); border:1px solid var(--border2); border-radius:20px 20px 0 0; padding:24px 20px; padding-bottom:calc(24px + env(safe-area-inset-bottom,0px)); width:100%; max-width:560px; max-height:92vh; overflow-y:auto; }
-  .modal-title { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:18px; letter-spacing:-0.5px; }
-  .section-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.1em; margin:16px 0 8px; }
+  /* PIN DISPLAY */
+  .pin-display { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; color:var(--azzurro); letter-spacing:6px; background:var(--surface3); border-radius:8px; padding:8px 16px; display:inline-block; }
 
-  /* ── PROFILE (player) ── */
-  .profile-hero { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; text-align:center; margin-bottom:14px; position:relative; overflow:hidden; }
-  .profile-hero-bg { position:absolute; inset:0; background-size:cover; background-position:center; opacity:.18; }
-  .profile-avatar { width:90px; height:90px; border-radius:50%; margin:0 auto 14px; border:3px solid var(--azzurro); display:flex; align-items:center; justify-content:center; font-size:42px; overflow:hidden; position:relative; }
-  .profile-avatar img { width:100%; height:100%; object-fit:cover; }
-  .profile-name { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; letter-spacing:-0.5px; position:relative; }
-  .profile-level { font-size:14px; color:var(--azzurro); margin-bottom:10px; font-weight:600; position:relative; }
-  .xp-bar-wrap { height:7px; background:var(--surface3); border-radius:99px; overflow:hidden; margin:8px 0; position:relative; }
-  .xp-bar { height:100%; background:linear-gradient(90deg, var(--azzurro), var(--rosa)); border-radius:99px; transition:width .5s; }
-  .xp-label { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); position:relative; }
-
-  /* ── SFIDA DEL GIORNO ── */
-  .sfida-card { border-radius:var(--radius-lg); padding:18px; margin-bottom:14px; position:relative; overflow:hidden; border:2px solid var(--rosso); background:rgba(212,19,35,.06); }
-  .sfida-label { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:900; text-transform:uppercase; color:var(--rosso); letter-spacing:.1em; margin-bottom:4px; }
-  .sfida-title { font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; text-transform:uppercase; color:var(--text); letter-spacing:-0.3px; margin-bottom:6px; }
-  .sfida-desc { font-size:13px; color:var(--text2); margin-bottom:12px; line-height:1.5; }
-  .sfida-reward { display:inline-flex; align-items:center; gap:6px; background:rgba(253,239,38,.15); border:1px solid rgba(253,239,38,.3); border-radius:99px; padding:4px 12px; font-size:12px; font-weight:700; color:var(--giallo); }
-
-  /* ── DIARIO ── */
-  .diary-day { margin-bottom:18px; }
-  .diary-date { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--azzurro); margin-bottom:8px; letter-spacing:-0.3px; }
-  .diary-entry { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:5px; }
-  .diary-icon { font-size:18px; flex-shrink:0; }
-  .diary-text { flex:1; font-size:13px; color:var(--text); line-height:1.4; }
-  .diary-pts { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; color:var(--azzurro); flex-shrink:0; }
-
-  /* ── QR ── */
-  .qr-code { font-family:'Barlow Condensed',sans-serif; font-size:52px; font-weight:900; color:var(--azzurro); letter-spacing:10px; margin:16px 0; }
-
-  /* ── AVATAR UPLOAD ── */
-  .avatar-upload-area { border:2px dashed var(--border2); border-radius:var(--radius); padding:20px; text-align:center; cursor:pointer; margin-bottom:12px; transition:border-color .15s; }
-  .avatar-upload-area:hover { border-color:var(--azzurro); }
-  .avatar-preview { width:80px; height:80px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:block; border:2.5px solid var(--azzurro); }
-
-  /* ── THEME TOGGLE ── */
-  .theme-toggle { width:44px; height:24px; border-radius:99px; border:none; cursor:pointer; position:relative; transition:background .2s; display:flex; align-items:center; padding:0 3px; }
-  .theme-toggle-knob { width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 4px rgba(0,0,0,.3); }
-
-  /* ── MISC ── */
-  .tag { font-size:11px; padding:3px 9px; border-radius:99px; display:inline-block; font-weight:700; }
-  .tag-green { background:rgba(51,153,102,.15); color:var(--verde); }
-  .tag-blue { background:rgba(163,207,254,.15); color:var(--azzurro); }
-  .tag-amber { background:rgba(253,239,38,.15); color:#b8a000; }
-  .tag-red { background:rgba(212,19,35,.15); color:var(--danger); }
-  .tag-gray { background:var(--surface3); color:var(--text2); }
-  .loading { display:flex; align-items:center; justify-content:center; min-height:160px; color:var(--text2); font-size:14px; gap:8px; }
-  .empty { text-align:center; padding:40px 20px; color:var(--text3); font-size:14px; }
-  select { padding:10px 12px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:16px; outline:none; width:100%; }
-  textarea { width:100%; padding:10px 12px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; resize:vertical; min-height:80px; }
-  .color-swatch-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-  .color-swatch { width:36px; height:36px; border-radius:50%; border:3px solid transparent; cursor:pointer; transition:border-color .12s; }
-  .color-swatch.active { border-color:var(--text); }
-
-  /* ── RESPONSIVE ── */
+  /* RESPONSIVE */
   @media (min-width:768px) {
     .stats-grid { grid-template-columns:repeat(4,1fr); }
     .act-grid { grid-template-columns:1fr 1fr; }
@@ -355,7 +334,6 @@ const css = `
     .msg-list { width:100%; flex-direction:row; overflow-x:auto; flex-wrap:nowrap; padding-bottom:4px; height:auto; }
     .msg-thread { flex-shrink:0; width:130px; }
     .msg-main { height:340px; }
-    .player-detail { padding:14px; }
   }
 `;
 
@@ -379,55 +357,44 @@ function XpBar({ xp }) {
 }
 
 function SquadPill({ name }) {
-  const s = SQUAD_STYLE[name] || { bg: "#252525", text: "#999", border: "#303030" };
+  const s = SQUAD_STYLE[name] || { bg: "#252525", text: "#999" };
   return <span className="squad-pill" style={{ background: s.bg, color: s.text }}>{name}</span>;
 }
 
-// Banner colorato per le sezioni (colore + eventuale immagine)
 function SectionBanner({ sectionKey, title, sub, sectionColors, onEdit }) {
   const cfg = sectionColors?.[sectionKey] || DEFAULT_SECTION_COLORS[sectionKey] || { color: "#252525", image: null };
   return (
     <div className="section-banner" style={{ background: cfg.image ? undefined : cfg.color }}>
       {cfg.image && <div className="section-banner-bg" style={{ backgroundImage: `url(${cfg.image})` }} />}
       {cfg.image && <div className="section-banner-overlay" />}
-      <div className="section-banner-content" style={{ flex: 1 }}>
+      <div className="section-banner-content">
         <div className="section-banner-title" style={{ color: cfg.image ? "#fff" : "#101010" }}>{title}</div>
         {sub && <div className="section-banner-sub" style={{ color: cfg.image ? "rgba(255,255,255,.75)" : "rgba(0,0,0,.5)" }}>{sub}</div>}
       </div>
       {onEdit && (
-        <button className="btn btn-xs btn-ghost" style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,.35)", color: "#fff", border: "none", fontSize: 11, backdropFilter: "blur(4px)" }} onClick={onEdit}>✏️ Personalizza</button>
+        <button className="btn btn-xs" style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,.35)", color: "#fff", border: "none", fontSize: 11, backdropFilter: "blur(4px)" }} onClick={onEdit}>✏️</button>
       )}
     </div>
   );
 }
 
-// Personalizzazione banner (colore + immagine)
 function BannerCustomizer({ sectionKey, sectionColors, setSectionColors, onClose }) {
   const cfg = sectionColors?.[sectionKey] || DEFAULT_SECTION_COLORS[sectionKey] || { color: "#A3CFFE", image: null };
   const [color, setColor] = useState(cfg.color);
   const [image, setImage] = useState(cfg.image);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef();
-
   const PRESET_COLORS = [BRAND.azzurro, BRAND.rosa, BRAND.giallo, BRAND.verde, BRAND.rosso, "#252525", "#ffffff"];
 
   async function handleImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `banners/${sectionKey}.${ext}`;
-    const { error } = await sb.storage.from("avatars").upload(path, file, { upsert: true });
-    if (!error) {
-      const { data } = sb.storage.from("avatars").getPublicUrl(path);
-      setImage(data.publicUrl + "?t=" + Date.now());
-    }
+    await sb.storage.from("avatars").upload(path, file, { upsert: true });
+    const { data } = sb.storage.from("avatars").getPublicUrl(path);
+    setImage(data.publicUrl + "?t=" + Date.now());
     setUploading(false);
-  }
-
-  function save() {
-    setSectionColors(prev => ({ ...prev, [sectionKey]: { color, image } }));
-    onClose();
   }
 
   return (
@@ -436,9 +403,7 @@ function BannerCustomizer({ sectionKey, sectionColors, setSectionColors, onClose
         <div className="modal-title">Personalizza sezione</div>
         <div className="section-label">Colore sfondo</div>
         <div className="color-swatch-row">
-          {PRESET_COLORS.map(c => (
-            <div key={c} className={`color-swatch ${color === c ? "active" : ""}`} style={{ background: c }} onClick={() => setColor(c)} />
-          ))}
+          {PRESET_COLORS.map(c => <div key={c} className={`color-swatch ${color === c ? "active" : ""}`} style={{ background: c }} onClick={() => setColor(c)} />)}
           <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: 36, height: 36, border: "none", borderRadius: "50%", cursor: "pointer", padding: 0 }} />
         </div>
         <div className="section-label">Immagine di sfondo (opzionale)</div>
@@ -449,7 +414,7 @@ function BannerCustomizer({ sectionKey, sectionColors, setSectionColors, onClose
         </div>
         {image && <button className="btn btn-danger btn-sm" style={{ marginBottom: 8 }} onClick={() => setImage(null)}>Rimuovi immagine</button>}
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={save}>Salva</button>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { setSectionColors(prev => ({ ...prev, [sectionKey]: { color, image } })); onClose(); }}>Salva</button>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
         </div>
       </div>
@@ -463,19 +428,16 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   const [preview, setPreview] = useState(currentUrl);
 
   async function handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `avatars/${playerId}.${ext}`;
-    const { error: upErr } = await sb.storage.from("avatars").upload(path, file, { upsert: true });
-    if (upErr) { alert("Errore upload: " + upErr.message); setUploading(false); return; }
+    const { error } = await sb.storage.from("avatars").upload(path, file, { upsert: true });
+    if (error) { alert("Errore upload: " + error.message); setUploading(false); return; }
     const { data } = sb.storage.from("avatars").getPublicUrl(path);
     const url = data.publicUrl + "?t=" + Date.now();
     await sb.from("profiles").update({ avatar_url: url }).eq("id", playerId);
-    setPreview(url);
-    onUploaded && onUploaded(url);
-    setUploading(false);
+    setPreview(url); onUploaded && onUploaded(url); setUploading(false);
   }
 
   return (
@@ -487,57 +449,146 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   );
 }
 
-// ─── LOG HELPER ───────────────────────────────────────────
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
   try {
     await sb.from("notifications").insert({
-      user_id: playerId,
-      type: "log_action",
-      title: action,
+      user_id: playerId, type: "log_action", title: action,
       body: [xpDelta ? `+${xpDelta} XP` : "", coinDelta ? `+${coinDelta} Coin` : "", note].filter(Boolean).join(" · "),
     });
   } catch (_) {}
 }
 
 // ─── LOGIN ────────────────────────────────────────────────
+// Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
 
 function Login({ onLogin }) {
+  const [mode, setMode] = useState("player"); // "player" | "educator"
+
+  // Player login
+  const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [pin, setPin] = useState("");
+  const [pinErr, setPinErr] = useState("");
+  const [loadingPin, setLoadingPin] = useState(false);
+
+  // Educator login
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [remember, setRemember] = useState(true);
+  const [eduErr, setEduErr] = useState("");
+  const [loadingEdu, setLoadingEdu] = useState(false);
 
-  async function handleLogin() {
-    setLoading(true); setErr("");
+  // Cerca nickname mentre digiti
+  useEffect(() => {
+    if (search.length < 2) { setSuggestions([]); return; }
+    const t = setTimeout(async () => {
+      const { data } = await sb.from("profiles").select("id, display_name, avatar_url, xp, squads(name)").eq("role", "player").ilike("display_name", `%${search}%`).limit(8);
+      setSuggestions(data || []);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  async function loginPlayer() {
+    if (!selectedPlayer || pin.length < 4) return;
+    setLoadingPin(true); setPinErr("");
+    const { data } = await sb.from("profiles").select("*, squads(name)").eq("id", selectedPlayer.id).single();
+    if (!data) { setPinErr("Giocatore non trovato."); setLoadingPin(false); return; }
+    const correctPin = data.pin || "1234";
+    if (pin !== correctPin) { setPinErr("PIN non corretto!"); setLoadingPin(false); return; }
+    // Salva sessione player in localStorage
+    localStorage.setItem("pug_player", JSON.stringify({ ...data, _playerSession: true }));
+    onLogin({ ...data, _playerSession: true });
+    setLoadingPin(false);
+  }
+
+  async function loginEducator() {
+    setLoadingEdu(true); setEduErr("");
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) { setErr(error.message); setLoading(false); return; }
+    if (error) { setEduErr(error.message); setLoadingEdu(false); return; }
     const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
-    setLoading(false);
+    setLoadingEdu(false);
   }
+
+  const lv = selectedPlayer ? getLevel(selectedPlayer.xp || 0) : null;
 
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="login-logo">
-          <div className="login-title">Per·You<br/>Garden</div>
-          <p className="login-sub">Accedi al tuo account</p>
+        <div className="login-title">Per·You<br/>Garden</div>
+        <p className="login-sub">Accedi al tuo account</p>
+
+        <div className="login-tabs">
+          <button className={`login-tab ${mode === "player" ? "active" : ""}`} onClick={() => setMode("player")}>🌿 Sono un giocatore</button>
+          <button className={`login-tab ${mode === "educator" ? "active" : ""}`} onClick={() => setMode("educator")}>👑 Educatore</button>
         </div>
-        <div className="form-group">
-          <label className="form-label">Email</label>
-          <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="nome@email.com" autoComplete="email" />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Password</label>
-          <input className="form-input" type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="••••••••" autoComplete="current-password" />
-        </div>
-        <label className="remember-row">
-          <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
-          <span>Resta collegato</span>
-        </label>
-        <button className="btn btn-primary" onClick={handleLogin} disabled={loading}>{loading ? "Accesso…" : "Accedi"}</button>
-        {err && <p className="err-msg">{err}</p>}
+
+        {mode === "player" && (
+          <>
+            {!selectedPlayer ? (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Cerca il tuo nickname</label>
+                  <input className="form-input" value={search} onChange={e => { setSearch(e.target.value); setSelectedPlayer(null); }} placeholder="Scrivi il tuo nome…" autoComplete="off" />
+                </div>
+                {suggestions.length > 0 && (
+                  <div className="nickname-list">
+                    {suggestions.map(p => {
+                      const lv = getLevel(p.xp || 0);
+                      return (
+                        <div key={p.id} className="nickname-item" onClick={() => { setSelectedPlayer(p); setSearch(""); setSuggestions([]); }}>
+                          <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--border2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Avatar url={p.avatar_url} emoji={lv.emoji} size={32} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700 }}>{p.display_name}</div>
+                            {p.squads?.name && <SquadPill name={p.squads.name} />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {search.length >= 2 && suggestions.length === 0 && (
+                  <div style={{ fontSize: 13, color: "var(--text3)", textAlign: "center", padding: "12px 0" }}>Nessun giocatore trovato</div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Giocatore selezionato — inserisci PIN */}
+                <div style={{ textAlign: "center", marginBottom: 20 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", border: "3px solid var(--azzurro)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                    <Avatar url={selectedPlayer.avatar_url} emoji={lv?.emoji} size={64} />
+                  </div>
+                  <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{selectedPlayer.display_name}</div>
+                  {selectedPlayer.squads?.name && <SquadPill name={selectedPlayer.squads.name} />}
+                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 8 }} onClick={() => { setSelectedPlayer(null); setPin(""); setPinErr(""); }}>← Cambia</button>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">PIN (4 cifre)</label>
+                  <input className="form-input pin-input" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setPinErr(""); }} onKeyDown={e => e.key === "Enter" && loginPlayer()} placeholder="••••" autoFocus />
+                </div>
+                {pinErr && <p className="err-msg">{pinErr}</p>}
+                <button className="btn btn-primary" onClick={loginPlayer} disabled={loadingPin || pin.length < 4}>{loadingPin ? "Accesso…" : "Entra"}</button>
+              </>
+            )}
+          </>
+        )}
+
+        {mode === "educator" && (
+          <>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && loginEducator()} placeholder="nome@email.com" autoComplete="email" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input className="form-input" type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && loginEducator()} placeholder="••••••••" autoComplete="current-password" />
+            </div>
+            {eduErr && <p className="err-msg">{eduErr}</p>}
+            <button className="btn btn-primary" onClick={loginEducator} disabled={loadingEdu}>{loadingEdu ? "Accesso…" : "Accedi"}</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -545,7 +596,7 @@ function Login({ onLogin }) {
 
 // ─── EDUCATOR VIEWS ───────────────────────────────────────
 
-function PlayersView({ profile, sectionColors, setSectionColors }) {
+function PlayersView({ sectionColors, setSectionColors }) {
   const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
@@ -596,12 +647,15 @@ function PlayersView({ profile, sectionColors, setSectionColors }) {
   }
 
   async function savePlayer(p) {
-    await sb.from("profiles").update({ display_name: p.display_name, squad_id: p.squad_id, xp: p.xp, coin: p.coin }).eq("id", p.id);
+    await sb.from("profiles").update({ display_name: p.display_name, squad_id: p.squad_id, xp: p.xp, coin: p.coin, pin: p.pin || "1234" }).eq("id", p.id);
     setEditPlayer(null); load();
   }
 
-  function toggleSelect(id) {
-    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  async function resetAllPins() {
+    if (!confirm("Resettare tutti i PIN a 1234?")) return;
+    await sb.from("profiles").update({ pin: "1234" }).eq("role", "player");
+    setMsg("Tutti i PIN resettati a 1234");
+    setTimeout(() => setMsg(""), 3000);
   }
 
   return (
@@ -611,6 +665,10 @@ function PlayersView({ profile, sectionColors, setSectionColors }) {
         <div className="stat-card"><div className="stat-label">XP totali</div><div className="stat-value">{visible.reduce((a, p) => a + p.xp, 0).toLocaleString()}</div></div>
         <div className="stat-card"><div className="stat-label">Selezionati</div><div className="stat-value">{selected.size}</div></div>
         <div className="stat-card"><div className="stat-label">Squadre</div><div className="stat-value">{squads.length}</div></div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        <button className="btn btn-ghost btn-sm" onClick={resetAllPins}>🔑 Reset tutti PIN</button>
       </div>
 
       {selected.size > 0 && (
@@ -642,17 +700,15 @@ function PlayersView({ profile, sectionColors, setSectionColors }) {
           <div className="player-grid">
             {visible.map(p => {
               const lv = getLevel(p.xp);
-              const sq = p.squads?.name;
               return (
-                <div key={p.id} className={`player-card ${selected.has(p.id) ? "selected" : ""}`} onClick={() => { toggleSelect(p.id); setExpandedPlayer(null); }}>
-                  <div className="avatar-wrap" style={{ borderColor: SQUAD_STYLE[sq]?.bg || "var(--border2)" }}>
-                    <Avatar url={p.avatar_url} emoji={lv.emoji} />
-                  </div>
+                <div key={p.id} className={`player-card ${selected.has(p.id) ? "selected" : ""}`} onClick={() => { const n = new Set(selected); n.has(p.id) ? n.delete(p.id) : n.add(p.id); setSelected(n); }}>
+                  <div className="avatar-wrap"><Avatar url={p.avatar_url} emoji={lv.emoji} /></div>
                   <div className="p-name">{p.display_name}</div>
                   <div className="p-level">{lv.emoji} {lv.name}</div>
                   <div className="p-xp">{p.xp} XP</div>
                   <div className="p-coin">🪙 {p.coin}</div>
-                  {sq && <SquadPill name={sq} />}
+                  {p.squads?.name && <SquadPill name={p.squads.name} />}
+                  <div style={{ fontSize: 10, color: "var(--text3)", marginTop: 4 }}>PIN: <span style={{ color: "var(--azzurro)", fontWeight: 700 }}>{p.pin || "1234"}</span></div>
                   <div className="pts-row" onClick={e => e.stopPropagation()}>
                     <button className="pts-btn rem" onClick={() => changeXP(p.id, -10)}>−</button>
                     <button className="pts-btn add" onClick={() => changeXP(p.id, 10)}>+</button>
@@ -662,16 +718,12 @@ function PlayersView({ profile, sectionColors, setSectionColors }) {
                   <button className="btn btn-ghost btn-xs" style={{ marginTop: 8, width: "100%" }} onClick={e => { e.stopPropagation(); setExpandedPlayer(expandedPlayer === p.id ? null : p.id); }}>
                     {expandedPlayer === p.id ? "▲ Chiudi" : "🔍 Dettagli"}
                   </button>
-                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setEditPlayer({ ...p }); }}>✏️ Modifica</button>
+                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setEditPlayer({ ...p, pin: p.pin || "1234" }); }}>✏️ Modifica</button>
                 </div>
               );
             })}
           </div>
-
-          {/* Pannello dettaglio giocatore espandibile */}
-          {expandedPlayer && (
-            <PlayerDetailPanel playerId={expandedPlayer} squads={squads} onClose={() => setExpandedPlayer(null)} />
-          )}
+          {expandedPlayer && <PlayerDetailPanel playerId={expandedPlayer} squads={squads} onClose={() => setExpandedPlayer(null)} />}
         </>
       )}
 
@@ -680,10 +732,7 @@ function PlayersView({ profile, sectionColors, setSectionColors }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Modifica profilo</div>
             <AvatarUpload playerId={editPlayer.id} currentUrl={editPlayer.avatar_url} onUploaded={url => setEditPlayer(p => ({ ...p, avatar_url: url }))} />
-            <div className="form-group">
-              <label className="form-label">Nome</label>
-              <input className="form-input" value={editPlayer.display_name} onChange={e => setEditPlayer(p => ({ ...p, display_name: e.target.value }))} />
-            </div>
+            <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={editPlayer.display_name} onChange={e => setEditPlayer(p => ({ ...p, display_name: e.target.value }))} /></div>
             <div className="form-group">
               <label className="form-label">Squadra</label>
               <select value={editPlayer.squad_id || ""} onChange={e => setEditPlayer(p => ({ ...p, squad_id: e.target.value || null }))}>
@@ -691,9 +740,10 @@ function PlayersView({ profile, sectionColors, setSectionColors }) {
                 {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
               <div className="form-group"><label className="form-label">XP</label><input className="form-input" type="number" value={editPlayer.xp} onChange={e => setEditPlayer(p => ({ ...p, xp: Number(e.target.value) }))} /></div>
               <div className="form-group"><label className="form-label">Coin</label><input className="form-input" type="number" value={editPlayer.coin} onChange={e => setEditPlayer(p => ({ ...p, coin: Number(e.target.value) }))} /></div>
+              <div className="form-group"><label className="form-label">PIN</label><input className="form-input" type="text" maxLength={4} value={editPlayer.pin} onChange={e => setEditPlayer(p => ({ ...p, pin: e.target.value.replace(/\D/g, "").slice(0, 4) }))} style={{ textAlign: "center", fontFamily: "'Barlow Condensed'", fontSize: 20, letterSpacing: 4 }} /></div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => savePlayer(editPlayer)}>Salva</button>
@@ -706,7 +756,6 @@ function PlayersView({ profile, sectionColors, setSectionColors }) {
   );
 }
 
-// Pannello dettaglio giocatore (feature #4)
 function PlayerDetailPanel({ playerId, squads, onClose }) {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("storia");
@@ -724,17 +773,14 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
     load();
   }, [playerId]);
 
-  if (!data) return <div className="loading" style={{ minHeight: 80 }}>Caricamento dettagli…</div>;
-
+  if (!data) return <div className="loading" style={{ minHeight: 80 }}>Caricamento…</div>;
   const { profile, badges, attendances, history } = data;
   const lv = getLevel(profile?.xp || 0);
 
   return (
     <div className="player-detail">
       <div className="player-detail-header">
-        <div className="player-detail-av">
-          <Avatar url={profile?.avatar_url} emoji={lv.emoji} size={64} />
-        </div>
+        <div className="player-detail-av"><Avatar url={profile?.avatar_url} emoji={lv.emoji} size={64} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{profile?.display_name}</div>
           <div style={{ fontSize: 12, color: "var(--azzurro)", fontWeight: 600 }}>{lv.emoji} {lv.name} · {profile?.xp} XP · 🪙 {profile?.coin}</div>
@@ -742,16 +788,14 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
         </div>
         <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
       </div>
-
       <div className="detail-tabs">
         {[["storia","📜 Storia"],["badge","🎖️ Badge"],["presenze","✅ Presenze"]].map(([id, label]) => (
           <button key={id} className={`detail-tab ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</button>
         ))}
       </div>
-
       {tab === "storia" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
-          {history.length === 0 && <div className="empty" style={{ padding: "20px" }}>Nessuna azione registrata.</div>}
+          {history.length === 0 && <div className="empty" style={{ padding: "20px" }}>Nessuna azione.</div>}
           {history.map(n => (
             <div key={n.id} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
               <span style={{ fontSize: 16 }}>📌</span>
@@ -764,28 +808,26 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
           ))}
         </div>
       )}
-
       {tab === "badge" && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {badges.length === 0 && <div className="empty" style={{ padding: "20px", width: "100%" }}>Nessun badge.</div>}
           {badges.map(pb => (
             <div key={pb.id} style={{ textAlign: "center", width: 70 }}>
-              {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--rosa)" }} alt={pb.badges?.name} /> : <div style={{ fontSize: 32 }}>🎖️</div>}
-              <div style={{ fontSize: 10, color: "var(--text2)", marginTop: 4, lineHeight: 1.2 }}>{pb.badges?.name}</div>
+              {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--rosa)" }} alt="" /> : <div style={{ fontSize: 32 }}>🎖️</div>}
+              <div style={{ fontSize: 10, color: "var(--text2)", marginTop: 4 }}>{pb.badges?.name}</div>
             </div>
           ))}
         </div>
       )}
-
       {tab === "presenze" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 240, overflowY: "auto" }}>
-          {attendances.length === 0 && <div className="empty" style={{ padding: "20px" }}>Nessuna presenza registrata.</div>}
+          {attendances.length === 0 && <div className="empty" style={{ padding: "20px" }}>Nessuna presenza.</div>}
           {attendances.map(a => {
             const icons = { full: "✅", partial: "🟡", completed: "⭐", none: "❌" };
             return (
               <div key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
                 <span style={{ fontSize: 16 }}>{icons[a.status] || "—"}</span>
-                <span style={{ flex: 1, fontSize: 13, color: "var(--text)" }}>{a.date}</span>
+                <span style={{ flex: 1, fontSize: 13 }}>{a.date}</span>
                 <span style={{ fontSize: 12, color: "var(--azzurro)", fontWeight: 700 }}>+{a.xp_awarded || 0} XP</span>
               </div>
             );
@@ -821,7 +863,7 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
         <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
         {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
       </div>
-      {loading ? <div className="loading">⏳ Caricamento…</div> : (
+      {loading ? <div className="loading">⏳</div> : (
         <div className="lb-list">
           {visible.map((p, i) => {
             const lv = getLevel(p.xp);
@@ -851,7 +893,6 @@ function SquadsView() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [newSquad, setNewSquad] = useState({ name: "", color: "#A3CFFE" });
-
   const COLORS = [BRAND.azzurro, BRAND.rosa, BRAND.giallo, BRAND.verde, BRAND.rosso];
 
   const load = useCallback(async () => {
@@ -887,21 +928,18 @@ function SquadsView() {
             <div key={s.id} className="squad-row">
               <div className="squad-color-dot" style={{ background: s.color || "#A3CFFE" }} />
               <span className="squad-name">{s.name}</span>
-              <span className="squad-count">{players.filter(p => p.squad_id === s.id).length} giocatori</span>
+              <span className="squad-count" style={{ fontSize: 12, color: "var(--text3)" }}>{players.filter(p => p.squad_id === s.id).length} giocatori</span>
               <button className="btn btn-danger btn-sm" onClick={() => deleteSquad(s.id)}>Elimina</button>
             </div>
           ))}
-          {squads.length === 0 && <div className="empty">Nessuna squadra. Creane una!</div>}
+          {squads.length === 0 && <div className="empty">Nessuna squadra.</div>}
         </div>
       )}
       {showForm && (
         <div className="modal-bg" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Nuova squadra</div>
-            <div className="form-group">
-              <label className="form-label">Nome</label>
-              <input className="form-input" value={newSquad.name} onChange={e => setNewSquad(f => ({ ...f, name: e.target.value }))} placeholder="es. Rossa" />
-            </div>
+            <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={newSquad.name} onChange={e => setNewSquad(f => ({ ...f, name: e.target.value }))} placeholder="es. Rossa" /></div>
             <div className="form-group">
               <label className="form-label">Colore</label>
               <div className="color-swatch-row">
@@ -927,8 +965,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   const [squadFilter, setSquadFilter] = useState("all");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(true);
-  const [config] = useState({ xp_daily_checkin: 10, coin_daily_checkin: 5, xp_week_bonus: 50 });
   const [customizing, setCustomizing] = useState(false);
+  const config = { xp_daily_checkin: 10, coin_daily_checkin: 5, xp_week_bonus: 50 };
 
   useEffect(() => {
     async function load() {
@@ -966,7 +1004,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
       <div className="stats-grid">
         <div className="stat-card"><div className="stat-label">Presenti</div><div className="stat-value">{presentCount}</div></div>
         <div className="stat-card"><div className="stat-label">Totale</div><div className="stat-value">{visible.length}</div></div>
-        <div className="stat-card"><div className="stat-label">XP presenza</div><div className="stat-value">{config.xp_daily_checkin}</div></div>
+        <div className="stat-card"><div className="stat-label">XP pres.</div><div className="stat-value">{config.xp_daily_checkin}</div></div>
         <div className="stat-card"><div className="stat-label">Bonus sett.</div><div className="stat-value">{config.xp_week_bonus}</div></div>
       </div>
       <div className="filter-bar">
@@ -1024,8 +1062,8 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   useEffect(() => { load(); }, [load]);
 
   async function createActivity() {
-    const { data } = await sb.from("activities").insert({ ...form, max_participants: form.max_participants || null }).select().single();
-    if (data) { setActivities(prev => [data, ...prev]); setShowForm(false); }
+    await sb.from("activities").insert({ ...form, max_participants: form.max_participants || null });
+    setShowForm(false); load();
   }
 
   async function deleteActivity(id) {
@@ -1053,20 +1091,20 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               </div>
             </div>
           ))}
-          {activities.length === 0 && <div className="empty">Nessuna attività. Creane una!</div>}
+          {activities.length === 0 && <div className="empty">Nessuna attività.</div>}
         </div>
       )}
       {showForm && (
         <div className="modal-bg" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Nuova attività</div>
-            {[["name","Nome","text"],["description","Descrizione","text"],["duration_days","Durata (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k, label, type]) => (
-              <div className="form-group" key={k}><label className="form-label">{label}</label><input className="form-input" type={type} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} /></div>
+            {[["name","Nome","text"],["description","Descrizione","text"],["duration_days","Durata (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
+              <div className="form-group" key={k}><label className="form-label">{l}</label><input className="form-input" type={t} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} /></div>
             ))}
             <div className="section-label">XP per livello</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {[["xp_partial","Parz."],["xp_full","Compl."],["xp_completed","Fine"]].map(([k,label]) => (
-                <div key={k}><label className="form-label">{label}</label><input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} /></div>
+              {[["xp_partial","Parz."],["xp_full","Compl."],["xp_completed","Fine"]].map(([k,l]) => (
+                <div key={k}><label className="form-label">{l}</label><input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} /></div>
               ))}
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
@@ -1123,13 +1161,12 @@ function BadgesView({ sectionColors, setSectionColors }) {
     await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
     await sb.from("profiles").update({ xp: (player?.xp || 0) + Number(assignXp), coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
     await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: `Badge: ${badge?.name}`, body: `+${assignXp} XP, +${assignCoin} Coin` });
-    await logAction({ playerId: assignTarget, action: `Badge assegnato: ${badge?.name}`, xpDelta: Number(assignXp), coinDelta: Number(assignCoin) });
     setShowAssign(null);
   }
 
   async function createBadge() {
-    const { data } = await sb.from("badges").insert(newBadge).select().single();
-    if (data) { setBadges(prev => [data, ...prev]); setShowCreate(false); setNewBadge({ name: "", xp_default: 20, coin_default: 10, image_url: null }); }
+    await sb.from("badges").insert(newBadge);
+    load(); setShowCreate(false); setNewBadge({ name: "", xp_default: 20, coin_default: 10, image_url: null });
   }
 
   async function deleteBadge(id) {
@@ -1140,7 +1177,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
 
   return (
     <div>
-      <SectionBanner sectionKey="badge" title="Badge" sub={`${badges.length} badge creati`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="badge" title="Badge" sub={`${badges.length} badge`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
         <button className="btn btn-yellow btn-sm" onClick={() => setShowCreate(true)}>+ Nuovo badge</button>
       </div>
@@ -1156,7 +1193,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
               </div>
             </div>
           ))}
-          {badges.length === 0 && <div className="empty" style={{ gridColumn: "1/-1" }}>Nessun badge. Creane uno!</div>}
+          {badges.length === 0 && <div className="empty" style={{ gridColumn: "1/-1" }}>Nessun badge.</div>}
         </div>
       )}
 
@@ -1165,9 +1202,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Assegna badge</div>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
-              {badges.find(b => b.id === showAssign)?.image_url
-                ? <img src={badges.find(b => b.id === showAssign).image_url} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)" }} alt="" />
-                : <span style={{ fontSize: 48 }}>🎖️</span>}
+              {badges.find(b => b.id === showAssign)?.image_url ? <img src={badges.find(b => b.id === showAssign).image_url} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)" }} alt="" /> : <span style={{ fontSize: 48 }}>🎖️</span>}
               <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 20, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginTop: 6 }}>{badges.find(b => b.id === showAssign)?.name}</div>
             </div>
             <div className="form-group"><label className="form-label">Giocatore</label>
@@ -1180,7 +1215,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
               <div className="form-group"><label className="form-label">XP</label><input className="form-input" type="number" value={assignXp} onChange={e => setAssignXp(e.target.value)} /></div>
               <div className="form-group"><label className="form-label">Coin</label><input className="form-input" type="number" value={assignCoin} onChange={e => setAssignCoin(e.target.value)} /></div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={assignBadge} disabled={!assignTarget}>Assegna</button>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowAssign(null)}>Annulla</button>
             </div>
@@ -1209,26 +1244,21 @@ function BadgesView({ sectionColors, setSectionColors }) {
           </div>
         </div>
       )}
-
       {customizing && <BannerCustomizer sectionKey="badge" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
     </div>
   );
 }
 
-// Sfida del giorno (feature #1)
 function SfidaView({ sectionColors, setSectionColors }) {
   const [sfide, setSfide] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [customizing, setCustomizing] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", xp_reward: 20, coin_reward: 10, expires_at: "" });
+  const [form, setForm] = useState({ title: "", description: "", xp_reward: 20, coin_reward: 10 });
 
   const load = useCallback(async () => {
-    const { data } = await sb.from("activities").select("*").eq("is_active", true).ilike("description", "%sfida%").order("created_at", { ascending: false }).limit(10);
-    // Se non c'è una tabella sfide separata, usiamo le attività con tag sfida
-    // Per ora mostriamo le ultime attività come sfide
-    const { data: all } = await sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(5);
-    setSfide(all || []); setLoading(false);
+    const { data } = await sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(10);
+    setSfide(data?.filter(a => a.description?.includes("SFIDA")) || []); setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -1240,12 +1270,12 @@ function SfidaView({ sectionColors, setSectionColors }) {
 
   return (
     <div>
-      <SectionBanner sectionKey="sfida" title="Sfida del Giorno" sub="Crea sfide a tempo per i tuoi giocatori" sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="sfida" title="Sfida del Giorno" sub="Sfide a tempo per i giocatori" sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
         <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuova sfida</button>
       </div>
       {loading ? <div className="loading">⏳</div> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div>
           {sfide.map(s => (
             <div key={s.id} className="sfida-card">
               <div className="sfida-label">⚡ Sfida attiva</div>
@@ -1254,15 +1284,15 @@ function SfidaView({ sectionColors, setSectionColors }) {
               <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
             </div>
           ))}
-          {sfide.length === 0 && <div className="empty">Nessuna sfida attiva. Creane una!</div>}
+          {sfide.length === 0 && <div className="empty">Nessuna sfida attiva.</div>}
         </div>
       )}
       {showForm && (
         <div className="modal-bg" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Nuova sfida del giorno</div>
-            <div className="form-group"><label className="form-label">Titolo sfida</label><input className="form-input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="es. Corri 5 giri!" /></div>
-            <div className="form-group"><label className="form-label">Descrizione</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Descrivi la sfida..." /></div>
+            <div className="modal-title">Nuova sfida</div>
+            <div className="form-group"><label className="form-label">Titolo</label><input className="form-input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="es. Corri 5 giri!" /></div>
+            <div className="form-group"><label className="form-label">Descrizione</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div className="form-group"><label className="form-label">XP premio</label><input className="form-input" type="number" value={form.xp_reward} onChange={e => setForm(f => ({ ...f, xp_reward: e.target.value }))} /></div>
               <div className="form-group"><label className="form-label">Coin premio</label><input className="form-input" type="number" value={form.coin_reward} onChange={e => setForm(f => ({ ...f, coin_reward: e.target.value }))} /></div>
@@ -1279,7 +1309,6 @@ function SfidaView({ sectionColors, setSectionColors }) {
   );
 }
 
-// Diario giornate (educator-only)
 function DiaryView() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1287,17 +1316,14 @@ function DiaryView() {
 
   useEffect(() => {
     async function load() {
-      let q = sb.from("notifications").select("*, profiles(display_name, avatar_url)").order("created_at", { ascending: false }).limit(200);
-      if (dateFilter) {
-        q = q.gte("created_at", dateFilter + "T00:00:00").lte("created_at", dateFilter + "T23:59:59");
-      }
+      let q = sb.from("notifications").select("*, profiles(display_name)").order("created_at", { ascending: false }).limit(200);
+      if (dateFilter) q = q.gte("created_at", dateFilter + "T00:00:00").lte("created_at", dateFilter + "T23:59:59");
       const { data } = await q;
       setEntries(data || []); setLoading(false);
     }
     load();
   }, [dateFilter]);
 
-  // Raggruppa per data
   const grouped = {};
   entries.forEach(e => {
     const d = e.created_at?.split("T")[0] || "?";
@@ -1305,43 +1331,36 @@ function DiaryView() {
     grouped[d].push(e);
   });
 
-  const typeIcon = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", log_action: "📌", xp_manual: "⭐", default: "🔔" };
+  const typeIcon = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", log_action: "📌" };
 
   return (
     <div>
-      <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)", marginBottom: 16, letterSpacing: "-0.5px" }}>📜 Diario giornate</div>
+      <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)", marginBottom: 16 }}>📜 Diario giornate</div>
       <div className="filter-bar">
         <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
         {dateFilter && <button className="btn btn-ghost btn-sm" onClick={() => setDateFilter("")}>✕ Tutto</button>}
       </div>
-      {loading ? <div className="loading">⏳ Caricamento…</div> : (
-        Object.keys(grouped).length === 0
-          ? <div className="empty">Nessuna azione registrata.</div>
-          : Object.entries(grouped).map(([date, dayEntries]) => (
-            <div key={date} className="diary-day">
-              <div className="diary-date">{new Date(date).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</div>
-              {dayEntries.filter(e => e.profiles).map(e => (
-                <div key={e.id} className="diary-entry">
-                  <span className="diary-icon">{typeIcon[e.type] || typeIcon.default}</span>
-                  <div className="diary-text">
-                    <strong>{e.profiles?.display_name}</strong> · {e.title}
-                    {e.body && <span style={{ color: "var(--text2)", marginLeft: 4 }}>{e.body}</span>}
-                  </div>
-                  <div className="diary-pts">{new Date(e.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</div>
-                </div>
-              ))}
-            </div>
-          ))
+      {loading ? <div className="loading">⏳</div> : (
+        Object.keys(grouped).length === 0 ? <div className="empty">Nessuna azione registrata.</div> :
+        Object.entries(grouped).map(([date, dayEntries]) => (
+          <div key={date} className="diary-day">
+            <div className="diary-date">{new Date(date).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</div>
+            {dayEntries.filter(e => e.profiles).map(e => (
+              <div key={e.id} className="diary-entry">
+                <span className="diary-icon">{typeIcon[e.type] || "🔔"}</span>
+                <div className="diary-text"><strong>{e.profiles?.display_name}</strong> · {e.title}{e.body && <span style={{ color: "var(--text2)", marginLeft: 4 }}>{e.body}</span>}</div>
+                <div className="diary-pts">{new Date(e.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</div>
+              </div>
+            ))}
+          </div>
+        ))
       )}
     </div>
   );
 }
 
 function MessagesView({ profile }) {
-  const threads = [
-    { id: "verde", name: "Squadra Verde" }, { id: "gialla", name: "Squadra Gialla" },
-    { id: "azzurra", name: "Squadra Azzurra" }, { id: "tutti", name: "Tutti" },
-  ];
+  const threads = [{ id: "verde", name: "Squadra Verde" }, { id: "gialla", name: "Squadra Gialla" }, { id: "azzurra", name: "Squadra Azzurra" }, { id: "tutti", name: "Tutti" }];
   const [active, setActive] = useState(threads[0]);
   const [msgs, setMsgs] = useState([{ id: 1, body: "Benvenuto nella chat! 🌿", mine: false }]);
   const [input, setInput] = useState("");
@@ -1405,7 +1424,7 @@ function BookingsView() {
               <div key={b.id} className="card-sm">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{b.profiles?.display_name}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{b.profiles?.display_name}</div>
                     <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 2 }}>{b.activities?.name} · 🪙 {b.coin_held}</div>
                   </div>
                   <span className={`tag ${tc}`}>{tl}</span>
@@ -1469,9 +1488,9 @@ function QrView() {
 
 // ─── PLAYER DASHBOARD ─────────────────────────────────────
 
-function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
+function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [tab, setTab] = useState("profilo");
-  const [fullProfile, setFullProfile] = useState(null);
+  const [fullProfile, setFullProfile] = useState(profile);
   const [badges, setBadges] = useState([]);
   const [activities, setActivities] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -1481,7 +1500,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
   const [loading, setLoading] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
-  const [savingName, setSavingName] = useState(false);
 
   const load = useCallback(async () => {
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }] = await Promise.all([
@@ -1491,18 +1509,19 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
       sb.from("bookings").select("*, activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("*").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
     ]);
-    setFullProfile(p); setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []);
+    if (p) setFullProfile(p);
+    setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []);
     setLoading(false);
   }, [profile.id]);
 
-  // Realtime (feature #6)
   useEffect(() => {
     load();
-    const channel = sb.channel("player_" + profile.id)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` }, () => { load(); })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, () => { load(); })
+    // Realtime updates
+    const channel = sb.channel("player_notifs_" + profile.id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, load)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` }, load)
       .subscribe();
-    return () => { sb.removeChannel(channel); };
+    return () => sb.removeChannel(channel);
   }, [profile.id, load]);
 
   async function doCheckin() {
@@ -1510,8 +1529,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
     const { data: qr } = await sb.from("daily_qr").select("*").eq("date", today).single();
     if (!qr) { setQrMsg("Nessun QR attivo oggi."); return; }
     if (qrInput.toUpperCase() !== qr.code) { setQrMsg("❌ Codice non valido."); return; }
-    const now = new Date();
-    if (now < new Date(qr.valid_from) || now > new Date(qr.valid_until)) { setQrMsg("⏰ Codice scaduto."); return; }
     const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: 10, coin_awarded: 5, qr_verified: true });
     if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
     await sb.from("profiles").update({ xp: (fullProfile?.xp || 0) + 10, coin: (fullProfile?.coin || 0) + 5 }).eq("id", profile.id);
@@ -1529,22 +1546,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
 
   async function saveName() {
     if (!newName.trim() || newName.length > 30) return;
-    setSavingName(true);
     await sb.from("profiles").update({ display_name: newName.trim() }).eq("id", profile.id);
     setFullProfile(prev => ({ ...prev, display_name: newName.trim() }));
-    setEditingName(false); setSavingName(false);
+    localStorage.setItem("pug_player", JSON.stringify({ ...fullProfile, display_name: newName.trim(), _playerSession: true }));
+    setEditingName(false);
   }
 
   const lv = getLevel(fullProfile?.xp || 0);
   const unread = notifications.filter(n => !n.read_at).length;
-
-  const PLAYER_TABS = [
-    ["profilo","👤","Profilo"],
-    ["checkin","📍","Check-in"],
-    ["attivita","⚡","Attività"],
-    ["badge","🎖️","Badge"],
-    ["notifiche","🔔",""],
-  ];
 
   if (loading) return <div className="loading" style={{ minHeight: "100vh" }}>🌿 Caricamento…</div>;
 
@@ -1565,9 +1574,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
       </div>
 
       {/* Contenuto */}
-      <div style={{ paddingTop: 66, paddingBottom: "calc(70px + env(safe-area-inset-bottom,0px))", padding: "70px 14px calc(70px + env(safe-area-inset-bottom,0px))" }}>
+      <div style={{ paddingTop: 70, paddingBottom: "calc(70px + env(safe-area-inset-bottom,0px))", padding: "70px 14px calc(70px + env(safe-area-inset-bottom,0px))" }}>
 
-        {/* PROFILO */}
         {tab === "profilo" && fullProfile && (
           <>
             <div className="profile-hero">
@@ -1575,21 +1583,21 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
               <div className="profile-name">{fullProfile.display_name}</div>
               <div className="profile-level">{lv.emoji} {lv.name}</div>
               {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name} />}
-              <div style={{ marginTop: 16, position: "relative" }}><XpBar xp={fullProfile.xp} /></div>
+              <div style={{ marginTop: 16 }}><XpBar xp={fullProfile.xp} /></div>
               <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 18 }}>
-                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--azzurro)" }}>{fullProfile.xp}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em" }}>XP</div></div>
-                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--giallo)" }}>🪙 {fullProfile.coin}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em" }}>Coin</div></div>
-                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--rosa)" }}>{badges.length}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em" }}>Badge</div></div>
+                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--azzurro)" }}>{fullProfile.xp}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>XP</div></div>
+                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--giallo)" }}>🪙 {fullProfile.coin}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>Coin</div></div>
+                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--rosa)" }}>{badges.length}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>Badge</div></div>
               </div>
             </div>
 
-            {/* Modifica nome (unica cosa editabile) */}
+            {/* Modifica nome */}
             <div className="card" style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Il tuo nome in gioco</div>
               {editingName ? (
                 <div style={{ display: "flex", gap: 8 }}>
                   <input className="form-input" value={newName} onChange={e => setNewName(e.target.value.slice(0, 30))} placeholder="Inserisci nome…" style={{ flex: 1 }} maxLength={30} autoFocus />
-                  <button className="btn btn-yellow btn-sm" onClick={saveName} disabled={savingName || !newName.trim()}>{savingName ? "…" : "Salva"}</button>
+                  <button className="btn btn-yellow btn-sm" onClick={saveName} disabled={!newName.trim()}>Salva</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => setEditingName(false)}>✕</button>
                 </div>
               ) : (
@@ -1598,7 +1606,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
                   <button className="btn btn-ghost btn-xs" onClick={() => { setNewName(fullProfile.display_name); setEditingName(true); }}>✏️ Modifica</button>
                 </div>
               )}
-              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>Puoi cambiare solo il tuo nome · Max 30 caratteri</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>Solo il nome è modificabile · Max 30 caratteri</div>
             </div>
 
             {/* Badge nel profilo */}
@@ -1608,9 +1616,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   {badges.map(pb => (
                     <div key={pb.id} style={{ textAlign: "center", width: 64 }}>
-                      {pb.badges?.image_url
-                        ? <img src={pb.badges.image_url} style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2.5px solid var(--rosa)", display: "block", margin: "0 auto 4px" }} alt={pb.badges?.name} />
-                        : <div style={{ fontSize: 36, marginBottom: 4 }}>🎖️</div>}
+                      {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2.5px solid var(--rosa)", display: "block", margin: "0 auto 4px" }} alt={pb.badges?.name} /> : <div style={{ fontSize: 36, marginBottom: 4 }}>🎖️</div>}
                       <div style={{ fontSize: 10, color: "var(--text2)", lineHeight: 1.2, fontWeight: 600 }}>{pb.badges?.name}</div>
                     </div>
                   ))}
@@ -1618,10 +1624,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
               </div>
             )}
 
-            {/* Prenotazioni recenti */}
             {bookings.length > 0 && (
               <>
-                <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 14, fontWeight: 900, textTransform: "uppercase", color: "var(--text3)", letterSpacing: ".08em", marginBottom: 8 }}>Prenotazioni</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Prenotazioni</div>
                 {bookings.slice(0, 5).map(b => {
                   const s = { pending: ["tag-amber","In attesa"], confirmed: ["tag-green","Confermata"], rejected: ["tag-red","Rifiutata"] };
                   const [cls, label] = s[b.status] || ["tag-gray", b.status];
@@ -1632,7 +1637,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
           </>
         )}
 
-        {/* CHECK-IN */}
         {tab === "checkin" && (
           <div className="card" style={{ marginTop: 8 }}>
             <div style={{ textAlign: "center", padding: "24px 0" }}>
@@ -1650,10 +1654,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
           </div>
         )}
 
-        {/* ATTIVITÀ + SFIDE */}
         {tab === "attivita" && (
           <div style={{ marginTop: 8 }}>
-            {/* Sfida del giorno in evidenza */}
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
               <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
                 <div className="sfida-label">⚡ Sfida del giorno</div>
@@ -1675,14 +1677,13 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
                 </button>
               </div>
             ))}
-            {activities.length === 0 && <div className="empty">Nessuna attività disponibile.</div>}
+            {activities.length === 0 && <div className="empty">Nessuna attività.</div>}
           </div>
         )}
 
-        {/* BADGE */}
         {tab === "badge" && (
           <div style={{ marginTop: 8 }}>
-            <SectionBanner sectionKey="badge" title="I tuoi badge" sub={`${badges.length} badge conquistati`} sectionColors={sectionColors} />
+            <SectionBanner sectionKey="badge" title="I tuoi badge" sub={`${badges.length} conquistati`} sectionColors={sectionColors} />
             {badges.length === 0 ? <div className="empty">Nessun badge ancora. Continua così!</div> : (
               <div className="badge-grid">
                 {badges.map(pb => (
@@ -1697,11 +1698,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
           </div>
         )}
 
-        {/* NOTIFICHE */}
         {tab === "notifiche" && (
           <div style={{ marginTop: 8 }}>
             {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
-              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", week_bonus: "🏆" };
+              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙" };
               return (
                 <div key={n.id} className="notif-item">
                   <div className="notif-icon">{icons[n.type] || "🔔"}</div>
@@ -1717,13 +1717,13 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
         )}
       </div>
 
-      {/* Bottom nav giocatore */}
+      {/* Bottom nav */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--nero)", borderTop: "1px solid var(--border)", zIndex: 20, display: "flex", paddingBottom: "env(safe-area-inset-bottom,0px)" }}>
-        {PLAYER_TABS.map(([id, icon, badge]) => (
+        {[["profilo","👤","Profilo"],["checkin","📍","Check-in"],["attivita","⚡","Attività"],["badge","🎖️","Badge"],["notifiche","🔔","Notifiche"]].map(([id, icon, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: "10px 0", background: "none", border: "none", cursor: "pointer", color: tab === id ? "var(--azzurro)" : "var(--text3)", fontFamily: "'Funnel Display'", position: "relative" }}>
             <span style={{ fontSize: 22 }}>{icon}</span>
             {id === "notifiche" && unread > 0 && <span style={{ position: "absolute", top: 6, right: "calc(50% - 18px)", background: "var(--rosa)", color: "#fff", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px" }}>{unread}</span>}
-            <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>{["Profilo","Check-in","Attività","Badge","Notifiche"][["profilo","checkin","attivita","badge","notifiche"].indexOf(id)]}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</span>
           </button>
         ))}
       </div>
@@ -1734,19 +1734,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
 // ─── EDUCATOR SHELL ───────────────────────────────────────
 
 const EDUCATOR_TABS = [
-  ["giocatori","👤","Giocatori"],
-  ["classifica","🏆","Classifica"],
-  ["squadre","🛡️","Squadre"],
-  ["presenze","✅","Presenze"],
-  ["attivita","⚡","Attività"],
-  ["sfida","🔥","Sfida"],
-  ["badge","🎖️","Badge"],
-  ["prenotazioni","📋","Prenotazioni"],
-  ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"],
-  ["qr","📍","QR"],
+  ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
+  ["presenze","✅","Presenze"], ["attivita","⚡","Attività"], ["sfida","🔥","Sfida"],
+  ["badge","🎖️","Badge"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
+  ["diario","📜","Diario"], ["qr","📍","QR"],
 ];
-
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
 function EducatorShell({ profile, onLogout }) {
@@ -1761,12 +1753,7 @@ function EducatorShell({ profile, onLogout }) {
   const lv = getLevel(profile.xp || 0);
   const mobTabs = EDUCATOR_TABS.filter(t => MOB_TABS_IDS.includes(t[0]));
 
-  // Theme toggle (feature #5)
-  useEffect(() => {
-    document.body.classList.toggle("light", theme === "light");
-  }, [theme]);
-
-  function goTo(id) { setTab(id); setDrawerOpen(false); }
+  useEffect(() => { document.body.classList.toggle("light", theme === "light"); }, [theme]);
 
   const sharedProps = { sectionColors, setSectionColors };
 
@@ -1795,7 +1782,6 @@ function EducatorShell({ profile, onLogout }) {
               <div style={{ fontSize: 11, color: "var(--text3)" }}>{profile.role}</div>
             </div>
           </div>
-          {/* Theme toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 12, color: "var(--text3)" }}>{theme === "dark" ? "🌙" : "☀️"}</span>
             <button className="theme-toggle" style={{ background: theme === "light" ? "var(--azzurro)" : "var(--surface3)" }} onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}>
@@ -1826,32 +1812,21 @@ function EducatorShell({ profile, onLogout }) {
         </div>
         <nav style={{ flex: 1, padding: "10px 0", overflowY: "auto" }}>
           {EDUCATOR_TABS.map(([id, icon, label]) => (
-            <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => goTo(id)}>
+            <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => { setTab(id); setDrawerOpen(false); }}>
               <span className="nav-icon">{icon}</span><span>{label}</span>
             </div>
           ))}
         </nav>
         <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, cursor: "pointer" }} onClick={() => { setShowAvatarModal(true); setDrawerOpen(false); }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", border: "2.5px solid var(--azzurro)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Avatar url={avatarUrl} emoji={lv.emoji} size={36} />
-            </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{profile.display_name}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)" }}>{profile.role}</div>
-            </div>
-          </div>
           <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={onLogout}>Esci</button>
         </div>
       </div>
 
       {/* Main */}
       <div className="edu-main">
-        <div className="topbar">
-          <div className="topbar-title">{cur?.[1]} {cur?.[2]}</div>
-        </div>
+        <div className="topbar"><div className="topbar-title">{cur?.[1]} {cur?.[2]}</div></div>
         <div className="content edu-content-wrap">
-          {tab === "giocatori"    && <PlayersView profile={profile} {...sharedProps} />}
+          {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
           {tab === "squadre"      && <SquadsView />}
           {tab === "presenze"     && <AttendanceView {...sharedProps} />}
@@ -1871,7 +1846,7 @@ function EducatorShell({ profile, onLogout }) {
           {mobTabs.map(([id, icon, label]) => (
             <button key={id} className={`mob-nav-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
               <span style={{ fontSize: 22 }}>{icon}</span>
-              <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em" }}>{label}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase" }}>{label}</span>
             </button>
           ))}
           <button className={`mob-nav-btn ${!MOB_TABS_IDS.includes(tab) ? "active" : ""}`} onClick={() => setDrawerOpen(true)}>
@@ -1881,7 +1856,6 @@ function EducatorShell({ profile, onLogout }) {
         </div>
       </div>
 
-      {/* Avatar modal */}
       {showAvatarModal && (
         <div className="modal-bg" onClick={() => setShowAvatarModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -1903,6 +1877,24 @@ export default function App() {
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
   useEffect(() => {
+    // Controlla prima sessione player (localStorage)
+    const savedPlayer = localStorage.getItem("pug_player");
+    if (savedPlayer) {
+      try {
+        const p = JSON.parse(savedPlayer);
+        if (p?._playerSession && p?.id) {
+          // Verifica che il profilo esista ancora
+          sb.from("profiles").select("*, squads(name)").eq("id", p.id).single().then(({ data }) => {
+            if (data) setProfile({ ...data, _playerSession: true });
+            else localStorage.removeItem("pug_player");
+            setChecking(false);
+          });
+          return;
+        }
+      } catch (_) { localStorage.removeItem("pug_player"); }
+    }
+
+    // Poi controlla sessione educator (Supabase Auth)
     sb.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
@@ -1910,6 +1902,7 @@ export default function App() {
       }
       setChecking(false);
     });
+
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT") setProfile(null);
       if (event === "SIGNED_IN" && session) {
@@ -1921,6 +1914,7 @@ export default function App() {
   }, []);
 
   async function onLogout() {
+    localStorage.removeItem("pug_player");
     await sb.auth.signOut();
     setProfile(null);
     document.body.classList.remove("light");
