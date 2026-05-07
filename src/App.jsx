@@ -1,1156 +1,7 @@
 import { sb } from "./supabase.js";
-import { useState, useEffect, useCallback } from "react";
-
-const LEVELS = [
-  {id:1,name:"Seme",emoji:"🌱",xp:0},{id:2,name:"Germoglio",emoji:"🌿",xp:50},
-  {id:3,name:"Foglia",emoji:"🍃",xp:100},{id:4,name:"Fiore",emoji:"🌸",xp:150},
-  {id:5,name:"Frutto",emoji:"🍎",xp:200},{id:6,name:"Radice",emoji:"🪴",xp:250},
-  {id:7,name:"Stelo",emoji:"🌾",xp:300},{id:8,name:"Tronco",emoji:"🪵",xp:350},
-  {id:9,name:"Albero",emoji:"🌳",xp:400},{id:10,name:"Bosco",emoji:"🌲",xp:450},
-  {id:11,name:"Micelio",emoji:"🍄",xp:610},{id:12,name:"Creatura Selvatica",emoji:"🦊",xp:730},
-  {id:13,name:"Guardiano Notturno",emoji:"🌙",xp:860},{id:14,name:"Fauno del Blocco",emoji:"🔥",xp:1000},
-  {id:15,name:"Dryad Kid",emoji:"🧚",xp:1150},{id:16,name:"Spirito Verde",emoji:"🌀",xp:1350},
-  {id:17,name:"Folletto Hyper",emoji:"⚡",xp:1560},{id:18,name:"Custode Segreto",emoji:"👁️",xp:1780},
-  {id:19,name:"Campione della Chioma",emoji:"🏆",xp:2010},{id:20,name:"Re/Regina delle Fronde",emoji:"👑",xp:2250},
-  {id:21,name:"Foresta Mistica",emoji:"🌌",xp:2550},{id:22,name:"Creatura Leggendaria",emoji:"🐉",xp:2860},
-  {id:23,name:"Mythic Verde",emoji:"💎",xp:3180},{id:24,name:"Boss della Radura",emoji:"🔥",xp:3510},
-  {id:25,name:"Garden Boss",emoji:"👑🌿",xp:4000},
-];
-
-function getLevel(xp) {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (xp >= LEVELS[i].xp) return LEVELS[i];
-  }
-  return LEVELS[0];
-}
-
-const SQUAD_STYLE = {
-  Verde:   { bg: "#EAF3DE", text: "#3B6D11", border: "#97C459" },
-  Gialla:  { bg: "#FAEEDA", text: "#854F0B", border: "#EF9F27" },
-  Azzurra: { bg: "#E6F1FB", text: "#185FA5", border: "#85B7EB" },
-};
-
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: #0f1412; color: #e8f0ec; min-height: 100vh; }
-  :root {
-    --green: #3B6D11; --green-light: #EAF3DE; --green-mid: #639922;
-    --amber: #854F0B; --amber-light: #FAEEDA;
-    --blue: #185FA5; --blue-light: #E6F1FB;
-    --surface: #1a2420; --surface2: #222e29; --surface3: #2a3830;
-    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
-    --text: #e8f0ec; --text2: #8fa898; --text3: #5a6e62;
-    --accent: #4a9e2a; --accent2: #63c93a;
-    --danger: #e24b4a; --warning: #EF9F27;
-    --radius: 12px; --radius-sm: 8px;
-  }
-  .app { display: flex; min-height: 100vh; }
-  .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; width: 100%; background: #0f1412; }
-  .login-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; }
-  .login-logo { text-align: center; margin-bottom: 32px; }
-  .login-logo-icon { font-size: 48px; display: block; margin-bottom: 8px; }
-  .login-logo h1 { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }
-  .login-logo p { font-size: 13px; color: var(--text2); margin-top: 4px; }
-  .form-group { margin-bottom: 16px; }
-  .form-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: .05em; }
-  .form-input { width: 100%; padding: 11px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color .15s; }
-  .form-input:focus { border-color: var(--accent); }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; transition: all .15s; white-space: nowrap; }
-  .btn-primary { background: var(--accent); color: #fff; width: 100%; padding: 13px; font-size: 14px; }
-  .btn-primary:hover { background: var(--accent2); }
-  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
-  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
-  .btn-danger { background: rgba(226,75,74,.15); color: var(--danger); border: 1px solid rgba(226,75,74,.3); }
-  .btn-danger:hover { background: rgba(226,75,74,.25); }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
-  .btn-icon { width: 32px; height: 32px; padding: 0; border-radius: 50%; }
-  .err-msg { font-size: 12px; color: var(--danger); margin-top: 10px; text-align: center; }
-  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-  .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
-  .sidebar-logo-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
-  .sidebar-logo-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
-  .nav { flex: 1; padding: 10px 0; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; color: var(--text2); border-left: 2px solid transparent; transition: all .12s; }
-  .nav-item:hover { background: var(--surface2); color: var(--text); }
-  .nav-item.active { background: rgba(74,158,42,.1); color: var(--accent2); border-left-color: var(--accent); font-weight: 500; }
-  .nav-icon { font-size: 15px; width: 20px; text-align: center; }
-  .sidebar-user { padding: 14px 18px; border-top: 1px solid var(--border); }
-  .sidebar-user-name { font-size: 12px; font-weight: 500; color: var(--text); }
-  .sidebar-user-role { font-size: 11px; color: var(--text3); margin-top: 2px; }
-  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-  .topbar { padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-  .topbar h2 { font-size: 16px; font-weight: 600; color: var(--text); margin-right: auto; }
-  .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
-  .card-sm { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-  .stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
-  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
-  .stat-value { font-size: 24px; font-weight: 600; color: var(--text); }
-  .stat-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
-  .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-  .player-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 10px; text-align: center; cursor: pointer; transition: all .15s; position: relative; }
-  .player-card:hover { border-color: var(--border2); transform: translateY(-1px); }
-  .player-card.selected { border-color: var(--accent); background: rgba(74,158,42,.08); }
-  .avatar-wrap { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 26px; border: 2px solid var(--border2); }
-  .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
-  .p-name { font-size: 11px; font-weight: 500; color: var(--text); margin-bottom: 3px; word-break: break-word; line-height: 1.3; }
-  .p-level { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
-  .p-xp { font-size: 11px; font-weight: 500; color: var(--accent2); }
-  .p-coin { font-size: 10px; color: var(--amber); }
-  .squad-pill { font-size: 9px; padding: 2px 7px; border-radius: 99px; display: inline-block; margin-top: 5px; font-weight: 500; }
-  .pts-row { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
-  .pts-btn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border2); background: var(--surface3); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; color: var(--text2); font-family: 'DM Sans', sans-serif; transition: all .1s; line-height: 1; }
-  .pts-btn:hover { background: var(--surface); }
-  .pts-btn.add { color: var(--accent2); border-color: rgba(99,201,58,.3); }
-  .pts-btn.rem { color: var(--danger); border-color: rgba(226,75,74,.3); }
-  .badge-indicator { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--warning); }
-  .lb-list { display: flex; flex-direction: column; gap: 6px; }
-  .lb-row { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; transition: border-color .12s; }
-  .lb-row:hover { border-color: var(--border2); }
-  .lb-rank { font-size: 13px; font-weight: 600; width: 28px; text-align: center; color: var(--text3); flex-shrink: 0; }
-  .lb-rank.gold { color: #EF9F27; } .lb-rank.silver { color: #8fa898; } .lb-rank.bronze { color: #D85A30; }
-  .lb-av { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--border2); }
-  .lb-av img { width: 100%; height: 100%; object-fit: cover; }
-  .lb-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lb-level { font-size: 11px; color: var(--text3); }
-  .lb-bar-wrap { width: 80px; height: 4px; background: var(--surface3); border-radius: 99px; overflow: hidden; flex-shrink: 0; }
-  .lb-bar { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
-  .lb-xp { font-size: 12px; font-weight: 500; color: var(--accent2); width: 55px; text-align: right; flex-shrink: 0; }
-  .lb-coin { font-size: 11px; color: var(--amber); width: 45px; text-align: right; flex-shrink: 0; }
-  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-  .search-inp { padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; flex: 1; min-width: 160px; transition: border-color .15s; }
-  .search-inp:focus { border-color: var(--accent); }
-  .chip { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border2); background: transparent; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; transition: all .12s; font-weight: 500; }
-  .chip:hover { background: var(--surface2); color: var(--text); }
-  .chip.active { background: rgba(74,158,42,.15); color: var(--accent2); border-color: rgba(74,158,42,.4); }
-  .batch-panel { background: rgba(74,158,42,.06); border: 1px solid rgba(74,158,42,.2); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .batch-info { font-size: 13px; color: var(--accent2); font-weight: 500; flex: 1; }
-  .batch-inp { width: 80px; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; text-align: center; }
-  .batch-inp:focus { border-color: var(--accent); }
-  .pres-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .pres-table th { padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 600; color: var(--text3); border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .05em; position: sticky; top: 0; background: #0f1412; }
-  .pres-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
-  .pres-dot { width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; font-family: 'DM Sans', sans-serif; transition: transform .1s; }
-  .pres-dot:active { transform: scale(.9); }
-  .pd-yes { background: rgba(74,158,42,.2); color: var(--accent2); }
-  .pd-partial { background: rgba(239,159,39,.2); color: var(--warning); }
-  .pd-completed { background: rgba(74,158,42,.35); color: #63c93a; }
-  .pd-none { background: var(--surface3); color: var(--text3); }
-  .act-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .act-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; transition: border-color .12s; }
-  .act-card:hover { border-color: var(--border2); }
-  .act-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .act-meta { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
-  .act-rewards { display: flex; gap: 6px; flex-wrap: wrap; }
-  .reward-tag { font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
-  .xp-tag { background: rgba(74,158,42,.15); color: var(--accent2); }
-  .coin-tag { background: rgba(239,159,39,.15); color: var(--warning); }
-  .day-tag { background: var(--surface3); color: var(--text2); }
-  .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
-  .badge-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 10px; text-align: center; cursor: pointer; transition: all .15s; }
-  .badge-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-  .badge-img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; margin: 0 auto 8px; display: block; border: 2px solid var(--border2); }
-  .badge-emoji { font-size: 32px; display: block; margin: 0 auto 8px; }
-  .badge-name { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1.3; }
-  .badge-pts { font-size: 10px; color: var(--text2); margin-top: 3px; }
-  .msg-layout { display: flex; gap: 12px; height: 500px; }
-  .msg-list { width: 180px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex-shrink: 0; }
-  .msg-thread { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: border-color .12s; }
-  .msg-thread:hover { border-color: var(--border2); }
-  .msg-thread.active { border-color: var(--accent); background: rgba(74,158,42,.08); }
-  .mt-name { font-size: 12px; font-weight: 500; color: var(--text); }
-  .mt-last { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .msg-main { flex: 1; display: flex; flex-direction: column; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .msg-hdr { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 500; color: var(--text); }
-  .msg-body { flex: 1; padding: 14px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-  .bubble-wrap { display: flex; gap: 8px; }
-  .bubble-wrap.mine { flex-direction: row-reverse; }
-  .bubble-av { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; background: var(--surface3); overflow: hidden; }
-  .bubble-av img { width: 100%; height: 100%; object-fit: cover; }
-  .bubble { max-width: 220px; padding: 8px 12px; border-radius: 12px; font-size: 12px; line-height: 1.6; }
-  .bubble.them { background: var(--surface3); color: var(--text); border-bottom-left-radius: 4px; }
-  .bubble.mine { background: rgba(74,158,42,.2); color: var(--accent2); border-bottom-right-radius: 4px; }
-  .msg-inp-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
-  .msg-inp { flex: 1; padding: 8px 12px; background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px; outline: none; }
-  .msg-inp:focus { border-color: var(--accent); }
-  .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: inline-block; margin-left: 4px; vertical-align: middle; }
-  .notif-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .notif-icon { font-size: 20px; flex-shrink: 0; }
-  .notif-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
-  .notif-body { font-size: 12px; color: var(--text2); }
-  .notif-time { font-size: 10px; color: var(--text3); margin-top: 3px; }
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 24px; width: 100%; max-width: 460px; max-height: 80vh; overflow-y: auto; }
-  .modal-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
-  .section-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin: 14px 0 8px; }
-  .profile-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; text-align: center; margin-bottom: 16px; }
-  .profile-avatar { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 14px; border: 3px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 40px; overflow: hidden; }
-  .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .profile-name { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .profile-level { font-size: 14px; color: var(--accent2); margin-bottom: 12px; }
-  .xp-bar-wrap { height: 6px; background: var(--surface3); border-radius: 99px; overflow: hidden; margin: 8px 0; }
-  .xp-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width .6s; }
-  .xp-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); }
-  .qr-wrap { text-align: center; padding: 24px; }
-  .qr-code { font-family: 'DM Mono', monospace; font-size: 48px; font-weight: 500; color: var(--accent2); letter-spacing: 8px; margin: 16px 0; }
-  .qr-date { font-size: 13px; color: var(--text2); }
-  .loading { display: flex; align-items: center; justify-content: center; min-height: 200px; color: var(--text2); font-size: 14px; }
-  .empty { text-align: center; padding: 40px; color: var(--text3); font-size: 13px; }
-  .tag { font-size: 10px; padding: 2px 8px; border-radius: 99px; display: inline-block; font-weight: 500; }
-  .tag-green { background: rgba(74,158,42,.15); color: var(--accent2); }
-  .tag-amber { background: rgba(239,159,39,.15); color: var(--warning); }
-  .tag-red { background: rgba(226,75,74,.15); color: var(--danger); }
-  .tag-gray { background: var(--surface3); color: var(--text2); }
-  select { padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; }
-  select:focus { border-color: var(--accent); }
-  textarea { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; resize: vertical; min-height: 80px; }
-  textarea:focus { border-color: var(--accent); }
-  @media (max-width: 768px) {
-    .sidebar { width: 56px; }
-    .sidebar-logo-title span, .nav-item span, .sidebar-user { display: none; }
-    .nav-item { justify-content: center; padding: 12px; }
-    .stats-grid { grid-template-columns: 1fr 1fr; }
-    .act-grid { grid-template-columns: 1fr; }
-    .player-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
-  }
-`;
-
-// ─── HELPER: crea profilo fallback da sessione ─────────────
-// Usato quando il profilo non esiste ancora nel DB
-function makeFallbackProfile(userId, email) {
-  return { id: userId, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 };
-}
-
-// ─── COMPONENTS ───────────────────────────────────────────
-
-function Avatar({ url, emoji, size = 40 }) {
-  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }} />;
-  return <span style={{ fontSize: size * 0.55 }}>{emoji || "🌱"}</span>;
-}
-
-function XpBar({ xp }) {
-  const lv = getLevel(xp);
-  const nextLv = LEVELS.find(l => l.xp > xp);
-  const pct = nextLv ? Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100) : 100;
-  return (
-    <div>
-      <div className="xp-bar-wrap"><div className="xp-bar" style={{ width: pct + "%" }} /></div>
-      <div className="xp-label"><span>{xp} XP</span>{nextLv && <span>{nextLv.xp} XP</span>}</div>
-    </div>
-  );
-}
-
-function SquadPill({ name }) {
-  const s = SQUAD_STYLE[name] || { bg: "#1a2420", text: "#8fa898", border: "#2a3830" };
-  return <span className="squad-pill" style={{ background: s.bg + "33", color: s.text, border: `1px solid ${s.border}44` }}>{name}</span>;
-}
-
-// ─── LOGIN ────────────────────────────────────────────────
-
-function Login({ onLogin }) {
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleLogin() {
-    setLoading(true); setErr("");
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) { setErr(error.message); setLoading(false); return; }
-    const { data: profile } = await sb.from("profiles").select("*").eq("id", data.user.id).single();
-    // ✅ FIX 1: se il profilo non esiste usa educator come fallback (non player)
-    onLogin(profile || makeFallbackProfile(data.user.id, email));
-    setLoading(false);
-  }
-
-  return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <div className="login-logo">
-          <span className="login-logo-icon">🌿</span>
-          <h1>PUG Scoreboard</h1>
-          <p>Accedi al tuo account</p>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Email</label>
-          <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="nome@email.com" />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Password</label>
-          <input className="form-input" type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="••••••••" />
-        </div>
-        <button className="btn btn-primary" onClick={handleLogin} disabled={loading}>
-          {loading ? "Accesso in corso…" : "Accedi"}
-        </button>
-        {err && <p className="err-msg">{err}</p>}
-      </div>
-    </div>
-  );
-}
-
-// ─── EDUCATOR VIEWS ───────────────────────────────────────
-
-function PlayersView({ profile }) {
-  const [players, setPlayers] = useState([]);
-  const [squads, setSquads] = useState([]);
-  const [search, setSearch] = useState("");
-  const [squadFilter, setSquadFilter] = useState("all");
-  const [selected, setSelected] = useState(new Set());
-  const [loading, setLoading] = useState(true);
-  const [batchXp, setBatchXp] = useState(10);
-  const [batchCoin, setBatchCoin] = useState(5);
-  const [msg, setMsg] = useState("");
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    const { data } = await sb.from("profiles").select("*, squads(name, color)").eq("role", "player").order("xp", { ascending: false });
-    const { data: sq } = await sb.from("squads").select("*");
-    setPlayers(data || []);
-    setSquads(sq || []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const visible = players.filter(p => {
-    const sq = squadFilter === "all" || p.squads?.name === squadFilter;
-    const sr = !search || p.display_name.toLowerCase().includes(search.toLowerCase());
-    return sq && sr;
-  });
-
-  async function changeXP(playerId, delta, field = "xp") {
-    const p = players.find(x => x.id === playerId);
-    if (!p) return;
-    const newVal = Math.max(0, p[field] + delta);
-    await sb.from("profiles").update({ [field]: newVal }).eq("id", playerId);
-    setPlayers(prev => prev.map(x => x.id === playerId ? { ...x, [field]: newVal } : x));
-  }
-
-  async function applyBatch() {
-    if (!selected.size) return;
-    const ids = [...selected];
-    for (const id of ids) {
-      const p = players.find(x => x.id === id);
-      if (!p) continue;
-      await sb.from("profiles").update({ xp: p.xp + Number(batchXp), coin: p.coin + Number(batchCoin) }).eq("id", id);
-    }
-    setMsg(`+${batchXp} XP e +${batchCoin} coin assegnati a ${ids.length} giocatori`);
-    setSelected(new Set());
-    load();
-    setTimeout(() => setMsg(""), 3000);
-  }
-
-  function toggleSelect(id) {
-    setSelected(prev => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-  }
-
-  function selectAll() {
-    setSelected(prev => prev.size === visible.length ? new Set() : new Set(visible.map(p => p.id)));
-  }
-
-  const totalXP = visible.reduce((a, p) => a + p.xp, 0);
-
-  return (
-    <div>
-      <div className="stats-grid">
-        <div className="stat-card"><div className="stat-label">Giocatori</div><div className="stat-value">{visible.length}</div></div>
-        <div className="stat-card"><div className="stat-label">XP totali</div><div className="stat-value">{totalXP.toLocaleString()}</div></div>
-        <div className="stat-card"><div className="stat-label">Selezionati</div><div className="stat-value">{selected.size}</div></div>
-        <div className="stat-card"><div className="stat-label">Squadre</div><div className="stat-value">{squads.length}</div></div>
-      </div>
-
-      {selected.size > 0 && (
-        <div className="batch-panel">
-          <span className="batch-info">{selected.size} giocatori selezionati</span>
-          <input className="batch-inp" type="number" value={batchXp} onChange={e => setBatchXp(e.target.value)} placeholder="XP" />
-          <span style={{ fontSize: 12, color: "var(--text3)" }}>XP</span>
-          <input className="batch-inp" type="number" value={batchCoin} onChange={e => setBatchCoin(e.target.value)} placeholder="Coin" />
-          <span style={{ fontSize: 12, color: "var(--text3)" }}>Coin</span>
-          <button className="btn btn-primary btn-sm" onClick={applyBatch}>Assegna</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>Annulla</button>
-        </div>
-      )}
-      {msg && <div style={{ background: "rgba(74,158,42,.1)", border: "1px solid rgba(74,158,42,.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "var(--accent2)" }}>{msg}</div>}
-
-      <div className="filter-bar">
-        <input className="search-inp" placeholder="Cerca giocatore…" value={search} onChange={e => setSearch(e.target.value)} />
-        <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
-        {squads.map(s => (
-          <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>
-        ))}
-        <button className="btn btn-ghost btn-sm" onClick={selectAll}>{selected.size === visible.length ? "Deseleziona tutti" : "Seleziona tutti"}</button>
-      </div>
-
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="player-grid">
-          {visible.map(p => {
-            const lv = getLevel(p.xp);
-            const sq = p.squads?.name;
-            const sqStyle = SQUAD_STYLE[sq] || {};
-            return (
-              <div key={p.id} className={`player-card ${selected.has(p.id) ? "selected" : ""}`} onClick={() => toggleSelect(p.id)}>
-                {p.player_badges?.length > 0 && <div className="badge-indicator" />}
-                <div className="avatar-wrap" style={{ borderColor: sqStyle.border || "var(--border2)" }}>
-                  <Avatar url={p.avatar_url} emoji={lv.emoji} />
-                </div>
-                <div className="p-name">{p.display_name}</div>
-                <div className="p-level">{lv.emoji} {lv.name}</div>
-                <div className="p-xp">{p.xp} XP</div>
-                <div className="p-coin">🪙 {p.coin}</div>
-                {sq && <SquadPill name={sq} />}
-                <div className="pts-row" onClick={e => e.stopPropagation()}>
-                  <button className="pts-btn rem" onClick={() => changeXP(p.id, -10)}>−</button>
-                  <button className="pts-btn add" onClick={() => changeXP(p.id, 10)}>+</button>
-                  <button className="pts-btn rem" style={{ fontSize: 10, width: 32, borderRadius: 8 }} onClick={() => changeXP(p.id, -5, "coin")}>🪙−</button>
-                  <button className="pts-btn add" style={{ fontSize: 10, width: 32, borderRadius: 8 }} onClick={() => changeXP(p.id, 5, "coin")}>🪙+</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function LeaderboardView() {
-  const [players, setPlayers] = useState([]);
-  const [squadFilter, setSquadFilter] = useState("all");
-  const [squads, setSquads] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      const { data } = await sb.from("profiles").select("*, squads(name)").eq("role", "player").order("xp", { ascending: false });
-      const { data: sq } = await sb.from("squads").select("*");
-      setPlayers(data || []);
-      setSquads(sq || []);
-      setLoading(false);
-    }
-    load();
-  }, []);
-
-  const visible = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
-  const maxXP = visible[0]?.xp || 1;
-  const medals = ["gold", "silver", "bronze"];
-  const medalLabel = ["1°", "2°", "3°"];
-
-  return (
-    <div>
-      <div className="filter-bar">
-        <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
-        {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
-      </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="lb-list">
-          {visible.map((p, i) => {
-            const lv = getLevel(p.xp);
-            return (
-              <div key={p.id} className="lb-row">
-                <span className={`lb-rank ${i < 3 ? medals[i] : ""}`}>{i < 3 ? medalLabel[i] : (i + 1) + "°"}</span>
-                <div className="lb-av"><Avatar url={p.avatar_url} emoji={lv.emoji} size={36} /></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="lb-name">{p.display_name}</div>
-                  <div className="lb-level">{lv.emoji} {lv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
-                </div>
-                <div className="lb-bar-wrap"><div className="lb-bar" style={{ width: Math.round(p.xp / maxXP * 100) + "%" }} /></div>
-                <span className="lb-xp">{p.xp} XP</span>
-                <span className="lb-coin">🪙 {p.coin}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AttendanceView() {
-  const [players, setPlayers] = useState([]);
-  const [squads, setSquads] = useState([]);
-  const [attendances, setAttendances] = useState({});
-  const [squadFilter, setSquadFilter] = useState("all");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState({ xp_daily_checkin: "10", coin_daily_checkin: "5", xp_week_bonus: "50", coin_week_bonus: "25" });
-
-  useEffect(() => {
-    async function load() {
-      const [{ data: pl }, { data: sq }, { data: att }, { data: cfg }] = await Promise.all([
-        sb.from("profiles").select("*, squads(name)").eq("role", "player").order("display_name"),
-        sb.from("squads").select("*"),
-        sb.from("attendances").select("*").eq("date", date).eq("check_type", "daily"),
-        sb.from("config").select("*"),
-      ]);
-      setPlayers(pl || []);
-      setSquads(sq || []);
-      const attMap = {};
-      (att || []).forEach(a => { attMap[a.player_id] = a; });
-      setAttendances(attMap);
-      const cfgMap = {};
-      (cfg || []).forEach(c => { cfgMap[c.key] = c.value; });
-      setConfig(prev => ({ ...prev, ...cfgMap }));
-      setLoading(false);
-    }
-    load();
-  }, [date]);
-
-  async function setStatus(playerId, status) {
-    const existing = attendances[playerId];
-    const xp = status === "none" ? 0 : Number(config.xp_daily_checkin);
-    const coin = status === "none" ? 0 : Number(config.coin_daily_checkin);
-    if (existing) {
-      await sb.from("attendances").update({ status, xp_awarded: xp, coin_awarded: coin }).eq("id", existing.id);
-    } else {
-      await sb.from("attendances").insert({ player_id: playerId, date, check_type: "daily", status, xp_awarded: xp, coin_awarded: coin, qr_verified: false });
-    }
-    if (status !== "none") {
-      await sb.from("profiles").update({ xp: (players.find(p => p.id === playerId)?.xp || 0) + xp, coin: (players.find(p => p.id === playerId)?.coin || 0) + coin }).eq("id", playerId);
-    }
-    setAttendances(prev => ({ ...prev, [playerId]: { ...existing, status, player_id: playerId } }));
-  }
-
-  async function markAllPresent() {
-    const vis = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
-    for (const p of vis) { await setStatus(p.id, "full"); }
-  }
-
-  const visible = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
-  const presentCount = Object.values(attendances).filter(a => a.status !== "none").length;
-
-  return (
-    <div>
-      <div className="stats-grid">
-        <div className="stat-card"><div className="stat-label">Presenti oggi</div><div className="stat-value">{presentCount}</div></div>
-        <div className="stat-card"><div className="stat-label">Totale</div><div className="stat-value">{visible.length}</div></div>
-        <div className="stat-card"><div className="stat-label">XP presenza</div><div className="stat-value">{config.xp_daily_checkin}</div></div>
-        <div className="stat-card"><div className="stat-label">Bonus settimana</div><div className="stat-value">{config.xp_week_bonus} XP</div></div>
-      </div>
-      <div className="filter-bar">
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ padding: "7px 10px", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 8, color: "var(--text)", fontFamily: "DM Sans", fontSize: 13 }} />
-        <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
-        {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
-        <button className="btn btn-primary btn-sm" onClick={markAllPresent}>✓ Tutti presenti</button>
-      </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <table className="pres-table">
-            <thead><tr><th>Giocatore</th><th>Squadra</th><th>Livello</th><th>Stato</th><th>XP</th><th>Coin</th></tr></thead>
-            <tbody>
-              {visible.map(p => {
-                const lv = getLevel(p.xp);
-                const att = attendances[p.id];
-                const status = att?.status || "none";
-                return (
-                  <tr key={p.id}>
-                    <td style={{ fontWeight: 500 }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Avatar url={p.avatar_url} emoji={lv.emoji} size={28} />{p.display_name}</div></td>
-                    <td>{p.squads?.name && <SquadPill name={p.squads.name} />}</td>
-                    <td style={{ fontSize: 11, color: "var(--text2)" }}>{lv.emoji} {lv.name}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        {[["none","?","pd-none"],["partial","~","pd-partial"],["full","✓","pd-yes"],["completed","★","pd-completed"]].map(([s, label, cls]) => (
-                          <button key={s} className={`pres-dot ${cls}`} style={{ opacity: status === s ? 1 : 0.35 }} onClick={() => setStatus(p.id, s)}>{label}</button>
-                        ))}
-                      </div>
-                    </td>
-                    <td style={{ fontFamily: "DM Mono", fontSize: 12, color: "var(--accent2)" }}>{p.xp}</td>
-                    <td style={{ fontFamily: "DM Mono", fontSize: 12, color: "var(--warning)" }}>{p.coin}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ActivitiesView() {
-  const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" });
-
-  useEffect(() => {
-    sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }).then(({ data }) => { setActivities(data || []); setLoading(false); });
-  }, []);
-
-  async function createActivity() {
-    const { data } = await sb.from("activities").insert({ ...form, max_participants: form.max_participants || null }).select().single();
-    if (data) { setActivities(prev => [data, ...prev]); setShowForm(false); setForm({ name: "", description: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" }); }
-  }
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>+ Nuova attività</button>
-      </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="act-grid">
-          {activities.map(a => (
-            <div key={a.id} className="act-card">
-              <div className="act-title">{a.name}</div>
-              <div className="act-meta">{a.description} · <span className="tag tag-gray">{a.duration_days} giorni</span></div>
-              <div className="act-rewards">
-                <span className="reward-tag xp-tag">Parziale: {a.xp_partial} XP</span>
-                <span className="reward-tag xp-tag">Completa: {a.xp_full} XP</span>
-                <span className="reward-tag xp-tag">Completata: {a.xp_completed} XP</span>
-                <span className="reward-tag coin-tag">🪙 {a.coin_cost} per prenotare</span>
-              </div>
-            </div>
-          ))}
-          {activities.length === 0 && <div className="empty" style={{ gridColumn: "1/-1" }}>Nessuna attività ancora. Creane una!</div>}
-        </div>
-      )}
-      {showForm && (
-        <div className="modal-bg" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Nuova attività</div>
-            {[["name","Nome attività","text"],["description","Descrizione","text"],["duration_days","Durata (giorni)","number"],["coin_cost","Costo prenotazione (coin)","number"],["max_participants","Max partecipanti (opzionale)","number"]].map(([k, label, type]) => (
-              <div className="form-group" key={k}>
-                <label className="form-label">{label}</label>
-                <input className="form-input" type={type} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
-              </div>
-            ))}
-            <div className="section-label">XP per livello di presenza</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {[["xp_partial","Parziale"],["xp_full","Completa"],["xp_completed","Completata"]].map(([k, label]) => (
-                <div key={k}>
-                  <label className="form-label">{label}</label>
-                  <input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} />
-                </div>
-              ))}
-            </div>
-            <div className="section-label">Coin per livello di presenza</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {[["coin_partial","Parziale"],["coin_full","Completa"],["coin_completed","Completata"]].map(([k, label]) => (
-                <div key={k}>
-                  <label className="form-label">{label}</label>
-                  <input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} />
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createActivity}>Crea attività</button>
-              <button className="btn btn-ghost" onClick={() => setShowForm(false)}>Annulla</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BadgesView() {
-  const [badges, setBadges] = useState([]);
-  const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showAssign, setShowAssign] = useState(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [assignTarget, setAssignTarget] = useState("");
-  const [assignXp, setAssignXp] = useState(0);
-  const [assignCoin, setAssignCoin] = useState(0);
-  const [newBadge, setNewBadge] = useState({ name: "", xp_default: 20, coin_default: 10 });
-
-  useEffect(() => {
-    async function load() {
-      const [{ data: b }, { data: p }] = await Promise.all([sb.from("badges").select("*").order("created_at", { ascending: false }), sb.from("profiles").select("id, display_name").eq("role", "player").order("display_name")]);
-      setBadges(b || []); setPlayers(p || []); setLoading(false);
-    }
-    load();
-  }, []);
-
-  async function assignBadge() {
-    if (!assignTarget || !showAssign) return;
-    const badge = badges.find(b => b.id === showAssign);
-    await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
-    await sb.from("profiles").update({ xp: (players.find(p => p.id === assignTarget)?.xp || 0) + Number(assignXp), coin: (players.find(p => p.id === assignTarget)?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
-    await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: "Nuovo badge ricevuto!", body: `Hai ricevuto il badge "${badge?.name}"` });
-    setShowAssign(null);
-  }
-
-  async function createBadge() {
-    const { data } = await sb.from("badges").insert(newBadge).select().single();
-    if (data) { setBadges(prev => [data, ...prev]); setShowCreate(false); }
-  }
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>+ Nuovo badge</button>
-      </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="badge-grid">
-          {badges.map(b => (
-            <div key={b.id} className="badge-card" onClick={() => { setShowAssign(b.id); setAssignXp(b.xp_default); setAssignCoin(b.coin_default); }}>
-              {b.image_url ? <img className="badge-img" src={b.image_url} alt={b.name} /> : <span className="badge-emoji">🎖️</span>}
-              <div className="badge-name">{b.name}</div>
-              <div className="badge-pts">+{b.xp_default} XP · 🪙{b.coin_default}</div>
-            </div>
-          ))}
-          {badges.length === 0 && <div className="empty" style={{ gridColumn: "1/-1" }}>Nessun badge ancora.</div>}
-        </div>
-      )}
-      {showAssign && (
-        <div className="modal-bg" onClick={() => setShowAssign(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Assegna badge</div>
-            <div className="form-group">
-              <label className="form-label">Giocatore</label>
-              <select style={{ width: "100%" }} value={assignTarget} onChange={e => setAssignTarget(e.target.value)}>
-                <option value="">Seleziona giocatore…</option>
-                {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-              </select>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <div className="form-group"><label className="form-label">XP</label><input className="form-input" type="number" value={assignXp} onChange={e => setAssignXp(e.target.value)} /></div>
-              <div className="form-group"><label className="form-label">Coin</label><input className="form-input" type="number" value={assignCoin} onChange={e => setAssignCoin(e.target.value)} /></div>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={assignBadge} disabled={!assignTarget}>Assegna</button>
-              <button className="btn btn-ghost" onClick={() => setShowAssign(null)}>Annulla</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showCreate && (
-        <div className="modal-bg" onClick={() => setShowCreate(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Crea nuovo badge</div>
-            <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={newBadge.name} onChange={e => setNewBadge(f => ({ ...f, name: e.target.value }))} /></div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <div className="form-group"><label className="form-label">XP default</label><input className="form-input" type="number" value={newBadge.xp_default} onChange={e => setNewBadge(f => ({ ...f, xp_default: Number(e.target.value) }))} /></div>
-              <div className="form-group"><label className="form-label">Coin default</label><input className="form-input" type="number" value={newBadge.coin_default} onChange={e => setNewBadge(f => ({ ...f, coin_default: Number(e.target.value) }))} /></div>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createBadge} disabled={!newBadge.name}>Crea badge</button>
-              <button className="btn btn-ghost" onClick={() => setShowCreate(false)}>Annulla</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MessagesView({ profile }) {
-  const [threads] = useState([
-    { id: "verde", name: "Squadra Verde", last: "Ottimo allenamento!" },
-    { id: "gialla", name: "Squadra Gialla", last: "Ci vediamo sabato?" },
-    { id: "azzurra", name: "Squadra Azzurra", last: "Grande partita!" },
-    { id: "tutti", name: "Tutti", last: "Evento sabato!" },
-  ]);
-  const [active, setActive] = useState(threads[0]);
-  const [msgs, setMsgs] = useState([{ id: 1, sender: "Sistema", body: "Benvenuto nella chat!", mine: false }]);
-  const [input, setInput] = useState("");
-
-  function send() {
-    if (!input.trim()) return;
-    setMsgs(prev => [...prev, { id: Date.now(), sender: profile.display_name, body: input, mine: true }]);
-    setInput("");
-  }
-
-  return (
-    <div className="msg-layout">
-      <div className="msg-list">
-        <div className="section-label" style={{ marginTop: 0 }}>Canali</div>
-        {threads.map(t => (
-          <div key={t.id} className={`msg-thread ${active.id === t.id ? "active" : ""}`} onClick={() => setActive(t)}>
-            <div className="mt-name">{t.name}</div>
-            <div className="mt-last">{t.last}</div>
-          </div>
-        ))}
-      </div>
-      <div className="msg-main">
-        <div className="msg-hdr">{active.name}</div>
-        <div className="msg-body">
-          {msgs.map(m => (
-            <div key={m.id} className={`bubble-wrap ${m.mine ? "mine" : ""}`}>
-              <div className="bubble-av">{m.mine ? "👑" : "🌿"}</div>
-              <div>
-                {!m.mine && <div style={{ fontSize: 10, color: "var(--text3)", marginBottom: 2 }}>{m.sender}</div>}
-                <div className={`bubble ${m.mine ? "mine" : "them"}`}>{m.body}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="msg-inp-row">
-          <input className="msg-inp" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Scrivi un messaggio…" />
-          <button className="btn btn-primary btn-sm" onClick={send}>Invia</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BookingsView() {
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      const { data } = await sb.from("bookings").select("*, profiles(display_name), activities(name, coin_cost)").order("created_at", { ascending: false });
-      setBookings(data || []);
-      setLoading(false);
-    }
-    load();
-  }, []);
-
-  async function review(id, status, playerId, coinHeld) {
-    await sb.from("bookings").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
-    if (status === "rejected") {
-      const { data: p } = await sb.from("profiles").select("coin").eq("id", playerId).single();
-      await sb.from("profiles").update({ coin: (p?.coin || 0) + coinHeld }).eq("id", playerId);
-    }
-    await sb.from("notifications").insert({ user_id: playerId, type: status === "confirmed" ? "booking_confirmed" : "booking_rejected", title: status === "confirmed" ? "Prenotazione confermata!" : "Prenotazione non accettata", body: status === "confirmed" ? "La tua prenotazione è stata confermata." : "Le tue coin sono state restituite." });
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-  }
-
-  const statusTag = { pending: ["tag-amber", "In attesa"], confirmed: ["tag-green", "Confermata"], rejected: ["tag-red", "Rifiutata"], cancelled: ["tag-gray", "Annullata"] };
-
-  return (
-    <div>
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <table className="pres-table">
-            <thead><tr><th>Giocatore</th><th>Attività</th><th>Coin</th><th>Stato</th><th>Azioni</th></tr></thead>
-            <tbody>
-              {bookings.map(b => {
-                const [tagClass, tagLabel] = statusTag[b.status] || ["tag-gray", b.status];
-                return (
-                  <tr key={b.id}>
-                    <td style={{ fontWeight: 500 }}>{b.profiles?.display_name}</td>
-                    <td>{b.activities?.name}</td>
-                    <td style={{ color: "var(--warning)" }}>🪙 {b.coin_held}</td>
-                    <td><span className={`tag ${tagClass}`}>{tagLabel}</span></td>
-                    <td>
-                      {b.status === "pending" && (
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-sm" style={{ background: "rgba(74,158,42,.15)", color: "var(--accent2)", border: "1px solid rgba(74,158,42,.3)" }} onClick={() => review(b.id, "confirmed", b.player_id, b.coin_held)}>✓ Conferma</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => review(b.id, "rejected", b.player_id, b.coin_held)}>✗ Rifiuta</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {bookings.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", padding: 32, color: "var(--text3)" }}>Nessuna prenotazione</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function QrView() {
-  const [qr, setQr] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const today = new Date().toISOString().split("T")[0];
-
-  useEffect(() => {
-    async function load() {
-      const { data } = await sb.from("daily_qr").select("*").eq("date", today).single();
-      setQr(data);
-      setLoading(false);
-    }
-    load();
-  }, [today]);
-
-  async function generateQr() {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const validFrom = new Date(); validFrom.setHours(8, 0, 0, 0);
-    const validUntil = new Date(); validUntil.setHours(12, 0, 0, 0);
-    const { data } = await sb.from("daily_qr").upsert({ date: today, code, valid_from: validFrom.toISOString(), valid_until: validUntil.toISOString() }).select().single();
-    setQr(data);
-  }
-
-  return (
-    <div className="card" style={{ maxWidth: 400, margin: "0 auto" }}>
-      <div className="qr-wrap">
-        <div style={{ fontSize: 14, color: "var(--text2)", marginBottom: 8 }}>QR Check-in giornaliero</div>
-        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 20 }}>{today}</div>
-        {loading ? <div className="loading">Caricamento…</div> : qr ? (
-          <>
-            <div style={{ background: "var(--surface3)", borderRadius: 16, padding: "20px 28px", marginBottom: 16 }}>
-              <div className="qr-code">{qr.code}</div>
-            </div>
-            <div className="qr-date">Valido dalle {new Date(qr.valid_from).getHours()}:00 alle {new Date(qr.valid_until).getHours()}:00</div>
-            <div style={{ marginTop: 8, fontSize: 11, color: "var(--text3)" }}>Mostra o stampa questo codice in loco</div>
-            <button className="btn btn-ghost" style={{ marginTop: 16, width: "100%" }} onClick={generateQr}>Rigenera codice</button>
-          </>
-        ) : (
-          <>
-            <div style={{ color: "var(--text3)", fontSize: 13, marginBottom: 20 }}>Nessun codice generato per oggi</div>
-            <button className="btn btn-primary" style={{ width: "100%" }} onClick={generateQr}>Genera QR di oggi</button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── PLAYER VIEW ──────────────────────────────────────────
-
-function PlayerDashboard({ profile, onLogout }) {
-  const [tab, setTab] = useState("profilo");
-  const [fullProfile, setFullProfile] = useState(null);
-  const [badges, setBadges] = useState([]);
-  const [activities, setActivities] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [qrInput, setQrInput] = useState("");
-  const [qrMsg, setQrMsg] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }] = await Promise.all([
-        sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single(),
-        sb.from("player_badges").select("*, badges(*)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
-        sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }),
-        sb.from("bookings").select("*, activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
-        sb.from("notifications").select("*").eq("user_id", profile.id).order("created_at", { ascending: false }).limit(20),
-      ]);
-      setFullProfile(p); setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []);
-      setLoading(false);
-    }
-    load();
-  }, [profile.id]);
-
-  async function doCheckin() {
-    const today = new Date().toISOString().split("T")[0];
-    const { data: qr } = await sb.from("daily_qr").select("*").eq("date", today).single();
-    if (!qr) { setQrMsg("Nessun QR attivo oggi."); return; }
-    if (qrInput.toUpperCase() !== qr.code) { setQrMsg("Codice non valido. Riprova."); return; }
-    const now = new Date();
-    if (now < new Date(qr.valid_from) || now > new Date(qr.valid_until)) { setQrMsg("Il codice non è più valido per questa fascia oraria."); return; }
-    const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: 10, coin_awarded: 5, qr_verified: true });
-    if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
-    await sb.from("profiles").update({ xp: (fullProfile?.xp || 0) + 10, coin: (fullProfile?.coin || 0) + 5 }).eq("id", profile.id);
-    setQrMsg("✓ Check-in effettuato! +10 XP, +5 Coin");
-    setFullProfile(prev => ({ ...prev, xp: (prev?.xp || 0) + 10, coin: (prev?.coin || 0) + 5 }));
-  }
-
-  async function bookActivity(actId, cost) {
-    if ((fullProfile?.coin || 0) < cost) { alert("Coin insufficienti!"); return; }
-    await sb.from("bookings").insert({ player_id: profile.id, activity_id: actId, coin_held: cost });
-    await sb.from("profiles").update({ coin: (fullProfile?.coin || 0) - cost }).eq("id", profile.id);
-    setFullProfile(prev => ({ ...prev, coin: (prev?.coin || 0) - cost }));
-    alert("Prenotazione inviata! Attendi la conferma dell'educatore.");
-  }
-
-  const lv = getLevel(fullProfile?.xp || 0);
-  const nextLv = LEVELS.find(l => l.xp > (fullProfile?.xp || 0));
-  const unread = notifications.filter(n => !n.read_at).length;
-  const tabs = [["profilo","👤","Profilo"],["checkin","📍","Check-in"],["attivita","⚡","Attività"],["badge","🎖️","Badge"],["notifiche","🔔",`Notifiche${unread > 0 ? " ●" : ""}`]];
-
-  if (loading) return <div className="loading" style={{ minHeight: "100vh" }}>Caricamento…</div>;
-
-  return (
-    <div style={{ maxWidth: 500, margin: "0 auto", padding: "16px", minHeight: "100vh" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>🌿 PUG Scoreboard</div>
-        <button className="btn btn-ghost btn-sm" onClick={onLogout}>Esci</button>
-      </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, overflow: "auto", paddingBottom: 4 }}>
-        {tabs.map(([id, icon, label]) => (
-          <button key={id} className={`chip ${tab === id ? "active" : ""}`} onClick={() => setTab(id)} style={{ flexShrink: 0 }}>{icon} {label}</button>
-        ))}
-      </div>
-
-      {tab === "profilo" && fullProfile && (
-        <>
-          <div className="profile-hero">
-            <div className="profile-avatar"><Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={88} /></div>
-            <div className="profile-name">{fullProfile.display_name}</div>
-            <div className="profile-level">{lv.emoji} {lv.name}</div>
-            {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name} />}
-            <div style={{ marginTop: 16 }}>
-              <XpBar xp={fullProfile.xp} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 16 }}>
-              <div style={{ textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 600, color: "var(--accent2)" }}>{fullProfile.xp}</div><div style={{ fontSize: 11, color: "var(--text3)" }}>XP totali</div></div>
-              <div style={{ textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 600, color: "var(--warning)" }}>🪙 {fullProfile.coin}</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Coin</div></div>
-              <div style={{ textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 600, color: "var(--text)" }}>{badges.length}</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Badge</div></div>
-            </div>
-          </div>
-          <div className="section-label">Le mie prenotazioni</div>
-          {bookings.slice(0, 5).map(b => {
-            const s = { pending: ["tag-amber","In attesa"], confirmed: ["tag-green","Confermata"], rejected: ["tag-red","Rifiutata"] };
-            const [cls, label] = s[b.status] || ["tag-gray", b.status];
-            return <div key={b.id} className="card-sm" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 13 }}>{b.activities?.name}</span><span className={`tag ${cls}`}>{label}</span></div>;
-          })}
-        </>
-      )}
-
-      {tab === "checkin" && (
-        <div className="card">
-          <div style={{ textAlign: "center", padding: "16px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📍</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>Check-in giornaliero</div>
-            <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 24 }}>Inserisci il codice mostrato in loco</div>
-            <input className="form-input" value={qrInput} onChange={e => setQrInput(e.target.value.toUpperCase())} placeholder="es. ABC123" style={{ textAlign: "center", fontSize: 24, fontFamily: "DM Mono", letterSpacing: 6, marginBottom: 12 }} maxLength={6} />
-            <button className="btn btn-primary" style={{ width: "100%", marginTop: 8 }} onClick={doCheckin}>Conferma presenza</button>
-            {qrMsg && <div style={{ marginTop: 14, fontSize: 13, color: qrMsg.startsWith("✓") ? "var(--accent2)" : "var(--danger)" }}>{qrMsg}</div>}
-            <div style={{ marginTop: 20, fontSize: 11, color: "var(--text3)" }}>Presenza confermata = +10 XP + 5 Coin</div>
-          </div>
-        </div>
-      )}
-
-      {tab === "attivita" && (
-        <div>
-          {activities.map(a => (
-            <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
-              <div className="act-title">{a.name}</div>
-              <div className="act-meta">{a.description} · {a.duration_days} giorni</div>
-              <div className="act-rewards">
-                <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
-                <span className="reward-tag coin-tag">🪙 {a.coin_cost} per prenotare</span>
-              </div>
-              <button className="btn btn-ghost btn-sm" style={{ marginTop: 10, width: "100%" }} onClick={() => bookActivity(a.id, a.coin_cost)}>
-                Prenota {a.coin_cost > (fullProfile?.coin || 0) ? "(coin insufficienti)" : ""}
-              </button>
-            </div>
-          ))}
-          {activities.length === 0 && <div className="empty">Nessuna attività disponibile al momento.</div>}
-        </div>
-      )}
-
-      {tab === "badge" && (
-        <div>
-          {badges.length === 0 ? <div className="empty">Nessun badge ancora. Partecipa alle attività!</div> : (
-            <div className="badge-grid">
-              {badges.map(pb => (
-                <div key={pb.id} className="badge-card">
-                  {pb.badges?.image_url ? <img className="badge-img" src={pb.badges.image_url} alt={pb.badges?.name} /> : <span className="badge-emoji">🎖️</span>}
-                  <div className="badge-name">{pb.badges?.name}</div>
-                  <div className="badge-pts">+{pb.xp_awarded} XP · 🪙{pb.coin_awarded}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "notifiche" && (
-        <div>
-          {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
-            const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", week_bonus: "🏆", new_message: "💬" };
-            return (
-              <div key={n.id} className="notif-item">
-                <div className="notif-icon">{icons[n.type] || "🔔"}</div>
-                <div>
-                  <div className="notif-title">{n.title}{!n.read_at && <span className="notif-dot" />}</div>
-                  <div className="notif-body">{n.body}</div>
-                  <div className="notif-time">{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── EDUCATOR SHELL ───────────────────────────────────────
-
-const EDUCATOR_TABS = [
-  ["giocatori", "👤", "Giocatori"],
-  ["classifica", "🏆", "Classifica"],
-  ["presenze", "✅", "Presenze"],
-  ["attivita", "⚡", "Attività"],
-  ["badge", "🎖️", "Badge"],
-  ["prenotazioni", "📋", "Prenotazioni"],
-  ["messaggi", "💬", "Messaggi"],
-  ["qr", "📍", "QR Check-in"],
-];
-
-function EducatorShell({ profile, onLogout }) {
-  const [tab, setTab] = useState("giocatori");
-  const cur = EDUCATOR_TABS.find(t => t[0] === tab);
-
-  return (
-    <div className="app">
-      <div className="sidebar">
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-title"><span>🌿</span><span>PUG</span></div>
-          <div className="sidebar-logo-sub">Pannello educatore</div>
-        </div>
-        <nav className="nav">
-          {EDUCATOR_TABS.map(([id, icon, label]) => (
-            <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
-              <span className="nav-icon">{icon}</span>
-              <span>{label}</span>
-            </div>
-          ))}
-        </nav>
-        <div className="sidebar-user">
-          <div className="sidebar-user-name">{profile.display_name}</div>
-          <div className="sidebar-user-role">{profile.role}</div>
-          <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, width: "100%" }} onClick={onLogout}>Esci</button>
-        </div>
-      </div>
-      <div className="main">
-        <div className="topbar">
-          <h2>{cur?.[2]}</h2>
-        </div>
-        <div className="content">
-          {tab === "giocatori"    && <PlayersView profile={profile} />}
-          {tab === "classifica"   && <LeaderboardView />}
-          {tab === "presenze"     && <AttendanceView />}
-          {tab === "attivita"     && <ActivitiesView />}
-          {tab === "badge"        && <BadgesView />}
-          {tab === "prenotazioni" && <BookingsView />}
-          {tab === "messaggi"     && <MessagesView profile={profile} />}
-          {tab === "qr"           && <QrView />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── ROOT ─────────────────────────────────────────────────
-
-export default function App() {
-  const [profile, setProfile] = useState(null);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    sb.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-        // ✅ FIX 2: se il profilo non esiste nel DB, usa fallback educator invece di null
-        setProfile(p || makeFallbackProfile(session.user.id, session.user.email));
-      }
-      setChecking(false);
-    });
-    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") setProfile(null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  async function onLogout() {
-    await sb.auth.signOut();
-    setProfile(null);
-  }
-
-  if (checking) return <div className="loading" style={{ minHeight: "100vh" }}>🌿 Caricamento…</div>;
-
-  return (
-    <>
-      <style>{css}</style>import { sb } from "./supabase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 
+// ─── LIVELLI ──────────────────────────────────────────────
 const LEVELS = [
   {id:1,name:"Seme",emoji:"🌱",xp:0},{id:2,name:"Germoglio",emoji:"🌿",xp:50},
   {id:3,name:"Foglia",emoji:"🍃",xp:100},{id:4,name:"Fiore",emoji:"🌸",xp:150},
@@ -1174,218 +25,345 @@ function getLevel(xp) {
   return LEVELS[0];
 }
 
-const SQUAD_STYLE = {
-  Verde:   { bg: "#EAF3DE", text: "#3B6D11", border: "#97C459" },
-  Gialla:  { bg: "#FAEEDA", text: "#854F0B", border: "#EF9F27" },
-  Azzurra: { bg: "#E6F1FB", text: "#185FA5", border: "#85B7EB" },
+// ─── BRAND PALETTE ────────────────────────────────────────
+const BRAND = {
+  azzurro: "#A3CFFE",
+  rosa:    "#FF6DEC",
+  giallo:  "#FDEF26",
+  verde:   "#339966",
+  rosso:   "#D41323",
+  nero:    "#101010",
+  bianco:  "#FFFFFF",
 };
 
+const SQUAD_STYLE = {
+  Verde:   { bg: "#339966", text: "#fff", border: "#339966" },
+  Gialla:  { bg: "#FDEF26", text: "#101010", border: "#FDEF26" },
+  Azzurra: { bg: "#A3CFFE", text: "#101010", border: "#A3CFFE" },
+};
+
+// Colori di default per le sezioni personalizzabili
+const DEFAULT_SECTION_COLORS = {
+  classifica: { color: "#A3CFFE", image: null },
+  badge:      { color: "#FF6DEC", image: null },
+  presenze:   { color: "#FDEF26", image: null },
+  attivita:   { color: "#339966", image: null },
+  sfida:      { color: "#D41323", image: null },
+};
+
+// ─── CSS ──────────────────────────────────────────────────
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: #0f1412; color: #e8f0ec; min-height: 100vh; }
-  :root {
-    --green: #3B6D11; --green-light: #EAF3DE; --green-mid: #639922;
-    --amber: #854F0B; --amber-light: #FAEEDA;
-    --blue: #185FA5; --blue-light: #E6F1FB;
-    --surface: #1a2420; --surface2: #222e29; --surface3: #2a3830;
-    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
-    --text: #e8f0ec; --text2: #8fa898; --text3: #5a6e62;
-    --accent: #4a9e2a; --accent2: #63c93a;
-    --danger: #e24b4a; --warning: #EF9F27;
-    --radius: 12px; --radius-sm: 8px;
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Funnel+Display:wght@300;400;500;600;700;800&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Funnel Display', sans-serif;
+    background: #101010;
+    color: #f0f0f0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
-  .app { display: flex; min-height: 100vh; }
-  .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; width: 100%; background: #0f1412; }
-  .login-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; }
-  .login-logo { text-align: center; margin-bottom: 32px; }
-  .login-logo-icon { font-size: 48px; display: block; margin-bottom: 8px; }
-  .login-logo h1 { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }
-  .login-logo p { font-size: 13px; color: var(--text2); margin-top: 4px; }
-  .form-group { margin-bottom: 16px; }
-  .form-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: .05em; }
-  .form-input { width: 100%; padding: 11px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color .15s; }
-  .form-input:focus { border-color: var(--accent); }
-  .remember-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; cursor: pointer; }
-  .remember-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
-  .remember-row span { font-size: 13px; color: var(--text2); }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; transition: all .15s; white-space: nowrap; }
-  .btn-primary { background: var(--accent); color: #fff; width: 100%; padding: 13px; font-size: 14px; }
-  .btn-primary:hover { background: var(--accent2); }
-  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
-  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
-  .btn-danger { background: rgba(226,75,74,.15); color: var(--danger); border: 1px solid rgba(226,75,74,.3); }
-  .btn-danger:hover { background: rgba(226,75,74,.25); }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
-  .btn-icon { width: 32px; height: 32px; padding: 0; border-radius: 50%; }
-  .err-msg { font-size: 12px; color: var(--danger); margin-top: 10px; text-align: center; }
-  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-  .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
-  .sidebar-logo-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
-  .sidebar-logo-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
-  .nav { flex: 1; padding: 10px 0; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; color: var(--text2); border-left: 2px solid transparent; transition: all .12s; }
-  .nav-item:hover { background: var(--surface2); color: var(--text); }
-  .nav-item.active { background: rgba(74,158,42,.1); color: var(--accent2); border-left-color: var(--accent); font-weight: 500; }
-  .nav-icon { font-size: 15px; width: 20px; text-align: center; }
-  .sidebar-user { padding: 14px 18px; border-top: 1px solid var(--border); }
-  .sidebar-user-name { font-size: 12px; font-weight: 500; color: var(--text); }
-  .sidebar-user-role { font-size: 11px; color: var(--text3); margin-top: 2px; }
-  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-  .topbar { padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-  .topbar h2 { font-size: 16px; font-weight: 600; color: var(--text); margin-right: auto; }
-  .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
-  .card-sm { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-  .stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
-  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
-  .stat-value { font-size: 24px; font-weight: 600; color: var(--text); }
-  .stat-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
-  .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-  .player-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 10px; text-align: center; cursor: pointer; transition: all .15s; position: relative; }
-  .player-card:hover { border-color: var(--border2); transform: translateY(-1px); }
-  .player-card.selected { border-color: var(--accent); background: rgba(74,158,42,.08); }
-  .avatar-wrap { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 26px; border: 2px solid var(--border2); }
-  .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
-  .p-name { font-size: 11px; font-weight: 500; color: var(--text); margin-bottom: 3px; word-break: break-word; line-height: 1.3; }
-  .p-level { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
-  .p-xp { font-size: 11px; font-weight: 500; color: var(--accent2); }
-  .p-coin { font-size: 10px; color: var(--amber); }
-  .squad-pill { font-size: 9px; padding: 2px 7px; border-radius: 99px; display: inline-block; margin-top: 5px; font-weight: 500; }
-  .pts-row { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
-  .pts-btn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border2); background: var(--surface3); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; color: var(--text2); font-family: 'DM Sans', sans-serif; transition: all .1s; line-height: 1; }
-  .pts-btn:hover { background: var(--surface); }
-  .pts-btn.add { color: var(--accent2); border-color: rgba(99,201,58,.3); }
-  .pts-btn.rem { color: var(--danger); border-color: rgba(226,75,74,.3); }
-  .badge-indicator { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--warning); }
-  .lb-list { display: flex; flex-direction: column; gap: 6px; }
-  .lb-row { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; transition: border-color .12s; }
-  .lb-row:hover { border-color: var(--border2); }
-  .lb-rank { font-size: 13px; font-weight: 600; width: 28px; text-align: center; color: var(--text3); flex-shrink: 0; }
-  .lb-rank.gold { color: #EF9F27; } .lb-rank.silver { color: #8fa898; } .lb-rank.bronze { color: #D85A30; }
-  .lb-av { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--border2); }
-  .lb-av img { width: 100%; height: 100%; object-fit: cover; }
-  .lb-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lb-level { font-size: 11px; color: var(--text3); }
-  .lb-bar-wrap { width: 80px; height: 4px; background: var(--surface3); border-radius: 99px; overflow: hidden; flex-shrink: 0; }
-  .lb-bar { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
-  .lb-xp { font-size: 12px; font-weight: 500; color: var(--accent2); width: 55px; text-align: right; flex-shrink: 0; }
-  .lb-coin { font-size: 11px; color: var(--amber); width: 45px; text-align: right; flex-shrink: 0; }
-  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-  .search-inp { padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; flex: 1; min-width: 160px; transition: border-color .15s; }
-  .search-inp:focus { border-color: var(--accent); }
-  .chip { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border2); background: transparent; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; transition: all .12s; font-weight: 500; }
-  .chip:hover { background: var(--surface2); color: var(--text); }
-  .chip.active { background: rgba(74,158,42,.15); color: var(--accent2); border-color: rgba(74,158,42,.4); }
-  .batch-panel { background: rgba(74,158,42,.06); border: 1px solid rgba(74,158,42,.2); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .batch-info { font-size: 13px; color: var(--accent2); font-weight: 500; flex: 1; }
-  .batch-inp { width: 80px; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; text-align: center; }
-  .batch-inp:focus { border-color: var(--accent); }
-  .pres-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .pres-table th { padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 600; color: var(--text3); border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .05em; position: sticky; top: 0; background: #0f1412; }
-  .pres-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
-  .pres-dot { width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; font-family: 'DM Sans', sans-serif; transition: transform .1s; }
-  .pres-dot:active { transform: scale(.9); }
-  .pd-yes { background: rgba(74,158,42,.2); color: var(--accent2); }
-  .pd-partial { background: rgba(239,159,39,.2); color: var(--warning); }
-  .pd-completed { background: rgba(74,158,42,.35); color: #63c93a; }
-  .pd-none { background: var(--surface3); color: var(--text3); }
-  .act-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .act-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; transition: border-color .12s; position: relative; }
-  .act-card:hover { border-color: var(--border2); }
-  .act-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .act-meta { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
-  .act-rewards { display: flex; gap: 6px; flex-wrap: wrap; }
-  .reward-tag { font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
-  .xp-tag { background: rgba(74,158,42,.15); color: var(--accent2); }
-  .coin-tag { background: rgba(239,159,39,.15); color: var(--warning); }
-  .day-tag { background: var(--surface3); color: var(--text2); }
-  .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
-  .badge-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 10px; text-align: center; cursor: pointer; transition: all .15s; position: relative; }
-  .badge-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-  .badge-img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; margin: 0 auto 8px; display: block; border: 2px solid var(--border2); }
-  .badge-emoji { font-size: 32px; display: block; margin: 0 auto 8px; }
-  .badge-name { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1.3; }
-  .badge-pts { font-size: 10px; color: var(--text2); margin-top: 3px; }
-  .msg-layout { display: flex; gap: 12px; height: 500px; }
-  .msg-list { width: 180px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex-shrink: 0; }
-  .msg-thread { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: border-color .12s; }
-  .msg-thread:hover { border-color: var(--border2); }
-  .msg-thread.active { border-color: var(--accent); background: rgba(74,158,42,.08); }
-  .mt-name { font-size: 12px; font-weight: 500; color: var(--text); }
-  .mt-last { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .msg-main { flex: 1; display: flex; flex-direction: column; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .msg-hdr { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 500; color: var(--text); }
-  .msg-body { flex: 1; padding: 14px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-  .bubble-wrap { display: flex; gap: 8px; }
-  .bubble-wrap.mine { flex-direction: row-reverse; }
-  .bubble-av { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; background: var(--surface3); overflow: hidden; }
-  .bubble-av img { width: 100%; height: 100%; object-fit: cover; }
-  .bubble { max-width: 220px; padding: 8px 12px; border-radius: 12px; font-size: 12px; line-height: 1.6; }
-  .bubble.them { background: var(--surface3); color: var(--text); border-bottom-left-radius: 4px; }
-  .bubble.mine { background: rgba(74,158,42,.2); color: var(--accent2); border-bottom-right-radius: 4px; }
-  .msg-inp-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
-  .msg-inp { flex: 1; padding: 8px 12px; background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px; outline: none; }
-  .msg-inp:focus { border-color: var(--accent); }
-  .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: inline-block; margin-left: 4px; vertical-align: middle; }
-  .notif-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .notif-icon { font-size: 20px; flex-shrink: 0; }
-  .notif-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
-  .notif-body { font-size: 12px; color: var(--text2); }
-  .notif-time { font-size: 10px; color: var(--text3); margin-top: 3px; }
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 24px; width: 100%; max-width: 460px; max-height: 80vh; overflow-y: auto; }
-  .modal-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
-  .section-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin: 14px 0 8px; }
-  .profile-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; text-align: center; margin-bottom: 16px; }
-  .profile-avatar { width: 88px; height: 88px; border-radius: 50%; margin: 0 auto 14px; border: 3px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 40px; overflow: hidden; }
-  .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .profile-name { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .profile-level { font-size: 14px; color: var(--accent2); margin-bottom: 12px; }
-  .xp-bar-wrap { height: 6px; background: var(--surface3); border-radius: 99px; overflow: hidden; margin: 8px 0; }
-  .xp-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width .6s; }
-  .xp-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); }
-  .qr-wrap { text-align: center; padding: 24px; }
-  .qr-code { font-family: 'DM Mono', monospace; font-size: 48px; font-weight: 500; color: var(--accent2); letter-spacing: 8px; margin: 16px 0; }
-  .qr-date { font-size: 13px; color: var(--text2); }
-  .loading { display: flex; align-items: center; justify-content: center; min-height: 200px; color: var(--text2); font-size: 14px; }
-  .empty { text-align: center; padding: 40px; color: var(--text3); font-size: 13px; }
-  .tag { font-size: 10px; padding: 2px 8px; border-radius: 99px; display: inline-block; font-weight: 500; }
-  .tag-green { background: rgba(74,158,42,.15); color: var(--accent2); }
-  .tag-amber { background: rgba(239,159,39,.15); color: var(--warning); }
-  .tag-red { background: rgba(226,75,74,.15); color: var(--danger); }
-  .tag-gray { background: var(--surface3); color: var(--text2); }
-  .delete-btn { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(226,75,74,.3); background: rgba(226,75,74,.1); color: var(--danger); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s; }
-  .act-card:hover .delete-btn, .badge-card:hover .delete-btn { opacity: 1; }
-  .squad-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  .squad-row { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; }
-  .squad-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-  .squad-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); }
-  .squad-count { font-size: 12px; color: var(--text3); }
-  .avatar-upload-area { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 20px; text-align: center; cursor: pointer; transition: border-color .15s; margin-bottom: 12px; }
-  .avatar-upload-area:hover { border-color: var(--accent); }
-  .avatar-upload-area input { display: none; }
-  .avatar-preview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto 8px; display: block; border: 2px solid var(--accent); }
-  select { padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; }
-  select:focus { border-color: var(--accent); }
-  textarea { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; resize: vertical; min-height: 80px; }
-  textarea:focus { border-color: var(--accent); }
-  @media (max-width: 768px) {
-    .sidebar { width: 56px; }
-    .sidebar-logo-title span, .nav-item span, .sidebar-user { display: none; }
-    .nav-item { justify-content: center; padding: 12px; }
-    .stats-grid { grid-template-columns: 1fr 1fr; }
-    .act-grid { grid-template-columns: 1fr; }
-    .player-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+
+  :root {
+    /* Brand */
+    --azzurro: #A3CFFE; --rosa: #FF6DEC; --giallo: #FDEF26;
+    --verde: #339966; --rosso: #D41323;
+    --nero: #101010; --bianco: #FFFFFF;
+    /* UI surfaces */
+    --surface: #1c1c1c; --surface2: #252525; --surface3: #303030;
+    --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
+    --text: #f0f0f0; --text2: #999; --text3: #555;
+    /* Accents (remap to brand) */
+    --accent: #339966; --accent2: #4db880;
+    --danger: #D41323; --warning: #FDEF26;
+    --radius: 14px; --radius-sm: 10px; --radius-lg: 20px;
+  }
+
+  /* LIGHT THEME */
+  body.light {
+    background: #f5f5f5; color: #101010;
+    --surface: #ffffff; --surface2: #f0f0f0; --surface3: #e5e5e5;
+    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+    --text: #101010; --text2: #555; --text3: #999;
+  }
+
+  /* TYPOGRAPHY */
+  .font-display { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; }
+  .font-ui { font-family: 'Funnel Display', sans-serif; }
+
+  /* ── LOGIN ── */
+  .login-wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background: var(--nero); }
+  .login-card { background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius-lg); padding:36px 28px; width:100%; max-width:420px; }
+  .login-logo { text-align:center; margin-bottom:32px; }
+  .login-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:52px; text-transform:uppercase; letter-spacing:-1px; line-height:1; color:var(--azzurro); }
+  .login-sub { font-size:13px; color:var(--text2); margin-top:6px; }
+  .form-group { margin-bottom:14px; }
+  .form-label { font-size:10px; font-weight:700; color:var(--text2); margin-bottom:5px; display:block; text-transform:uppercase; letter-spacing:.1em; }
+  .form-input { width:100%; padding:13px 14px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display',sans-serif; font-size:16px; outline:none; transition:border-color .15s; }
+  .form-input:focus { border-color:var(--azzurro); }
+  .remember-row { display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer; }
+  .remember-row input[type=checkbox] { width:18px; height:18px; accent-color:var(--azzurro); }
+  .remember-row span { font-size:14px; color:var(--text2); }
+  .err-msg { font-size:12px; color:var(--danger); margin-top:10px; text-align:center; }
+
+  /* ── BUTTONS ── */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 18px; border-radius:var(--radius-sm); border:none; cursor:pointer; font-family:'Funnel Display',sans-serif; font-size:14px; font-weight:600; transition:all .15s; white-space:nowrap; min-height:44px; }
+  .btn-primary { background:var(--azzurro); color:var(--nero); width:100%; padding:14px; font-size:15px; font-weight:700; }
+  .btn-primary:active { opacity:.85; }
+  .btn-ghost { background:transparent; color:var(--text2); border:1.5px solid var(--border2); }
+  .btn-ghost:active { background:var(--surface2); }
+  .btn-danger { background:rgba(212,19,35,.15); color:var(--danger); border:1px solid rgba(212,19,35,.3); }
+  .btn-yellow { background:var(--giallo); color:var(--nero); font-weight:700; border:none; }
+  .btn-sm { padding:7px 14px; font-size:13px; min-height:38px; }
+  .btn-xs { padding:5px 10px; font-size:12px; min-height:32px; border-radius:8px; }
+
+  /* ── EDUCATOR DESKTOP ── */
+  .edu-layout { display:flex; min-height:100vh; }
+  .sidebar { width:230px; background:var(--nero); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; z-index:10; }
+  .sidebar-logo { padding:22px 20px 18px; border-bottom:1px solid var(--border); }
+  .sidebar-logo-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:28px; text-transform:uppercase; color:var(--azzurro); letter-spacing:-0.5px; line-height:1; }
+  .sidebar-logo-sub { font-size:11px; color:var(--text3); margin-top:3px; }
+  .nav { flex:1; padding:10px 0; }
+  .nav-item { display:flex; align-items:center; gap:12px; padding:10px 20px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text2); border-left:3px solid transparent; transition:all .12s; min-height:44px; }
+  .nav-item:hover { background:var(--surface2); color:var(--text); }
+  .nav-item.active { background:rgba(163,207,254,.08); color:var(--azzurro); border-left-color:var(--azzurro); font-weight:700; }
+  .nav-icon { font-size:17px; width:22px; text-align:center; flex-shrink:0; }
+  .sidebar-user { padding:16px 20px; border-top:1px solid var(--border); }
+  .edu-main { margin-left:230px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
+  .topbar { padding:14px 26px; background:var(--nero); border-bottom:1px solid var(--border); display:flex; align-items:center; position:sticky; top:0; z-index:5; gap:12px; }
+  .topbar-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:26px; text-transform:uppercase; color:var(--text); letter-spacing:-0.5px; }
+  .content { flex:1; padding:22px 26px; }
+
+  /* ── MOBILE EDUCATOR ── */
+  .mob-header { display:none; position:fixed; top:0; left:0; right:0; height:58px; background:var(--nero); border-bottom:1px solid var(--border); z-index:20; align-items:center; padding:0 16px; gap:12px; }
+  .mob-header-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:22px; text-transform:uppercase; color:var(--azzurro); flex:1; letter-spacing:-0.3px; }
+  .mob-drawer-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:30; }
+  .mob-drawer { position:fixed; top:0; left:0; bottom:0; width:270px; background:var(--nero); z-index:40; transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; }
+  .mob-drawer.open { transform:translateX(0); }
+  .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; background:var(--nero); border-top:1px solid var(--border); z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); }
+  .mob-bottom-nav-inner { display:flex; height:62px; }
+  .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:var(--text3); font-family:'Funnel Display'; padding:0; transition:color .12s; }
+  .mob-nav-btn.active { color:var(--azzurro); }
+
+  /* ── SECTION BANNERS ── */
+  .section-banner { border-radius:var(--radius-lg); padding:20px; margin-bottom:18px; position:relative; overflow:hidden; min-height:80px; display:flex; align-items:flex-end; }
+  .section-banner-bg { position:absolute; inset:0; background-size:cover; background-position:center; }
+  .section-banner-overlay { position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,.55) 0%, rgba(0,0,0,.1) 100%); }
+  .section-banner-content { position:relative; z-index:1; }
+  .section-banner-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:32px; text-transform:uppercase; color:#fff; letter-spacing:-0.5px; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .section-banner-sub { font-size:12px; color:rgba(255,255,255,.75); margin-top:2px; }
+
+  /* ── CARDS ── */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; }
+  .card-sm { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; }
+  .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
+  .stat-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+  .stat-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; font-weight:600; }
+  .stat-value { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; color:var(--text); line-height:1; }
+  .stat-sub { font-size:11px; color:var(--text2); margin-top:2px; }
+
+  /* ── PLAYER GRID ── */
+  .player-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
+  .player-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px 10px; text-align:center; cursor:pointer; position:relative; transition:border-color .15s; }
+  .player-card.selected { border-color:var(--azzurro); background:rgba(163,207,254,.06); }
+  .avatar-wrap { width:56px; height:56px; border-radius:50%; margin:0 auto 10px; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:26px; border:2.5px solid var(--border2); }
+  .avatar-wrap img { width:100%; height:100%; object-fit:cover; }
+  .p-name { font-size:12px; font-weight:700; color:var(--text); margin-bottom:2px; word-break:break-word; line-height:1.3; }
+  .p-level { font-size:10px; color:var(--text2); margin-bottom:3px; }
+  .p-xp { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:900; color:var(--azzurro); }
+  .p-coin { font-size:10px; color:var(--giallo); margin-top:1px; }
+  .squad-pill { font-size:9px; padding:2px 8px; border-radius:99px; display:inline-block; margin-top:5px; font-weight:700; }
+  .pts-row { display:flex; gap:4px; justify-content:center; margin-top:8px; }
+  .pts-btn { width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border2); background:var(--surface3); cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; color:var(--text2); font-family:'Funnel Display'; line-height:1; transition:all .1s; }
+  .pts-btn.add { color:var(--verde); border-color:rgba(51,153,102,.4); }
+  .pts-btn.rem { color:var(--danger); border-color:rgba(212,19,35,.3); }
+
+  /* ── LEADERBOARD ── */
+  .lb-list { display:flex; flex-direction:column; gap:6px; }
+  .lb-row { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; transition:border-color .15s; cursor:pointer; }
+  .lb-row:hover { border-color:var(--border2); }
+  .lb-rank { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; width:30px; text-align:center; color:var(--text3); flex-shrink:0; }
+  .lb-rank.gold { color:var(--giallo); } .lb-rank.silver { color:#ccc; } .lb-rank.bronze { color:#e8956d; }
+  .lb-av { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; overflow:hidden; border:1.5px solid var(--border2); }
+  .lb-av img { width:100%; height:100%; object-fit:cover; }
+  .lb-name { flex:1; font-size:14px; font-weight:700; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-level { font-size:10px; color:var(--text3); margin-top:1px; }
+  .lb-xp { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; color:var(--azzurro); flex-shrink:0; }
+
+  /* ── PLAYER DETAIL PANEL ── */
+  .player-detail { background:var(--surface); border:1.5px solid var(--azzurro); border-radius:var(--radius-lg); padding:20px; margin-top:12px; }
+  .player-detail-header { display:flex; gap:16px; align-items:center; margin-bottom:16px; }
+  .player-detail-av { width:64px; height:64px; border-radius:50%; overflow:hidden; border:3px solid var(--azzurro); display:flex; align-items:center; justify-content:center; font-size:30px; flex-shrink:0; }
+  .player-detail-av img { width:100%; height:100%; object-fit:cover; }
+  .detail-tabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .detail-tab { padding:6px 14px; border-radius:99px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:600; cursor:pointer; min-height:32px; }
+  .detail-tab.active { background:var(--azzurro); color:var(--nero); border-color:var(--azzurro); }
+
+  /* ── FILTER ── */
+  .filter-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+  .search-inp { padding:10px 14px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:16px; outline:none; flex:1; min-width:140px; }
+  .search-inp:focus { border-color:var(--azzurro); }
+  .chip { padding:8px 16px; border-radius:99px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:600; cursor:pointer; min-height:36px; transition:all .12s; }
+  .chip.active { background:var(--azzurro); color:var(--nero); border-color:var(--azzurro); }
+
+  /* ── BATCH ── */
+  .batch-panel { background:rgba(163,207,254,.06); border:1.5px solid rgba(163,207,254,.25); border-radius:var(--radius); padding:12px 16px; margin-bottom:14px; }
+  .batch-info { font-size:13px; color:var(--azzurro); font-weight:700; margin-bottom:10px; }
+  .batch-inp { width:70px; padding:8px 10px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Barlow Condensed'; font-size:18px; font-weight:700; outline:none; text-align:center; }
+
+  /* ── PRESENZE ── */
+  .pres-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius); border:1px solid var(--border); }
+  .pres-table { width:100%; border-collapse:collapse; font-size:13px; min-width:420px; }
+  .pres-table th { padding:10px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--text3); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.08em; background:var(--nero); }
+  .pres-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text); }
+  .pres-dot { width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center; font-family:'Funnel Display'; font-weight:700; transition:opacity .12s; }
+  .pd-yes { background:rgba(51,153,102,.25); color:var(--verde); }
+  .pd-partial { background:rgba(253,239,38,.2); color:#b8a000; }
+  .pd-completed { background:rgba(51,153,102,.45); color:#4db880; }
+  .pd-none { background:var(--surface3); color:var(--text3); }
+
+  /* ── ACTIVITIES ── */
+  .act-grid { display:grid; grid-template-columns:1fr; gap:10px; }
+  .act-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:16px; position:relative; }
+  .act-title { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; letter-spacing:-0.3px; }
+  .act-meta { font-size:12px; color:var(--text2); margin-bottom:10px; }
+  .act-rewards { display:flex; gap:6px; flex-wrap:wrap; }
+  .reward-tag { font-size:10px; padding:4px 10px; border-radius:99px; font-weight:700; }
+  .xp-tag { background:rgba(163,207,254,.15); color:var(--azzurro); }
+  .coin-tag { background:rgba(253,239,38,.15); color:#b8a000; }
+  .delete-btn { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:50%; border:1px solid rgba(212,19,35,.3); background:rgba(212,19,35,.1); color:var(--danger); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; }
+
+  /* ── BADGES ── */
+  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; }
+  .badge-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:12px 10px; text-align:center; cursor:pointer; position:relative; transition:border-color .15s; }
+  .badge-card:hover { border-color:var(--rosa); }
+  .badge-img { width:56px; height:56px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:block; border:2.5px solid var(--border2); }
+  .badge-emoji { font-size:36px; display:block; margin:0 auto 8px; line-height:1; }
+  .badge-name { font-size:11px; font-weight:700; color:var(--text); line-height:1.3; }
+  .badge-pts { font-size:10px; color:var(--text2); margin-top:3px; }
+
+  /* ── SQUAD ── */
+  .squad-list { display:flex; flex-direction:column; gap:8px; }
+  .squad-row { display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; }
+  .squad-color-dot { width:16px; height:16px; border-radius:50%; flex-shrink:0; }
+  .squad-name { flex:1; font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--text); }
+  .squad-count { font-size:12px; color:var(--text3); }
+
+  /* ── MESSAGES ── */
+  .msg-layout { display:flex; gap:12px; height:440px; }
+  .msg-list { width:150px; display:flex; flex-direction:column; gap:4px; overflow-y:auto; flex-shrink:0; }
+  .msg-thread { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; cursor:pointer; }
+  .msg-thread.active { border-color:var(--azzurro); background:rgba(163,207,254,.08); }
+  .mt-name { font-size:12px; font-weight:700; color:var(--text); }
+  .msg-main { flex:1; display:flex; flex-direction:column; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; min-width:0; }
+  .msg-hdr { padding:12px 16px; border-bottom:1px solid var(--border); font-weight:700; font-size:14px; color:var(--text); }
+  .msg-body { flex:1; padding:14px 16px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+  .bubble-wrap { display:flex; gap:8px; }
+  .bubble-wrap.mine { flex-direction:row-reverse; }
+  .bubble-av { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; background:var(--surface3); }
+  .bubble { max-width:220px; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; }
+  .bubble.them { background:var(--surface3); color:var(--text); }
+  .bubble.mine { background:rgba(163,207,254,.2); color:var(--azzurro); }
+  .msg-inp-row { padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:8px; }
+  .msg-inp { flex:1; padding:10px 12px; background:var(--surface3); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; }
+
+  /* ── NOTIFICATIONS ── */
+  .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--rosa); display:inline-block; margin-left:4px; vertical-align:middle; }
+  .notif-item { display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); }
+  .notif-icon { font-size:24px; flex-shrink:0; }
+  .notif-title { font-size:14px; font-weight:700; color:var(--text); margin-bottom:2px; }
+  .notif-body { font-size:13px; color:var(--text2); }
+  .notif-time { font-size:11px; color:var(--text3); margin-top:3px; }
+
+  /* ── MODAL ── */
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; display:flex; align-items:flex-end; justify-content:center; }
+  .modal { background:var(--surface); border:1px solid var(--border2); border-radius:20px 20px 0 0; padding:24px 20px; padding-bottom:calc(24px + env(safe-area-inset-bottom,0px)); width:100%; max-width:560px; max-height:92vh; overflow-y:auto; }
+  .modal-title { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:18px; letter-spacing:-0.5px; }
+  .section-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.1em; margin:16px 0 8px; }
+
+  /* ── PROFILE (player) ── */
+  .profile-hero { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; text-align:center; margin-bottom:14px; position:relative; overflow:hidden; }
+  .profile-hero-bg { position:absolute; inset:0; background-size:cover; background-position:center; opacity:.18; }
+  .profile-avatar { width:90px; height:90px; border-radius:50%; margin:0 auto 14px; border:3px solid var(--azzurro); display:flex; align-items:center; justify-content:center; font-size:42px; overflow:hidden; position:relative; }
+  .profile-avatar img { width:100%; height:100%; object-fit:cover; }
+  .profile-name { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; letter-spacing:-0.5px; position:relative; }
+  .profile-level { font-size:14px; color:var(--azzurro); margin-bottom:10px; font-weight:600; position:relative; }
+  .xp-bar-wrap { height:7px; background:var(--surface3); border-radius:99px; overflow:hidden; margin:8px 0; position:relative; }
+  .xp-bar { height:100%; background:linear-gradient(90deg, var(--azzurro), var(--rosa)); border-radius:99px; transition:width .5s; }
+  .xp-label { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); position:relative; }
+
+  /* ── SFIDA DEL GIORNO ── */
+  .sfida-card { border-radius:var(--radius-lg); padding:18px; margin-bottom:14px; position:relative; overflow:hidden; border:2px solid var(--rosso); background:rgba(212,19,35,.06); }
+  .sfida-label { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:900; text-transform:uppercase; color:var(--rosso); letter-spacing:.1em; margin-bottom:4px; }
+  .sfida-title { font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; text-transform:uppercase; color:var(--text); letter-spacing:-0.3px; margin-bottom:6px; }
+  .sfida-desc { font-size:13px; color:var(--text2); margin-bottom:12px; line-height:1.5; }
+  .sfida-reward { display:inline-flex; align-items:center; gap:6px; background:rgba(253,239,38,.15); border:1px solid rgba(253,239,38,.3); border-radius:99px; padding:4px 12px; font-size:12px; font-weight:700; color:var(--giallo); }
+
+  /* ── DIARIO ── */
+  .diary-day { margin-bottom:18px; }
+  .diary-date { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--azzurro); margin-bottom:8px; letter-spacing:-0.3px; }
+  .diary-entry { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:5px; }
+  .diary-icon { font-size:18px; flex-shrink:0; }
+  .diary-text { flex:1; font-size:13px; color:var(--text); line-height:1.4; }
+  .diary-pts { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; color:var(--azzurro); flex-shrink:0; }
+
+  /* ── QR ── */
+  .qr-code { font-family:'Barlow Condensed',sans-serif; font-size:52px; font-weight:900; color:var(--azzurro); letter-spacing:10px; margin:16px 0; }
+
+  /* ── AVATAR UPLOAD ── */
+  .avatar-upload-area { border:2px dashed var(--border2); border-radius:var(--radius); padding:20px; text-align:center; cursor:pointer; margin-bottom:12px; transition:border-color .15s; }
+  .avatar-upload-area:hover { border-color:var(--azzurro); }
+  .avatar-preview { width:80px; height:80px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:block; border:2.5px solid var(--azzurro); }
+
+  /* ── THEME TOGGLE ── */
+  .theme-toggle { width:44px; height:24px; border-radius:99px; border:none; cursor:pointer; position:relative; transition:background .2s; display:flex; align-items:center; padding:0 3px; }
+  .theme-toggle-knob { width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+
+  /* ── MISC ── */
+  .tag { font-size:11px; padding:3px 9px; border-radius:99px; display:inline-block; font-weight:700; }
+  .tag-green { background:rgba(51,153,102,.15); color:var(--verde); }
+  .tag-blue { background:rgba(163,207,254,.15); color:var(--azzurro); }
+  .tag-amber { background:rgba(253,239,38,.15); color:#b8a000; }
+  .tag-red { background:rgba(212,19,35,.15); color:var(--danger); }
+  .tag-gray { background:var(--surface3); color:var(--text2); }
+  .loading { display:flex; align-items:center; justify-content:center; min-height:160px; color:var(--text2); font-size:14px; gap:8px; }
+  .empty { text-align:center; padding:40px 20px; color:var(--text3); font-size:14px; }
+  select { padding:10px 12px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:16px; outline:none; width:100%; }
+  textarea { width:100%; padding:10px 12px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; resize:vertical; min-height:80px; }
+  .color-swatch-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .color-swatch { width:36px; height:36px; border-radius:50%; border:3px solid transparent; cursor:pointer; transition:border-color .12s; }
+  .color-swatch.active { border-color:var(--text); }
+
+  /* ── RESPONSIVE ── */
+  @media (min-width:768px) {
+    .stats-grid { grid-template-columns:repeat(4,1fr); }
+    .act-grid { grid-template-columns:1fr 1fr; }
+    .modal-bg { align-items:center; }
+    .modal { border-radius:20px; }
+  }
+  @media (max-width:767px) {
+    .sidebar { display:none; }
+    .edu-main { margin-left:0; }
+    .topbar { display:none; }
+    .content { padding:14px; }
+    .mob-header { display:flex; }
+    .mob-bottom-nav { display:block; }
+    .edu-content-wrap { padding-top:58px; padding-bottom:calc(62px + env(safe-area-inset-bottom,0px) + 8px); }
+    .player-grid { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
+    .msg-layout { flex-direction:column; height:auto; }
+    .msg-list { width:100%; flex-direction:row; overflow-x:auto; flex-wrap:nowrap; padding-bottom:4px; height:auto; }
+    .msg-thread { flex-shrink:0; width:130px; }
+    .msg-main { height:340px; }
+    .player-detail { padding:14px; }
   }
 `;
 
-// ─── COMPONENTS ───────────────────────────────────────────
+// ─── UTILS ────────────────────────────────────────────────
 
 function Avatar({ url, emoji, size = 40 }) {
   if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }} />;
-  return <span style={{ fontSize: size * 0.55 }}>{emoji || "🌱"}</span>;
+  return <span style={{ fontSize: size * 0.52 }}>{emoji || "🌱"}</span>;
 }
 
 function XpBar({ xp }) {
@@ -1401,11 +379,83 @@ function XpBar({ xp }) {
 }
 
 function SquadPill({ name }) {
-  const s = SQUAD_STYLE[name] || { bg: "#1a2420", text: "#8fa898", border: "#2a3830" };
-  return <span className="squad-pill" style={{ background: s.bg + "33", color: s.text, border: `1px solid ${s.border}44` }}>{name}</span>;
+  const s = SQUAD_STYLE[name] || { bg: "#252525", text: "#999", border: "#303030" };
+  return <span className="squad-pill" style={{ background: s.bg, color: s.text }}>{name}</span>;
 }
 
-// ─── AVATAR UPLOAD ────────────────────────────────────────
+// Banner colorato per le sezioni (colore + eventuale immagine)
+function SectionBanner({ sectionKey, title, sub, sectionColors, onEdit }) {
+  const cfg = sectionColors?.[sectionKey] || DEFAULT_SECTION_COLORS[sectionKey] || { color: "#252525", image: null };
+  return (
+    <div className="section-banner" style={{ background: cfg.image ? undefined : cfg.color }}>
+      {cfg.image && <div className="section-banner-bg" style={{ backgroundImage: `url(${cfg.image})` }} />}
+      {cfg.image && <div className="section-banner-overlay" />}
+      <div className="section-banner-content" style={{ flex: 1 }}>
+        <div className="section-banner-title" style={{ color: cfg.image ? "#fff" : "#101010" }}>{title}</div>
+        {sub && <div className="section-banner-sub" style={{ color: cfg.image ? "rgba(255,255,255,.75)" : "rgba(0,0,0,.5)" }}>{sub}</div>}
+      </div>
+      {onEdit && (
+        <button className="btn btn-xs btn-ghost" style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,.35)", color: "#fff", border: "none", fontSize: 11, backdropFilter: "blur(4px)" }} onClick={onEdit}>✏️ Personalizza</button>
+      )}
+    </div>
+  );
+}
+
+// Personalizzazione banner (colore + immagine)
+function BannerCustomizer({ sectionKey, sectionColors, setSectionColors, onClose }) {
+  const cfg = sectionColors?.[sectionKey] || DEFAULT_SECTION_COLORS[sectionKey] || { color: "#A3CFFE", image: null };
+  const [color, setColor] = useState(cfg.color);
+  const [image, setImage] = useState(cfg.image);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef();
+
+  const PRESET_COLORS = [BRAND.azzurro, BRAND.rosa, BRAND.giallo, BRAND.verde, BRAND.rosso, "#252525", "#ffffff"];
+
+  async function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `banners/${sectionKey}.${ext}`;
+    const { error } = await sb.storage.from("avatars").upload(path, file, { upsert: true });
+    if (!error) {
+      const { data } = sb.storage.from("avatars").getPublicUrl(path);
+      setImage(data.publicUrl + "?t=" + Date.now());
+    }
+    setUploading(false);
+  }
+
+  function save() {
+    setSectionColors(prev => ({ ...prev, [sectionKey]: { color, image } }));
+    onClose();
+  }
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-title">Personalizza sezione</div>
+        <div className="section-label">Colore sfondo</div>
+        <div className="color-swatch-row">
+          {PRESET_COLORS.map(c => (
+            <div key={c} className={`color-swatch ${color === c ? "active" : ""}`} style={{ background: c }} onClick={() => setColor(c)} />
+          ))}
+          <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: 36, height: 36, border: "none", borderRadius: "50%", cursor: "pointer", padding: 0 }} />
+        </div>
+        <div className="section-label">Immagine di sfondo (opzionale)</div>
+        <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+          {image ? <img src={image} alt="banner" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 8, marginBottom: 6 }} /> : <div style={{ fontSize: 30, marginBottom: 6 }}>🖼️</div>}
+          <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploading ? "Caricamento…" : "Tocca per caricare un'immagine"}</div>
+        </div>
+        {image && <button className="btn btn-danger btn-sm" style={{ marginBottom: 8 }} onClick={() => setImage(null)}>Rimuovi immagine</button>}
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={save}>Salva</button>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   const fileRef = useRef();
@@ -1430,14 +480,23 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
 
   return (
     <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
-      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} />
-      {preview
-        ? <img src={preview} className="avatar-preview" alt="avatar" />
-        : <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
-      }
-      <div style={{ fontSize: 12, color: "var(--text2)" }}>{uploading ? "Caricamento…" : "Clicca per cambiare avatar"}</div>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+      {preview ? <img src={preview} className="avatar-preview" alt="avatar" /> : <div style={{ fontSize: 40, marginBottom: 8 }}>📷</div>}
+      <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploading ? "Caricamento…" : "Tocca per cambiare foto"}</div>
     </div>
   );
+}
+
+// ─── LOG HELPER ───────────────────────────────────────────
+async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
+  try {
+    await sb.from("notifications").insert({
+      user_id: playerId,
+      type: "log_action",
+      title: action,
+      body: [xpDelta ? `+${xpDelta} XP` : "", coinDelta ? `+${coinDelta} Coin` : "", note].filter(Boolean).join(" · "),
+    });
+  } catch (_) {}
 }
 
 // ─── LOGIN ────────────────────────────────────────────────
@@ -1454,10 +513,6 @@ function Login({ onLogin }) {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
     if (error) { setErr(error.message); setLoading(false); return; }
     const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
-    if (!remember) {
-      // Se non vuole restare loggato, segna nella sessionStorage
-      sessionStorage.setItem("pug_no_persist", "1");
-    }
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
     setLoading(false);
   }
@@ -1466,25 +521,22 @@ function Login({ onLogin }) {
     <div className="login-wrap">
       <div className="login-card">
         <div className="login-logo">
-          <span className="login-logo-icon">🌿</span>
-          <h1>PUG Scoreboard</h1>
-          <p>Accedi al tuo account</p>
+          <div className="login-title">Per·You<br/>Garden</div>
+          <p className="login-sub">Accedi al tuo account</p>
         </div>
         <div className="form-group">
           <label className="form-label">Email</label>
-          <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="nome@email.com" />
+          <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="nome@email.com" autoComplete="email" />
         </div>
         <div className="form-group">
           <label className="form-label">Password</label>
-          <input className="form-input" type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="••••••••" />
+          <input className="form-input" type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && handleLogin()} placeholder="••••••••" autoComplete="current-password" />
         </div>
         <label className="remember-row">
           <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
           <span>Resta collegato</span>
         </label>
-        <button className="btn btn-primary" onClick={handleLogin} disabled={loading}>
-          {loading ? "Accesso in corso…" : "Accedi"}
-        </button>
+        <button className="btn btn-primary" onClick={handleLogin} disabled={loading}>{loading ? "Accesso…" : "Accedi"}</button>
         {err && <p className="err-msg">{err}</p>}
       </div>
     </div>
@@ -1493,7 +545,7 @@ function Login({ onLogin }) {
 
 // ─── EDUCATOR VIEWS ───────────────────────────────────────
 
-function PlayersView({ profile }) {
+function PlayersView({ profile, sectionColors, setSectionColors }) {
   const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
@@ -1504,14 +556,13 @@ function PlayersView({ profile }) {
   const [batchCoin, setBatchCoin] = useState(5);
   const [msg, setMsg] = useState("");
   const [editPlayer, setEditPlayer] = useState(null);
+  const [expandedPlayer, setExpandedPlayer] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await sb.from("profiles").select("*, squads(name, color)").eq("role", "player").order("xp", { ascending: false });
+    const { data } = await sb.from("profiles").select("*, squads(name,color)").eq("role", "player").order("xp", { ascending: false });
     const { data: sq } = await sb.from("squads").select("*");
-    setPlayers(data || []);
-    setSquads(sq || []);
-    setLoading(false);
+    setPlayers(data || []); setSquads(sq || []); setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -1527,146 +578,126 @@ function PlayersView({ profile }) {
     if (!p) return;
     const newVal = Math.max(0, p[field] + delta);
     await sb.from("profiles").update({ [field]: newVal }).eq("id", playerId);
+    await logAction({ playerId, action: field === "xp" ? "XP manuale" : "Coin manuale", xpDelta: field === "xp" ? delta : 0, coinDelta: field === "coin" ? delta : 0 });
     setPlayers(prev => prev.map(x => x.id === playerId ? { ...x, [field]: newVal } : x));
   }
 
   async function applyBatch() {
     if (!selected.size) return;
-    const ids = [...selected];
-    for (const id of ids) {
+    for (const id of [...selected]) {
       const p = players.find(x => x.id === id);
       if (!p) continue;
       await sb.from("profiles").update({ xp: p.xp + Number(batchXp), coin: p.coin + Number(batchCoin) }).eq("id", id);
+      await logAction({ playerId: id, action: "Assegnazione batch", xpDelta: Number(batchXp), coinDelta: Number(batchCoin) });
     }
-    setMsg(`+${batchXp} XP e +${batchCoin} coin assegnati a ${ids.length} giocatori`);
-    setSelected(new Set());
-    load();
+    setMsg(`+${batchXp} XP e +${batchCoin} coin assegnati a ${selected.size} giocatori`);
+    setSelected(new Set()); load();
     setTimeout(() => setMsg(""), 3000);
   }
 
   async function savePlayer(p) {
-    await sb.from("profiles").update({
-      display_name: p.display_name,
-      squad_id: p.squad_id,
-      xp: p.xp,
-      coin: p.coin,
-    }).eq("id", p.id);
-    setEditPlayer(null);
-    load();
+    await sb.from("profiles").update({ display_name: p.display_name, squad_id: p.squad_id, xp: p.xp, coin: p.coin }).eq("id", p.id);
+    setEditPlayer(null); load();
   }
 
   function toggleSelect(id) {
-    setSelected(prev => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
-
-  function selectAll() {
-    setSelected(prev => prev.size === visible.length ? new Set() : new Set(visible.map(p => p.id)));
-  }
-
-  const totalXP = visible.reduce((a, p) => a + p.xp, 0);
 
   return (
     <div>
       <div className="stats-grid">
         <div className="stat-card"><div className="stat-label">Giocatori</div><div className="stat-value">{visible.length}</div></div>
-        <div className="stat-card"><div className="stat-label">XP totali</div><div className="stat-value">{totalXP.toLocaleString()}</div></div>
+        <div className="stat-card"><div className="stat-label">XP totali</div><div className="stat-value">{visible.reduce((a, p) => a + p.xp, 0).toLocaleString()}</div></div>
         <div className="stat-card"><div className="stat-label">Selezionati</div><div className="stat-value">{selected.size}</div></div>
         <div className="stat-card"><div className="stat-label">Squadre</div><div className="stat-value">{squads.length}</div></div>
       </div>
 
       {selected.size > 0 && (
         <div className="batch-panel">
-          <span className="batch-info">{selected.size} giocatori selezionati</span>
-          <input className="batch-inp" type="number" value={batchXp} onChange={e => setBatchXp(e.target.value)} placeholder="XP" />
-          <span style={{ fontSize: 12, color: "var(--text3)" }}>XP</span>
-          <input className="batch-inp" type="number" value={batchCoin} onChange={e => setBatchCoin(e.target.value)} placeholder="Coin" />
-          <span style={{ fontSize: 12, color: "var(--text3)" }}>Coin</span>
-          <button className="btn btn-primary btn-sm" onClick={applyBatch}>Assegna</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>Annulla</button>
+          <div className="batch-info">{selected.size} giocatori selezionati</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input className="batch-inp" type="number" value={batchXp} onChange={e => setBatchXp(e.target.value)} />
+            <span style={{ fontSize: 12, color: "var(--text3)", fontWeight: 700 }}>XP</span>
+            <input className="batch-inp" type="number" value={batchCoin} onChange={e => setBatchCoin(e.target.value)} />
+            <span style={{ fontSize: 12, color: "var(--text3)", fontWeight: 700 }}>Coin</span>
+            <button className="btn btn-yellow btn-sm" onClick={applyBatch}>Assegna</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>Annulla</button>
+          </div>
         </div>
       )}
-      {msg && <div style={{ background: "rgba(74,158,42,.1)", border: "1px solid rgba(74,158,42,.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "var(--accent2)" }}>{msg}</div>}
+
+      {msg && <div style={{ background: "rgba(163,207,254,.1)", border: "1.5px solid rgba(163,207,254,.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "var(--azzurro)", fontWeight: 600 }}>{msg}</div>}
 
       <div className="filter-bar">
         <input className="search-inp" placeholder="Cerca giocatore…" value={search} onChange={e => setSearch(e.target.value)} />
-        <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
-        {squads.map(s => (
-          <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>
-        ))}
-        <button className="btn btn-ghost btn-sm" onClick={selectAll}>{selected.size === visible.length ? "Deseleziona tutti" : "Seleziona tutti"}</button>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
+          {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
+        </div>
       </div>
 
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="player-grid">
-          {visible.map(p => {
-            const lv = getLevel(p.xp);
-            const sq = p.squads?.name;
-            const sqStyle = SQUAD_STYLE[sq] || {};
-            return (
-              <div key={p.id} className={`player-card ${selected.has(p.id) ? "selected" : ""}`} onClick={() => toggleSelect(p.id)}>
-                <div className="avatar-wrap" style={{ borderColor: sqStyle.border || "var(--border2)" }}>
-                  <Avatar url={p.avatar_url} emoji={lv.emoji} />
+      {loading ? <div className="loading">⏳ Caricamento…</div> : (
+        <>
+          <div className="player-grid">
+            {visible.map(p => {
+              const lv = getLevel(p.xp);
+              const sq = p.squads?.name;
+              return (
+                <div key={p.id} className={`player-card ${selected.has(p.id) ? "selected" : ""}`} onClick={() => { toggleSelect(p.id); setExpandedPlayer(null); }}>
+                  <div className="avatar-wrap" style={{ borderColor: SQUAD_STYLE[sq]?.bg || "var(--border2)" }}>
+                    <Avatar url={p.avatar_url} emoji={lv.emoji} />
+                  </div>
+                  <div className="p-name">{p.display_name}</div>
+                  <div className="p-level">{lv.emoji} {lv.name}</div>
+                  <div className="p-xp">{p.xp} XP</div>
+                  <div className="p-coin">🪙 {p.coin}</div>
+                  {sq && <SquadPill name={sq} />}
+                  <div className="pts-row" onClick={e => e.stopPropagation()}>
+                    <button className="pts-btn rem" onClick={() => changeXP(p.id, -10)}>−</button>
+                    <button className="pts-btn add" onClick={() => changeXP(p.id, 10)}>+</button>
+                    <button className="pts-btn rem" style={{ fontSize: 10, width: 34, borderRadius: 8 }} onClick={() => changeXP(p.id, -5, "coin")}>🪙−</button>
+                    <button className="pts-btn add" style={{ fontSize: 10, width: 34, borderRadius: 8 }} onClick={() => changeXP(p.id, 5, "coin")}>🪙+</button>
+                  </div>
+                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 8, width: "100%" }} onClick={e => { e.stopPropagation(); setExpandedPlayer(expandedPlayer === p.id ? null : p.id); }}>
+                    {expandedPlayer === p.id ? "▲ Chiudi" : "🔍 Dettagli"}
+                  </button>
+                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setEditPlayer({ ...p }); }}>✏️ Modifica</button>
                 </div>
-                <div className="p-name">{p.display_name}</div>
-                <div className="p-level">{lv.emoji} {lv.name}</div>
-                <div className="p-xp">{p.xp} XP</div>
-                <div className="p-coin">🪙 {p.coin}</div>
-                {sq && <SquadPill name={sq} />}
-                <div className="pts-row" onClick={e => e.stopPropagation()}>
-                  <button className="pts-btn rem" onClick={() => changeXP(p.id, -10)}>−</button>
-                  <button className="pts-btn add" onClick={() => changeXP(p.id, 10)}>+</button>
-                  <button className="pts-btn rem" style={{ fontSize: 10, width: 32, borderRadius: 8 }} onClick={() => changeXP(p.id, -5, "coin")}>🪙−</button>
-                  <button className="pts-btn add" style={{ fontSize: 10, width: 32, borderRadius: 8 }} onClick={() => changeXP(p.id, 5, "coin")}>🪙+</button>
-                </div>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  style={{ marginTop: 8, width: "100%", fontSize: 10 }}
-                  onClick={e => { e.stopPropagation(); setEditPlayer({ ...p }); }}
-                >✏️ Modifica</button>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          {/* Pannello dettaglio giocatore espandibile */}
+          {expandedPlayer && (
+            <PlayerDetailPanel playerId={expandedPlayer} squads={squads} onClose={() => setExpandedPlayer(null)} />
+          )}
+        </>
       )}
 
-      {/* MODAL MODIFICA GIOCATORE */}
       {editPlayer && (
         <div className="modal-bg" onClick={() => setEditPlayer(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Modifica giocatore</div>
-            <AvatarUpload
-              playerId={editPlayer.id}
-              currentUrl={editPlayer.avatar_url}
-              onUploaded={url => setEditPlayer(p => ({ ...p, avatar_url: url }))}
-            />
+            <div className="modal-title">Modifica profilo</div>
+            <AvatarUpload playerId={editPlayer.id} currentUrl={editPlayer.avatar_url} onUploaded={url => setEditPlayer(p => ({ ...p, avatar_url: url }))} />
             <div className="form-group">
               <label className="form-label">Nome</label>
               <input className="form-input" value={editPlayer.display_name} onChange={e => setEditPlayer(p => ({ ...p, display_name: e.target.value }))} />
             </div>
             <div className="form-group">
               <label className="form-label">Squadra</label>
-              <select style={{ width: "100%" }} value={editPlayer.squad_id || ""} onChange={e => setEditPlayer(p => ({ ...p, squad_id: e.target.value || null }))}>
+              <select value={editPlayer.squad_id || ""} onChange={e => setEditPlayer(p => ({ ...p, squad_id: e.target.value || null }))}>
                 <option value="">Nessuna squadra</option>
                 {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <div className="form-group">
-                <label className="form-label">XP</label>
-                <input className="form-input" type="number" value={editPlayer.xp} onChange={e => setEditPlayer(p => ({ ...p, xp: Number(e.target.value) }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Coin</label>
-                <input className="form-input" type="number" value={editPlayer.coin} onChange={e => setEditPlayer(p => ({ ...p, coin: Number(e.target.value) }))} />
-              </div>
+              <div className="form-group"><label className="form-label">XP</label><input className="form-input" type="number" value={editPlayer.xp} onChange={e => setEditPlayer(p => ({ ...p, xp: Number(e.target.value) }))} /></div>
+              <div className="form-group"><label className="form-label">Coin</label><input className="form-input" type="number" value={editPlayer.coin} onChange={e => setEditPlayer(p => ({ ...p, coin: Number(e.target.value) }))} /></div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => savePlayer(editPlayer)}>Salva</button>
-              <button className="btn btn-ghost" onClick={() => setEditPlayer(null)}>Annulla</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditPlayer(null)}>Annulla</button>
             </div>
           </div>
         </div>
@@ -1675,54 +706,141 @@ function PlayersView({ profile }) {
   );
 }
 
-function LeaderboardView() {
-  const [players, setPlayers] = useState([]);
-  const [squadFilter, setSquadFilter] = useState("all");
-  const [squads, setSquads] = useState([]);
-  const [loading, setLoading] = useState(true);
+// Pannello dettaglio giocatore (feature #4)
+function PlayerDetailPanel({ playerId, squads, onClose }) {
+  const [data, setData] = useState(null);
+  const [tab, setTab] = useState("storia");
 
   useEffect(() => {
     async function load() {
-      const { data } = await sb.from("profiles").select("*, squads(name)").eq("role", "player").order("xp", { ascending: false });
-      const { data: sq } = await sb.from("squads").select("*");
-      setPlayers(data || []);
-      setSquads(sq || []);
-      setLoading(false);
+      const [{ data: p }, { data: badges }, { data: att }, { data: notifs }] = await Promise.all([
+        sb.from("profiles").select("*, squads(name)").eq("id", playerId).single(),
+        sb.from("player_badges").select("*, badges(name,image_url)").eq("player_id", playerId).order("assigned_at", { ascending: false }),
+        sb.from("attendances").select("*").eq("player_id", playerId).order("date", { ascending: false }).limit(20),
+        sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(30),
+      ]);
+      setData({ profile: p, badges: badges || [], attendances: att || [], history: notifs || [] });
     }
     load();
-  }, []);
+  }, [playerId]);
 
-  const visible = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
-  const maxXP = visible[0]?.xp || 1;
-  const medals = ["gold", "silver", "bronze"];
-  const medalLabel = ["1°", "2°", "3°"];
+  if (!data) return <div className="loading" style={{ minHeight: 80 }}>Caricamento dettagli…</div>;
+
+  const { profile, badges, attendances, history } = data;
+  const lv = getLevel(profile?.xp || 0);
 
   return (
-    <div>
-      <div className="filter-bar">
-        <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
-        {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
+    <div className="player-detail">
+      <div className="player-detail-header">
+        <div className="player-detail-av">
+          <Avatar url={profile?.avatar_url} emoji={lv.emoji} size={64} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{profile?.display_name}</div>
+          <div style={{ fontSize: 12, color: "var(--azzurro)", fontWeight: 600 }}>{lv.emoji} {lv.name} · {profile?.xp} XP · 🪙 {profile?.coin}</div>
+          {profile?.squads?.name && <SquadPill name={profile.squads.name} />}
+        </div>
+        <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
       </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="lb-list">
-          {visible.map((p, i) => {
-            const lv = getLevel(p.xp);
+
+      <div className="detail-tabs">
+        {[["storia","📜 Storia"],["badge","🎖️ Badge"],["presenze","✅ Presenze"]].map(([id, label]) => (
+          <button key={id} className={`detail-tab ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</button>
+        ))}
+      </div>
+
+      {tab === "storia" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
+          {history.length === 0 && <div className="empty" style={{ padding: "20px" }}>Nessuna azione registrata.</div>}
+          {history.map(n => (
+            <div key={n.id} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ fontSize: 16 }}>📌</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{n.title}</div>
+                <div style={{ fontSize: 12, color: "var(--text2)" }}>{n.body}</div>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text3)", flexShrink: 0 }}>{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "badge" && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {badges.length === 0 && <div className="empty" style={{ padding: "20px", width: "100%" }}>Nessun badge.</div>}
+          {badges.map(pb => (
+            <div key={pb.id} style={{ textAlign: "center", width: 70 }}>
+              {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--rosa)" }} alt={pb.badges?.name} /> : <div style={{ fontSize: 32 }}>🎖️</div>}
+              <div style={{ fontSize: 10, color: "var(--text2)", marginTop: 4, lineHeight: 1.2 }}>{pb.badges?.name}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "presenze" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 240, overflowY: "auto" }}>
+          {attendances.length === 0 && <div className="empty" style={{ padding: "20px" }}>Nessuna presenza registrata.</div>}
+          {attendances.map(a => {
+            const icons = { full: "✅", partial: "🟡", completed: "⭐", none: "❌" };
             return (
-              <div key={p.id} className="lb-row">
-                <span className={`lb-rank ${i < 3 ? medals[i] : ""}`}>{i < 3 ? medalLabel[i] : (i + 1) + "°"}</span>
-                <div className="lb-av"><Avatar url={p.avatar_url} emoji={lv.emoji} size={36} /></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="lb-name">{p.display_name}</div>
-                  <div className="lb-level">{lv.emoji} {lv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
-                </div>
-                <div className="lb-bar-wrap"><div className="lb-bar" style={{ width: Math.round(p.xp / maxXP * 100) + "%" }} /></div>
-                <span className="lb-xp">{p.xp} XP</span>
-                <span className="lb-coin">🪙 {p.coin}</span>
+              <div key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                <span style={{ fontSize: 16 }}>{icons[a.status] || "—"}</span>
+                <span style={{ flex: 1, fontSize: 13, color: "var(--text)" }}>{a.date}</span>
+                <span style={{ fontSize: 12, color: "var(--azzurro)", fontWeight: 700 }}>+{a.xp_awarded || 0} XP</span>
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function LeaderboardView({ sectionColors, setSectionColors }) {
+  const [players, setPlayers] = useState([]);
+  const [squadFilter, setSquadFilter] = useState("all");
+  const [squads, setSquads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [customizing, setCustomizing] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await sb.from("profiles").select("*, squads(name)").eq("role", "player").order("xp", { ascending: false });
+      const { data: sq } = await sb.from("squads").select("*");
+      setPlayers(data || []); setSquads(sq || []); setLoading(false);
+    }
+    load();
+  }, []);
+
+  const visible = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
+
+  return (
+    <div>
+      <SectionBanner sectionKey="classifica" title="Classifica" sub={`${visible.length} giocatori`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <div className="filter-bar">
+        <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
+        {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
+      </div>
+      {loading ? <div className="loading">⏳ Caricamento…</div> : (
+        <div className="lb-list">
+          {visible.map((p, i) => {
+            const lv = getLevel(p.xp);
+            const medals = ["gold","silver","bronze"];
+            return (
+              <div key={p.id} className="lb-row">
+                <span className={`lb-rank ${i < 3 ? medals[i] : ""}`}>{i < 3 ? ["1°","2°","3°"][i] : (i+1)+"°"}</span>
+                <div className="lb-av"><Avatar url={p.avatar_url} emoji={lv.emoji} size={38} /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="lb-name">{p.display_name}</div>
+                  <div className="lb-level">{lv.emoji} {lv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
+                </div>
+                <span className="lb-xp">{p.xp} XP</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {customizing && <BannerCustomizer sectionKey="classifica" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
     </div>
   );
 }
@@ -1732,17 +850,17 @@ function SquadsView() {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [newSquad, setNewSquad] = useState({ name: "", color: "#4a9e2a" });
+  const [newSquad, setNewSquad] = useState({ name: "", color: "#A3CFFE" });
+
+  const COLORS = [BRAND.azzurro, BRAND.rosa, BRAND.giallo, BRAND.verde, BRAND.rosso];
 
   const load = useCallback(async () => {
     setLoading(true);
     const [{ data: sq }, { data: pl }] = await Promise.all([
       sb.from("squads").select("*").order("name"),
-      sb.from("profiles").select("id, squad_id").eq("role", "player"),
+      sb.from("profiles").select("id,squad_id").eq("role","player"),
     ]);
-    setSquads(sq || []);
-    setPlayers(pl || []);
-    setLoading(false);
+    setSquads(sq || []); setPlayers(pl || []); setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -1750,31 +868,26 @@ function SquadsView() {
   async function createSquad() {
     if (!newSquad.name.trim()) return;
     await sb.from("squads").insert(newSquad);
-    setShowForm(false);
-    setNewSquad({ name: "", color: "#4a9e2a" });
-    load();
+    setShowForm(false); setNewSquad({ name: "", color: "#A3CFFE" }); load();
   }
 
   async function deleteSquad(id) {
-    if (!confirm("Eliminare questa squadra? I giocatori resteranno senza squadra.")) return;
-    await sb.from("squads").delete().eq("id", id);
-    load();
+    if (!confirm("Eliminare questa squadra?")) return;
+    await sb.from("squads").delete().eq("id", id); load();
   }
-
-  const countFor = (id) => players.filter(p => p.squad_id === id).length;
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>+ Nuova squadra</button>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+        <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuova squadra</button>
       </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
+      {loading ? <div className="loading">⏳</div> : (
         <div className="squad-list">
           {squads.map(s => (
             <div key={s.id} className="squad-row">
-              <div className="squad-color-dot" style={{ background: s.color || "#4a9e2a" }} />
+              <div className="squad-color-dot" style={{ background: s.color || "#A3CFFE" }} />
               <span className="squad-name">{s.name}</span>
-              <span className="squad-count">{countFor(s.id)} giocatori</span>
+              <span className="squad-count">{players.filter(p => p.squad_id === s.id).length} giocatori</span>
               <button className="btn btn-danger btn-sm" onClick={() => deleteSquad(s.id)}>Elimina</button>
             </div>
           ))}
@@ -1791,14 +904,14 @@ function SquadsView() {
             </div>
             <div className="form-group">
               <label className="form-label">Colore</label>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="color" value={newSquad.color} onChange={e => setNewSquad(f => ({ ...f, color: e.target.value }))} style={{ width: 40, height: 36, border: "none", background: "none", cursor: "pointer" }} />
-                <span style={{ fontSize: 13, color: "var(--text2)" }}>{newSquad.color}</span>
+              <div className="color-swatch-row">
+                {COLORS.map(c => <div key={c} className={`color-swatch ${newSquad.color === c ? "active" : ""}`} style={{ background: c }} onClick={() => setNewSquad(f => ({ ...f, color: c }))} />)}
+                <input type="color" value={newSquad.color} onChange={e => setNewSquad(f => ({ ...f, color: e.target.value }))} style={{ width: 36, height: 36, border: "none", borderRadius: "50%", cursor: "pointer", padding: 0 }} />
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={createSquad} disabled={!newSquad.name.trim()}>Crea</button>
-              <button className="btn btn-ghost" onClick={() => setShowForm(false)}>Annulla</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annulla</button>
             </div>
           </div>
         </div>
@@ -1807,31 +920,25 @@ function SquadsView() {
   );
 }
 
-function AttendanceView() {
+function AttendanceView({ sectionColors, setSectionColors }) {
   const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [attendances, setAttendances] = useState({});
   const [squadFilter, setSquadFilter] = useState("all");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState({ xp_daily_checkin: "10", coin_daily_checkin: "5", xp_week_bonus: "50", coin_week_bonus: "25" });
+  const [config] = useState({ xp_daily_checkin: 10, coin_daily_checkin: 5, xp_week_bonus: 50 });
+  const [customizing, setCustomizing] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const [{ data: pl }, { data: sq }, { data: att }, { data: cfg }] = await Promise.all([
-        sb.from("profiles").select("*, squads(name)").eq("role", "player").order("display_name"),
+      const [{ data: pl }, { data: sq }, { data: att }] = await Promise.all([
+        sb.from("profiles").select("*, squads(name)").eq("role","player").order("display_name"),
         sb.from("squads").select("*"),
-        sb.from("attendances").select("*").eq("date", date).eq("check_type", "daily"),
-        sb.from("config").select("*"),
+        sb.from("attendances").select("*").eq("date", date).eq("check_type","daily"),
       ]);
-      setPlayers(pl || []);
-      setSquads(sq || []);
-      const attMap = {};
-      (att || []).forEach(a => { attMap[a.player_id] = a; });
-      setAttendances(attMap);
-      const cfgMap = {};
-      (cfg || []).forEach(c => { cfgMap[c.key] = c.value; });
-      setConfig(prev => ({ ...prev, ...cfgMap }));
+      setPlayers(pl || []); setSquads(sq || []);
+      const map = {}; (att || []).forEach(a => { map[a.player_id] = a; }); setAttendances(map);
       setLoading(false);
     }
     load();
@@ -1839,22 +946,15 @@ function AttendanceView() {
 
   async function setStatus(playerId, status) {
     const existing = attendances[playerId];
-    const xp = status === "none" ? 0 : Number(config.xp_daily_checkin);
-    const coin = status === "none" ? 0 : Number(config.coin_daily_checkin);
+    const xp = status === "none" ? 0 : config.xp_daily_checkin;
+    const coin = status === "none" ? 0 : config.coin_daily_checkin;
     if (existing) {
       await sb.from("attendances").update({ status, xp_awarded: xp, coin_awarded: coin }).eq("id", existing.id);
     } else {
       await sb.from("attendances").insert({ player_id: playerId, date, check_type: "daily", status, xp_awarded: xp, coin_awarded: coin, qr_verified: false });
-    }
-    if (status !== "none") {
-      await sb.from("profiles").update({ xp: (players.find(p => p.id === playerId)?.xp || 0) + xp, coin: (players.find(p => p.id === playerId)?.coin || 0) + coin }).eq("id", playerId);
+      if (status !== "none") await logAction({ playerId, action: "Presenza segnata", xpDelta: xp, coinDelta: coin });
     }
     setAttendances(prev => ({ ...prev, [playerId]: { ...existing, status, player_id: playerId } }));
-  }
-
-  async function markAllPresent() {
-    const vis = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
-    for (const p of vis) { await setStatus(p.id, "full"); }
   }
 
   const visible = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
@@ -1862,41 +962,41 @@ function AttendanceView() {
 
   return (
     <div>
+      <SectionBanner sectionKey="presenze" title="Presenze" sub={`${presentCount}/${visible.length} presenti`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div className="stats-grid">
-        <div className="stat-card"><div className="stat-label">Presenti oggi</div><div className="stat-value">{presentCount}</div></div>
+        <div className="stat-card"><div className="stat-label">Presenti</div><div className="stat-value">{presentCount}</div></div>
         <div className="stat-card"><div className="stat-label">Totale</div><div className="stat-value">{visible.length}</div></div>
         <div className="stat-card"><div className="stat-label">XP presenza</div><div className="stat-value">{config.xp_daily_checkin}</div></div>
-        <div className="stat-card"><div className="stat-label">Bonus settimana</div><div className="stat-value">{config.xp_week_bonus} XP</div></div>
+        <div className="stat-card"><div className="stat-label">Bonus sett.</div><div className="stat-value">{config.xp_week_bonus}</div></div>
       </div>
       <div className="filter-bar">
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ padding: "7px 10px", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 8, color: "var(--text)", fontFamily: "DM Sans", fontSize: 13 }} />
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
+        <button className="btn btn-yellow btn-sm" onClick={async () => { for (const p of visible) await setStatus(p.id, "full"); }}>✓ Tutti</button>
+      </div>
+      <div className="filter-bar">
         <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
         {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
-        <button className="btn btn-primary btn-sm" onClick={markAllPresent}>✓ Tutti presenti</button>
       </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      {loading ? <div className="loading">⏳</div> : (
+        <div className="pres-wrap">
           <table className="pres-table">
-            <thead><tr><th>Giocatore</th><th>Squadra</th><th>Livello</th><th>Stato</th><th>XP</th><th>Coin</th></tr></thead>
+            <thead><tr><th>Giocatore</th><th>Squadra</th><th>Stato</th><th>XP</th></tr></thead>
             <tbody>
               {visible.map(p => {
                 const lv = getLevel(p.xp);
-                const att = attendances[p.id];
-                const status = att?.status || "none";
+                const status = attendances[p.id]?.status || "none";
                 return (
                   <tr key={p.id}>
-                    <td style={{ fontWeight: 500 }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Avatar url={p.avatar_url} emoji={lv.emoji} size={28} />{p.display_name}</div></td>
+                    <td><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Avatar url={p.avatar_url} emoji={lv.emoji} size={28} /><span style={{ fontWeight: 600 }}>{p.display_name}</span></div></td>
                     <td>{p.squads?.name && <SquadPill name={p.squads.name} />}</td>
-                    <td style={{ fontSize: 11, color: "var(--text2)" }}>{lv.emoji} {lv.name}</td>
                     <td>
                       <div style={{ display: "flex", gap: 4 }}>
                         {[["none","?","pd-none"],["partial","~","pd-partial"],["full","✓","pd-yes"],["completed","★","pd-completed"]].map(([s, label, cls]) => (
-                          <button key={s} className={`pres-dot ${cls}`} style={{ opacity: status === s ? 1 : 0.35 }} onClick={() => setStatus(p.id, s)}>{label}</button>
+                          <button key={s} className={`pres-dot ${cls}`} style={{ opacity: status === s ? 1 : 0.3 }} onClick={() => setStatus(p.id, s)}>{label}</button>
                         ))}
                       </div>
                     </td>
-                    <td style={{ fontFamily: "DM Mono", fontSize: 12, color: "var(--accent2)" }}>{p.xp}</td>
-                    <td style={{ fontFamily: "DM Mono", fontSize: 12, color: "var(--warning)" }}>{p.coin}</td>
+                    <td style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, color: "var(--azzurro)" }}>{p.xp}</td>
                   </tr>
                 );
               })}
@@ -1904,160 +1004,175 @@ function AttendanceView() {
           </table>
         </div>
       )}
+      {customizing && <BannerCustomizer sectionKey="presenze" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
     </div>
   );
 }
 
-function ActivitiesView() {
+function ActivitiesView({ sectionColors, setSectionColors }) {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [customizing, setCustomizing] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" });
 
   const load = useCallback(async () => {
     const { data } = await sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false });
-    setActivities(data || []);
-    setLoading(false);
+    setActivities(data || []); setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function createActivity() {
     const { data } = await sb.from("activities").insert({ ...form, max_participants: form.max_participants || null }).select().single();
-    if (data) { setActivities(prev => [data, ...prev]); setShowForm(false); setForm({ name: "", description: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" }); }
+    if (data) { setActivities(prev => [data, ...prev]); setShowForm(false); }
   }
 
   async function deleteActivity(id) {
-    if (!confirm("Eliminare questa attività?")) return;
+    if (!confirm("Eliminare?")) return;
     await sb.from("activities").update({ is_active: false }).eq("id", id);
     setActivities(prev => prev.filter(a => a.id !== id));
   }
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>+ Nuova attività</button>
+      <SectionBanner sectionKey="attivita" title="Attività" sub={`${activities.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+        <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuova attività</button>
       </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
+      {loading ? <div className="loading">⏳</div> : (
         <div className="act-grid">
           {activities.map(a => (
             <div key={a.id} className="act-card">
-              <button className="delete-btn" onClick={() => deleteActivity(a.id)} title="Elimina">✕</button>
+              <button className="delete-btn" onClick={() => deleteActivity(a.id)}>✕</button>
               <div className="act-title">{a.name}</div>
-              <div className="act-meta">{a.description} · <span className="tag tag-gray">{a.duration_days} giorni</span></div>
+              <div className="act-meta">{a.description} · {a.duration_days}g</div>
               <div className="act-rewards">
-                <span className="reward-tag xp-tag">Parziale: {a.xp_partial} XP</span>
-                <span className="reward-tag xp-tag">Completa: {a.xp_full} XP</span>
-                <span className="reward-tag xp-tag">Completata: {a.xp_completed} XP</span>
-                <span className="reward-tag coin-tag">🪙 {a.coin_cost} per prenotare</span>
+                <span className="reward-tag xp-tag">Max {a.xp_completed} XP</span>
+                <span className="reward-tag coin-tag">🪙 {a.coin_cost}</span>
               </div>
             </div>
           ))}
-          {activities.length === 0 && <div className="empty" style={{ gridColumn: "1/-1" }}>Nessuna attività ancora. Creane una!</div>}
+          {activities.length === 0 && <div className="empty">Nessuna attività. Creane una!</div>}
         </div>
       )}
       {showForm && (
         <div className="modal-bg" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Nuova attività</div>
-            {[["name","Nome attività","text"],["description","Descrizione","text"],["duration_days","Durata (giorni)","number"],["coin_cost","Costo prenotazione (coin)","number"],["max_participants","Max partecipanti (opzionale)","number"]].map(([k, label, type]) => (
-              <div className="form-group" key={k}>
-                <label className="form-label">{label}</label>
-                <input className="form-input" type={type} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
-              </div>
+            {[["name","Nome","text"],["description","Descrizione","text"],["duration_days","Durata (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k, label, type]) => (
+              <div className="form-group" key={k}><label className="form-label">{label}</label><input className="form-input" type={type} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} /></div>
             ))}
-            <div className="section-label">XP per livello di presenza</div>
+            <div className="section-label">XP per livello</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {[["xp_partial","Parziale"],["xp_full","Completa"],["xp_completed","Completata"]].map(([k, label]) => (
-                <div key={k}><label className="form-label">{label}</label><input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} /></div>
-              ))}
-            </div>
-            <div className="section-label">Coin per livello di presenza</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {[["coin_partial","Parziale"],["coin_full","Completa"],["coin_completed","Completata"]].map(([k, label]) => (
+              {[["xp_partial","Parz."],["xp_full","Compl."],["xp_completed","Fine"]].map(([k,label]) => (
                 <div key={k}><label className="form-label">{label}</label><input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} /></div>
               ))}
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createActivity}>Crea attività</button>
-              <button className="btn btn-ghost" onClick={() => setShowForm(false)}>Annulla</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createActivity}>Crea</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annulla</button>
             </div>
           </div>
         </div>
       )}
+      {customizing && <BannerCustomizer sectionKey="attivita" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
     </div>
   );
 }
 
-function BadgesView() {
+function BadgesView({ sectionColors, setSectionColors }) {
   const [badges, setBadges] = useState([]);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAssign, setShowAssign] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [customizing, setCustomizing] = useState(false);
   const [assignTarget, setAssignTarget] = useState("");
   const [assignXp, setAssignXp] = useState(0);
   const [assignCoin, setAssignCoin] = useState(0);
-  const [newBadge, setNewBadge] = useState({ name: "", xp_default: 20, coin_default: 10 });
+  const [newBadge, setNewBadge] = useState({ name: "", xp_default: 20, coin_default: 10, image_url: null });
+  const [uploadingBadge, setUploadingBadge] = useState(false);
+  const badgeFileRef = useRef();
 
   const load = useCallback(async () => {
     const [{ data: b }, { data: p }] = await Promise.all([
       sb.from("badges").select("*").order("created_at", { ascending: false }),
-      sb.from("profiles").select("id, display_name").eq("role", "player").order("display_name"),
+      sb.from("profiles").select("id,display_name,xp,coin").eq("role","player").order("display_name"),
     ]);
     setBadges(b || []); setPlayers(p || []); setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
+  async function uploadBadgeImage(e) {
+    const file = e.target.files[0]; if (!file) return;
+    setUploadingBadge(true);
+    const ext = file.name.split(".").pop();
+    const path = `badges/badge_${Date.now()}.${ext}`;
+    await sb.storage.from("avatars").upload(path, file, { upsert: true });
+    const { data } = sb.storage.from("avatars").getPublicUrl(path);
+    setNewBadge(f => ({ ...f, image_url: data.publicUrl + "?t=" + Date.now() }));
+    setUploadingBadge(false);
+  }
+
   async function assignBadge() {
     if (!assignTarget || !showAssign) return;
     const badge = badges.find(b => b.id === showAssign);
+    const player = players.find(p => p.id === assignTarget);
     await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
-    await sb.from("profiles").update({ xp: (players.find(p => p.id === assignTarget)?.xp || 0) + Number(assignXp), coin: (players.find(p => p.id === assignTarget)?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
-    await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: "Nuovo badge ricevuto!", body: `Hai ricevuto il badge "${badge?.name}"` });
+    await sb.from("profiles").update({ xp: (player?.xp || 0) + Number(assignXp), coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
+    await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: `Badge: ${badge?.name}`, body: `+${assignXp} XP, +${assignCoin} Coin` });
+    await logAction({ playerId: assignTarget, action: `Badge assegnato: ${badge?.name}`, xpDelta: Number(assignXp), coinDelta: Number(assignCoin) });
     setShowAssign(null);
   }
 
   async function createBadge() {
     const { data } = await sb.from("badges").insert(newBadge).select().single();
-    if (data) { setBadges(prev => [data, ...prev]); setShowCreate(false); setNewBadge({ name: "", xp_default: 20, coin_default: 10 }); }
+    if (data) { setBadges(prev => [data, ...prev]); setShowCreate(false); setNewBadge({ name: "", xp_default: 20, coin_default: 10, image_url: null }); }
   }
 
   async function deleteBadge(id) {
-    if (!confirm("Eliminare questo badge?")) return;
+    if (!confirm("Eliminare?")) return;
     await sb.from("badges").delete().eq("id", id);
     setBadges(prev => prev.filter(b => b.id !== id));
   }
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>+ Nuovo badge</button>
+      <SectionBanner sectionKey="badge" title="Badge" sub={`${badges.length} badge creati`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+        <button className="btn btn-yellow btn-sm" onClick={() => setShowCreate(true)}>+ Nuovo badge</button>
       </div>
-      {loading ? <div className="loading">Caricamento…</div> : (
+      {loading ? <div className="loading">⏳</div> : (
         <div className="badge-grid">
           {badges.map(b => (
             <div key={b.id} className="badge-card">
-              <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteBadge(b.id); }} title="Elimina">✕</button>
+              <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteBadge(b.id); }}>✕</button>
               <div onClick={() => { setShowAssign(b.id); setAssignXp(b.xp_default); setAssignCoin(b.coin_default); }}>
                 {b.image_url ? <img className="badge-img" src={b.image_url} alt={b.name} /> : <span className="badge-emoji">🎖️</span>}
                 <div className="badge-name">{b.name}</div>
-                <div className="badge-pts">+{b.xp_default} XP · 🪙{b.coin_default}</div>
+                <div className="badge-pts">+{b.xp_default} XP</div>
               </div>
             </div>
           ))}
-          {badges.length === 0 && <div className="empty" style={{ gridColumn: "1/-1" }}>Nessun badge ancora.</div>}
+          {badges.length === 0 && <div className="empty" style={{ gridColumn: "1/-1" }}>Nessun badge. Creane uno!</div>}
         </div>
       )}
+
       {showAssign && (
         <div className="modal-bg" onClick={() => setShowAssign(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Assegna badge</div>
-            <div className="form-group">
-              <label className="form-label">Giocatore</label>
-              <select style={{ width: "100%" }} value={assignTarget} onChange={e => setAssignTarget(e.target.value)}>
-                <option value="">Seleziona giocatore…</option>
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              {badges.find(b => b.id === showAssign)?.image_url
+                ? <img src={badges.find(b => b.id === showAssign).image_url} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)" }} alt="" />
+                : <span style={{ fontSize: 48 }}>🎖️</span>}
+              <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 20, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginTop: 6 }}>{badges.find(b => b.id === showAssign)?.name}</div>
+            </div>
+            <div className="form-group"><label className="form-label">Giocatore</label>
+              <select value={assignTarget} onChange={e => setAssignTarget(e.target.value)}>
+                <option value="">Seleziona…</option>
                 {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
               </select>
             </div>
@@ -2067,75 +1182,189 @@ function BadgesView() {
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={assignBadge} disabled={!assignTarget}>Assegna</button>
-              <button className="btn btn-ghost" onClick={() => setShowAssign(null)}>Annulla</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowAssign(null)}>Annulla</button>
             </div>
           </div>
         </div>
       )}
+
       {showCreate && (
         <div className="modal-bg" onClick={() => setShowCreate(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Crea nuovo badge</div>
+            <div className="modal-title">Crea badge</div>
+            <div className="avatar-upload-area" onClick={() => badgeFileRef.current.click()}>
+              <input ref={badgeFileRef} type="file" accept="image/*" onChange={uploadBadgeImage} style={{ display: "none" }} />
+              {newBadge.image_url ? <img src={newBadge.image_url} className="avatar-preview" alt="badge" /> : <div style={{ fontSize: 40, marginBottom: 8 }}>🖼️</div>}
+              <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploadingBadge ? "Caricamento…" : "Carica immagine badge"}</div>
+            </div>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={newBadge.name} onChange={e => setNewBadge(f => ({ ...f, name: e.target.value }))} /></div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <div className="form-group"><label className="form-label">XP default</label><input className="form-input" type="number" value={newBadge.xp_default} onChange={e => setNewBadge(f => ({ ...f, xp_default: Number(e.target.value) }))} /></div>
-              <div className="form-group"><label className="form-label">Coin default</label><input className="form-input" type="number" value={newBadge.coin_default} onChange={e => setNewBadge(f => ({ ...f, coin_default: Number(e.target.value) }))} /></div>
+              <div className="form-group"><label className="form-label">XP</label><input className="form-input" type="number" value={newBadge.xp_default} onChange={e => setNewBadge(f => ({ ...f, xp_default: Number(e.target.value) }))} /></div>
+              <div className="form-group"><label className="form-label">Coin</label><input className="form-input" type="number" value={newBadge.coin_default} onChange={e => setNewBadge(f => ({ ...f, coin_default: Number(e.target.value) }))} /></div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createBadge} disabled={!newBadge.name}>Crea badge</button>
-              <button className="btn btn-ghost" onClick={() => setShowCreate(false)}>Annulla</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createBadge} disabled={!newBadge.name}>Crea</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowCreate(false)}>Annulla</button>
             </div>
           </div>
         </div>
+      )}
+
+      {customizing && <BannerCustomizer sectionKey="badge" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
+    </div>
+  );
+}
+
+// Sfida del giorno (feature #1)
+function SfidaView({ sectionColors, setSectionColors }) {
+  const [sfide, setSfide] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [customizing, setCustomizing] = useState(false);
+  const [form, setForm] = useState({ title: "", description: "", xp_reward: 20, coin_reward: 10, expires_at: "" });
+
+  const load = useCallback(async () => {
+    const { data } = await sb.from("activities").select("*").eq("is_active", true).ilike("description", "%sfida%").order("created_at", { ascending: false }).limit(10);
+    // Se non c'è una tabella sfide separata, usiamo le attività con tag sfida
+    // Per ora mostriamo le ultime attività come sfide
+    const { data: all } = await sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(5);
+    setSfide(all || []); setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function createSfida() {
+    await sb.from("activities").insert({ name: form.title, description: "SFIDA · " + form.description, duration_days: 1, xp_full: Number(form.xp_reward), xp_completed: Number(form.xp_reward), xp_partial: Math.round(Number(form.xp_reward) / 2), coin_full: Number(form.coin_reward), coin_completed: Number(form.coin_reward), coin_partial: Math.round(Number(form.coin_reward) / 2), coin_cost: 0, is_active: true });
+    setShowForm(false); load();
+  }
+
+  return (
+    <div>
+      <SectionBanner sectionKey="sfida" title="Sfida del Giorno" sub="Crea sfide a tempo per i tuoi giocatori" sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+        <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuova sfida</button>
+      </div>
+      {loading ? <div className="loading">⏳</div> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {sfide.map(s => (
+            <div key={s.id} className="sfida-card">
+              <div className="sfida-label">⚡ Sfida attiva</div>
+              <div className="sfida-title">{s.name}</div>
+              <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
+              <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+            </div>
+          ))}
+          {sfide.length === 0 && <div className="empty">Nessuna sfida attiva. Creane una!</div>}
+        </div>
+      )}
+      {showForm && (
+        <div className="modal-bg" onClick={() => setShowForm(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Nuova sfida del giorno</div>
+            <div className="form-group"><label className="form-label">Titolo sfida</label><input className="form-input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="es. Corri 5 giri!" /></div>
+            <div className="form-group"><label className="form-label">Descrizione</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Descrivi la sfida..." /></div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div className="form-group"><label className="form-label">XP premio</label><input className="form-input" type="number" value={form.xp_reward} onChange={e => setForm(f => ({ ...f, xp_reward: e.target.value }))} /></div>
+              <div className="form-group"><label className="form-label">Coin premio</label><input className="form-input" type="number" value={form.coin_reward} onChange={e => setForm(f => ({ ...f, coin_reward: e.target.value }))} /></div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createSfida} disabled={!form.title.trim()}>Pubblica</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {customizing && <BannerCustomizer sectionKey="sfida" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
+    </div>
+  );
+}
+
+// Diario giornate (educator-only)
+function DiaryView() {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dateFilter, setDateFilter] = useState("");
+
+  useEffect(() => {
+    async function load() {
+      let q = sb.from("notifications").select("*, profiles(display_name, avatar_url)").order("created_at", { ascending: false }).limit(200);
+      if (dateFilter) {
+        q = q.gte("created_at", dateFilter + "T00:00:00").lte("created_at", dateFilter + "T23:59:59");
+      }
+      const { data } = await q;
+      setEntries(data || []); setLoading(false);
+    }
+    load();
+  }, [dateFilter]);
+
+  // Raggruppa per data
+  const grouped = {};
+  entries.forEach(e => {
+    const d = e.created_at?.split("T")[0] || "?";
+    if (!grouped[d]) grouped[d] = [];
+    grouped[d].push(e);
+  });
+
+  const typeIcon = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", log_action: "📌", xp_manual: "⭐", default: "🔔" };
+
+  return (
+    <div>
+      <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)", marginBottom: 16, letterSpacing: "-0.5px" }}>📜 Diario giornate</div>
+      <div className="filter-bar">
+        <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
+        {dateFilter && <button className="btn btn-ghost btn-sm" onClick={() => setDateFilter("")}>✕ Tutto</button>}
+      </div>
+      {loading ? <div className="loading">⏳ Caricamento…</div> : (
+        Object.keys(grouped).length === 0
+          ? <div className="empty">Nessuna azione registrata.</div>
+          : Object.entries(grouped).map(([date, dayEntries]) => (
+            <div key={date} className="diary-day">
+              <div className="diary-date">{new Date(date).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</div>
+              {dayEntries.filter(e => e.profiles).map(e => (
+                <div key={e.id} className="diary-entry">
+                  <span className="diary-icon">{typeIcon[e.type] || typeIcon.default}</span>
+                  <div className="diary-text">
+                    <strong>{e.profiles?.display_name}</strong> · {e.title}
+                    {e.body && <span style={{ color: "var(--text2)", marginLeft: 4 }}>{e.body}</span>}
+                  </div>
+                  <div className="diary-pts">{new Date(e.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</div>
+                </div>
+              ))}
+            </div>
+          ))
       )}
     </div>
   );
 }
 
 function MessagesView({ profile }) {
-  const [threads] = useState([
-    { id: "verde", name: "Squadra Verde", last: "Ottimo allenamento!" },
-    { id: "gialla", name: "Squadra Gialla", last: "Ci vediamo sabato?" },
-    { id: "azzurra", name: "Squadra Azzurra", last: "Grande partita!" },
-    { id: "tutti", name: "Tutti", last: "Evento sabato!" },
-  ]);
+  const threads = [
+    { id: "verde", name: "Squadra Verde" }, { id: "gialla", name: "Squadra Gialla" },
+    { id: "azzurra", name: "Squadra Azzurra" }, { id: "tutti", name: "Tutti" },
+  ];
   const [active, setActive] = useState(threads[0]);
-  const [msgs, setMsgs] = useState([{ id: 1, sender: "Sistema", body: "Benvenuto nella chat!", mine: false }]);
+  const [msgs, setMsgs] = useState([{ id: 1, body: "Benvenuto nella chat! 🌿", mine: false }]);
   const [input, setInput] = useState("");
 
   function send() {
     if (!input.trim()) return;
-    setMsgs(prev => [...prev, { id: Date.now(), sender: profile.display_name, body: input, mine: true }]);
+    setMsgs(prev => [...prev, { id: Date.now(), body: input, mine: true }]);
     setInput("");
   }
 
   return (
     <div className="msg-layout">
       <div className="msg-list">
-        <div className="section-label" style={{ marginTop: 0 }}>Canali</div>
-        {threads.map(t => (
-          <div key={t.id} className={`msg-thread ${active.id === t.id ? "active" : ""}`} onClick={() => setActive(t)}>
-            <div className="mt-name">{t.name}</div>
-            <div className="mt-last">{t.last}</div>
-          </div>
-        ))}
+        {threads.map(t => <div key={t.id} className={`msg-thread ${active.id === t.id ? "active" : ""}`} onClick={() => setActive(t)}><div className="mt-name">{t.name}</div></div>)}
       </div>
       <div className="msg-main">
         <div className="msg-hdr">{active.name}</div>
         <div className="msg-body">
-          {msgs.map(m => (
-            <div key={m.id} className={`bubble-wrap ${m.mine ? "mine" : ""}`}>
-              <div className="bubble-av">{m.mine ? "👑" : "🌿"}</div>
-              <div>
-                {!m.mine && <div style={{ fontSize: 10, color: "var(--text3)", marginBottom: 2 }}>{m.sender}</div>}
-                <div className={`bubble ${m.mine ? "mine" : "them"}`}>{m.body}</div>
-              </div>
-            </div>
-          ))}
+          {msgs.map(m => <div key={m.id} className={`bubble-wrap ${m.mine ? "mine" : ""}`}><div className="bubble-av">{m.mine ? "👑" : "🌿"}</div><div className={`bubble ${m.mine ? "mine" : "them"}`}>{m.body}</div></div>)}
         </div>
         <div className="msg-inp-row">
-          <input className="msg-inp" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Scrivi un messaggio…" />
-          <button className="btn btn-primary btn-sm" onClick={send}>Invia</button>
+          <input className="msg-inp" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Scrivi…" />
+          <button className="btn btn-yellow btn-sm" onClick={send}>Invia</button>
         </div>
       </div>
     </div>
@@ -2148,9 +1377,8 @@ function BookingsView() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await sb.from("bookings").select("*, profiles(display_name), activities(name, coin_cost)").order("created_at", { ascending: false });
-      setBookings(data || []);
-      setLoading(false);
+      const { data } = await sb.from("bookings").select("*, profiles(display_name), activities(name,coin_cost)").order("created_at", { ascending: false });
+      setBookings(data || []); setLoading(false);
     }
     load();
   }, []);
@@ -2161,41 +1389,37 @@ function BookingsView() {
       const { data: p } = await sb.from("profiles").select("coin").eq("id", playerId).single();
       await sb.from("profiles").update({ coin: (p?.coin || 0) + coinHeld }).eq("id", playerId);
     }
-    await sb.from("notifications").insert({ user_id: playerId, type: status === "confirmed" ? "booking_confirmed" : "booking_rejected", title: status === "confirmed" ? "Prenotazione confermata!" : "Prenotazione non accettata", body: status === "confirmed" ? "La tua prenotazione è stata confermata." : "Le tue coin sono state restituite." });
+    await sb.from("notifications").insert({ user_id: playerId, type: status === "confirmed" ? "booking_confirmed" : "booking_rejected", title: status === "confirmed" ? "Prenotazione confermata!" : "Prenotazione rifiutata", body: status === "confirmed" ? "Sei dentro!" : "Coin restituite." });
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
   }
 
-  const statusTag = { pending: ["tag-amber", "In attesa"], confirmed: ["tag-green", "Confermata"], rejected: ["tag-red", "Rifiutata"], cancelled: ["tag-gray", "Annullata"] };
+  const statusTag = { pending: ["tag-amber","In attesa"], confirmed: ["tag-green","Confermata"], rejected: ["tag-red","Rifiutata"], cancelled: ["tag-gray","Annullata"] };
 
   return (
     <div>
-      {loading ? <div className="loading">Caricamento…</div> : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <table className="pres-table">
-            <thead><tr><th>Giocatore</th><th>Attività</th><th>Coin</th><th>Stato</th><th>Azioni</th></tr></thead>
-            <tbody>
-              {bookings.map(b => {
-                const [tagClass, tagLabel] = statusTag[b.status] || ["tag-gray", b.status];
-                return (
-                  <tr key={b.id}>
-                    <td style={{ fontWeight: 500 }}>{b.profiles?.display_name}</td>
-                    <td>{b.activities?.name}</td>
-                    <td style={{ color: "var(--warning)" }}>🪙 {b.coin_held}</td>
-                    <td><span className={`tag ${tagClass}`}>{tagLabel}</span></td>
-                    <td>
-                      {b.status === "pending" && (
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-sm" style={{ background: "rgba(74,158,42,.15)", color: "var(--accent2)", border: "1px solid rgba(74,158,42,.3)" }} onClick={() => review(b.id, "confirmed", b.player_id, b.coin_held)}>✓ Conferma</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => review(b.id, "rejected", b.player_id, b.coin_held)}>✗ Rifiuta</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {bookings.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", padding: 32, color: "var(--text3)" }}>Nessuna prenotazione</td></tr>}
-            </tbody>
-          </table>
+      {loading ? <div className="loading">⏳</div> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {bookings.map(b => {
+            const [tc, tl] = statusTag[b.status] || ["tag-gray", b.status];
+            return (
+              <div key={b.id} className="card-sm">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{b.profiles?.display_name}</div>
+                    <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 2 }}>{b.activities?.name} · 🪙 {b.coin_held}</div>
+                  </div>
+                  <span className={`tag ${tc}`}>{tl}</span>
+                </div>
+                {b.status === "pending" && (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn btn-sm" style={{ flex: 1, background: "rgba(51,153,102,.15)", color: "var(--verde)", border: "1px solid rgba(51,153,102,.3)" }} onClick={() => review(b.id, "confirmed", b.player_id, b.coin_held)}>✓ Conferma</button>
+                    <button className="btn btn-danger btn-sm" style={{ flex: 1 }} onClick={() => review(b.id, "rejected", b.player_id, b.coin_held)}>✗ Rifiuta</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {bookings.length === 0 && <div className="empty">Nessuna prenotazione</div>}
         </div>
       )}
     </div>
@@ -2208,39 +1432,34 @@ function QrView() {
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    async function load() {
-      const { data } = await sb.from("daily_qr").select("*").eq("date", today).single();
-      setQr(data);
-      setLoading(false);
-    }
-    load();
+    sb.from("daily_qr").select("*").eq("date", today).single().then(({ data }) => { setQr(data); setLoading(false); });
   }, [today]);
 
   async function generateQr() {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const validFrom = new Date(); validFrom.setHours(8, 0, 0, 0);
-    const validUntil = new Date(); validUntil.setHours(12, 0, 0, 0);
-    const { data } = await sb.from("daily_qr").upsert({ date: today, code, valid_from: validFrom.toISOString(), valid_until: validUntil.toISOString() }).select().single();
+    const vf = new Date(); vf.setHours(8, 0, 0, 0);
+    const vu = new Date(); vu.setHours(18, 0, 0, 0);
+    const { data } = await sb.from("daily_qr").upsert({ date: today, code, valid_from: vf.toISOString(), valid_until: vu.toISOString() }).select().single();
     setQr(data);
   }
 
   return (
-    <div className="card" style={{ maxWidth: 400, margin: "0 auto" }}>
-      <div className="qr-wrap">
-        <div style={{ fontSize: 14, color: "var(--text2)", marginBottom: 8 }}>QR Check-in giornaliero</div>
-        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 20 }}>{today}</div>
-        {loading ? <div className="loading">Caricamento…</div> : qr ? (
+    <div className="card" style={{ maxWidth: 400, margin: "0 auto", textAlign: "center" }}>
+      <div style={{ padding: "24px 0" }}>
+        <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 13, fontWeight: 900, textTransform: "uppercase", color: "var(--text2)", letterSpacing: ".1em", marginBottom: 4 }}>QR Check-in</div>
+        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 24 }}>{today}</div>
+        {loading ? <div className="loading">⏳</div> : qr ? (
           <>
-            <div style={{ background: "var(--surface3)", borderRadius: 16, padding: "20px 28px", marginBottom: 16 }}>
+            <div style={{ background: "var(--surface2)", borderRadius: 16, padding: "24px 32px", marginBottom: 16, display: "inline-block", border: "1.5px solid var(--border2)" }}>
               <div className="qr-code">{qr.code}</div>
             </div>
-            <div className="qr-date">Valido dalle {new Date(qr.valid_from).getHours()}:00 alle {new Date(qr.valid_until).getHours()}:00</div>
-            <button className="btn btn-ghost" style={{ marginTop: 16, width: "100%" }} onClick={generateQr}>Rigenera codice</button>
+            <div style={{ fontSize: 13, color: "var(--text2)" }}>Valido {new Date(qr.valid_from).getHours()}:00 – {new Date(qr.valid_until).getHours()}:00</div>
+            <button className="btn btn-ghost" style={{ marginTop: 16, width: "100%" }} onClick={generateQr}>Rigenera</button>
           </>
         ) : (
           <>
-            <div style={{ color: "var(--text3)", fontSize: 13, marginBottom: 20 }}>Nessun codice generato per oggi</div>
-            <button className="btn btn-primary" style={{ width: "100%" }} onClick={generateQr}>Genera QR di oggi</button>
+            <div style={{ color: "var(--text3)", fontSize: 14, marginBottom: 24 }}>Nessun codice per oggi</div>
+            <button className="btn btn-primary" onClick={generateQr}>Genera QR di oggi</button>
           </>
         )}
       </div>
@@ -2248,9 +1467,9 @@ function QrView() {
   );
 }
 
-// ─── PLAYER VIEW ──────────────────────────────────────────
+// ─── PLAYER DASHBOARD ─────────────────────────────────────
 
-function PlayerDashboard({ profile, onLogout }) {
+function PlayerDashboard({ profile, onLogout, sectionColors, theme }) {
   const [tab, setTab] = useState("profilo");
   const [fullProfile, setFullProfile] = useState(null);
   const [badges, setBadges] = useState([]);
@@ -2260,33 +1479,43 @@ function PlayerDashboard({ profile, onLogout }) {
   const [qrInput, setQrInput] = useState("");
   const [qrMsg, setQrMsg] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }] = await Promise.all([
-        sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single(),
-        sb.from("player_badges").select("*, badges(*)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
-        sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }),
-        sb.from("bookings").select("*, activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
-        sb.from("notifications").select("*").eq("user_id", profile.id).order("created_at", { ascending: false }).limit(20),
-      ]);
-      setFullProfile(p); setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []);
-      setLoading(false);
-    }
-    load();
+  const load = useCallback(async () => {
+    const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }] = await Promise.all([
+      sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single(),
+      sb.from("player_badges").select("*, badges(name,image_url,xp_default)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
+      sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("bookings").select("*, activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
+      sb.from("notifications").select("*").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
+    ]);
+    setFullProfile(p); setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []);
+    setLoading(false);
   }, [profile.id]);
+
+  // Realtime (feature #6)
+  useEffect(() => {
+    load();
+    const channel = sb.channel("player_" + profile.id)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` }, () => { load(); })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, () => { load(); })
+      .subscribe();
+    return () => { sb.removeChannel(channel); };
+  }, [profile.id, load]);
 
   async function doCheckin() {
     const today = new Date().toISOString().split("T")[0];
     const { data: qr } = await sb.from("daily_qr").select("*").eq("date", today).single();
     if (!qr) { setQrMsg("Nessun QR attivo oggi."); return; }
-    if (qrInput.toUpperCase() !== qr.code) { setQrMsg("Codice non valido. Riprova."); return; }
+    if (qrInput.toUpperCase() !== qr.code) { setQrMsg("❌ Codice non valido."); return; }
     const now = new Date();
-    if (now < new Date(qr.valid_from) || now > new Date(qr.valid_until)) { setQrMsg("Il codice non è più valido per questa fascia oraria."); return; }
+    if (now < new Date(qr.valid_from) || now > new Date(qr.valid_until)) { setQrMsg("⏰ Codice scaduto."); return; }
     const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: 10, coin_awarded: 5, qr_verified: true });
     if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
     await sb.from("profiles").update({ xp: (fullProfile?.xp || 0) + 10, coin: (fullProfile?.coin || 0) + 5 }).eq("id", profile.id);
-    setQrMsg("✓ Check-in effettuato! +10 XP, +5 Coin");
+    setQrMsg("✅ Check-in! +10 XP, +5 Coin");
     setFullProfile(prev => ({ ...prev, xp: (prev?.xp || 0) + 10, coin: (prev?.coin || 0) + 5 }));
   }
 
@@ -2295,116 +1524,209 @@ function PlayerDashboard({ profile, onLogout }) {
     await sb.from("bookings").insert({ player_id: profile.id, activity_id: actId, coin_held: cost });
     await sb.from("profiles").update({ coin: (fullProfile?.coin || 0) - cost }).eq("id", profile.id);
     setFullProfile(prev => ({ ...prev, coin: (prev?.coin || 0) - cost }));
-    alert("Prenotazione inviata! Attendi la conferma dell'educatore.");
+    alert("✅ Prenotazione inviata!");
+  }
+
+  async function saveName() {
+    if (!newName.trim() || newName.length > 30) return;
+    setSavingName(true);
+    await sb.from("profiles").update({ display_name: newName.trim() }).eq("id", profile.id);
+    setFullProfile(prev => ({ ...prev, display_name: newName.trim() }));
+    setEditingName(false); setSavingName(false);
   }
 
   const lv = getLevel(fullProfile?.xp || 0);
-  const nextLv = LEVELS.find(l => l.xp > (fullProfile?.xp || 0));
   const unread = notifications.filter(n => !n.read_at).length;
-  const tabs = [["profilo","👤","Profilo"],["checkin","📍","Check-in"],["attivita","⚡","Attività"],["badge","🎖️","Badge"],["notifiche","🔔",`Notifiche${unread > 0 ? " ●" : ""}`]];
 
-  if (loading) return <div className="loading" style={{ minHeight: "100vh" }}>Caricamento…</div>;
+  const PLAYER_TABS = [
+    ["profilo","👤","Profilo"],
+    ["checkin","📍","Check-in"],
+    ["attivita","⚡","Attività"],
+    ["badge","🎖️","Badge"],
+    ["notifiche","🔔",""],
+  ];
+
+  if (loading) return <div className="loading" style={{ minHeight: "100vh" }}>🌿 Caricamento…</div>;
 
   return (
-    <div style={{ maxWidth: 500, margin: "0 auto", padding: "16px", minHeight: "100vh" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>🌿 PUG Scoreboard</div>
+    <div style={{ background: "var(--nero)", minHeight: "100vh" }}>
+      {/* Header */}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 58, background: "var(--nero)", borderBottom: "1px solid var(--border)", zIndex: 20, display: "flex", alignItems: "center", padding: "0 16px", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", border: "2.5px solid var(--azzurro)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Avatar url={fullProfile?.avatar_url} emoji={lv.emoji} size={36} />
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", lineHeight: 1 }}>{fullProfile?.display_name}</div>
+            <div style={{ fontSize: 11, color: "var(--azzurro)", fontWeight: 600 }}>{lv.emoji} {lv.name}</div>
+          </div>
+        </div>
         <button className="btn btn-ghost btn-sm" onClick={onLogout}>Esci</button>
       </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, overflow: "auto", paddingBottom: 4 }}>
-        {tabs.map(([id, icon, label]) => (
-          <button key={id} className={`chip ${tab === id ? "active" : ""}`} onClick={() => setTab(id)} style={{ flexShrink: 0 }}>{icon} {label}</button>
-        ))}
+
+      {/* Contenuto */}
+      <div style={{ paddingTop: 66, paddingBottom: "calc(70px + env(safe-area-inset-bottom,0px))", padding: "70px 14px calc(70px + env(safe-area-inset-bottom,0px))" }}>
+
+        {/* PROFILO */}
+        {tab === "profilo" && fullProfile && (
+          <>
+            <div className="profile-hero">
+              <div className="profile-avatar"><Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={90} /></div>
+              <div className="profile-name">{fullProfile.display_name}</div>
+              <div className="profile-level">{lv.emoji} {lv.name}</div>
+              {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name} />}
+              <div style={{ marginTop: 16, position: "relative" }}><XpBar xp={fullProfile.xp} /></div>
+              <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 18 }}>
+                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--azzurro)" }}>{fullProfile.xp}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em" }}>XP</div></div>
+                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--giallo)" }}>🪙 {fullProfile.coin}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em" }}>Coin</div></div>
+                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--rosa)" }}>{badges.length}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em" }}>Badge</div></div>
+              </div>
+            </div>
+
+            {/* Modifica nome (unica cosa editabile) */}
+            <div className="card" style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Il tuo nome in gioco</div>
+              {editingName ? (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input className="form-input" value={newName} onChange={e => setNewName(e.target.value.slice(0, 30))} placeholder="Inserisci nome…" style={{ flex: 1 }} maxLength={30} autoFocus />
+                  <button className="btn btn-yellow btn-sm" onClick={saveName} disabled={savingName || !newName.trim()}>{savingName ? "…" : "Salva"}</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setEditingName(false)}>✕</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 22, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{fullProfile.display_name}</span>
+                  <button className="btn btn-ghost btn-xs" onClick={() => { setNewName(fullProfile.display_name); setEditingName(true); }}>✏️ Modifica</button>
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>Puoi cambiare solo il tuo nome · Max 30 caratteri</div>
+            </div>
+
+            {/* Badge nel profilo */}
+            {badges.length > 0 && (
+              <div className="card" style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>I tuoi badge</div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {badges.map(pb => (
+                    <div key={pb.id} style={{ textAlign: "center", width: 64 }}>
+                      {pb.badges?.image_url
+                        ? <img src={pb.badges.image_url} style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2.5px solid var(--rosa)", display: "block", margin: "0 auto 4px" }} alt={pb.badges?.name} />
+                        : <div style={{ fontSize: 36, marginBottom: 4 }}>🎖️</div>}
+                      <div style={{ fontSize: 10, color: "var(--text2)", lineHeight: 1.2, fontWeight: 600 }}>{pb.badges?.name}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Prenotazioni recenti */}
+            {bookings.length > 0 && (
+              <>
+                <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 14, fontWeight: 900, textTransform: "uppercase", color: "var(--text3)", letterSpacing: ".08em", marginBottom: 8 }}>Prenotazioni</div>
+                {bookings.slice(0, 5).map(b => {
+                  const s = { pending: ["tag-amber","In attesa"], confirmed: ["tag-green","Confermata"], rejected: ["tag-red","Rifiutata"] };
+                  const [cls, label] = s[b.status] || ["tag-gray", b.status];
+                  return <div key={b.id} className="card-sm" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 13, fontWeight: 600 }}>{b.activities?.name}</span><span className={`tag ${cls}`}>{label}</span></div>;
+                })}
+              </>
+            )}
+          </>
+        )}
+
+        {/* CHECK-IN */}
+        {tab === "checkin" && (
+          <div className="card" style={{ marginTop: 8 }}>
+            <div style={{ textAlign: "center", padding: "24px 0" }}>
+              <div style={{ fontSize: 60, marginBottom: 12 }}>📍</div>
+              <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginBottom: 6 }}>Check-in</div>
+              <div style={{ fontSize: 14, color: "var(--text2)", marginBottom: 28 }}>Inserisci il codice mostrato in loco</div>
+              <input className="form-input" value={qrInput} onChange={e => setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{ textAlign: "center", fontFamily: "'Barlow Condensed'", fontSize: 36, fontWeight: 900, letterSpacing: 10, marginBottom: 16 }} maxLength={6} />
+              <button className="btn btn-primary" onClick={doCheckin}>Conferma presenza</button>
+              {qrMsg && <div style={{ marginTop: 16, fontSize: 15, fontWeight: 700, color: qrMsg.includes("✅") ? "var(--verde)" : "var(--danger)" }}>{qrMsg}</div>}
+              <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 20 }}>
+                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--azzurro)" }}>+10</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>XP</div></div>
+                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--giallo)" }}>+5</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>Coin</div></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ATTIVITÀ + SFIDE */}
+        {tab === "attivita" && (
+          <div style={{ marginTop: 8 }}>
+            {/* Sfida del giorno in evidenza */}
+            {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
+              <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
+                <div className="sfida-label">⚡ Sfida del giorno</div>
+                <div className="sfida-title">{s.name}</div>
+                <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
+                <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+              </div>
+            ))}
+            {activities.filter(a => !a.description?.includes("SFIDA")).map(a => (
+              <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
+                <div className="act-title">{a.name}</div>
+                <div className="act-meta">{a.description} · {a.duration_days} giorni</div>
+                <div className="act-rewards">
+                  <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
+                  <span className="reward-tag coin-tag">🪙 {a.coin_cost}</span>
+                </div>
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 12, width: "100%" }} onClick={() => bookActivity(a.id, a.coin_cost)} disabled={a.coin_cost > (fullProfile?.coin || 0)}>
+                  {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti" : "Prenota"}
+                </button>
+              </div>
+            ))}
+            {activities.length === 0 && <div className="empty">Nessuna attività disponibile.</div>}
+          </div>
+        )}
+
+        {/* BADGE */}
+        {tab === "badge" && (
+          <div style={{ marginTop: 8 }}>
+            <SectionBanner sectionKey="badge" title="I tuoi badge" sub={`${badges.length} badge conquistati`} sectionColors={sectionColors} />
+            {badges.length === 0 ? <div className="empty">Nessun badge ancora. Continua così!</div> : (
+              <div className="badge-grid">
+                {badges.map(pb => (
+                  <div key={pb.id} className="badge-card">
+                    {pb.badges?.image_url ? <img className="badge-img" src={pb.badges.image_url} alt={pb.badges?.name} /> : <span className="badge-emoji">🎖️</span>}
+                    <div className="badge-name">{pb.badges?.name}</div>
+                    <div className="badge-pts">+{pb.xp_awarded} XP</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* NOTIFICHE */}
+        {tab === "notifiche" && (
+          <div style={{ marginTop: 8 }}>
+            {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
+              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", week_bonus: "🏆" };
+              return (
+                <div key={n.id} className="notif-item">
+                  <div className="notif-icon">{icons[n.type] || "🔔"}</div>
+                  <div style={{ flex: 1 }}>
+                    <div className="notif-title">{n.title}{!n.read_at && <span className="notif-dot" />}</div>
+                    <div className="notif-body">{n.body}</div>
+                    <div className="notif-time">{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {tab === "profilo" && fullProfile && (
-        <>
-          <div className="profile-hero">
-            <div className="profile-avatar"><Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={88} /></div>
-            <div className="profile-name">{fullProfile.display_name}</div>
-            <div className="profile-level">{lv.emoji} {lv.name}</div>
-            {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name} />}
-            <div style={{ marginTop: 16 }}><XpBar xp={fullProfile.xp} /></div>
-            <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 16 }}>
-              <div style={{ textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 600, color: "var(--accent2)" }}>{fullProfile.xp}</div><div style={{ fontSize: 11, color: "var(--text3)" }}>XP totali</div></div>
-              <div style={{ textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 600, color: "var(--warning)" }}>🪙 {fullProfile.coin}</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Coin</div></div>
-              <div style={{ textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 600, color: "var(--text)" }}>{badges.length}</div><div style={{ fontSize: 11, color: "var(--text3)" }}>Badge</div></div>
-            </div>
-          </div>
-          <div className="section-label">Le mie prenotazioni</div>
-          {bookings.slice(0, 5).map(b => {
-            const s = { pending: ["tag-amber","In attesa"], confirmed: ["tag-green","Confermata"], rejected: ["tag-red","Rifiutata"] };
-            const [cls, label] = s[b.status] || ["tag-gray", b.status];
-            return <div key={b.id} className="card-sm" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 13 }}>{b.activities?.name}</span><span className={`tag ${cls}`}>{label}</span></div>;
-          })}
-        </>
-      )}
-
-      {tab === "checkin" && (
-        <div className="card">
-          <div style={{ textAlign: "center", padding: "16px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📍</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>Check-in giornaliero</div>
-            <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 24 }}>Inserisci il codice mostrato in loco</div>
-            <input className="form-input" value={qrInput} onChange={e => setQrInput(e.target.value.toUpperCase())} placeholder="es. ABC123" style={{ textAlign: "center", fontSize: 24, fontFamily: "DM Mono", letterSpacing: 6, marginBottom: 12 }} maxLength={6} />
-            <button className="btn btn-primary" style={{ width: "100%", marginTop: 8 }} onClick={doCheckin}>Conferma presenza</button>
-            {qrMsg && <div style={{ marginTop: 14, fontSize: 13, color: qrMsg.startsWith("✓") ? "var(--accent2)" : "var(--danger)" }}>{qrMsg}</div>}
-          </div>
-        </div>
-      )}
-
-      {tab === "attivita" && (
-        <div>
-          {activities.map(a => (
-            <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
-              <div className="act-title">{a.name}</div>
-              <div className="act-meta">{a.description} · {a.duration_days} giorni</div>
-              <div className="act-rewards">
-                <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
-                <span className="reward-tag coin-tag">🪙 {a.coin_cost} per prenotare</span>
-              </div>
-              <button className="btn btn-ghost btn-sm" style={{ marginTop: 10, width: "100%" }} onClick={() => bookActivity(a.id, a.coin_cost)}>
-                Prenota {a.coin_cost > (fullProfile?.coin || 0) ? "(coin insufficienti)" : ""}
-              </button>
-            </div>
-          ))}
-          {activities.length === 0 && <div className="empty">Nessuna attività disponibile al momento.</div>}
-        </div>
-      )}
-
-      {tab === "badge" && (
-        <div>
-          {badges.length === 0 ? <div className="empty">Nessun badge ancora. Partecipa alle attività!</div> : (
-            <div className="badge-grid">
-              {badges.map(pb => (
-                <div key={pb.id} className="badge-card">
-                  {pb.badges?.image_url ? <img className="badge-img" src={pb.badges.image_url} alt={pb.badges?.name} /> : <span className="badge-emoji">🎖️</span>}
-                  <div className="badge-name">{pb.badges?.name}</div>
-                  <div className="badge-pts">+{pb.xp_awarded} XP · 🪙{pb.coin_awarded}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "notifiche" && (
-        <div>
-          {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
-            const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", week_bonus: "🏆", new_message: "💬" };
-            return (
-              <div key={n.id} className="notif-item">
-                <div className="notif-icon">{icons[n.type] || "🔔"}</div>
-                <div>
-                  <div className="notif-title">{n.title}{!n.read_at && <span className="notif-dot" />}</div>
-                  <div className="notif-body">{n.body}</div>
-                  <div className="notif-time">{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Bottom nav giocatore */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--nero)", borderTop: "1px solid var(--border)", zIndex: 20, display: "flex", paddingBottom: "env(safe-area-inset-bottom,0px)" }}>
+        {PLAYER_TABS.map(([id, icon, badge]) => (
+          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: "10px 0", background: "none", border: "none", cursor: "pointer", color: tab === id ? "var(--azzurro)" : "var(--text3)", fontFamily: "'Funnel Display'", position: "relative" }}>
+            <span style={{ fontSize: 22 }}>{icon}</span>
+            {id === "notifiche" && unread > 0 && <span style={{ position: "absolute", top: 6, right: "calc(50% - 18px)", background: "var(--rosa)", color: "#fff", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px" }}>{unread}</span>}
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>{["Profilo","Check-in","Attività","Badge","Notifiche"][["profilo","checkin","attivita","badge","notifiche"].indexOf(id)]}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -2412,82 +1734,163 @@ function PlayerDashboard({ profile, onLogout }) {
 // ─── EDUCATOR SHELL ───────────────────────────────────────
 
 const EDUCATOR_TABS = [
-  ["giocatori", "👤", "Giocatori"],
-  ["classifica", "🏆", "Classifica"],
-  ["squadre", "🛡️", "Squadre"],
-  ["presenze", "✅", "Presenze"],
-  ["attivita", "⚡", "Attività"],
-  ["badge", "🎖️", "Badge"],
-  ["prenotazioni", "📋", "Prenotazioni"],
-  ["messaggi", "💬", "Messaggi"],
-  ["qr", "📍", "QR Check-in"],
+  ["giocatori","👤","Giocatori"],
+  ["classifica","🏆","Classifica"],
+  ["squadre","🛡️","Squadre"],
+  ["presenze","✅","Presenze"],
+  ["attivita","⚡","Attività"],
+  ["sfida","🔥","Sfida"],
+  ["badge","🎖️","Badge"],
+  ["prenotazioni","📋","Prenotazioni"],
+  ["messaggi","💬","Messaggi"],
+  ["diario","📜","Diario"],
+  ["qr","📍","QR"],
 ];
+
+const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
 function EducatorShell({ profile, onLogout }) {
   const [tab, setTab] = useState("giocatori");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
+  const [theme, setTheme] = useState("dark");
+  const [sectionColors, setSectionColors] = useState(DEFAULT_SECTION_COLORS);
+
   const cur = EDUCATOR_TABS.find(t => t[0] === tab);
   const lv = getLevel(profile.xp || 0);
+  const mobTabs = EDUCATOR_TABS.filter(t => MOB_TABS_IDS.includes(t[0]));
+
+  // Theme toggle (feature #5)
+  useEffect(() => {
+    document.body.classList.toggle("light", theme === "light");
+  }, [theme]);
+
+  function goTo(id) { setTab(id); setDrawerOpen(false); }
+
+  const sharedProps = { sectionColors, setSectionColors };
 
   return (
-    <div className="app">
+    <div className="edu-layout">
+      {/* Sidebar desktop */}
       <div className="sidebar">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-title"><span>🌿</span><span>PUG</span></div>
+          <div className="sidebar-logo-title">Per·You Garden</div>
           <div className="sidebar-logo-sub">Pannello educatore</div>
         </div>
         <nav className="nav">
           {EDUCATOR_TABS.map(([id, icon, label]) => (
             <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
-              <span className="nav-icon">{icon}</span>
-              <span>{label}</span>
+              <span className="nav-icon">{icon}</span><span>{label}</span>
             </div>
           ))}
         </nav>
         <div className="sidebar-user">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, cursor: "pointer" }} onClick={() => setShowAvatarModal(true)} title="Cambia avatar">
-            <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--border2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-              <Avatar url={avatarUrl} emoji={lv.emoji} size={32} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" }} onClick={() => setShowAvatarModal(true)}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", border: "2.5px solid var(--azzurro)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Avatar url={avatarUrl} emoji={lv.emoji} size={36} />
             </div>
             <div>
-              <div className="sidebar-user-name">{profile.display_name}</div>
-              <div className="sidebar-user-role">{profile.role}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{profile.display_name}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>{profile.role}</div>
+            </div>
+          </div>
+          {/* Theme toggle */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: "var(--text3)" }}>{theme === "dark" ? "🌙" : "☀️"}</span>
+            <button className="theme-toggle" style={{ background: theme === "light" ? "var(--azzurro)" : "var(--surface3)" }} onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}>
+              <div className="theme-toggle-knob" style={{ transform: theme === "light" ? "translateX(20px)" : "translateX(0)" }} />
+            </button>
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={onLogout}>Esci</button>
+        </div>
+      </div>
+
+      {/* Header mobile */}
+      <div className="mob-header">
+        <button onClick={() => setDrawerOpen(true)} style={{ background: "none", border: "none", color: "var(--text2)", fontSize: 24, cursor: "pointer", padding: 4, lineHeight: 1 }}>☰</button>
+        <span className="mob-header-title">{cur?.[2]}</span>
+        <button className="theme-toggle" style={{ background: theme === "light" ? "var(--azzurro)" : "var(--surface3)", width: 38, height: 22 }} onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}>
+          <div className="theme-toggle-knob" style={{ width: 16, height: 16, transform: theme === "light" ? "translateX(16px)" : "translateX(0)" }} />
+        </button>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", border: "2.5px solid var(--azzurro)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setShowAvatarModal(true)}>
+          <Avatar url={avatarUrl} emoji={lv.emoji} size={36} />
+        </div>
+      </div>
+
+      {/* Drawer mobile */}
+      {drawerOpen && <div className="mob-drawer-bg" onClick={() => setDrawerOpen(false)} />}
+      <div className={`mob-drawer ${drawerOpen ? "open" : ""}`}>
+        <div style={{ padding: "22px 20px 16px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)" }}>Per·You Garden</div>
+        </div>
+        <nav style={{ flex: 1, padding: "10px 0", overflowY: "auto" }}>
+          {EDUCATOR_TABS.map(([id, icon, label]) => (
+            <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => goTo(id)}>
+              <span className="nav-icon">{icon}</span><span>{label}</span>
+            </div>
+          ))}
+        </nav>
+        <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, cursor: "pointer" }} onClick={() => { setShowAvatarModal(true); setDrawerOpen(false); }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", border: "2.5px solid var(--azzurro)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Avatar url={avatarUrl} emoji={lv.emoji} size={36} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{profile.display_name}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)" }}>{profile.role}</div>
             </div>
           </div>
           <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={onLogout}>Esci</button>
         </div>
       </div>
 
+      {/* Main */}
+      <div className="edu-main">
+        <div className="topbar">
+          <div className="topbar-title">{cur?.[1]} {cur?.[2]}</div>
+        </div>
+        <div className="content edu-content-wrap">
+          {tab === "giocatori"    && <PlayersView profile={profile} {...sharedProps} />}
+          {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
+          {tab === "squadre"      && <SquadsView />}
+          {tab === "presenze"     && <AttendanceView {...sharedProps} />}
+          {tab === "attivita"     && <ActivitiesView {...sharedProps} />}
+          {tab === "sfida"        && <SfidaView {...sharedProps} />}
+          {tab === "badge"        && <BadgesView {...sharedProps} />}
+          {tab === "prenotazioni" && <BookingsView />}
+          {tab === "messaggi"     && <MessagesView profile={profile} />}
+          {tab === "diario"       && <DiaryView />}
+          {tab === "qr"           && <QrView />}
+        </div>
+      </div>
+
+      {/* Bottom nav mobile */}
+      <div className="mob-bottom-nav">
+        <div className="mob-bottom-nav-inner">
+          {mobTabs.map(([id, icon, label]) => (
+            <button key={id} className={`mob-nav-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
+              <span style={{ fontSize: 22 }}>{icon}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em" }}>{label}</span>
+            </button>
+          ))}
+          <button className={`mob-nav-btn ${!MOB_TABS_IDS.includes(tab) ? "active" : ""}`} onClick={() => setDrawerOpen(true)}>
+            <span style={{ fontSize: 22 }}>⋯</span>
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase" }}>Altro</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Avatar modal */}
       {showAvatarModal && (
         <div className="modal-bg" onClick={() => setShowAvatarModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Il tuo avatar</div>
-            <AvatarUpload
-              playerId={profile.id}
-              currentUrl={avatarUrl}
-              onUploaded={url => setAvatarUrl(url)}
-            />
+            <AvatarUpload playerId={profile.id} currentUrl={avatarUrl} onUploaded={url => setAvatarUrl(url)} />
             <button className="btn btn-ghost" style={{ width: "100%", marginTop: 8 }} onClick={() => setShowAvatarModal(false)}>Chiudi</button>
           </div>
         </div>
       )}
-      <div className="main">
-        <div className="topbar">
-          <h2>{cur?.[2]}</h2>
-        </div>
-        <div className="content">
-          {tab === "giocatori"    && <PlayersView profile={profile} />}
-          {tab === "classifica"   && <LeaderboardView />}
-          {tab === "squadre"      && <SquadsView />}
-          {tab === "presenze"     && <AttendanceView />}
-          {tab === "attivita"     && <ActivitiesView />}
-          {tab === "badge"        && <BadgesView />}
-          {tab === "prenotazioni" && <BookingsView />}
-          {tab === "messaggi"     && <MessagesView profile={profile} />}
-          {tab === "qr"           && <QrView />}
-        </div>
-      </div>
     </div>
   );
 }
@@ -2497,6 +1900,7 @@ function EducatorShell({ profile, onLogout }) {
 export default function App() {
   const [profile, setProfile] = useState(null);
   const [checking, setChecking] = useState(true);
+  const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
   useEffect(() => {
     sb.auth.getSession().then(async ({ data: { session } }) => {
@@ -2519,9 +1923,17 @@ export default function App() {
   async function onLogout() {
     await sb.auth.signOut();
     setProfile(null);
+    document.body.classList.remove("light");
   }
 
-  if (checking) return <div className="loading" style={{ minHeight: "100vh" }}>🌿 Caricamento…</div>;
+  if (checking) return (
+    <>
+      <style>{css}</style>
+      <div className="loading" style={{ minHeight: "100vh" }}>
+        <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)" }}>Per·You Garden</span>
+      </div>
+    </>
+  );
 
   return (
     <>
@@ -2529,17 +1941,7 @@ export default function App() {
       {!profile
         ? <Login onLogin={setProfile} />
         : profile.role === "player"
-          ? <PlayerDashboard profile={profile} onLogout={onLogout} />
-          : <EducatorShell profile={profile} onLogout={onLogout} />
-      }
-    </>
-  );
-}
-
-      {!profile
-        ? <Login onLogin={setProfile} />
-        : profile.role === "player"
-          ? <PlayerDashboard profile={profile} onLogout={onLogout} />
+          ? <PlayerDashboard profile={profile} onLogout={onLogout} sectionColors={sectionColors} />
           : <EducatorShell profile={profile} onLogout={onLogout} />
       }
     </>
