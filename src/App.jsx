@@ -68,17 +68,17 @@ const css = `
   }
 
   /* LOGIN */
-  .login-wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:#101010; }
-  .login-card { background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius-lg); padding:36px 28px; width:100%; max-width:420px; }
-  .login-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:52px; text-transform:uppercase; letter-spacing:-1px; line-height:1; color:var(--azzurro); text-align:center; margin-bottom:6px; }
+  .login-wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:radial-gradient(ellipse at 60% 20%, rgba(163,207,254,.15) 0%, transparent 60%), radial-gradient(ellipse at 20% 80%, rgba(255,109,236,.12) 0%, transparent 55%), #101010; }
+  .login-card { background:rgba(28,28,28,.95); border:1.5px solid rgba(163,207,254,.25); border-radius:var(--radius-lg); padding:36px 28px; width:100%; max-width:420px; box-shadow:0 0 40px rgba(163,207,254,.08), 0 24px 48px rgba(0,0,0,.6); backdrop-filter:blur(20px); }
+  .login-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:52px; text-transform:uppercase; letter-spacing:-1px; line-height:1; background:linear-gradient(135deg, var(--azzurro), var(--rosa)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; text-align:center; margin-bottom:6px; }
   .login-sub { font-size:13px; color:var(--text2); text-align:center; margin-bottom:28px; }
   .login-tabs { display:flex; background:var(--surface2); border-radius:var(--radius-sm); padding:4px; margin-bottom:24px; gap:4px; }
   .login-tab { flex:1; padding:10px; border-radius:8px; border:none; cursor:pointer; font-family:'Funnel Display'; font-size:13px; font-weight:700; background:transparent; color:var(--text2); transition:all .15s; }
-  .login-tab.active { background:var(--azzurro); color:#101010; }
+  .login-tab.active { background:linear-gradient(135deg, var(--azzurro), #7eb8ff); color:#101010; box-shadow:0 2px 12px rgba(163,207,254,.3); }
   .form-group { margin-bottom:14px; }
   .form-label { font-size:10px; font-weight:700; color:var(--text2); margin-bottom:5px; display:block; text-transform:uppercase; letter-spacing:.1em; }
-  .form-input { width:100%; padding:13px 14px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display',sans-serif; font-size:16px; outline:none; transition:border-color .15s; }
-  .form-input:focus { border-color:var(--azzurro); }
+  .form-input { width:100%; padding:13px 14px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display',sans-serif; font-size:16px; outline:none; transition:border-color .15s, box-shadow .15s; }
+  .form-input:focus { border-color:var(--azzurro); box-shadow:0 0 0 3px rgba(163,207,254,.12); }
   .pin-input { text-align:center; font-family:'Barlow Condensed',sans-serif; font-size:36px; font-weight:900; letter-spacing:12px; }
   .remember-row { display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer; }
   .remember-row input { width:18px; height:18px; accent-color:var(--azzurro); }
@@ -93,12 +93,12 @@ const css = `
 
   /* BUTTONS */
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 18px; border-radius:var(--radius-sm); border:none; cursor:pointer; font-family:'Funnel Display',sans-serif; font-size:14px; font-weight:600; transition:all .15s; white-space:nowrap; min-height:44px; }
-  .btn-primary { background:var(--azzurro); color:#101010; width:100%; padding:14px; font-size:15px; font-weight:700; }
-  .btn-primary:active { opacity:.85; }
+  .btn-primary { background:linear-gradient(135deg, var(--azzurro), #7eb8ff); color:#101010; width:100%; padding:14px; font-size:15px; font-weight:800; box-shadow:0 4px 16px rgba(163,207,254,.3); letter-spacing:.02em; }
+  .btn-primary:active { opacity:.85; transform:scale(.98); }
   .btn-ghost { background:transparent; color:var(--text2); border:1.5px solid var(--border2); }
   .btn-ghost:active { background:var(--surface2); }
   .btn-danger { background:rgba(212,19,35,.15); color:var(--danger); border:1px solid rgba(212,19,35,.3); }
-  .btn-yellow { background:var(--giallo); color:#101010; font-weight:700; border:none; }
+  .btn-yellow { background:linear-gradient(135deg, var(--giallo), #ffe44d); color:#101010; font-weight:800; border:none; box-shadow:0 4px 14px rgba(253,239,38,.25); }
   .btn-sm { padding:7px 14px; font-size:13px; min-height:38px; }
   .btn-xs { padding:5px 10px; font-size:12px; min-height:32px; border-radius:8px; }
 
@@ -106,7 +106,7 @@ const css = `
   .edu-layout { display:flex; min-height:100vh; }
   .sidebar { width:230px; background:var(--nero); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; z-index:10; }
   .sidebar-logo { padding:22px 20px 18px; border-bottom:1px solid var(--border); }
-  .sidebar-logo-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:26px; text-transform:uppercase; color:var(--azzurro); line-height:1; }
+  .sidebar-logo-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:26px; text-transform:uppercase; background:linear-gradient(135deg, var(--azzurro), var(--rosa)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; }
   .sidebar-logo-sub { font-size:11px; color:var(--text3); margin-top:3px; }
   .nav { flex:1; padding:10px 0; }
   .nav-item { display:flex; align-items:center; gap:12px; padding:10px 20px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text2); border-left:3px solid transparent; transition:all .12s; min-height:44px; }
@@ -164,9 +164,9 @@ const css = `
 
   /* LEADERBOARD */
   .lb-list { display:flex; flex-direction:column; gap:6px; }
-  .lb-row { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; }
+  .lb-row { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; transition:border-color .15s; }
   .lb-rank { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; width:30px; text-align:center; color:var(--text3); flex-shrink:0; }
-  .lb-rank.gold { color:var(--giallo); } .lb-rank.silver { color:#ccc; } .lb-rank.bronze { color:#e8956d; }
+  .lb-rank.gold { color:var(--giallo); text-shadow:0 0 12px rgba(253,239,38,.5); } .lb-rank.silver { color:#ccc; } .lb-rank.bronze { color:#e8956d; }
   .lb-av { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; overflow:hidden; border:1.5px solid var(--border2); }
   .lb-av img { width:100%; height:100%; object-fit:cover; }
   .lb-name { flex:1; font-size:14px; font-weight:700; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -186,8 +186,8 @@ const css = `
   .filter-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
   .search-inp { padding:10px 14px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:16px; outline:none; flex:1; min-width:140px; }
   .search-inp:focus { border-color:var(--azzurro); }
-  .chip { padding:8px 16px; border-radius:99px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:600; cursor:pointer; min-height:36px; }
-  .chip.active { background:var(--azzurro); color:#101010; border-color:var(--azzurro); }
+  .chip { padding:8px 16px; border-radius:99px; border:1.5px solid var(--border2); background:transparent; color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:600; cursor:pointer; min-height:36px; transition:all .15s; }
+  .chip.active { background:var(--azzurro); color:#101010; border-color:var(--azzurro); box-shadow:0 2px 10px rgba(163,207,254,.25); }
 
   /* BATCH */
   .batch-panel { background:rgba(163,207,254,.06); border:1.5px solid rgba(163,207,254,.25); border-radius:var(--radius); padding:12px 16px; margin-bottom:14px; }
@@ -207,26 +207,26 @@ const css = `
 
   /* ACTIVITIES */
   .act-grid { display:grid; grid-template-columns:1fr; gap:10px; }
-  .act-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:16px; position:relative; }
+  .act-card { background:linear-gradient(145deg, var(--surface2), rgba(51,153,102,.06)); border:1.5px solid rgba(51,153,102,.2); border-radius:var(--radius); padding:16px; position:relative; }
   .act-title { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; }
   .act-meta { font-size:12px; color:var(--text2); margin-bottom:10px; }
   .act-rewards { display:flex; gap:6px; flex-wrap:wrap; }
   .reward-tag { font-size:10px; padding:4px 10px; border-radius:99px; font-weight:700; }
-  .xp-tag { background:rgba(163,207,254,.15); color:var(--azzurro); }
-  .coin-tag { background:rgba(253,239,38,.15); color:#b8a000; }
+  .xp-tag { background:rgba(163,207,254,.15); color:var(--azzurro); border:1px solid rgba(163,207,254,.2); }
+  .coin-tag { background:rgba(253,239,38,.15); color:#b8a000; border:1px solid rgba(253,239,38,.2); }
   .delete-btn { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:50%; border:1px solid rgba(212,19,35,.3); background:rgba(212,19,35,.1); color:var(--danger); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; }
 
   /* BADGES */
   .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; }
-  .badge-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:var(--radius); padding:12px 10px; text-align:center; cursor:pointer; position:relative; transition:border-color .15s; }
-  .badge-card:hover { border-color:var(--rosa); }
-  .badge-img { width:56px; height:56px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:block; border:2.5px solid var(--border2); }
+  .badge-card { background:linear-gradient(145deg, var(--surface2), rgba(255,109,236,.05)); border:1.5px solid rgba(255,109,236,.15); border-radius:var(--radius); padding:12px 10px; text-align:center; cursor:pointer; position:relative; transition:all .15s; }
+  .badge-card:hover { border-color:var(--rosa); box-shadow:0 0 16px rgba(255,109,236,.15); transform:translateY(-2px); }
+  .badge-img { width:56px; height:56px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:block; border:2.5px solid var(--rosa); box-shadow:0 0 12px rgba(255,109,236,.25); }
   .badge-emoji { font-size:36px; display:block; margin:0 auto 8px; line-height:1; }
   .badge-name { font-size:11px; font-weight:700; color:var(--text); line-height:1.3; }
   .badge-pts { font-size:10px; color:var(--text2); margin-top:3px; }
 
   /* SFIDA */
-  .sfida-card { border-radius:var(--radius-lg); padding:18px; margin-bottom:14px; position:relative; overflow:hidden; border:2px solid var(--rosso); background:rgba(212,19,35,.06); }
+  .sfida-card { border-radius:var(--radius-lg); padding:18px; margin-bottom:14px; position:relative; overflow:hidden; border:2px solid var(--rosso); background:linear-gradient(135deg, rgba(212,19,35,.12), rgba(212,19,35,.04)); box-shadow:0 0 24px rgba(212,19,35,.12); }
   .sfida-label { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:900; text-transform:uppercase; color:var(--rosso); letter-spacing:.1em; margin-bottom:4px; }
   .sfida-title { font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:6px; }
   .sfida-desc { font-size:13px; color:var(--text2); margin-bottom:12px; line-height:1.5; }
@@ -246,15 +246,26 @@ const css = `
   .modal-title { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:18px; }
   .section-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.1em; margin:16px 0 8px; }
 
-  /* PROFILE */
-  .profile-hero { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; text-align:center; margin-bottom:14px; }
-  .profile-avatar { width:90px; height:90px; border-radius:50%; margin:0 auto 14px; border:3px solid var(--azzurro); display:flex; align-items:center; justify-content:center; font-size:42px; overflow:hidden; }
+  /* PROFILE HERO - FORTNITE STYLE */
+  .profile-hero { border-radius:var(--radius-lg); padding:0; margin-bottom:14px; overflow:hidden; position:relative; background:linear-gradient(160deg, #0d1f3c 0%, #101010 50%, #1a0a20 100%); border:1.5px solid rgba(163,207,254,.2); }
+  .profile-hero-bg { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%, rgba(163,207,254,.18) 0%, transparent 65%), radial-gradient(ellipse at 80% 100%, rgba(255,109,236,.12) 0%, transparent 55%); pointer-events:none; }
+  .profile-hero-inner { padding:28px 20px 22px; position:relative; z-index:1; text-align:center; }
+  .profile-avatar { width:110px; height:110px; border-radius:50%; margin:0 auto 14px; border:3px solid transparent; background:linear-gradient(#101010,#101010) padding-box, linear-gradient(135deg, var(--azzurro), var(--rosa)) border-box; display:flex; align-items:center; justify-content:center; font-size:52px; overflow:hidden; box-shadow:0 0 0 1px rgba(255,255,255,.05), 0 8px 32px rgba(0,0,0,.6), 0 0 40px rgba(163,207,254,.18); position:relative; }
   .profile-avatar img { width:100%; height:100%; object-fit:cover; }
-  .profile-name { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; }
-  .profile-level { font-size:14px; color:var(--azzurro); margin-bottom:10px; font-weight:600; }
-  .xp-bar-wrap { height:7px; background:var(--surface3); border-radius:99px; overflow:hidden; margin:8px 0; }
-  .xp-bar { height:100%; background:linear-gradient(90deg,var(--azzurro),var(--rosa)); border-radius:99px; transition:width .5s; }
-  .xp-label { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); }
+  .profile-avatar-ring { position:absolute; inset:-6px; border-radius:50%; border:2px solid rgba(163,207,254,.15); animation:spin 8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .profile-name { font-family:'Barlow Condensed',sans-serif; font-size:34px; font-weight:900; text-transform:uppercase; letter-spacing:-0.5px; color:#fff; margin-bottom:2px; text-shadow:0 2px 12px rgba(0,0,0,.5); }
+  .profile-firstname { font-size:14px; color:rgba(255,255,255,.55); margin-bottom:6px; }
+  .profile-level { font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; background:rgba(163,207,254,.12); border:1px solid rgba(163,207,254,.2); border-radius:99px; padding:4px 14px; color:var(--azzurro); margin-bottom:14px; }
+  .profile-stats-row { display:flex; justify-content:center; gap:0; }
+  .profile-stat { flex:1; text-align:center; padding:12px 8px; border-right:1px solid rgba(255,255,255,.06); }
+  .profile-stat:last-child { border-right:none; }
+  .profile-stat-val { font-family:'Barlow Condensed',sans-serif; font-size:30px; font-weight:900; line-height:1; }
+  .profile-stat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.4); margin-top:2px; }
+  .profile-xp-section { padding:0 20px 20px; position:relative; z-index:1; }
+  .xp-bar-wrap { height:8px; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden; margin:10px 0 4px; }
+  .xp-bar { height:100%; background:linear-gradient(90deg,var(--azzurro),var(--rosa)); border-radius:99px; transition:width .5s; box-shadow:0 0 8px rgba(163,207,254,.4); }
+  .xp-label { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,.4); font-weight:600; }
 
   /* QR */
   .qr-code { font-family:'Barlow Condensed',sans-serif; font-size:52px; font-weight:900; color:var(--azzurro); letter-spacing:10px; margin:16px 0; }
@@ -344,7 +355,7 @@ function Avatar({ url, emoji, size = 40 }) {
   return <span style={{ fontSize: size * 0.52 }}>{emoji || "🌱"}</span>;
 }
 
-function XpBar({ xp }) {
+function XpBar({ xp, dark = false }) {
   const lv = getLevel(xp);
   const nextLv = LEVELS.find(l => l.xp > xp);
   const pct = nextLv ? Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100) : 100;
@@ -1761,23 +1772,53 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {/* ── PROFILO ── */}
         {tab === "profilo" && fullProfile && (
           <>
+            {/* Hero Card */}
             <div className="profile-hero">
-              <div className="profile-avatar"><Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={90} /></div>
-              <div className="profile-name">{fullProfile.display_name}</div>
-              {fullProfile.first_name && <div style={{ fontSize: 15, color: "var(--text2)", marginBottom: 4 }}>{fullProfile.first_name}</div>}
-              <div className="profile-level">{lv.emoji} {lv.name}</div>
-              {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name} />}
-              <div style={{ marginTop: 16 }}><XpBar xp={fullProfile.xp} /></div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 28, marginTop: 18 }}>
-                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--azzurro)" }}>{fullProfile.xp}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>XP</div></div>
-                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--giallo)" }}>🪙 {fullProfile.coin}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>Coin</div></div>
-                <div style={{ textAlign: "center" }}><div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, color: "var(--rosa)" }}>{badges.length}</div><div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>Badge</div></div>
+              <div className="profile-hero-bg" />
+              <div className="profile-hero-inner">
+                <div className="profile-avatar">
+                  <div className="profile-avatar-ring" />
+                  <Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={110} />
+                </div>
+                <div className="profile-name">{fullProfile.display_name}</div>
+                {fullProfile.first_name && <div className="profile-firstname">{fullProfile.first_name}</div>}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+                  <div className="profile-level">{lv.emoji} {lv.name}</div>
+                </div>
+                {fullProfile.squads?.name && <div style={{ marginBottom: 14 }}><SquadPill name={fullProfile.squads.name} /></div>}
+                <div className="profile-stats-row" style={{ background: "rgba(0,0,0,.25)", borderRadius: 12, border: "1px solid rgba(255,255,255,.06)" }}>
+                  <div className="profile-stat">
+                    <div className="profile-stat-val" style={{ color: "var(--azzurro)" }}>{fullProfile.xp}</div>
+                    <div className="profile-stat-lbl">XP</div>
+                  </div>
+                  <div className="profile-stat">
+                    <div className="profile-stat-val" style={{ color: "var(--giallo)" }}>🪙{fullProfile.coin}</div>
+                    <div className="profile-stat-lbl">Coin</div>
+                  </div>
+                  <div className="profile-stat">
+                    <div className="profile-stat-val" style={{ color: "var(--rosa)" }}>{badges.length}</div>
+                    <div className="profile-stat-lbl">Badge</div>
+                  </div>
+                </div>
+              </div>
+              <div className="profile-xp-section">
+                <XpBar xp={fullProfile.xp} />
               </div>
             </div>
 
-            {/* Nome di battesimo */}
-            <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Il tuo nome di battesimo</div>
+            {/* Sfida del giorno in profilo */}
+            {activities.filter(a => a.description?.includes("SFIDA")).slice(0,1).map(s => (
+              <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
+                <div className="sfida-label">⚡ Sfida del giorno</div>
+                <div className="sfida-title">{s.name}</div>
+                <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
+                <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+              </div>
+            ))}
+
+            {/* Nome */}
+            <div className="card" style={{ marginBottom: 12, background: "linear-gradient(145deg, var(--surface), rgba(163,207,254,.04))", border: "1px solid rgba(163,207,254,.12)" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Il tuo nome</div>
               {editingFirstName ? (
                 <div style={{ display: "flex", gap: 8 }}>
                   <input className="form-input" value={newFirstName} onChange={e => setNewFirstName(e.target.value.slice(0, 30))} placeholder="Inserisci il tuo nome…" style={{ flex: 1 }} maxLength={30} autoFocus />
@@ -1794,21 +1835,21 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             </div>
 
             {/* Check-in */}
-            <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>📍 Check-in giornaliero</div>
+            <div className="card" style={{ marginBottom: 12, background: "linear-gradient(145deg, var(--surface), rgba(51,153,102,.06))", border: "1px solid rgba(51,153,102,.15)" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--verde)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>📍 Check-in giornaliero</div>
               <input className="form-input" value={qrInput} onChange={e => setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{ textAlign: "center", fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, letterSpacing: 8, marginBottom: 10 }} maxLength={6} />
-              <button className="btn btn-primary" onClick={doCheckin}>Conferma presenza</button>
+              <button className="btn btn-primary" onClick={doCheckin}>Conferma presenza · +10 XP +5 🪙</button>
               {qrMsg && <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: qrMsg.includes("✅") ? "var(--verde)" : "var(--danger)", textAlign: "center" }}>{qrMsg}</div>}
             </div>
 
             {/* Badge */}
             {badges.length > 0 && (
-              <div className="card" style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>I tuoi badge</div>
+              <div className="card" style={{ marginBottom: 12, background: "linear-gradient(145deg, var(--surface), rgba(255,109,236,.04))", border: "1px solid rgba(255,109,236,.12)" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--rosa)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>🎖️ I tuoi badge</div>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   {badges.map(pb => (
                     <div key={pb.id} style={{ textAlign: "center", width: 64, cursor: "pointer" }} onClick={() => setSelectedBadge(pb)}>
-                      {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2.5px solid var(--rosa)", display: "block", margin: "0 auto 4px" }} alt={pb.badges?.name} /> : <div style={{ fontSize: 36, marginBottom: 4 }}>🎖️</div>}
+                      {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2.5px solid var(--rosa)", display: "block", margin: "0 auto 4px", boxShadow: "0 0 10px rgba(255,109,236,.2)" }} alt={pb.badges?.name} /> : <div style={{ fontSize: 36, marginBottom: 4 }}>🎖️</div>}
                       <div style={{ fontSize: 10, color: "var(--text2)", lineHeight: 1.2, fontWeight: 600 }}>{pb.badges?.name}</div>
                     </div>
                   ))}
