@@ -18,6 +18,8 @@ const LEVELS = [
   {id:25,name:"Garden Boss",emoji:"👑🌿",xp:4000},
 ];
 
+const MONTH_NAMES = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+
 function getLevel(xp) {
   for (let i = LEVELS.length - 1; i >= 0; i--) {
     if (xp >= LEVELS[i].xp) return LEVELS[i];
@@ -508,6 +510,17 @@ const css = `
     .msg-thread { flex-shrink:0; width:130px; }
     .msg-main { height:340px; }
   }
+
+  /* ═══ STREAK ═══ */
+  .streak-card { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(255,120,0,.25); border-radius:14px; padding:12px 14px; position:relative; z-index:2; }
+  .streak-row { display:flex; gap:8px; }
+  .streak-item { flex:1; text-align:center; }
+  .streak-val { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:900; color:#ff8c00; line-height:1; display:block; }
+  .streak-lbl { font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.35); margin-top:2px; display:block; }
+  .month-prog { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.07); }
+  .month-prog-lbl { display:flex; justify-content:space-between; font-size:9px; font-weight:900; color:rgba(255,255,255,.3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+  .month-prog-bg { height:7px; background:rgba(255,255,255,.07); border-radius:99px; overflow:hidden; }
+  .month-prog-fill { height:100%; background:linear-gradient(90deg,#ff6600,#ffaa00); border-radius:99px; }
 
   /* ═══ PLAYER DASHBOARD — NEW DESIGN ═══ */
   .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; }
@@ -1848,6 +1861,91 @@ function QrView() {
   );
 }
 
+// ─── STREAK CONFIG VIEW ───────────────────────────────────
+
+function StreakConfigView() {
+  const [configs, setConfigs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(null);
+  const [msg, setMsg] = useState("");
+
+  const now = new Date();
+  const months = Array.from({length:12},(_,i) => ({
+    month: i+1, year: now.getFullYear(), label: MONTH_NAMES[i]
+  }));
+
+  const load = useCallback(async () => {
+    const { data } = await sb.from("streak_config").select("*").eq("year", now.getFullYear()).order("month");
+    setConfigs(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function saveConfig(cfg) {
+    await sb.from("streak_config").upsert({
+      month: cfg.month, year: cfg.year,
+      min_days: Number(cfg.min_days),
+      xp_reward: Number(cfg.xp_reward),
+      coin_reward: Number(cfg.coin_reward),
+      badge_name: cfg.badge_name || `${MONTH_NAMES[cfg.month-1]} ${cfg.year}`
+    }, { onConflict: "month,year" });
+    setEditing(null);
+    setMsg("Configurazione salvata ✅");
+    setTimeout(() => setMsg(""), 3000);
+    load();
+  }
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed'",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16}}>🔥 Streak & Badge Mensili</div>
+      <div style={{background:"rgba(255,120,0,.06)",border:"1px solid rgba(255,120,0,.2)",borderRadius:14,padding:"12px 16px",marginBottom:16,fontSize:13,color:"var(--text2)",lineHeight:1.5}}>
+        Configura i requisiti per guadagnare il badge mensile. Il badge viene assegnato automaticamente al primo check-in del mese successivo se il giocatore ha raggiunto il minimo di presenze.
+      </div>
+      {msg && <div style={{background:"rgba(0,255,136,.08)",border:"1px solid rgba(0,255,136,.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"var(--neon-green)",fontWeight:700}}>{msg}</div>}
+      {loading ? <div className="loading">⏳</div> : (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {months.map(m => {
+            const cfg = configs.find(c => c.month === m.month) || { month: m.month, year: m.year, min_days: 10, xp_reward: 50, coin_reward: 25, badge_name: `${m.label} ${m.year}` };
+            const isPast = m.month < now.getMonth() + 1;
+            const isCurrent = m.month === now.getMonth() + 1;
+            return (
+              <div key={m.month} style={{background:"rgba(8,18,40,0.9)",border:`1px solid ${isCurrent?"rgba(255,140,0,.3)":isPast?"rgba(0,255,136,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:editing?.month===m.month?12:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:20}}>{isPast?"✅":isCurrent?"🔥":"📅"}</span>
+                    <div>
+                      <div style={{fontFamily:"'Barlow Condensed'",fontSize:18,fontWeight:900,textTransform:"uppercase",color:"var(--text)"}}>{m.label} {m.year}</div>
+                      <div style={{fontSize:11,color:"var(--text3)"}}>Min. {cfg.min_days}gg · +{cfg.xp_reward} XP · +{cfg.coin_reward} Coin</div>
+                    </div>
+                  </div>
+                  <button className="btn btn-ghost btn-xs" onClick={() => setEditing(editing?.month===m.month?null:{...cfg})}>
+                    {editing?.month===m.month?"▲":"✏️"}
+                  </button>
+                </div>
+                {editing?.month === m.month && (
+                  <div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                      <div><label className="form-label">Min. giorni</label><input className="form-input" type="number" min="1" max="31" value={editing.min_days} onChange={e=>setEditing(p=>({...p,min_days:e.target.value}))}/></div>
+                      <div><label className="form-label">XP badge</label><input className="form-input" type="number" value={editing.xp_reward} onChange={e=>setEditing(p=>({...p,xp_reward:e.target.value}))}/></div>
+                      <div><label className="form-label">Coin badge</label><input className="form-input" type="number" value={editing.coin_reward} onChange={e=>setEditing(p=>({...p,coin_reward:e.target.value}))}/></div>
+                    </div>
+                    <div className="form-group"><label className="form-label">Nome badge</label><input className="form-input" value={editing.badge_name||""} onChange={e=>setEditing(p=>({...p,badge_name:e.target.value}))} placeholder={`${m.label} ${m.year}`}/></div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button className="btn btn-primary" style={{flex:1}} onClick={()=>saveConfig(editing)}>Salva</button>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>setEditing(null)}>Annulla</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── PLAYER DASHBOARD ─────────────────────────────────────
 
 function PlayerDashboard({ profile, onLogout, sectionColors }) {
@@ -1863,6 +1961,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [xpMonth, setXpMonth] = useState({});
   const [qrInput, setQrInput] = useState("");
   const [qrMsg, setQrMsg] = useState("");
+  const [monthPresences, setMonthPresences] = useState(null);
+  const [monthTarget, setMonthTarget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
@@ -1888,6 +1988,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
     const td = {}; (attToday || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpToday(td);
     const mt = {}; (attMonth || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpMonth(mt);
+    // Presenze mese corrente per il giocatore
+    const now = new Date();
+    const cm = now.getMonth() + 1;
+    const cy = now.getFullYear();
+    const mStart = `${cy}-${String(cm).padStart(2,"0")}-01`;
+    const [{ data: myPres }, { data: mConfig }] = await Promise.all([
+      sb.from("attendances").select("id").eq("player_id", profile.id).gte("date", mStart).neq("status","none"),
+      sb.from("streak_config").select("min_days").eq("month", cm).eq("year", cy).single(),
+    ]);
+    setMonthPresences(myPres?.length || 0);
+    setMonthTarget(mConfig?.min_days || null);
   } catch(err) {
     console.error("Errore caricamento dati:", err);
   } finally {
@@ -1904,6 +2015,36 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     return () => sb.removeChannel(channel);
   }, [profile.id, load]);
 
+  async function checkAndAssignMonthlyBadge(currentXp, currentCoin) {
+    const now = new Date();
+    if (now.getDate() > 5) return; // Solo nei primi 5 giorni del mese
+    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const { data: config } = await sb.from("streak_config").select("*").eq("month", prevMonth).eq("year", prevYear).single();
+    if (!config) return;
+    const badgeName = config.badge_name || `${MONTH_NAMES[prevMonth-1]} ${prevYear}`;
+    const monthStart = `${prevYear}-${String(prevMonth).padStart(2,"0")}-01`;
+    const monthEnd = `${prevYear}-${String(prevMonth).padStart(2,"0")}-31`;
+    const [{ data: presences }, { data: existingBadge }] = await Promise.all([
+      sb.from("attendances").select("id").eq("player_id", profile.id).gte("date", monthStart).lte("date", monthEnd).neq("status","none"),
+      sb.from("player_badges").select("id, badges(name)").eq("player_id", profile.id),
+    ]);
+    const alreadyHas = existingBadge?.some(pb => pb.badges?.name === badgeName);
+    if (alreadyHas) return;
+    if ((presences?.length || 0) < config.min_days) return;
+    let { data: badge } = await sb.from("badges").select("id").eq("name", badgeName).single();
+    if (!badge) {
+      const { data: nb } = await sb.from("badges").insert({ name: badgeName, description: `Presente almeno ${config.min_days} giorni in ${badgeName}!`, xp_default: config.xp_reward, coin_default: config.coin_reward }).select().single();
+      badge = nb;
+    }
+    if (!badge) return;
+    await sb.from("player_badges").insert({ player_id: profile.id, badge_id: badge.id, xp_awarded: config.xp_reward, coin_awarded: config.coin_reward });
+    await sb.from("profiles").update({ xp: currentXp + config.xp_reward, coin: currentCoin + config.coin_reward }).eq("id", profile.id);
+    await sb.from("notifications").insert({ user_id: profile.id, type: "badge_assigned", title: `🏅 Badge ${badgeName} sbloccato!`, body: `+${config.xp_reward} XP · +${config.coin_reward} Coin` });
+    setQrMsg(prev => prev + ` · 🏅 Badge ${badgeName}!`);
+    setFullProfile(prev => ({ ...prev, xp: prev.xp + config.xp_reward, coin: prev.coin + config.coin_reward }));
+  }
+
   async function doCheckin() {
     const today = new Date().toISOString().split("T")[0];
     const { data: qr } = await sb.from("daily_qr").select("*").eq("date", today).single();
@@ -1911,9 +2052,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     if (qrInput.toUpperCase() !== qr.code) { setQrMsg("❌ Codice non valido."); return; }
     const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: 10, coin_awarded: 5, qr_verified: true });
     if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
-    await sb.from("profiles").update({ xp: (fullProfile?.xp || 0) + 10, coin: (fullProfile?.coin || 0) + 5 }).eq("id", profile.id);
-    setQrMsg("✅ Check-in! +10 XP, +5 Coin");
-    setFullProfile(prev => ({ ...prev, xp: (prev?.xp || 0) + 10, coin: (prev?.coin || 0) + 5 }));
+    // Calcola streak
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+    const wasYesterday = fullProfile?.last_checkin_date === yesterday;
+    const newStreak = wasYesterday ? (fullProfile?.current_streak || 0) + 1 : 1;
+    const newLongest = Math.max(newStreak, fullProfile?.longest_streak || 0);
+    const newXp = (fullProfile?.xp || 0) + 10;
+    const newCoin = (fullProfile?.coin || 0) + 5;
+    await sb.from("profiles").update({ xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }).eq("id", profile.id);
+    setQrMsg(`✅ Check-in! +10 XP +5 Coin · 🔥 ${newStreak} giorni`);
+    setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }));
+    await checkAndAssignMonthlyBadge(newXp, newCoin);
   }
 
   async function bookActivity(actId, cost) {
@@ -2046,6 +2195,24 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
               ))}
             </div>
+
+            {/* Streak */}
+            {((fullProfile.current_streak||0) > 0 || (fullProfile.longest_streak||0) > 0) && (
+              <div className="streak-card">
+                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(255,140,0,.7)',marginBottom:8}}>🔥 Streak presenze</div>
+                <div className="streak-row">
+                  <div className="streak-item"><span className="streak-val">{fullProfile.current_streak||0}</span><span className="streak-lbl">Giorni attuali</span></div>
+                  <div className="streak-item"><span className="streak-val">{fullProfile.longest_streak||0}</span><span className="streak-lbl">Record</span></div>
+                  <div className="streak-item"><span className="streak-val">{(() => { const now=new Date(); return new Date(now.getFullYear(),now.getMonth()+1,0).getDate(); })()}</span><span className="streak-lbl">Giorni mese</span></div>
+                </div>
+                {monthPresences !== null && monthTarget !== null && (
+                  <div className="month-prog">
+                    <div className="month-prog-lbl"><span>🗓️ {MONTH_NAMES[new Date().getMonth()]}</span><span>{monthPresences}/{monthTarget} giorni</span></div>
+                    <div className="month-prog-bg"><div className="month-prog-fill" style={{width:Math.min(100,Math.round((monthPresences/Math.max(1,monthTarget))*100))+'%'}}/></div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Squadra */}
             {fullProfile.squads?.name && (
@@ -2261,7 +2428,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 const EDUCATOR_TABS = [
   ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Attività"], ["sfida","🔥","Sfida"],
-  ["badge","🎖️","Badge"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
+  ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
   ["diario","📜","Diario"], ["qr","📍","QR"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
@@ -2358,6 +2525,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "attivita"     && <ActivitiesView {...sharedProps} />}
           {tab === "sfida"        && <SfidaView {...sharedProps} />}
           {tab === "badge"        && <BadgesView {...sharedProps} />}
+          {tab === "streak"       && <StreakConfigView />}
           {tab === "prenotazioni" && <BookingsView />}
           {tab === "messaggi"     && <MessagesView profile={profile} />}
           {tab === "diario"       && <DiaryView />}
