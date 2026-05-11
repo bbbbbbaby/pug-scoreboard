@@ -900,8 +900,8 @@ function PlayersView({ sectionColors, setSectionColors }) {
   return (
     <div>
       <div className="stats-grid">
-        <div className="stat-card"><div className="stat-label">Giocatori</div><div className="stat-value">{visible.length}</div></div>
-        <div className="stat-card"><div className="stat-label">XP totali</div><div className="stat-value">{visible.reduce((a, p) => a + p.xp, 0).toLocaleString()}</div></div>
+        <div className="stat-card"><div className="stat-label">Totali</div><div className="stat-value">{visible.length}</div></div>
+        <div className="stat-card"><div className="stat-label">Attivi</div><div className="stat-value">{visible.filter(p => p.xp > 0).length}</div></div>
         <div className="stat-card"><div className="stat-label">Selezionati</div><div className="stat-value">{selected.size}</div></div>
         <div className="stat-card"><div className="stat-label">Squadre</div><div className="stat-value">{squads.length}</div></div>
       </div>
@@ -1162,6 +1162,13 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
         <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
         {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
       </div>
+      <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:10, padding:"8px 10px", background:"rgba(255,255,255,.03)", border:"1px solid var(--border)", borderRadius:10, fontSize:11, color:"var(--text3)" }}>
+        <span><strong style={{color:"var(--text2)"}}>Legenda:</strong></span>
+        <span><span className="pres-dot pd-none" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>?</span> Assente</span>
+        <span><span className="pres-dot pd-partial" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>~</span> Parziale</span>
+        <span><span className="pres-dot pd-yes" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>✓</span> Presente</span>
+        <span><span className="pres-dot pd-completed" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>★</span> Completato</span>
+      </div>
       {loading ? <div className="loading">⏳</div> : (
         <>
           <Podium ranked={ranked} xpData={timeFilter==="oggi"?xpToday:timeFilter==="mese"?xpMonth:{}} timeFilter={timeFilter} highlightId={null}/>
@@ -1373,9 +1380,32 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const [createErr, setCreateErr] = useState("");
+
   async function createActivity() {
-    await sb.from("activities").insert({ ...form, educator_id: form.educator_id || null, max_participants: form.max_participants || null });
-    setShowForm(false); load();
+    setCreateErr("");
+    if (!form.name.trim()) { setCreateErr("Inserisci il nome dell'attività"); return; }
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim(),
+      link: form.link.trim() || null,
+      educator_id: form.educator_id || null,
+      duration_days: Number(form.duration_days) || 1,
+      xp_partial: Number(form.xp_partial) || 0,
+      xp_full: Number(form.xp_full) || 0,
+      xp_completed: Number(form.xp_completed) || 0,
+      coin_partial: Number(form.coin_partial) || 0,
+      coin_full: Number(form.coin_full) || 0,
+      coin_completed: Number(form.coin_completed) || 0,
+      coin_cost: Number(form.coin_cost) || 0,
+      max_participants: form.max_participants ? Number(form.max_participants) : null,
+      is_active: true,
+    };
+    const { error } = await sb.from("activities").insert(payload);
+    if (error) { setCreateErr("Errore: " + error.message); return; }
+    setShowForm(false);
+    setForm({ name:"", description:"", link:"", educator_id:"", duration_days:4, xp_partial:10, xp_full:20, xp_completed:35, coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
+    load();
   }
 
   async function deleteActivity(id) {
@@ -1430,6 +1460,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
                 <div key={k}><label className="form-label">{l}</label><input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} /></div>
               ))}
             </div>
+            {createErr && <div style={{ color:"var(--danger)", fontSize:12, fontWeight:700, marginBottom:8 }}>{createErr}</div>}
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={createActivity}>Crea</button>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annulla</button>
@@ -1579,23 +1610,51 @@ function SfidaView({ sectionColors, setSectionColors }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [customizing, setCustomizing] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", xp_reward: 20, coin_reward: 10 });
+  const [form, setForm] = useState({ title:"", description:"", xp_reward:20, coin_reward:10, expires_at:"" });
 
   const load = useCallback(async () => {
-    const { data } = await sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(10);
-    setSfide(data?.filter(a => a.description?.includes("SFIDA")) || []); setLoading(false);
+    const now = new Date().toISOString();
+    const { data } = await sb.from("activities").select("*").eq("is_active", true).order("created_at", { ascending: false }).limit(20);
+    const active = (data || []).filter(a =>
+      a.description?.includes("SFIDA") &&
+      (!a.expires_at || a.expires_at > now)
+    );
+    setSfide(active); setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function createSfida() {
-    await sb.from("activities").insert({ name: form.title, description: "SFIDA · " + form.description, duration_days: 1, xp_full: Number(form.xp_reward), xp_completed: Number(form.xp_reward), xp_partial: Math.round(Number(form.xp_reward) / 2), coin_full: Number(form.coin_reward), coin_completed: Number(form.coin_reward), coin_partial: Math.round(Number(form.coin_reward) / 2), coin_cost: 0, is_active: true });
-    setShowForm(false); load();
+    if (!form.title.trim()) return;
+    const payload = {
+      name: form.title,
+      description: "SFIDA · " + form.description,
+      duration_days: 1,
+      xp_full: Number(form.xp_reward),
+      xp_completed: Number(form.xp_reward),
+      xp_partial: Math.round(Number(form.xp_reward) / 2),
+      coin_full: Number(form.coin_reward),
+      coin_completed: Number(form.coin_reward),
+      coin_partial: Math.round(Number(form.coin_reward) / 2),
+      coin_cost: 0,
+      is_active: true,
+      expires_at: form.expires_at ? new Date(form.expires_at + "T23:59:59").toISOString() : null,
+    };
+    await sb.from("activities").insert(payload);
+    setShowForm(false);
+    setForm({ title:"", description:"", xp_reward:20, coin_reward:10, expires_at:"" });
+    load();
+  }
+
+  async function deleteSfida(id) {
+    if (!confirm("Disattivare questa sfida?")) return;
+    await sb.from("activities").update({ is_active: false }).eq("id", id);
+    setSfide(prev => prev.filter(s => s.id !== id));
   }
 
   return (
     <div>
-      <SectionBanner sectionKey="sfida" title="Sfida del Giorno" sub="Sfide a tempo per i giocatori" sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="sfida" title="Sfida del Giorno" sub={`${sfide.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
         <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuova sfida</button>
       </div>
@@ -1603,10 +1662,18 @@ function SfidaView({ sectionColors, setSectionColors }) {
         <div>
           {sfide.map(s => (
             <div key={s.id} className="sfida-card">
+              <button className="delete-btn" onClick={() => deleteSfida(s.id)} title="Disattiva sfida">✕</button>
               <div className="sfida-label">⚡ Sfida attiva</div>
               <div className="sfida-title">{s.name}</div>
               <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-              <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+                {s.expires_at && (
+                  <span style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700 }}>
+                    ⏰ Scade: {new Date(s.expires_at).toLocaleDateString("it-IT")}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
           {sfide.length === 0 && <div className="empty">Nessuna sfida attiva.</div>}
@@ -1621,6 +1688,11 @@ function SfidaView({ sectionColors, setSectionColors }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div className="form-group"><label className="form-label">XP premio</label><input className="form-input" type="number" value={form.xp_reward} onChange={e => setForm(f => ({ ...f, xp_reward: e.target.value }))} /></div>
               <div className="form-group"><label className="form-label">Coin premio</label><input className="form-input" type="number" value={form.coin_reward} onChange={e => setForm(f => ({ ...f, coin_reward: e.target.value }))} /></div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Data scadenza (opzionale)</label>
+              <input className="form-input" type="date" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} min={new Date().toISOString().split("T")[0]} />
+              <div style={{ fontSize:10, color:"var(--text3)", marginTop:4 }}>Lascia vuoto per sfida senza scadenza</div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={createSfida} disabled={!form.title.trim()}>Pubblica</button>
@@ -1637,48 +1709,68 @@ function SfidaView({ sectionColors, setSectionColors }) {
 function DiaryView() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split("T")[0]);
 
   useEffect(() => {
     async function load() {
-      let q = sb.from("notifications").select("*, profiles(display_name)").order("created_at", { ascending: false }).limit(200);
-      if (dateFilter) q = q.gte("created_at", dateFilter + "T00:00:00").lte("created_at", dateFilter + "T23:59:59");
-      const { data } = await q;
-      setEntries(data || []); setLoading(false);
+      setLoading(true);
+      const dayStart = dateFilter + "T00:00:00";
+      const dayEnd = dateFilter + "T23:59:59";
+      const [{ data: notifs }, { data: atts }] = await Promise.all([
+        sb.from("notifications").select("*, profiles(display_name)")
+          .gte("created_at", dayStart).lte("created_at", dayEnd)
+          .order("created_at", { ascending: false }).limit(200),
+        sb.from("attendances").select("*, profiles(display_name)")
+          .eq("date", dateFilter).neq("status","none")
+          .order("created_at", { ascending: false }),
+      ]);
+      // Merge: notifiche + presenze come eventi
+      const presEvents = (atts || []).filter(a => a.profiles).map(a => ({
+        id: "att_" + a.id,
+        type: "presenza",
+        title: `Presenza ${a.status === "full" ? "completa" : a.status === "partial" ? "parziale" : "completata"}`,
+        body: `+${a.xp_awarded || 0} XP · +${a.coin_awarded || 0} Coin`,
+        profiles: a.profiles,
+        created_at: a.created_at || (dateFilter + "T12:00:00"),
+      }));
+      const allEntries = [...(notifs||[]).filter(n => n.profiles), ...presEvents]
+        .sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+      setEntries(allEntries); setLoading(false);
     }
     load();
   }, [dateFilter]);
 
-  const grouped = {};
-  entries.forEach(e => {
-    const d = e.created_at?.split("T")[0] || "?";
-    if (!grouped[d]) grouped[d] = [];
-    grouped[d].push(e);
-  });
-
-  const typeIcon = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", log_action: "📌" };
+  const typeIcon = { badge_assigned:"🎖️", booking_confirmed:"✅", booking_rejected:"❌", log_action:"📌", presenza:"✅", new_message:"💬", level_up:"🆙" };
+  const typeColor = { badge_assigned:"var(--rosa)", booking_confirmed:"var(--verde)", booking_rejected:"var(--danger)", presenza:"var(--neon-green)", new_message:"var(--azzurro)", level_up:"var(--neon-gold)" };
 
   return (
     <div>
       <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)", marginBottom: 16 }}>📜 Diario giornate</div>
       <div className="filter-bar">
         <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
-        {dateFilter && <button className="btn btn-ghost btn-sm" onClick={() => setDateFilter("")}>✕ Tutto</button>}
+        <button className="btn btn-ghost btn-sm" onClick={() => setDateFilter(new Date().toISOString().split("T")[0])}>Oggi</button>
       </div>
       {loading ? <div className="loading">⏳</div> : (
-        Object.keys(grouped).length === 0 ? <div className="empty">Nessuna azione registrata.</div> :
-        Object.entries(grouped).map(([date, dayEntries]) => (
-          <div key={date} className="diary-day">
-            <div className="diary-date">{new Date(date).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</div>
-            {dayEntries.filter(e => e.profiles).map(e => (
-              <div key={e.id} className="diary-entry">
-                <span className="diary-icon">{typeIcon[e.type] || "🔔"}</span>
-                <div className="diary-text"><strong>{e.profiles?.display_name}</strong> · {e.title}{e.body && <span style={{ color: "var(--text2)", marginLeft: 4 }}>{e.body}</span>}</div>
-                <div className="diary-pts">{new Date(e.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</div>
+        entries.length === 0
+          ? <div className="empty">Nessuna azione per questo giorno.</div>
+          : (
+            <div>
+              <div style={{ fontSize:12, color:"var(--text3)", marginBottom:10, fontWeight:700 }}>
+                {entries.length} azioni · {new Date(dateFilter).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"long" })}
               </div>
-            ))}
-          </div>
-        ))
+              {entries.map(e => (
+                <div key={e.id} className="diary-entry">
+                  <span className="diary-icon" style={{ color: typeColor[e.type] || "var(--text2)" }}>{typeIcon[e.type] || "🔔"}</span>
+                  <div className="diary-text">
+                    <strong style={{ color:"var(--text)" }}>{e.profiles?.display_name}</strong>
+                    <span style={{ color:"var(--text2)", marginLeft:6 }}>{e.title}</span>
+                    {e.body && <span style={{ color:"var(--text3)", marginLeft:6, fontSize:11 }}>{e.body}</span>}
+                  </div>
+                  <div className="diary-pts">{new Date(e.created_at).toLocaleTimeString("it-IT", { hour:"2-digit", minute:"2-digit" })}</div>
+                </div>
+              ))}
+            </div>
+          )
       )}
     </div>
   );
