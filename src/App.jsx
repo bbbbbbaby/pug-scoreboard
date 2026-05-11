@@ -511,6 +511,24 @@ const css = `
     .msg-main { height:340px; }
   }
 
+  /* ═══ PODIUM ═══ */
+  .podium-wrap { display:flex; align-items:flex-end; gap:6px; margin:0 0 14px; padding:0 2px; }
+  .pod-col { flex:1; text-align:center; }
+  .pod-crown { font-size:18px; margin-bottom:3px; display:block; }
+  .pod-av-wrap { border-radius:50%; margin:0 auto 6px; overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative; }
+  .pod-name { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:900; text-transform:uppercase; color:#fff; letter-spacing:.03em; line-height:1.2; word-break:break-word; }
+  .pod-xp { font-size:10px; font-weight:700; margin-top:2px; }
+  .pod-base { border-radius:12px 12px 0 0; padding:8px 4px 6px; margin-top:6px; }
+  .pod-1 .pod-av-wrap { width:68px; height:68px; border:3px solid #ffcc00; box-shadow:0 0 24px rgba(255,204,0,.45); }
+  .pod-2 .pod-av-wrap { width:54px; height:54px; border:2px solid #9090b0; box-shadow:0 0 14px rgba(150,150,200,.35); }
+  .pod-3 .pod-av-wrap { width:48px; height:48px; border:2px solid #b87a30; box-shadow:0 0 12px rgba(200,130,50,.3); }
+  .pod-1 .pod-base { background:rgba(255,204,0,.08); border:1px solid rgba(255,204,0,.22); border-bottom:none; min-height:70px; }
+  .pod-2 .pod-base { background:rgba(140,140,180,.06); border:1px solid rgba(140,140,180,.15); border-bottom:none; min-height:52px; }
+  .pod-3 .pod-base { background:rgba(180,120,50,.06); border:1px solid rgba(180,120,50,.14); border-bottom:none; min-height:40px; }
+  .pod-1 .pod-xp { color:#ffcc00; }
+  .pod-2 .pod-xp { color:#aac8e0; }
+  .pod-3 .pod-xp { color:#d4916a; }
+
   /* ═══ STREAK ═══ */
   .streak-card { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(255,120,0,.25); border-radius:14px; padding:12px 14px; position:relative; z-index:2; }
   .streak-row { display:flex; gap:8px; }
@@ -1059,6 +1077,40 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
   );
 }
 
+function Podium({ ranked, xpData, timeFilter, highlightId }) {
+  const top3 = ranked.slice(0, 3);
+  if (top3.length < 2) return null;
+  const order = [1, 0, 2]; // silver, gold, bronze
+  const cols = ["pod-2", "pod-1", "pod-3"];
+  const crowns = [null, "👑", null];
+  const xpColors = ["#aac8e0", "#ffcc00", "#d4916a"];
+  const sizes = [54, 68, 48];
+  return (
+    <div className="podium-wrap">
+      {order.map((pos, i) => {
+        const p = top3[pos];
+        if (!p) return <div key={i} className={`pod-col ${cols[i]}`}/>;
+        const lv = getLevel(p.xp);
+        const xpShown = timeFilter === "oggi" ? xpData[p.id]||0 : timeFilter === "mese" ? xpData[p.id]||0 : p.xp;
+        const isMe = p.id === highlightId;
+        return (
+          <div key={p.id} className={`pod-col ${cols[i]}`}>
+            {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
+            <div className="pod-av-wrap" style={isMe?{outline:"2px solid var(--neon-blue)",outlineOffset:2}:{}}>
+              <Avatar url={p.avatar_url} emoji={lv.emoji} size={sizes[i]}/>
+            </div>
+            <div className="pod-name">{p.display_name}{isMe&&<span style={{color:"var(--azzurro)",fontSize:9,display:"block"}}>TU</span>}</div>
+            <div className="pod-xp">{xpShown} XP</div>
+            <div className="pod-base">
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:xpColors[i]}}>{["2°","1°","3°"][i]}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function LeaderboardView({ sectionColors, setSectionColors }) {
   const [players, setPlayers] = useState([]);
   const [squadFilter, setSquadFilter] = useState("all");
@@ -1111,29 +1163,32 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
         {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
       </div>
       {loading ? <div className="loading">⏳</div> : (
-        <div className="lb-list">
-          {ranked.map((p, i) => {
-            const lv = getLevel(p.xp);
-            const medals = ["gold","silver","bronze"];
-            const xpShown = timeFilter === "oggi" ? xpToday[p.id] || 0 : timeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
-            const xpLabel = timeFilter === "oggi" ? "XP oggi" : timeFilter === "mese" ? "XP mese" : "XP";
-            return (
-              <div key={p.id} className="lb-row">
-                <span className={`lb-rank ${i < 3 ? medals[i] : ""}`}>{i < 3 ? ["1°","2°","3°"][i] : (i+1)+"°"}</span>
-                <div className="lb-av"><Avatar url={p.avatar_url} emoji={lv.emoji} size={38} /></div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="lb-name">{p.display_name}</div>
-                  <div className="lb-level">{lv.emoji} {lv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
+        <>
+          <Podium ranked={ranked} xpData={timeFilter==="oggi"?xpToday:timeFilter==="mese"?xpMonth:{}} timeFilter={timeFilter} highlightId={null}/>
+          <div className="lb-list">
+            {ranked.slice(ranked.length>=3?3:0).map((p, i) => {
+              const lv = getLevel(p.xp);
+              const realIdx = (ranked.length>=3?3:0)+i;
+              const xpShown = timeFilter === "oggi" ? xpToday[p.id] || 0 : timeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
+              const xpLabel = timeFilter === "oggi" ? "XP oggi" : timeFilter === "mese" ? "XP mese" : "XP";
+              return (
+                <div key={p.id} className="lb-row">
+                  <span className="lb-rank">{(realIdx+1)+"°"}</span>
+                  <div className="lb-av"><Avatar url={p.avatar_url} emoji={lv.emoji} size={38} /></div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="lb-name">{p.display_name}</div>
+                    <div className="lb-level">{lv.emoji} {lv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span className="lb-xp">{xpShown}</span>
+                    <div style={{ fontSize: 9, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>{xpLabel}</div>
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <span className="lb-xp">{xpShown}</span>
-                  <div style={{ fontSize: 9, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>{xpLabel}</div>
-                </div>
-              </div>
-            );
-          })}
-          {ranked.length === 0 && <div className="empty">Nessun dato disponibile.</div>}
-        </div>
+              );
+            })}
+            {ranked.length === 0 && <div className="empty">Nessun dato disponibile.</div>}
+          </div>
+        </>
       )}
       {customizing && <BannerCustomizer sectionKey="classifica" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
     </div>
@@ -2281,15 +2336,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               <button className={`chip ${lbTimeFilter === "oggi" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, background: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, color: lbTimeFilter === "oggi" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("oggi")}>⚡ Top 3 Oggi</button>
               <button className={`chip ${lbTimeFilter === "mese" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "mese" ? "var(--rosa)" : undefined, background: lbTimeFilter === "mese" ? "var(--rosa)" : undefined, color: lbTimeFilter === "mese" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("mese")}>📅 Top 10 Mese</button>
             </div>
+            <Podium ranked={lbRanked} xpData={lbTimeFilter==="oggi"?xpToday:lbTimeFilter==="mese"?xpMonth:{}} timeFilter={lbTimeFilter} highlightId={profile.id}/>
             <div className="lb-list">
-              {lbRanked.map((p, i) => {
+              {lbRanked.slice(lbRanked.length>=3?3:0).map((p, i) => {
                 const plv = getLevel(p.xp);
-                const medals = ["gold","silver","bronze"];
+                const realIdx = (lbRanked.length>=3?3:0)+i;
                 const xpShown = lbTimeFilter === "oggi" ? xpToday[p.id] || 0 : lbTimeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
                 const isMe = p.id === profile.id;
                 return (
                   <div key={p.id} className="lb-row" style={{ border: isMe ? "1.5px solid var(--azzurro)" : undefined, background: isMe ? "rgba(163,207,254,.06)" : undefined }}>
-                    <span className={`lb-rank ${i < 3 ? medals[i] : ""}`}>{i < 3 ? ["1°","2°","3°"][i] : (i+1)+"°"}</span>
+                    <span className="lb-rank">{(realIdx+1)+"°"}</span>
                     <div className="lb-av"><Avatar url={p.avatar_url} emoji={plv.emoji} size={38} /></div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="lb-name">{p.display_name}{isMe && <span style={{ fontSize: 10, color: "var(--azzurro)", marginLeft: 6, fontWeight: 700 }}>TU</span>}</div>
@@ -2590,13 +2646,17 @@ export default function App() {
     }
 
     // Poi controlla sessione educator (Supabase Auth)
-    sb.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-        setProfile(p || { id: session.user.id, role: "educator", display_name: session.user.email?.split("@")[0], xp: 0, coin: 100 });
-      }
-      setChecking(false);
-    });
+    const _t = setTimeout(() => setChecking(false), 5000); // fallback timeout
+    sb.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        clearTimeout(_t);
+        if (session) {
+          const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
+          setProfile(p || { id: session.user.id, role: "educator", display_name: session.user.email?.split("@")[0], xp: 0, coin: 100 });
+        }
+        setChecking(false);
+      })
+      .catch(() => { clearTimeout(_t); setChecking(false); });
 
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT") setProfile(null);
