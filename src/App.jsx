@@ -2626,6 +2626,12 @@ export default function App() {
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
   useEffect(() => {
+    // Deregistra service worker se presente (evita cache stale)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
+    }
     // Controlla prima sessione player (localStorage)
     const savedPlayer = localStorage.getItem("pug_player");
     if (savedPlayer) {
