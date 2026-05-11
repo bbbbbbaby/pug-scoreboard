@@ -992,6 +992,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
     setCreatePlayerErr("");
     if (!newPlayer.display_name.trim()) { setCreatePlayerErr("Inserisci il nickname"); return; }
     const payload = {
+      id: crypto.randomUUID(),
       display_name: newPlayer.display_name.trim(),
       first_name: newPlayer.first_name.trim() || null,
       role: "player",
@@ -1354,13 +1355,6 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
         <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
         {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
       </div>
-      <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:10, padding:"8px 10px", background:"rgba(255,255,255,.03)", border:"1px solid var(--border)", borderRadius:10, fontSize:11, color:"var(--text3)" }}>
-        <span><strong style={{color:"var(--text2)"}}>Legenda:</strong></span>
-        <span><span className="pres-dot pd-none" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>?</span> Assente</span>
-        <span><span className="pres-dot pd-partial" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>~</span> Parziale</span>
-        <span><span className="pres-dot pd-yes" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>✓</span> Presente</span>
-        <span><span className="pres-dot pd-completed" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>★</span> Completato</span>
-      </div>
       {loading ? <div className="loading">⏳</div> : (
         <>
           <Podium ranked={ranked} xpData={timeFilter==="oggi"?xpToday:timeFilter==="mese"?xpMonth:{}} timeFilter={timeFilter} highlightId={null}/>
@@ -1523,6 +1517,14 @@ function AttendanceView({ sectionColors, setSectionColors }) {
         {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
       </div>
       {loading ? <div className="loading">⏳</div> : (
+        <>
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:10, padding:"8px 10px", background:"rgba(255,255,255,.03)", border:"1px solid var(--border)", borderRadius:10, fontSize:11, color:"var(--text3)" }}>
+          <span><strong style={{color:"var(--text2)"}}>Legenda stati:</strong></span>
+          <span><span className="pres-dot pd-none" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>?</span> Assente</span>
+          <span><span className="pres-dot pd-partial" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>~</span> Parziale</span>
+          <span><span className="pres-dot pd-yes" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>✓</span> Presente (+XP)</span>
+          <span><span className="pres-dot pd-completed" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>★</span> Attività completata</span>
+        </div>
         <div className="pres-wrap">
           <table className="pres-table">
             <thead><tr><th>Giocatore</th><th>Squadra</th><th>Stato</th><th>XP</th></tr></thead>
@@ -1547,7 +1549,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
       {customizing && <BannerCustomizer sectionKey="presenze" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
     </div>
@@ -2184,10 +2187,11 @@ function QrView() {
         {loading ? <div className="loading">⏳</div> : qr ? (
           <>
             <div style={{ background: "var(--surface2)", borderRadius: 16, padding: "24px 32px", marginBottom: 16, display: "inline-block", border: "1.5px solid var(--border2)" }}>
-              <div className="qr-code">{qr.code}</div>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8 }}/>
             </div>
-            <div style={{ fontSize: 13, color: "var(--text2)" }}>Valido {new Date(qr.valid_from).getHours()}:00 – {new Date(qr.valid_until).getHours()}:00</div>
-            <button className="btn btn-ghost" style={{ marginTop: 16, width: "100%" }} onClick={generateQr}>Rigenera</button>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:34, fontWeight:900, color:"var(--neon-blue)", letterSpacing:8, margin:"10px 0 6px", textShadow:"var(--glow-blue)" }}>{qr.code}</div>
+            <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Valido {new Date(qr.valid_from).getHours()}:00 – {new Date(qr.valid_until).getHours()}:00</div>
+            <button className="btn btn-ghost" style={{ width:"100%" }} onClick={generateQr}>🔄 Rigenera</button>
           </>
         ) : (
           <>
@@ -2484,10 +2488,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
     const TAB_BG = {
       profilo:    'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',
-      classifica: 'linear-gradient(160deg,#0e1a60 0%,#0a258a 45%,#0e1a6e 100%)',
-      attivita:   'linear-gradient(160deg,#083518 0%,#0a5028 45%,#083518 100%)',
-      messaggi:   'linear-gradient(160deg,#480a38 0%,#701050 45%,#480a38 100%)',
-      notifiche:  'linear-gradient(160deg,#3a2800 0%,#583c00 45%,#3a2800 100%)',
+      classifica: 'linear-gradient(160deg,#001a6e 0%,#0030b8 50%,#001a6e 100%)',
+      attivita:   'linear-gradient(160deg,#043a14 0%,#0a6a28 50%,#043a14 100%)',
+      messaggi:   'linear-gradient(160deg,#5a0535 0%,#a00860 50%,#5a0535 100%)',
+      notifiche:  'linear-gradient(160deg,#3d2200 0%,#7a4400 50%,#3d2200 100%)',
     };
     return (
     <div className="player-wrap" style={{background:TAB_BG[tab]||TAB_BG.profilo,transition:'background 0.5s ease'}}>
@@ -2866,6 +2870,13 @@ function EducatorShell({ profile, onLogout }) {
               <div style={{fontSize:12,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile.display_name}</div>
               <div style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>🌱 Giardiniere</div>
             </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,padding:"6px 10px",background:"rgba(255,255,255,.04)",borderRadius:10,border:"1px solid rgba(255,255,255,.07)"}}>
+            <span style={{fontSize:13}}>{theme==="dark"?"🌙":"☀️"}</span>
+            <span style={{fontSize:11,color:"rgba(255,255,255,.4)",flex:1}}>{theme==="dark"?"Scuro":"Chiaro"}</span>
+            <button className="theme-toggle" style={{background:theme==="light"?"rgba(255,204,0,.3)":"rgba(255,255,255,.1)",flexShrink:0}} onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>
+              <div className="theme-toggle-knob" style={{background:theme==="light"?"#c08800":"rgba(255,255,255,.6)",transform:theme==="light"?"translateX(20px)":"translateX(0)"}}/>
+            </button>
           </div>
           <button className="btn btn-ghost btn-sm" style={{width:"100%",color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
         </div>
