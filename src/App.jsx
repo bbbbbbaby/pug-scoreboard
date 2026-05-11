@@ -508,6 +508,40 @@ const css = `
     .msg-thread { flex-shrink:0; width:130px; }
     .msg-main { height:340px; }
   }
+
+  /* ═══ PLAYER DASHBOARD — NEW DESIGN ═══ */
+  .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; }
+  .pd-topbar { position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,0,.85); border-bottom:1px solid rgba(255,255,255,.1); z-index:20; display:flex; align-items:center; padding:0 14px; justify-content:space-between; backdrop-filter:blur(20px); }
+  .pd-logo-box { background:#cc1111; border-radius:9px 12px 9px 14px; padding:4px 10px; transform:rotate(-1.5deg); box-shadow:2px 3px 0 rgba(0,0,0,.2); }
+  .pd-logo-t { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:900; color:#111; line-height:1.05; text-transform:uppercase; letter-spacing:-.3px; }
+  .pd-logo-sub { font-family:'Barlow Condensed',sans-serif; background:#111; color:#ffe600; font-size:8px; font-weight:900; border-radius:4px; padding:2px 7px; text-transform:uppercase; letter-spacing:.07em; margin-top:2px; display:inline-block; }
+  .pd-scroll { padding-top:66px; padding-bottom:calc(68px + env(safe-area-inset-bottom,0px)); }
+  .pd-av-zone { display:flex; flex-direction:column; align-items:center; padding-top:6px; position:relative; z-index:2; }
+  .pd-av-glow { position:absolute; width:280px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(80,140,255,.38) 0%,transparent 70%); top:0; left:50%; transform:translateX(-50%); filter:blur(18px); pointer-events:none; }
+  .pd-av-img { width:240px; height:240px; object-fit:contain; position:relative; z-index:3; filter:drop-shadow(0 12px 28px rgba(0,0,0,.55)) drop-shadow(0 0 50px rgba(100,160,255,.28)); margin-bottom:-14px; }
+  .pd-av-emoji { font-size:160px; line-height:1; position:relative; z-index:3; margin-bottom:-14px; filter:drop-shadow(0 12px 28px rgba(0,0,0,.55)); display:block; text-align:center; }
+  .pd-name-pill { background:#111; color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:21px; font-weight:900; text-transform:uppercase; letter-spacing:.07em; border-radius:10px 13px 10px 15px; padding:5px 18px; position:relative; z-index:3; margin-bottom:4px; box-shadow:2px 3px 0 rgba(0,0,0,.3); }
+  .pd-lv-pill { display:inline-flex; align-items:center; gap:5px; background:rgba(0,212,255,.1); border:1px solid rgba(0,212,255,.28); border-radius:99px; padding:4px 14px; font-size:10px; font-weight:700; color:var(--neon-blue); letter-spacing:.07em; text-transform:uppercase; position:relative; z-index:3; margin-bottom:12px; }
+  .pd-card { margin:0 14px 8px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:12px 14px; position:relative; z-index:2; }
+  .pd-sg { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:0 14px 8px; position:relative; z-index:2; }
+  .pd-sc { background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:11px 6px; text-align:center; }
+  .pd-sv { font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; color:#ffcc00; line-height:1; display:block; }
+  .pd-sl { font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.38); margin-top:2px; display:block; }
+  .pd-squad { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:11px 14px; display:flex; align-items:center; gap:10px; position:relative; z-index:2; }
+  .pd-sfida { margin:0 14px 8px; background:#111; border-radius:16px; padding:14px 16px; position:relative; z-index:2; overflow:hidden; }
+  .pd-sfida::after { content:'★'; position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:44px; color:rgba(255,220,0,.1); line-height:1; }
+  .pd-badges { margin:0 14px 8px; position:relative; z-index:2; }
+  .pd-badge-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+  .pd-badge-row::-webkit-scrollbar { display:none; }
+  .pd-badge-item { flex-shrink:0; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:10px 8px; text-align:center; min-width:68px; cursor:pointer; transition:all .2s; }
+  .pd-badge-item:hover { border-color:rgba(255,0,204,.4); transform:translateY(-2px); }
+  .pd-checkin { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(0,255,136,.2); border-radius:16px; padding:14px; position:relative; z-index:2; }
+  .pd-tab-title { font-family:'Barlow Condensed',sans-serif; font-size:30px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; margin-bottom:14px; position:relative; z-index:2; padding:0 2px; }
+  /* override bottom nav for new design */
+  .player-bottom-nav { background:rgba(0,0,0,.88) !important; border-top:1px solid rgba(255,255,255,.1) !important; }
+  .player-nav-btn { color:rgba(255,255,255,.28) !important; }
+  .player-nav-btn.active { color:#ffcc00 !important; }
+  .player-nav-btn.active::after { background:#ffcc00 !important; box-shadow:0 0 8px rgba(255,204,0,.5) !important; }
 `;
 
 
@@ -1836,6 +1870,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [selectedBadge, setSelectedBadge] = useState(null);
 
   const load = useCallback(async () => {
+  try {
     const today = new Date().toISOString().split("T")[0];
     const monthStart = today.slice(0, 7) + "-01";
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }] = await Promise.all([
@@ -1853,7 +1888,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
     const td = {}; (attToday || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpToday(td);
     const mt = {}; (attMonth || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpMonth(mt);
+  } catch(err) {
+    console.error("Errore caricamento dati:", err);
+  } finally {
     setLoading(false);
+  }
   }, [profile.id]);
 
   useEffect(() => {
@@ -1902,7 +1941,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   if (lbTimeFilter === "oggi") lbRanked = lbRanked.sort((a, b) => (xpToday[b.id] || 0) - (xpToday[a.id] || 0)).slice(0, 3);
   else if (lbTimeFilter === "mese") lbRanked = lbRanked.sort((a, b) => (xpMonth[b.id] || 0) - (xpMonth[a.id] || 0)).slice(0, 10);
 
-  if (loading) return <div className="loading" style={{ minHeight: "100vh" }}>🌿 Caricamento…</div>;
+  if (loading) return (
+    <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#A3CFFE',letterSpacing:'.08em'}}>🌿 Caricamento…</div>
+    </div>
+  );
 
   const BOTTOM_TABS = [
     ["profilo","👤","Profilo"],
@@ -1912,132 +1955,160 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     ["notifiche","🔔","Notifiche"],
   ];
 
+  const xpPct = (() => { const nxt = LEVELS.find(l => l.xp > (fullProfile?.xp||0)); return nxt ? Math.min(100,Math.round(((fullProfile.xp-lv.xp)/(nxt.xp-lv.xp))*100)) : 100; })();
+
   return (
-    <div style={{ background: "var(--nero)", minHeight: "100vh", position: "relative", zIndex: 1 }}>
-      {/* Header */}
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 58, background: "rgba(4,8,20,0.97)", borderBottom: "1px solid rgba(0,212,255,0.15)", zIndex: 20, display: "flex", alignItems: "center", padding: "0 16px", justifyContent: "space-between", backdropFilter: "blur(20px)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", border: "2px solid transparent", background: "linear-gradient(rgba(4,8,20,1),rgba(4,8,20,1)) padding-box, linear-gradient(135deg,var(--neon-blue),var(--neon-pink)) border-box", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "var(--glow-blue)" }}>
-            <Avatar url={fullProfile?.avatar_url} emoji={lv.emoji} size={38} />
-          </div>
-          <div>
-            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, textTransform: "uppercase", color: "#fff", lineHeight: 1, letterSpacing: 1, textShadow: "0 0 20px rgba(0,212,255,0.4)" }}>{fullProfile?.display_name}</div>
-            {fullProfile?.first_name && <div style={{ fontSize: 10, color: "rgba(255,255,255,.4)", letterSpacing: ".05em" }}>{fullProfile.first_name}</div>}
-            <div style={{ fontSize: 10, color: "var(--neon-blue)", fontWeight: 700, letterSpacing: ".06em" }}>{lv.emoji} {lv.name}</div>
-          </div>
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{ fontSize: 11, letterSpacing: ".06em", textTransform: "uppercase" }}>Esci</button>
+    <div className="player-wrap">
+      {/* Floral background */}
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.07,overflow:'hidden'}}>
+        <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
+          <defs>
+            <g id="fl"><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="4" fill="white"/></g>
+            <g id="lf"><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(20)"/><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(-20)"/></g>
+          </defs>
+          <use href="#fl" transform="translate(40,60) scale(1.2)"/><use href="#lf" transform="translate(90,130)"/><use href="#fl" transform="translate(320,80) scale(.9)"/><use href="#lf" transform="translate(280,170) scale(1.1)"/><use href="#fl" transform="translate(55,260) scale(.8)"/><use href="#lf" transform="translate(340,310)"/><use href="#fl" transform="translate(170,360) scale(1.3)"/><use href="#lf" transform="translate(45,430) scale(1.2)"/><use href="#fl" transform="translate(305,450) scale(.9)"/><use href="#lf" transform="translate(200,510)"/><use href="#fl" transform="translate(75,570) scale(1.1)"/><use href="#lf" transform="translate(335,595) scale(.8)"/><use href="#fl" transform="translate(185,640) scale(.9)"/><use href="#lf" transform="translate(115,690) scale(1.2)"/>
+        </svg>
       </div>
 
-      {/* Contenuto */}
-      <div style={{ paddingTop: 70, paddingBottom: "calc(70px + env(safe-area-inset-bottom,0px))", padding: "70px 14px calc(70px + env(safe-area-inset-bottom,0px))" }}>
+      {/* Top bar */}
+      <div className="pd-topbar">
+        <div>
+          <div className="pd-logo-box"><div className="pd-logo-t">PeR·You<br/>GaRDeN</div></div>
+          <div className="pd-logo-sub">gratuito &amp; popolare</div>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          {fullProfile?.squads?.name && (
+            <div style={{background:'#111',color:'#ffcc00',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
+          )}
+          <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div className="pd-scroll">
 
         {/* ── PROFILO ── */}
         {tab === "profilo" && fullProfile && (
-          <>
-            {/* Hero Card */}
-            <div className="profile-hero">
-              <div className="profile-hero-bg" />
-              <div className="profile-hero-inner">
-                <div className="profile-avatar">
-                  <div className="profile-avatar-ring" />
-                  <Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={110} />
+          <div>
+            {/* Avatar Hero */}
+            <div className="pd-av-zone">
+              <div className="pd-av-glow"/>
+              {fullProfile.avatar_url
+                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar"/>
+                : <span className="pd-av-emoji">{lv.emoji}</span>
+              }
+              <div className="pd-name-pill">{fullProfile.display_name}</div>
+              <div className="pd-lv-pill">{lv.emoji} LV.{lv.id} · {lv.name}</div>
+            </div>
+
+            {/* Profile card: thumbnail + nome editabile + XP */}
+            <div className="pd-card">
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+                <div style={{width:52,height:52,borderRadius:10,border:'2px solid rgba(255,204,0,.6)',overflow:'hidden',flexShrink:0,background:'rgba(0,0,0,.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={52}/>
                 </div>
-                <div className="profile-name">{fullProfile.display_name}</div>
-                {fullProfile.first_name && <div className="profile-firstname">{fullProfile.first_name}</div>}
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
-                  <div className="profile-level">{lv.emoji} {lv.name}</div>
-                </div>
-                {fullProfile.squads?.name && <div style={{ marginBottom: 14 }}><SquadPill name={fullProfile.squads.name} /></div>}
-                <div className="profile-stats-row" style={{ background: "rgba(0,0,0,.25)", borderRadius: 12, border: "1px solid rgba(255,255,255,.06)" }}>
-                  <div className="profile-stat">
-                    <div className="profile-stat-val" style={{ color: "var(--azzurro)" }}>{fullProfile.xp}</div>
-                    <div className="profile-stat-lbl">XP</div>
-                  </div>
-                  <div className="profile-stat">
-                    <div className="profile-stat-val" style={{ color: "var(--giallo)" }}>🪙{fullProfile.coin}</div>
-                    <div className="profile-stat-lbl">Coin</div>
-                  </div>
-                  <div className="profile-stat">
-                    <div className="profile-stat-val" style={{ color: "var(--rosa)" }}>{badges.length}</div>
-                    <div className="profile-stat-lbl">Badge</div>
-                  </div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:2}}>{fullProfile.display_name}</div>
+                  {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
                 </div>
               </div>
-              <div className="profile-xp-section">
-                <XpBar xp={fullProfile.xp} />
+              {editingFirstName ? (
+                <div style={{display:'flex',gap:8,marginBottom:8}}>
+                  <input className="form-input" value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} placeholder="Il tuo nome…" style={{flex:1}} maxLength={30} autoFocus/>
+                  <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setEditingFirstName(false)}>✕</button>
+                </div>
+              ) : (
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                  <span style={{fontSize:14,color:'#ffcc00',fontWeight:800}}>{fullProfile.first_name || <span style={{color:'rgba(255,255,255,.3)',fontSize:12}}>Aggiungi il tuo nome ✏️</span>}</span>
+                  <button className="btn btn-ghost btn-xs" onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>✏️</button>
+                </div>
+              )}
+              <div style={{fontSize:9,fontWeight:900,color:'rgba(255,255,255,.35)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:5,display:'flex',justifyContent:'space-between'}}>
+                <span>{lv.emoji} {lv.name}</span>
+                <span>{fullProfile.xp} / {LEVELS.find(l=>l.xp>(fullProfile.xp||0))?.xp||'MAX'} XP</span>
+              </div>
+              <div style={{height:8,background:'rgba(255,255,255,.08)',borderRadius:99,overflow:'hidden'}}>
+                <div style={{height:'100%',background:'linear-gradient(90deg,#6644ff,#aa44ff)',borderRadius:99,width:xpPct+'%',boxShadow:'0 0 8px rgba(130,80,255,.5)'}}/>
               </div>
             </div>
 
-            {/* Sfida del giorno in profilo */}
-            {activities.filter(a => a.description?.includes("SFIDA")).slice(0,1).map(s => (
-              <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
-                <div className="sfida-label">⚡ Sfida del giorno</div>
-                <div className="sfida-title">{s.name}</div>
-                <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-                <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+            {/* Stats grid 1: XP, Coin, Badge */}
+            <div className="pd-sg">
+              {[['⭐',fullProfile.xp,'XP'],['🪙',fullProfile.coin,'Coin'],['🎖️',badges.length,'Badge']].map(([ic,v,l])=>(
+                <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
+              ))}
+            </div>
+
+            {/* Stats grid 2: Attività, Conf., Rank */}
+            <div className="pd-sg">
+              {[['🌿',activities.filter(a=>!a.description?.includes('SFIDA')).length,'Attività'],['✅',bookings.filter(b=>b.status==='confirmed').length,'Confermati'],['🏆',(players.findIndex(p=>p.id===profile.id)+1)||'-','Rank']].map(([ic,v,l])=>(
+                <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
+              ))}
+            </div>
+
+            {/* Squadra */}
+            {fullProfile.squads?.name && (
+              <div className="pd-squad">
+                <div style={{width:36,height:36,borderRadius:8,background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>⚡</div>
+                <div>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
+                  <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>
+                </div>
+              </div>
+            )}
+
+            {/* Sfida del giorno */}
+            {activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
+              <div key={s.id} className="pd-sfida">
+                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'#ffcc00',marginBottom:4}}>⚡ Sfida del Giorno</div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:7}}>{s.name}</div>
+                <div style={{fontSize:12,color:'rgba(255,255,255,.5)',marginBottom:10,lineHeight:1.5}}>{s.description?.replace('SFIDA · ','')}</div>
+                <div style={{display:'inline-flex',alignItems:'center',gap:5,background:'rgba(255,220,0,.14)',border:'1px solid rgba(255,220,0,.35)',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:900,color:'#ffcc00'}}>🌟 +{s.xp_completed} XP · +{s.coin_completed} Coin</div>
               </div>
             ))}
 
-            {/* Nome */}
-            <div className="card" style={{ marginBottom: 12, background: "linear-gradient(145deg, var(--surface), rgba(163,207,254,.04))", border: "1px solid rgba(163,207,254,.12)" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Il tuo nome</div>
-              {editingFirstName ? (
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input className="form-input" value={newFirstName} onChange={e => setNewFirstName(e.target.value.slice(0, 30))} placeholder="Inserisci il tuo nome…" style={{ flex: 1 }} maxLength={30} autoFocus />
-                  <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setEditingFirstName(false)}>✕</button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 15, color: "var(--text)", fontWeight: 600 }}>{fullProfile.first_name || <span style={{ color: "var(--text3)" }}>Non impostato</span>}</span>
-                  <button className="btn btn-ghost btn-xs" onClick={() => { setNewFirstName(fullProfile.first_name || ""); setEditingFirstName(true); }}>✏️ Modifica</button>
-                </div>
-              )}
-              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>Il nickname è gestito dal Giardiniere · Max 30 caratteri</div>
-            </div>
-
-            {/* Check-in */}
-            <div className="card" style={{ marginBottom: 12, background: "linear-gradient(145deg, var(--surface), rgba(51,153,102,.06))", border: "1px solid rgba(51,153,102,.15)" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--verde)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>📍 Check-in giornaliero</div>
-              <input className="form-input" value={qrInput} onChange={e => setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{ textAlign: "center", fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, letterSpacing: 8, marginBottom: 10 }} maxLength={6} />
-              <button className="btn btn-primary" onClick={doCheckin}>Conferma presenza · +10 XP +5 🪙</button>
-              {qrMsg && <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: qrMsg.includes("✅") ? "var(--verde)" : "var(--danger)", textAlign: "center" }}>{qrMsg}</div>}
-            </div>
-
             {/* Badge */}
             {badges.length > 0 && (
-              <div className="card" style={{ marginBottom: 12, background: "linear-gradient(145deg, var(--surface), rgba(255,109,236,.04))", border: "1px solid rgba(255,109,236,.12)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--rosa)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>🎖️ I tuoi badge</div>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  {badges.map(pb => (
-                    <div key={pb.id} style={{ textAlign: "center", width: 64, cursor: "pointer" }} onClick={() => setSelectedBadge(pb)}>
-                      {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2.5px solid var(--rosa)", display: "block", margin: "0 auto 4px", boxShadow: "0 0 10px rgba(255,109,236,.2)" }} alt={pb.badges?.name} /> : <div style={{ fontSize: 36, marginBottom: 4 }}>🎖️</div>}
-                      <div style={{ fontSize: 10, color: "var(--text2)", lineHeight: 1.2, fontWeight: 600 }}>{pb.badges?.name}</div>
+              <div className="pd-badges">
+                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',textAlign:'center',marginBottom:6}}>— Badge —</div>
+                <div className="pd-badge-row">
+                  {badges.map(pb=>(
+                    <div key={pb.id} className="pd-badge-item" onClick={()=>setSelectedBadge(pb)}>
+                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt=""/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
+                      <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.65)',lineHeight:1.3}}>{pb.badges?.name}</div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Check-in */}
+            <div className="pd-checkin">
+              <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'var(--neon-green)',marginBottom:8}}>📍 Check-in giornaliero</div>
+              <input className="form-input" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{textAlign:'center',fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,letterSpacing:8,marginBottom:10}} maxLength={6}/>
+              <button className="btn btn-primary" onClick={doCheckin}>Conferma presenza · +10 XP +5 🪙</button>
+              {qrMsg&&<div style={{marginTop:10,fontSize:14,fontWeight:700,color:qrMsg.includes('✅')?'var(--verde)':'var(--danger)',textAlign:'center'}}>{qrMsg}</div>}
+            </div>
+
             {/* Prenotazioni */}
-            {bookings.length > 0 && (
-              <>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>Prenotazioni</div>
-                {bookings.slice(0, 5).map(b => {
-                  const s = { pending: ["tag-amber","In attesa"], confirmed: ["tag-green","Confermata"], rejected: ["tag-red","Rifiutata"] };
-                  const [cls, label] = s[b.status] || ["tag-gray", b.status];
-                  return <div key={b.id} className="card-sm" style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: 13, fontWeight: 600 }}>{b.activities?.name}</span><span className={`tag ${cls}`}>{label}</span></div>;
+            {bookings.length>0&&(
+              <div style={{padding:'0 0 8px'}}>
+                <div style={{fontSize:10,fontWeight:900,textTransform:'uppercase',letterSpacing:'.08em',color:'rgba(255,255,255,.3)',marginBottom:8,paddingLeft:2}}>Prenotazioni</div>
+                {bookings.slice(0,5).map(b=>{
+                  const s={pending:['tag-amber','In attesa'],confirmed:['tag-green','Confermata'],rejected:['tag-red','Rifiutata']};
+                  const[cls,label]=s[b.status]||['tag-gray',b.status];
+                  return <div key={b.id} className="card-sm" style={{marginBottom:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{fontSize:13,fontWeight:600}}>{b.activities?.name}</span><span className={`tag ${cls}`}>{label}</span></div>;
                 })}
-              </>
+              </div>
             )}
-          </>
+          </div>
         )}
 
         {/* ── CLASSIFICA ── */}
         {tab === "classifica" && (
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)", marginBottom: 14 }}>🏆 Classifica</div>
+            <div className="pd-tab-title" style={{color:"#A3CFFE"}}>🏆 Classifica</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
               <button className={`chip ${lbTimeFilter === "generale" ? "active" : ""}`} onClick={() => setLbTimeFilter("generale")}>🏆 Generale</button>
               <button className={`chip ${lbTimeFilter === "oggi" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, background: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, color: lbTimeFilter === "oggi" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("oggi")}>⚡ Top 3 Oggi</button>
@@ -2072,7 +2143,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {/* ── ATTIVITÀ ── */}
         {tab === "attivita" && (
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--verde)", marginBottom: 14 }}>⚡ Attività</div>
+            <div className="pd-tab-title" style={{color:"#00ff88"}}>⚡ Attività</div>
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
               <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
                 <div className="sfida-label">⚡ Sfida del giorno</div>
@@ -2112,7 +2183,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {/* ── MESSAGGI ── */}
         {tab === "messaggi" && (
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--rosa)", marginBottom: 14 }}>💬 Messaggi</div>
+            <div className="pd-tab-title" style={{color:"#FF6DEC"}}>💬 Messaggi</div>
             {messages.length === 0 ? <div className="empty">Nessun messaggio ricevuto.</div> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {messages.map(m => (
@@ -2135,7 +2206,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {/* ── NOTIFICHE ── */}
         {tab === "notifiche" && (
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginBottom: 14 }}>🔔 Notifiche</div>
+            <div className="pd-tab-title" style={{color:"#ffcc00"}}>🔔 Notifiche</div>
             {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
               const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬" };
               return (
@@ -2151,7 +2222,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             })}
           </div>
         )}
-      </div>
+      </div>{/* end pd-scroll */}
 
       {/* Badge detail modal */}
       {selectedBadge && (
@@ -2338,11 +2409,13 @@ export default function App() {
         const p = JSON.parse(savedPlayer);
         if (p?._playerSession && p?.id) {
           // Verifica che il profilo esista ancora
-          sb.from("profiles").select("*, squads(name)").eq("id", p.id).single().then(({ data }) => {
-            if (data) setProfile({ ...data, _playerSession: true });
-            else localStorage.removeItem("pug_player");
-            setChecking(false);
-          });
+          sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
+            .then(({ data }) => {
+              if (data) setProfile({ ...data, _playerSession: true });
+              else localStorage.removeItem("pug_player");
+            })
+            .catch(() => { localStorage.removeItem("pug_player"); })
+            .finally(() => setChecking(false));
           return;
         }
       } catch (_) { localStorage.removeItem("pug_player"); }
