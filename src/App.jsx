@@ -156,32 +156,34 @@ const css = `
   .btn-xs { padding:5px 10px; font-size:11px; min-height:30px; border-radius:8px; }
 
   /* ═══ EDUCATOR DESKTOP ═══ */
-  .edu-layout { display:flex; min-height:100vh; position:relative; z-index:1; }
-  .sidebar { width:230px; background:rgba(4,10,25,0.97); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; z-index:10; backdrop-filter:blur(20px); }
-  .sidebar-logo { padding:22px 20px 18px; border-bottom:1px solid var(--border); }
-  .sidebar-logo-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:24px; text-transform:uppercase; background:linear-gradient(135deg, var(--neon-blue), var(--rosa)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; }
-  .sidebar-logo-sub { font-size:10px; color:var(--text3); margin-top:3px; text-transform:uppercase; letter-spacing:.1em; }
-  .nav { flex:1; padding:10px 0; }
-  .nav-item { display:flex; align-items:center; gap:12px; padding:10px 20px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text2); border-left:2px solid transparent; transition:all .12s; min-height:44px; }
-  .nav-item:hover { background:rgba(0,212,255,0.06); color:var(--text); }
-  .nav-item.active { background:rgba(0,212,255,0.08); color:var(--neon-blue); border-left-color:var(--neon-blue); font-weight:700; box-shadow:inset 0 0 20px rgba(0,212,255,0.05); }
+  .edu-layout { display:flex; min-height:100vh; position:relative; z-index:1; background:linear-gradient(160deg,#1a0e55 0%,#122a7a 50%,#1f0e5a 100%); }
+  .sidebar { width:240px; background:rgba(0,0,20,0.7); border-right:1px solid rgba(255,255,255,.08); display:flex; flex-direction:column; position:fixed; top:0; left:0; height:100vh; overflow-y:auto; z-index:10; backdrop-filter:blur(24px); }
+  .sidebar-logo { padding:20px 18px 16px; border-bottom:1px solid rgba(255,255,255,.08); }
+  .sidebar-logo-box { background:#cc1111; border-radius:9px 12px 9px 14px; padding:5px 11px; display:inline-block; box-shadow:2px 3px 0 rgba(0,0,0,.3); transform:rotate(-1deg); }
+  .sidebar-logo-t { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:15px; text-transform:uppercase; color:#111; line-height:1.05; letter-spacing:-.3px; }
+  .sidebar-logo-sub { font-family:'Barlow Condensed',sans-serif; background:#111; color:#ffe600; font-size:8px; font-weight:900; border-radius:4px; padding:2px 7px; text-transform:uppercase; letter-spacing:.07em; margin-top:3px; display:inline-block; }
+  .sidebar-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(255,204,0,.12); border:1px solid rgba(255,204,0,.25); border-radius:99px; padding:3px 10px; font-size:9px; font-weight:800; color:#ffcc00; text-transform:uppercase; letter-spacing:.06em; margin-top:8px; }
+  .nav { flex:1; padding:8px 0; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 18px; cursor:pointer; font-size:13px; font-weight:600; color:rgba(255,255,255,.38); border-left:2px solid transparent; transition:all .12s; min-height:42px; border-radius:0 10px 10px 0; margin:1px 8px 1px 0; }
+  .nav-item:hover { background:rgba(255,255,255,.05); color:rgba(255,255,255,.75); }
+  .nav-item.active { background:rgba(255,204,0,.1); color:#ffcc00; border-left-color:#ffcc00; font-weight:700; box-shadow:inset 0 0 20px rgba(255,204,0,.05); }
   .nav-icon { font-size:16px; width:22px; text-align:center; flex-shrink:0; }
-  .sidebar-user { padding:16px 20px; border-top:1px solid var(--border); }
-  .edu-main { margin-left:230px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
-  .topbar { padding:14px 26px; background:rgba(4,10,25,0.95); border-bottom:1px solid var(--border); display:flex; align-items:center; position:sticky; top:0; z-index:5; backdrop-filter:blur(20px); }
-  .topbar-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:24px; text-transform:uppercase; color:var(--text); letter-spacing:.05em; }
-  .content { flex:1; padding:22px 26px; }
+  .sidebar-user { padding:14px 18px; border-top:1px solid rgba(255,255,255,.08); }
+  .edu-main { margin-left:240px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
+  .topbar { padding:12px 24px; background:rgba(0,0,20,.6); border-bottom:1px solid rgba(255,255,255,.08); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:5; backdrop-filter:blur(24px); }
+  .topbar-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:26px; text-transform:uppercase; color:#fff; letter-spacing:.05em; }
+  .content { flex:1; padding:20px 24px; }
 
   /* ═══ MOBILE EDUCATOR ═══ */
-  .mob-header { display:none; position:fixed; top:0; left:0; right:0; height:58px; background:rgba(4,10,25,0.97); border-bottom:1px solid var(--border); z-index:20; align-items:center; padding:0 16px; gap:12px; backdrop-filter:blur(20px); }
-  .mob-header-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:22px; text-transform:uppercase; color:var(--neon-blue); flex:1; letter-spacing:.05em; }
-  .mob-drawer-bg { position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:30; backdrop-filter:blur(4px); }
-  .mob-drawer { position:fixed; top:0; left:0; bottom:0; width:270px; background:rgba(4,10,25,0.98); border-right:1px solid var(--border); z-index:40; transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; backdrop-filter:blur(20px); }
+  .mob-header { display:none; position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,20,.75); border-bottom:1px solid rgba(255,255,255,.08); z-index:20; align-items:center; padding:0 14px; gap:10px; backdrop-filter:blur(24px); }
+  .mob-header-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:20px; text-transform:uppercase; color:#fff; flex:1; letter-spacing:.05em; }
+  .mob-drawer-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:30; backdrop-filter:blur(6px); }
+  .mob-drawer { position:fixed; top:0; left:0; bottom:0; width:270px; background:rgba(10,5,40,.97); border-right:1px solid rgba(255,255,255,.08); z-index:40; transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; backdrop-filter:blur(24px); }
   .mob-drawer.open { transform:translateX(0); }
-  .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(4,10,25,0.97); border-top:1px solid var(--border); z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(20px); }
-  .mob-bottom-nav-inner { display:flex; height:62px; }
-  .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:var(--text3); font-family:'Funnel Display'; padding:0; transition:color .15s; }
-  .mob-nav-btn.active { color:var(--neon-blue); }
+  .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(0,0,20,.88); border-top:1px solid rgba(255,255,255,.08); z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(24px); }
+  .mob-bottom-nav-inner { display:flex; height:60px; }
+  .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:rgba(255,255,255,.28); font-family:'Funnel Display'; padding:0; transition:color .15s; }
+  .mob-nav-btn.active { color:#ffcc00; }
 
   /* ═══ SECTION BANNERS ═══ */
   .section-banner { border-radius:var(--radius-lg); padding:20px; margin-bottom:18px; position:relative; overflow:hidden; min-height:80px; display:flex; align-items:flex-end; }
@@ -193,17 +195,17 @@ const css = `
 
   /* ═══ GAME CARDS ═══ */
   .card {
-    background:rgba(8,18,40,0.9); border:1px solid var(--border);
+    background:rgba(0,0,20,0.45); border:1px solid rgba(255,255,255,0.09);
     border-radius:var(--radius); padding:16px 20px;
     backdrop-filter:blur(10px); position:relative;
   }
-  .card-sm { background:rgba(10,22,48,0.85); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; }
+  .card-sm { background:rgba(0,0,20,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:12px 14px; }
   .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
   .stat-card {
-    background:rgba(0,212,255,0.04); border:1px solid rgba(0,212,255,0.15);
+    background:rgba(0,0,20,0.4); border:1px solid rgba(255,255,255,0.1);
     border-radius:var(--radius); padding:14px; position:relative; overflow:hidden;
   }
-  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(0,212,255,0.4),transparent); }
+  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,204,0,0.3),transparent); }
   .stat-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.12em; margin-bottom:4px; font-weight:700; }
   .stat-value { font-family:'Barlow Condensed',sans-serif; font-size:36px; font-weight:900; color:var(--text); line-height:1; }
 
@@ -540,6 +542,92 @@ const css = `
   .month-prog-bg { height:7px; background:rgba(255,255,255,.07); border-radius:99px; overflow:hidden; }
   .month-prog-fill { height:100%; background:linear-gradient(90deg,#ff6600,#ffaa00); border-radius:99px; }
 
+
+  /* ═══ LIGHT MODE ═══ */
+  .light body { background:#eef2ff; color:#1a1a4a; }
+  .light body::before { background: radial-gradient(ellipse 80% 50% at 20% -10%,rgba(100,150,255,.15) 0%,transparent 60%), radial-gradient(ellipse 60% 40% at 90% 110%,rgba(200,100,200,.12) 0%,transparent 55%), #eef2ff; }
+  .light body::after { background-image: linear-gradient(rgba(80,80,200,.04) 1px,transparent 1px), linear-gradient(90deg,rgba(80,80,200,.04) 1px,transparent 1px); }
+  .light .edu-layout { background:linear-gradient(160deg,#dce8ff 0%,#c8d8ff 50%,#dcd0ff 100%); }
+  .light .sidebar { background:rgba(255,255,255,.88); border-right:1px solid rgba(100,100,200,.15); }
+  .light .nav-item { color:rgba(30,30,100,.45); }
+  .light .nav-item:hover { background:rgba(100,100,200,.06); color:rgba(30,30,100,.8); }
+  .light .nav-item.active { background:rgba(180,130,0,.12); color:#7a5800; border-left-color:#c08800; }
+  .light .sidebar-user { border-top:1px solid rgba(100,100,200,.15); }
+  .light .topbar { background:rgba(255,255,255,.8); border-bottom:1px solid rgba(100,100,200,.12); }
+  .light .topbar-title { color:#1a1a4a; }
+  .light .mob-header { background:rgba(255,255,255,.9); border-bottom:1px solid rgba(100,100,200,.12); }
+  .light .mob-header-title { color:#1a1a4a; }
+  .light .mob-bottom-nav { background:rgba(255,255,255,.92); border-top:1px solid rgba(100,100,200,.12); }
+  .light .mob-nav-btn { color:rgba(30,30,100,.35); }
+  .light .mob-nav-btn.active { color:#7a5800; }
+  .light .mob-drawer { background:rgba(255,255,255,.97); }
+  .light .card { background:rgba(255,255,255,.82); border-color:rgba(100,100,200,.12); }
+  .light .card-sm { background:rgba(255,255,255,.78); border-color:rgba(100,100,200,.1); }
+  .light .stat-card { background:rgba(255,255,255,.75); border-color:rgba(100,100,200,.12); }
+  .light .stat-card::before { background:linear-gradient(90deg,transparent,rgba(180,130,0,.3),transparent); }
+  .light .stat-label { color:rgba(30,30,100,.45); }
+  .light .stat-value { color:#1a1a4a; }
+  .light .lb-row { background:rgba(255,255,255,.75); border-color:rgba(100,100,200,.12); }
+  .light .lb-row::before { background:rgba(100,100,200,.2); }
+  .light .lb-name { color:#1a1a4a; }
+  .light .lb-level { color:rgba(30,30,100,.5); }
+  .light .lb-xp { color:#1a1a4a; }
+  .light .form-input { background:rgba(255,255,255,.9); border-color:rgba(100,100,200,.2); color:#1a1a4a; }
+  .light .form-input:focus { border-color:#8860cc; background:#fff; box-shadow:0 0 0 3px rgba(136,96,200,.1); }
+  .light .form-label { color:rgba(30,30,100,.55); }
+  .light select, .light textarea { background:rgba(255,255,255,.9); border-color:rgba(100,100,200,.2); color:#1a1a4a; }
+  .light .act-card { background:rgba(255,255,255,.8); border-color:rgba(0,120,60,.2); }
+  .light .act-title { color:#1a1a4a; }
+  .light .badge-card { background:rgba(255,255,255,.8); border-color:rgba(200,0,180,.2); }
+  .light .badge-name { color:#1a1a4a; }
+  .light .modal { background:rgba(255,255,255,.97); border-color:rgba(100,100,200,.2); }
+  .light .modal-title { color:#1a1a4a; }
+  .light .player-card { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.12); }
+  .light .player-card:hover { border-color:rgba(100,100,200,.3); }
+  .light .p-name { color:#1a1a4a; }
+  .light .p-level { color:rgba(30,30,100,.5); }
+  .light .player-wrap { background:linear-gradient(160deg,#c8d8ff 0%,#b8d0ff 50%,#ccc8ff 100%) !important; }
+  .light .pd-topbar { background:rgba(255,255,255,.8); border-bottom:1px solid rgba(100,100,200,.15); }
+  .light .pd-card { background:rgba(255,255,255,.78); border-color:rgba(100,100,200,.14); }
+  .light .nick-big, .light .pd-name-pill { background:#1a1a4a; color:#fff; }
+  .light .pd-sc { background:rgba(255,255,255,.75); border-color:rgba(100,100,200,.12); }
+  .light .pd-sv { color:#7a5800; }
+  .light .pd-sl { color:rgba(30,30,100,.4); }
+  .light .pd-squad { background:rgba(255,255,255,.75); border-color:rgba(100,100,200,.12); }
+  .light .pd-sfida { background:#1a1a4a; }
+  .light .pd-checkin { background:rgba(255,255,255,.75); border-color:rgba(0,150,80,.25); }
+  .light .player-bottom-nav { background:rgba(255,255,255,.92) !important; border-top:1px solid rgba(100,100,200,.12) !important; }
+  .light .player-nav-btn { color:rgba(30,30,100,.3) !important; }
+  .light .player-nav-btn.active { color:#7a5800 !important; }
+  .light .player-nav-btn.active::after { background:#c08800 !important; box-shadow:0 0 8px rgba(192,136,0,.35) !important; }
+  .light .pres-table th { background:rgba(255,255,255,.9); color:rgba(30,30,100,.5); border-bottom:1px solid rgba(100,100,200,.15); }
+  .light .pres-table td { color:#1a1a4a; border-bottom:1px solid rgba(100,100,200,.1); }
+  .light .chip { background:rgba(255,255,255,.6); border-color:rgba(100,100,200,.2); color:rgba(30,30,100,.55); }
+  .light .chip.active { background:rgba(180,130,0,.12); color:#7a5800; border-color:rgba(180,130,0,.3); }
+  .light .sfida-card { background:rgba(255,255,255,.8); border-color:rgba(200,0,60,.25); }
+  .light .sfida-title { color:#1a1a4a; }
+  .light .sfida-desc { color:rgba(30,30,100,.6); }
+  .light .section-banner-title { color:#fff; }
+  .light .streak-card { background:rgba(255,255,255,.78); border-color:rgba(200,100,0,.2); }
+  .light .streak-val { color:#b86600; }
+  .light .xp-bar-wrap { background:rgba(100,100,200,.15); }
+  .light .player-detail { background:rgba(255,255,255,.95); border-color:rgba(100,100,200,.2); }
+  .light .msg-card { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.12); }
+  .light .msg-hdr { background:rgba(100,100,200,.06); color:#1a1a4a; border-bottom:1px solid rgba(100,100,200,.1); }
+  .light .notif-item { border-bottom:1px solid rgba(100,100,200,.1); }
+  .light .notif-tit { color:#1a1a4a; }
+  .light .notif-body { color:rgba(30,30,100,.55); }
+  .light .diary-entry { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.12); }
+  .light .diary-date { color:#1a1a4a; }
+  .light .lb-av { background:rgba(100,100,200,.08); border-color:rgba(100,100,200,.2); }
+  .light .search-inp { background:rgba(255,255,255,.85); border-color:rgba(100,100,200,.18); color:#1a1a4a; }
+  .light .batch-panel { background:rgba(100,100,200,.06); border-color:rgba(100,100,200,.18); }
+  .light .pres-wrap { border-color:rgba(100,100,200,.15); }
+  .light .squad-row { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.12); }
+  .light .squad-name { color:#1a1a4a; }
+  .light .act-meta { color:rgba(30,30,100,.55); }
+  .light .section-banner { box-shadow:0 2px 12px rgba(100,100,200,.15); }
+
   /* ═══ PLAYER DASHBOARD — NEW DESIGN ═══ */
   .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; }
   .pd-topbar { position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,0,.85); border-bottom:1px solid rgba(255,255,255,.1); z-index:20; display:flex; align-items:center; padding:0 14px; justify-content:space-between; backdrop-filter:blur(20px); }
@@ -847,6 +935,9 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [msg, setMsg] = useState("");
   const [editPlayer, setEditPlayer] = useState(null);
   const [expandedPlayer, setExpandedPlayer] = useState(null);
+  const [showCreatePlayer, setShowCreatePlayer] = useState(false);
+  const [newPlayer, setNewPlayer] = useState({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0 });
+  const [createPlayerErr, setCreatePlayerErr] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -897,6 +988,27 @@ function PlayersView({ sectionColors, setSectionColors }) {
     setTimeout(() => setMsg(""), 3000);
   }
 
+  async function createPlayer() {
+    setCreatePlayerErr("");
+    if (!newPlayer.display_name.trim()) { setCreatePlayerErr("Inserisci il nickname"); return; }
+    const payload = {
+      display_name: newPlayer.display_name.trim(),
+      first_name: newPlayer.first_name.trim() || null,
+      role: "player",
+      pin: newPlayer.pin || "1234",
+      squad_id: newPlayer.squad_id || null,
+      xp: Number(newPlayer.xp) || 0,
+      coin: Number(newPlayer.coin) || 0,
+    };
+    const { error } = await sb.from("profiles").insert(payload);
+    if (error) { setCreatePlayerErr("Errore: " + error.message); return; }
+    setShowCreatePlayer(false);
+    setNewPlayer({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0 });
+    setMsg("Giocatore creato! PIN: " + (newPlayer.pin || "1234"));
+    setTimeout(() => setMsg(""), 4000);
+    load();
+  }
+
   return (
     <div>
       <div className="stats-grid">
@@ -907,7 +1019,8 @@ function PlayersView({ sectionColors, setSectionColors }) {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <button className="btn btn-ghost btn-sm" onClick={resetAllPins}>🔑 Reset tutti PIN</button>
+        <button className="btn btn-yellow btn-sm" onClick={() => setShowCreatePlayer(true)}>➕ Nuovo giocatore</button>
+        <button className="btn btn-ghost btn-sm" onClick={resetAllPins}>🔑 Reset PIN</button>
       </div>
 
       {selected.size > 0 && (
@@ -966,6 +1079,33 @@ function PlayersView({ sectionColors, setSectionColors }) {
         </>
       )}
 
+      {showCreatePlayer && (
+        <div className="modal-bg" onClick={() => setShowCreatePlayer(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">➕ Nuovo giocatore</div>
+            <div className="form-group"><label className="form-label">Nickname *</label><input className="form-input" value={newPlayer.display_name} onChange={e=>setNewPlayer(p=>({...p,display_name:e.target.value}))} placeholder="es. FoxTrot99" autoFocus/></div>
+            <div className="form-group"><label className="form-label">Nome reale</label><input className="form-input" value={newPlayer.first_name} onChange={e=>setNewPlayer(p=>({...p,first_name:e.target.value}))} placeholder="es. Marco R."/></div>
+            <div className="form-group"><label className="form-label">Squadra</label>
+              <select value={newPlayer.squad_id} onChange={e=>setNewPlayer(p=>({...p,squad_id:e.target.value}))}>
+                <option value="">Nessuna squadra</option>
+                {squads.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              <div className="form-group"><label className="form-label">PIN</label><input className="form-input" maxLength={4} value={newPlayer.pin} onChange={e=>setNewPlayer(p=>({...p,pin:e.target.value.replace(/\D/g,"").slice(0,4)}))} style={{textAlign:"center",fontFamily:"'Barlow Condensed'",fontSize:20,letterSpacing:4}}/></div>
+              <div className="form-group"><label className="form-label">XP inizio</label><input className="form-input" type="number" value={newPlayer.xp} onChange={e=>setNewPlayer(p=>({...p,xp:e.target.value}))}/></div>
+              <div className="form-group"><label className="form-label">Coin inizio</label><input className="form-input" type="number" value={newPlayer.coin} onChange={e=>setNewPlayer(p=>({...p,coin:e.target.value}))}/></div>
+            </div>
+            {createPlayerErr && <div style={{color:"var(--danger)",fontSize:12,fontWeight:700,marginBottom:8}}>{createPlayerErr}</div>}
+            <div style={{background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10,padding:"8px 12px",fontSize:11,color:"var(--text3)",marginBottom:12}}>💡 Il giocatore potrà cambiare il PIN al primo accesso. Il nickname deve essere unico.</div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={createPlayer} disabled={!newPlayer.display_name.trim()}>Crea giocatore</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setShowCreatePlayer(false)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editPlayer && (
         <div className="modal-bg" onClick={() => setEditPlayer(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -998,81 +1138,133 @@ function PlayersView({ sectionColors, setSectionColors }) {
 function PlayerDetailPanel({ playerId, squads, onClose }) {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("storia");
+  const [editing, setEditing] = useState(null);
+  const [saveMsg, setSaveMsg] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      const [{ data: p }, { data: badges }, { data: att }, { data: notifs }] = await Promise.all([
-        sb.from("profiles").select("*, squads(name)").eq("id", playerId).single(),
-        sb.from("player_badges").select("*, badges(name,image_url)").eq("player_id", playerId).order("assigned_at", { ascending: false }),
-        sb.from("attendances").select("*").eq("player_id", playerId).order("date", { ascending: false }).limit(20),
-        sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(30),
-      ]);
-      setData({ profile: p, badges: badges || [], attendances: att || [], history: notifs || [] });
-    }
-    load();
+  const loadData = useCallback(async () => {
+    const [{ data: p }, { data: badges }, { data: att }, { data: notifs }] = await Promise.all([
+      sb.from("profiles").select("*, squads(name)").eq("id", playerId).single(),
+      sb.from("player_badges").select("*, badges(name,image_url)").eq("player_id", playerId).order("assigned_at", { ascending: false }),
+      sb.from("attendances").select("*").eq("player_id", playerId).order("date", { ascending: false }).limit(30),
+      sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(40),
+    ]);
+    setData({ profile: p, badges: badges || [], attendances: att || [], history: notifs || [] });
+    if (p) setEditing({ xp: p.xp, coin: p.coin, pin: p.pin || "1234", display_name: p.display_name, squad_id: p.squad_id });
   }, [playerId]);
 
-  if (!data) return <div className="loading" style={{ minHeight: 80 }}>Caricamento…</div>;
+  useEffect(() => { loadData(); }, [loadData]);
+
+  async function saveEdits() {
+    if (!editing) return;
+    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null }).eq("id", playerId);
+    setSaveMsg("Salvato ✅"); setTimeout(() => setSaveMsg(""), 2000);
+    loadData();
+  }
+
+  if (!data) return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:200}}>
+        <div className="loading">Caricamento…</div>
+      </div>
+    </div>
+  );
+
   const { profile, badges, attendances, history } = data;
   const lv = getLevel(profile?.xp || 0);
+  const presentDays = attendances.filter(a => a.status !== "none").length;
 
   return (
-    <div className="player-detail">
-      <div className="player-detail-header">
-        <div className="player-detail-av"><Avatar url={profile?.avatar_url} emoji={lv.emoji} size={64} /></div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{profile?.display_name}</div>
-          <div style={{ fontSize: 12, color: "var(--azzurro)", fontWeight: 600 }}>{lv.emoji} {lv.name} · {profile?.xp} XP · 🪙 {profile?.coin}</div>
-          {profile?.squads?.name && <SquadPill name={profile.squads.name} />}
-        </div>
-        <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
-      </div>
-      <div className="detail-tabs">
-        {[["storia","📜 Storia"],["badge","🎖️ Badge"],["presenze","✅ Presenze"]].map(([id, label]) => (
-          <button key={id} className={`detail-tab ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</button>
-        ))}
-      </div>
-      {tab === "storia" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
-          {history.length === 0 && <div className="empty" style={{ padding: "20px" }}>Nessuna azione.</div>}
-          {history.map(n => (
-            <div key={n.id} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-              <span style={{ fontSize: 16 }}>📌</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{n.title}</div>
-                <div style={{ fontSize: 12, color: "var(--text2)" }}>{n.body}</div>
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text3)", flexShrink: 0 }}>{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxHeight:"92vh",borderRadius:16,overflowY:"auto"}}>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,paddingBottom:14,borderBottom:"1px solid var(--border)"}}>
+          <div style={{width:64,height:64,borderRadius:"50%",overflow:"hidden",border:"2.5px solid var(--neon-blue)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"var(--glow-blue)"}}>
+            <Avatar url={profile?.avatar_url} emoji={lv.emoji} size={64}/>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontFamily:"'Barlow Condensed'",fontSize:26,fontWeight:900,textTransform:"uppercase",color:"var(--text)",lineHeight:1}}>{profile?.display_name}</div>
+            <div style={{fontSize:12,color:"var(--azzurro)",fontWeight:600,marginTop:2}}>{lv.emoji} {lv.name}</div>
+            <div style={{display:"flex",gap:10,marginTop:4,flexWrap:"wrap"}}>
+              <span style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700}}>⭐ {profile?.xp} XP</span>
+              <span style={{fontSize:12,color:"var(--neon-gold)",fontWeight:700}}>🪙 {profile?.coin}</span>
+              <span style={{fontSize:12,color:"var(--neon-green)",fontWeight:700}}>📅 {presentDays} presenze</span>
+              <span style={{fontSize:12,color:"var(--rosa)",fontWeight:700}}>🎖️ {badges.length} badge</span>
             </div>
+          </div>
+          <button className="btn btn-ghost btn-xs" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Tabs */}
+        <div className="detail-tabs" style={{marginBottom:14}}>
+          {[["storia","📜 Storia"],["badge","🎖️ Badge"],["presenze","✅ Presenze"],["modifica","✏️ Modifica"]].map(([id,label]) => (
+            <button key={id} className={`detail-tab ${tab===id?"active":""}`} onClick={()=>setTab(id)}>{label}</button>
           ))}
         </div>
-      )}
-      {tab === "badge" && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {badges.length === 0 && <div className="empty" style={{ padding: "20px", width: "100%" }}>Nessun badge.</div>}
-          {badges.map(pb => (
-            <div key={pb.id} style={{ textAlign: "center", width: 70 }}>
-              {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--rosa)" }} alt="" /> : <div style={{ fontSize: 32 }}>🎖️</div>}
-              <div style={{ fontSize: 10, color: "var(--text2)", marginTop: 4 }}>{pb.badges?.name}</div>
-            </div>
-          ))}
-        </div>
-      )}
-      {tab === "presenze" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 240, overflowY: "auto" }}>
-          {attendances.length === 0 && <div className="empty" style={{ padding: "20px" }}>Nessuna presenza.</div>}
-          {attendances.map(a => {
-            const icons = { full: "✅", partial: "🟡", completed: "⭐", none: "❌" };
-            return (
-              <div key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                <span style={{ fontSize: 16 }}>{icons[a.status] || "—"}</span>
-                <span style={{ flex: 1, fontSize: 13 }}>{a.date}</span>
-                <span style={{ fontSize: 12, color: "var(--azzurro)", fontWeight: 700 }}>+{a.xp_awarded || 0} XP</span>
+
+        {tab==="storia" && (
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {history.length===0 && <div className="empty">Nessuna azione.</div>}
+            {history.map(n => (
+              <div key={n.id} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
+                <span style={{fontSize:15}}>📌</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{n.title}</div>
+                  <div style={{fontSize:11,color:"var(--text2)"}}>{n.body}</div>
+                </div>
+                <div style={{fontSize:10,color:"var(--text3)",flexShrink:0}}>{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+
+        {tab==="badge" && (
+          <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+            {badges.length===0 && <div className="empty" style={{width:"100%"}}>Nessun badge.</div>}
+            {badges.map(pb => (
+              <div key={pb.id} style={{textAlign:"center",width:72}}>
+                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--rosa)",display:"block",margin:"0 auto 5px"}} alt=""/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
+                <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.3}}>{pb.badges?.name}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="presenze" && (
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>
+            {attendances.length===0 && <div className="empty">Nessuna presenza.</div>}
+            {attendances.map(a => {
+              const icons={full:"✅",partial:"🟡",completed:"⭐",none:"❌"};
+              return (
+                <div key={a.id} style={{display:"flex",gap:10,alignItems:"center",padding:"8px 12px",background:"rgba(0,0,0,.15)",borderRadius:8}}>
+                  <span style={{fontSize:16}}>{icons[a.status]||"—"}</span>
+                  <span style={{flex:1,fontSize:13,color:"var(--text)"}}>{a.date}</span>
+                  <span style={{fontSize:12,color:"var(--azzurro)",fontWeight:700}}>+{a.xp_awarded||0} XP</span>
+                  <span style={{fontSize:12,color:"var(--neon-gold)",fontWeight:700}}>🪙 +{a.coin_awarded||0}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {tab==="modifica" && editing && (
+          <div>
+            <div className="form-group"><label className="form-label">Nickname</label><input className="form-input" value={editing.display_name} onChange={e=>setEditing(p=>({...p,display_name:e.target.value}))}/></div>
+            <div className="form-group"><label className="form-label">Squadra</label>
+              <select value={editing.squad_id||""} onChange={e=>setEditing(p=>({...p,squad_id:e.target.value||null}))}>
+                <option value="">Nessuna squadra</option>
+                {squads.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              <div className="form-group"><label className="form-label">XP</label><input className="form-input" type="number" value={editing.xp} onChange={e=>setEditing(p=>({...p,xp:e.target.value}))}/></div>
+              <div className="form-group"><label className="form-label">Coin</label><input className="form-input" type="number" value={editing.coin} onChange={e=>setEditing(p=>({...p,coin:e.target.value}))}/></div>
+              <div className="form-group"><label className="form-label">PIN</label><input className="form-input" maxLength={4} value={editing.pin} onChange={e=>setEditing(p=>({...p,pin:e.target.value.replace(/[^0-9]/g,"").slice(0,4)}))} style={{textAlign:"center",fontFamily:"'Barlow Condensed'",fontSize:20,letterSpacing:4}}/></div>
+            </div>
+            {saveMsg && <div style={{color:"var(--verde)",fontWeight:700,fontSize:13,marginBottom:8}}>{saveMsg}</div>}
+            <button className="btn btn-primary" onClick={saveEdits}>Salva modifiche</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -2115,6 +2307,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [newFirstName, setNewFirstName] = useState("");
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
   const [selectedBadge, setSelectedBadge] = useState(null);
+  const [mustChangePin, setMustChangePin] = useState(profile.pin === "1234");
+  const [newPin1, setNewPin1] = useState("");
+  const [newPin2, setNewPin2] = useState("");
+  const [pinChangeErr, setPinChangeErr] = useState("");
 
   const load = useCallback(async () => {
   try {
@@ -2237,6 +2433,39 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   if (lbTimeFilter === "oggi") lbRanked = lbRanked.sort((a, b) => (xpToday[b.id] || 0) - (xpToday[a.id] || 0)).slice(0, 3);
   else if (lbTimeFilter === "mese") lbRanked = lbRanked.sort((a, b) => (xpMonth[b.id] || 0) - (xpMonth[a.id] || 0)).slice(0, 10);
 
+  async function saveNewPin() {
+    if (newPin1.length < 4) { setPinChangeErr("Il PIN deve avere 4 cifre"); return; }
+    if (newPin1 !== newPin2) { setPinChangeErr("I PIN non coincidono"); return; }
+    if (newPin1 === "1234") { setPinChangeErr("Scegli un PIN diverso da 1234"); return; }
+    const { error } = await sb.from("profiles").update({ pin: newPin1 }).eq("id", profile.id);
+    if (error) { setPinChangeErr("Errore: " + error.message); return; }
+    const saved = JSON.parse(localStorage.getItem("pug_player") || "{}");
+    localStorage.setItem("pug_player", JSON.stringify({ ...saved, pin: newPin1 }));
+    setMustChangePin(false);
+  }
+
+  if (mustChangePin) return (
+    <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+      <div style={{background:'rgba(0,0,20,.7)',border:'1px solid rgba(255,255,255,.15)',borderRadius:20,padding:'32px 24px',width:'100%',maxWidth:360,backdropFilter:'blur(20px)'}}>
+        <div style={{textAlign:'center',marginBottom:24}}>
+          <div style={{fontSize:48,marginBottom:8}}>🔐</div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:8}}>Imposta il tuo PIN</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,.5)',lineHeight:1.5}}>Stai usando il PIN predefinito 1234. Scegli un PIN personale per proteggere il tuo account.</div>
+        </div>
+        <div style={{marginBottom:12}}>
+          <label className="form-label">Nuovo PIN (4 cifre)</label>
+          <input className="form-input pin-input" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={newPin1} onChange={e=>{setNewPin1(e.target.value.replace(/\D/g,""));setPinChangeErr("");}} placeholder="••••" autoFocus/>
+        </div>
+        <div style={{marginBottom:16}}>
+          <label className="form-label">Conferma PIN</label>
+          <input className="form-input pin-input" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={newPin2} onChange={e=>{setNewPin2(e.target.value.replace(/\D/g,""));setPinChangeErr("");}} onKeyDown={e=>e.key==="Enter"&&saveNewPin()} placeholder="••••"/>
+        </div>
+        {pinChangeErr && <div style={{color:'#ff4466',fontSize:12,fontWeight:700,textAlign:'center',marginBottom:10}}>{pinChangeErr}</div>}
+        <button className="btn btn-primary" onClick={saveNewPin} disabled={newPin1.length<4||newPin2.length<4}>Salva PIN</button>
+      </div>
+    </div>
+  );
+
   if (loading) return (
     <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#A3CFFE',letterSpacing:'.08em'}}>🌿 Caricamento…</div>
@@ -2253,8 +2482,15 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const xpPct = (() => { const nxt = LEVELS.find(l => l.xp > (fullProfile?.xp||0)); return nxt ? Math.min(100,Math.round(((fullProfile.xp-lv.xp)/(nxt.xp-lv.xp))*100)) : 100; })();
 
-  return (
-    <div className="player-wrap">
+    const TAB_BG = {
+      profilo:    'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',
+      classifica: 'linear-gradient(160deg,#0e1a60 0%,#0a258a 45%,#0e1a6e 100%)',
+      attivita:   'linear-gradient(160deg,#083518 0%,#0a5028 45%,#083518 100%)',
+      messaggi:   'linear-gradient(160deg,#480a38 0%,#701050 45%,#480a38 100%)',
+      notifiche:  'linear-gradient(160deg,#3a2800 0%,#583c00 45%,#3a2800 100%)',
+    };
+    return (
+    <div className="player-wrap" style={{background:TAB_BG[tab]||TAB_BG.profilo,transition:'background 0.5s ease'}}>
       {/* Floral background */}
       <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.07,overflow:'hidden'}}>
         <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
@@ -2599,11 +2835,20 @@ function EducatorShell({ profile, onLogout }) {
 
   return (
     <div className="edu-layout">
+      {/* Floral background */}
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.04,overflow:'hidden'}}>
+        <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
+          <defs><g id="ef"><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="5" fill="white"/></g></defs>
+          <use href="#ef" transform="translate(80,80) scale(1.4)"/><use href="#ef" transform="translate(350,60) scale(1.1)"/><use href="#ef" transform="translate(700,90) scale(1.3)"/><use href="#ef" transform="translate(1050,70) scale(1)"/><use href="#ef" transform="translate(200,300) scale(.9)"/><use href="#ef" transform="translate(550,280) scale(1.2)"/><use href="#ef" transform="translate(900,310) scale(1)"/><use href="#ef" transform="translate(100,550) scale(1.1)"/><use href="#ef" transform="translate(450,520) scale(.8)"/><use href="#ef" transform="translate(800,560) scale(1.3)"/><use href="#ef" transform="translate(250,780) scale(1)"/><use href="#ef" transform="translate(650,760) scale(1.2)"/><use href="#ef" transform="translate(1000,790) scale(.9)"/>
+        </svg>
+      </div>
+
       {/* Sidebar desktop */}
       <div className="sidebar">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-title">Per·You Garden</div>
-          <div className="sidebar-logo-sub">Pannello Giardiniere</div>
+          <div className="sidebar-logo-box"><div className="sidebar-logo-t">PeR·You<br/>GaRDeN</div></div>
+          <div className="sidebar-logo-sub">gratuito &amp; popolare</div>
+          <div className="sidebar-badge">🌱 Pannello Giardiniere</div>
         </div>
         <nav className="nav">
           {EDUCATOR_TABS.map(([id, icon, label]) => (
@@ -2613,58 +2858,64 @@ function EducatorShell({ profile, onLogout }) {
           ))}
         </nav>
         <div className="sidebar-user">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" }} onClick={() => setShowAvatarModal(true)}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", border: "2.5px solid var(--azzurro)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Avatar url={avatarUrl} emoji={lv.emoji} size={36} />
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,cursor:"pointer",padding:"8px 10px",background:"rgba(255,255,255,.04)",borderRadius:10,border:"1px solid rgba(255,255,255,.07)"}} onClick={() => setShowAvatarModal(true)}>
+            <div style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <Avatar url={avatarUrl} emoji={lv.emoji} size={34}/>
             </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{profile.display_name}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)" }}>{profile.role === "educator" ? "Giardiniere" : profile.role}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile.display_name}</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>🌱 Giardiniere</div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 12, color: "var(--text3)" }}>{theme === "dark" ? "🌙" : "☀️"}</span>
-            <button className="theme-toggle" style={{ background: theme === "light" ? "var(--azzurro)" : "var(--surface3)" }} onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}>
-              <div className="theme-toggle-knob" style={{ transform: theme === "light" ? "translateX(20px)" : "translateX(0)" }} />
-            </button>
-          </div>
-          <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={onLogout}>Esci</button>
+          <button className="btn btn-ghost btn-sm" style={{width:"100%",color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
         </div>
       </div>
 
       {/* Header mobile */}
       <div className="mob-header">
-        <button onClick={() => setDrawerOpen(true)} style={{ background: "none", border: "none", color: "var(--text2)", fontSize: 24, cursor: "pointer", padding: 4, lineHeight: 1 }}>☰</button>
-        <span className="mob-header-title">{cur?.[2]}</span>
-        <button className="theme-toggle" style={{ background: theme === "light" ? "var(--azzurro)" : "var(--surface3)", width: 38, height: 22 }} onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}>
-          <div className="theme-toggle-knob" style={{ width: 16, height: 16, transform: theme === "light" ? "translateX(16px)" : "translateX(0)" }} />
-        </button>
-        <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", border: "2.5px solid var(--azzurro)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setShowAvatarModal(true)}>
-          <Avatar url={avatarUrl} emoji={lv.emoji} size={36} />
+        <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
+        <div style={{transform:"rotate(-1deg)"}}>
+          <div style={{background:"#cc1111",borderRadius:"7px 10px 7px 11px",padding:"3px 8px",display:"inline-block"}}>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,color:"#111",lineHeight:1.05,textTransform:"uppercase"}}>PeR·You GaRDeN</div>
+          </div>
+        </div>
+        <span className="mob-header-title" style={{flex:1,marginLeft:8}}>{cur?.[2]}</span>
+        <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={() => setShowAvatarModal(true)}>
+          <Avatar url={avatarUrl} emoji={lv.emoji} size={32}/>
         </div>
       </div>
 
       {/* Drawer mobile */}
-      {drawerOpen && <div className="mob-drawer-bg" onClick={() => setDrawerOpen(false)} />}
+      {drawerOpen && <div className="mob-drawer-bg" onClick={() => setDrawerOpen(false)}/>}
       <div className={`mob-drawer ${drawerOpen ? "open" : ""}`}>
-        <div style={{ padding: "22px 20px 16px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)" }}>Per·You Garden</div>
+        <div style={{padding:"18px 16px 14px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
+          <div style={{transform:"rotate(-1deg)",marginBottom:8}}>
+            <div style={{background:"#cc1111",borderRadius:"8px 11px 8px 12px",padding:"5px 10px",display:"inline-block"}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,fontWeight:900,color:"#111",lineHeight:1.05,textTransform:"uppercase"}}>PeR·You GaRDeN</div>
+            </div>
+          </div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",background:"#111",color:"#ffe600",fontSize:9,fontWeight:900,borderRadius:4,padding:"2px 8px",textTransform:"uppercase",letterSpacing:".07em",display:"inline-block"}}>🌱 Giardiniere</div>
         </div>
-        <nav style={{ flex: 1, padding: "10px 0", overflowY: "auto" }}>
+        <nav style={{flex:1,padding:"8px 0",overflowY:"auto"}}>
           {EDUCATOR_TABS.map(([id, icon, label]) => (
             <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => { setTab(id); setDrawerOpen(false); }}>
               <span className="nav-icon">{icon}</span><span>{label}</span>
             </div>
           ))}
         </nav>
-        <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
-          <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={onLogout}>Esci</button>
+        <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,.08)"}}>
+          <button className="btn btn-ghost btn-sm" style={{width:"100%"}} onClick={onLogout}>Esci</button>
         </div>
       </div>
 
       {/* Main */}
       <div className="edu-main">
-        <div className="topbar"><div className="topbar-title">{cur?.[1]} {cur?.[2]}</div></div>
+        <div className="topbar">
+          <div className="topbar-title">{cur?.[1]} {cur?.[2]}</div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
+          </div>
+        </div>
         <div className="content edu-content-wrap">
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
