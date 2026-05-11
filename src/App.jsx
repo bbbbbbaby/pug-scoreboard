@@ -545,120 +545,165 @@ const css = `
 
 
   /* ═══ LIGHT MODE ═══ */
-  .light body { background:#eef2ff; color:#1a1a4a; }
-  .light body::before { background: radial-gradient(ellipse 80% 50% at 20% -10%,rgba(100,150,255,.15) 0%,transparent 60%), radial-gradient(ellipse 60% 40% at 90% 110%,rgba(200,100,200,.12) 0%,transparent 55%), #eef2ff; }
+  .light body { background:#f0f4ff; color:#1a1a3a; }
+  .light body::before { background: radial-gradient(ellipse 80% 50% at 20% -10%,rgba(100,140,255,.1) 0%,transparent 60%), #f0f4ff; }
   .light body::after { background-image: linear-gradient(rgba(80,80,200,.04) 1px,transparent 1px), linear-gradient(90deg,rgba(80,80,200,.04) 1px,transparent 1px); }
-  .light .edu-layout { background:linear-gradient(160deg,#dce8ff 0%,#c8d8ff 50%,#dcd0ff 100%); }
-  .light .sidebar { background:rgba(255,255,255,.88); border-right:1px solid rgba(100,100,200,.15); }
-  .light .nav-item { color:rgba(30,30,100,.45); }
-  .light .nav-item:hover { background:rgba(100,100,200,.06); color:rgba(30,30,100,.8); }
-  .light .nav-item.active { background:rgba(180,130,0,.12); color:#7a5800; border-left-color:#c08800; }
-  .light .sidebar-user { border-top:1px solid rgba(100,100,200,.15); }
-  .light .topbar { background:rgba(255,255,255,.8); border-bottom:1px solid rgba(100,100,200,.12); }
-  .light .topbar-title { color:#1a1a4a; }
-  .light .mob-header { background:rgba(255,255,255,.9); border-bottom:1px solid rgba(100,100,200,.12); }
-  .light .mob-header-title { color:#1a1a4a; }
-  .light .mob-bottom-nav { background:rgba(255,255,255,.92); border-top:1px solid rgba(100,100,200,.12); }
-  .light .mob-nav-btn { color:rgba(30,30,100,.35); }
+
+  /* Educator light */
+  .light .edu-layout { background:#f0f4ff; }
+  .light .sidebar { background:#ffffff; border-right:2px solid #e0e6f8; box-shadow:4px 0 16px rgba(0,0,80,.08); }
+  .light .sidebar-logo-box { background:#cc1111; }
+  .light .sidebar-badge { background:rgba(255,180,0,.15); border-color:rgba(255,180,0,.4); color:#8a5e00; }
+  .light .nav-item { color:#5a5a8a; font-weight:600; }
+  .light .nav-item:hover { background:#f0f4ff; color:#1a1a3a; }
+  .light .nav-item.active { background:#fffbe0; color:#7a5800; border-left-color:#c09000; font-weight:700; }
+  .light .sidebar-user { border-top:2px solid #e0e6f8; }
+  .light .topbar { background:#ffffff; border-bottom:2px solid #e0e6f8; box-shadow:0 2px 12px rgba(0,0,80,.07); }
+  .light .topbar-title { color:#1a1a3a; }
+  .light .mob-header { background:#ffffff; border-bottom:2px solid #e0e6f8; }
+  .light .mob-header-title { color:#1a1a3a; }
+  .light .mob-bottom-nav { background:#ffffff; border-top:2px solid #e0e6f8; box-shadow:0 -2px 12px rgba(0,0,80,.06); }
+  .light .mob-nav-btn { color:#8a8ab0; }
   .light .mob-nav-btn.active { color:#7a5800; }
-  .light .mob-drawer { background:rgba(255,255,255,.97); }
-  .light .card { background:rgba(255,255,255,.82); border-color:rgba(100,100,200,.12); }
-  .light .card-sm { background:rgba(255,255,255,.78); border-color:rgba(100,100,200,.1); }
-  .light .stat-card { background:rgba(255,255,255,.75); border-color:rgba(100,100,200,.12); }
-  .light .stat-card::before { background:linear-gradient(90deg,transparent,rgba(180,130,0,.3),transparent); }
-  .light .stat-label { color:rgba(30,30,100,.45); }
-  .light .stat-value { color:#1a1a4a; }
-  .light .lb-row { background:rgba(255,255,255,.75); border-color:rgba(100,100,200,.12); }
+  .light .mob-drawer { background:#ffffff; }
+  .light .content { background:#f0f4ff; }
+
+  /* Cards & elements */
+  .light .card { background:#ffffff; border:1px solid #e0e6f8; box-shadow:0 2px 8px rgba(0,0,80,.06); color:#1a1a3a; }
+  .light .card-sm { background:#ffffff; border:1px solid #e0e6f8; color:#1a1a3a; }
+  .light .stat-card { background:#ffffff; border:2px solid #e0e6f8; box-shadow:0 2px 8px rgba(0,0,80,.06); }
+  .light .stat-card::before { background:linear-gradient(90deg,transparent,rgba(180,130,0,.35),transparent); }
+  .light .stat-label { color:#6a6a9a; font-weight:700; }
+  .light .stat-value { color:#1a1a3a; }
+  .light .lb-row { background:#ffffff; border:1px solid #e0e6f8; }
   .light .lb-row::before { background:rgba(100,100,200,.2); }
-  .light .lb-name { color:#1a1a4a; }
-  .light .lb-level { color:rgba(30,30,100,.5); }
-  .light .lb-xp { color:#1a1a4a; }
-  .light .form-input { background:rgba(255,255,255,.9); border-color:rgba(100,100,200,.2); color:#1a1a4a; }
-  .light .form-input:focus { border-color:#8860cc; background:#fff; box-shadow:0 0 0 3px rgba(136,96,200,.1); }
-  .light .form-label { color:rgba(30,30,100,.55); }
-  .light select, .light textarea { background:rgba(255,255,255,.9); border-color:rgba(100,100,200,.2); color:#1a1a4a; }
-  .light .act-card { background:rgba(255,255,255,.8); border-color:rgba(0,120,60,.2); }
-  .light .act-title { color:#1a1a4a; }
-  .light .badge-card { background:rgba(255,255,255,.8); border-color:rgba(200,0,180,.2); }
-  .light .badge-name { color:#1a1a4a; }
-  .light .modal { background:rgba(255,255,255,.97); border-color:rgba(100,100,200,.2); }
-  .light .modal-title { color:#1a1a4a; }
-  .light .player-card { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.12); }
-  .light .player-card:hover { border-color:rgba(100,100,200,.3); }
-  .light .p-name { color:#1a1a4a; }
-  .light .p-level { color:rgba(30,30,100,.5); }
-  .light .player-wrap { background:linear-gradient(160deg,#dce8ff 0%,#c4d8ff 50%,#dcd0ff 100%) !important; }
-  .light .pd-topbar { background:rgba(255,255,255,.9); border-bottom:1px solid rgba(100,100,200,.2); }
-  .light .pd-topbar * { color:#1a1a4a !important; }
-  .light .pd-card { background:rgba(255,255,255,.85); border-color:rgba(100,100,200,.2); color:#1a1a4a; }
-  .light .pd-name-pill { background:#1a1a4a !important; color:#fff !important; }
-  .light .pd-lv-pill { background:rgba(100,100,200,.1); border-color:rgba(100,100,200,.3); color:#3a3a9a; }
-  .light .pd-sc { background:rgba(255,255,255,.85); border-color:rgba(100,100,200,.2); }
-  .light .pd-sv { color:#7a5800 !important; }
-  .light .pd-sl { color:rgba(30,30,100,.5) !important; }
-  .light .pd-squad { background:rgba(255,255,255,.82); border-color:rgba(100,100,200,.18); }
-  .light .squad-nm { color:#1a1a4a; }
-  .light .squad-role { color:rgba(30,30,100,.45); }
-  .light .pd-sfida { background:#1a1a4a !important; }
-  .light .pd-sfida * { color:#ffe600; }
-  .light .pd-sfida .sfl { color:#ffcc00 !important; }
-  .light .pd-sfida .sft { color:#fff !important; }
-  .light .pd-sfida .sfr { background:rgba(255,204,0,.15); border-color:rgba(255,204,0,.3); color:#ffcc00; }
-  .light .pd-checkin { background:rgba(255,255,255,.82); border-color:rgba(0,150,80,.3); }
-  .light .pd-badges { background:transparent; }
-  .light .pd-badge-item { background:rgba(255,255,255,.82); border-color:rgba(100,100,200,.2); }
-  .light .pd-badge-item div { color:#1a1a4a !important; }
-  .light .streak-card { background:rgba(255,255,255,.82); border-color:rgba(200,100,0,.25); }
+  .light .lb-name { color:#1a1a3a; font-weight:700; }
+  .light .lb-level { color:#6a6a9a; }
+  .light .lb-xp { color:#1a5fc0; }
+  .light .lb-av { background:#f0f4ff; border-color:#dde4f8; }
+  .light .form-input { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; font-weight:500; }
+  .light .form-input:focus { border-color:#7070cc; box-shadow:0 0 0 3px rgba(112,112,204,.12); }
+  .light .form-label { color:#5a5a8a; font-weight:700; }
+  .light select { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; }
+  .light textarea { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; }
+  .light .search-inp { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; }
+  .light .act-card { background:#ffffff; border:2px solid #b0e0c0; }
+  .light .act-title { color:#1a1a3a; }
+  .light .act-meta { color:#5a5a8a; }
+  .light .badge-card { background:#ffffff; border:2px solid #e0b0e0; }
+  .light .badge-name { color:#1a1a3a; }
+  .light .modal { background:#ffffff; border:2px solid #c8d4f0; box-shadow:0 -20px 60px rgba(0,0,80,.15); }
+  .light .modal-title { color:#1a1a3a; }
+  .light .modal::before { background:linear-gradient(90deg,transparent,#7070cc,#cc4488,transparent); }
+  .light .player-card { background:#ffffff; border:2px solid #dde4f8; }
+  .light .player-card:hover { border-color:#7070cc; }
+  .light .p-name { color:#1a1a3a; }
+  .light .p-level { color:#6a6a9a; }
+  .light .p-xp { color:#1a5fc0; }
+  .light .p-coin { color:#8a6000; }
+  .light .chip { background:#ffffff; border:2px solid #c8d4f0; color:#5a5a8a; }
+  .light .chip.active { background:#fffbe0; color:#7a5800; border-color:#c09000; }
+  .light .sfida-card { background:#ffffff; border:2px solid #f0b0b0; }
+  .light .sfida-label { color:#cc2244; }
+  .light .sfida-title { color:#1a1a3a; }
+  .light .sfida-desc { color:#5a5a8a; }
+  .light .sfida-reward { background:rgba(255,204,0,.15); border-color:rgba(255,180,0,.4); color:#7a5800; }
+  .light .section-label { color:#6a6a9a; }
+  .light .batch-panel { background:rgba(100,100,200,.06); border:2px solid rgba(100,100,200,.2); }
+  .light .batch-info { color:#3a3a9a; }
+  .light .pres-wrap { border:2px solid #e0e6f8; }
+  .light .pres-table th { background:#f8f9ff; color:#5a5a8a; border-bottom:2px solid #e0e6f8; }
+  .light .pres-table td { color:#1a1a3a; border-bottom:1px solid #eef0f8; }
+  .light .squad-row { background:#ffffff; border:2px solid #e0e6f8; }
+  .light .squad-name { color:#1a1a3a; }
+  .light .diary-entry { background:#ffffff; border:1px solid #e0e6f8; }
+  .light .diary-date { color:#1a5fc0; }
+  .light .diary-text { color:#1a1a3a; }
+  .light .notif-item { border-bottom:1px solid #eef0f8; }
+  .light .notif-title { color:#1a1a3a; }
+  .light .notif-body { color:#5a5a8a; }
+  .light .msg-card { background:#ffffff; border:1px solid #e0e6f8; }
+  .light .msg-hdr { background:#f8f9ff; color:#3a3a9a; border-bottom:1px solid #e0e6f8; }
+  .light .bubble .them { background:#f0f4ff; color:#1a1a3a; border-color:#e0e6f8; }
+  .light .lb-list .lb-row:nth-child(1) { border-color:rgba(200,160,0,.4); }
+  .light .lb-list .lb-row:nth-child(2) { border-color:rgba(140,140,180,.35); }
+  .light .lb-list .lb-row:nth-child(3) { border-color:rgba(180,120,50,.3); }
+  .light .filter-bar .chip { background:#ffffff; }
+  .light .act-rewards .reward-tag { filter:saturate(1.2) brightness(.8); }
+  .light .player-detail { background:#ffffff; border:2px solid #c8d4f0; }
+  .light .player-detail-header { border-bottom:1px solid #e0e6f8; }
+  .light .detail-tab { background:#f0f4ff; border:1px solid #d0d8f0; color:#5a5a8a; }
+  .light .detail-tab.active { background:#fffbe0; color:#7a5800; border-color:#c09000; }
+
+  /* Player light mode */
+  .light .player-wrap { background:linear-gradient(160deg,#e8f0ff 0%,#d8e8ff 50%,#e4dcff 100%) !important; }
+  .light .pd-topbar { background:#ffffff; border-bottom:2px solid #dde4f8; box-shadow:0 2px 10px rgba(0,0,80,.08); }
+  .light .pd-name-pill { background:#1a1a3a !important; color:#ffffff !important; }
+  .light .pd-lv-pill { background:rgba(70,70,200,.1); border-color:rgba(70,70,200,.25); color:#3a3aaa; }
+  .light .pd-card { background:#ffffff; border:1px solid #dde4f8; box-shadow:0 2px 8px rgba(0,0,80,.06); }
+  .light .pd-card * { color:#1a1a3a; }
+  .light .pd-sc { background:#ffffff; border:2px solid #dde4f8; }
+  .light .pd-sv { color:#7a5800 !important; font-weight:900; }
+  .light .pd-sl { color:#6a6a9a !important; }
+  .light .pd-squad { background:#ffffff; border:1px solid #dde4f8; }
+  .light .squad-nm { color:#1a1a3a !important; }
+  .light .squad-role { color:#6a6a9a !important; }
+  .light .pd-sfida { background:#1a1a3a !important; border:none; }
+  .light .sfl { color:#ffcc00 !important; }
+  .light .sft { color:#ffffff !important; }
+  .light .sfida-desc, .light .sfd { color:rgba(255,255,255,.7) !important; }
+  .light .sfr { background:rgba(255,204,0,.15); border-color:rgba(255,204,0,.35); color:#ffcc00; }
+  .light .pd-checkin { background:#ffffff; border:2px solid #a0ddb0; }
+  .light .cl { color:#1a8a3a !important; }
+  .light .ci-inp { background:#f0fff4; border-color:#a0ddb0; color:#1a1a3a; }
+  .light .ci-btn { background:linear-gradient(135deg,#1a7acc,#2a9aff); }
+  .light .pd-badge-item { background:#ffffff; border:2px solid #e0d0f0; }
+  .light .pd-badge-item div { color:#1a1a3a !important; }
+  .light .streak-card { background:#ffffff; border:2px solid #f0c090; }
   .light .streak-val { color:#b86600 !important; }
-  .light .streak-lbl { color:rgba(30,30,100,.45) !important; }
-  .light .player-bottom-nav { background:rgba(255,255,255,.95) !important; border-top:1px solid rgba(100,100,200,.2) !important; }
-  .light .player-nav-btn { color:rgba(30,30,100,.35) !important; }
+  .light .streak-lbl { color:#6a6a9a !important; }
+  .light .xp-bar-wrap { background:rgba(80,80,200,.12); }
+  .light .month-prog-bg { background:rgba(80,80,200,.12); }
+  .light .xp-bar { background:linear-gradient(90deg,#5050cc,#aa44ff); }
+  .light .month-prog-fill { background:linear-gradient(90deg,#c07000,#ffaa00); }
+  .light .player-bottom-nav { background:#ffffff !important; border-top:2px solid #dde4f8 !important; box-shadow:0 -2px 12px rgba(0,0,80,.07) !important; }
+  .light .player-nav-btn { color:#8a8ab0 !important; }
   .light .player-nav-btn.active { color:#7a5800 !important; }
-  .light .player-nav-btn.active::after { background:#c08800 !important; box-shadow:0 0 8px rgba(192,136,0,.35) !important; }
-  .light .pd-tab-title { color:#1a1a4a !important; }
-  .light .lb-list .lb-row { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.15); }
-  .light .form-input { background:rgba(255,255,255,.9); color:#1a1a4a; border-color:rgba(100,100,200,.25); }
-  .light .xp-bg { background:rgba(100,100,200,.15); }
-  .light .month-prog-bg { background:rgba(100,100,200,.15); }
-  .light .sfida-card { background:rgba(255,255,255,.85); border-color:rgba(200,0,60,.2); }
-  .light .sfida-title { color:#1a1a4a !important; }
-  .light .sfida-desc { color:rgba(30,30,100,.6) !important; }
-  .light .act-card { background:rgba(255,255,255,.82); border-color:rgba(0,150,60,.25); }
-  .light .act-nm { color:#1a1a4a; }
-  .light .act-edu { filter:brightness(.7); }
-  .light .msg-card { background:rgba(255,255,255,.82); border-color:rgba(100,100,200,.15); }
-  .light .mhdr { background:rgba(100,100,200,.06); color:#3a3a9a; border-color:rgba(100,100,200,.12); }
-  .light .bb-t { background:rgba(100,100,200,.08); border-color:rgba(100,100,200,.15); color:#1a1a4a; }
-  .light .notif-tit { color:#1a1a4a !important; }
-  .light .notif-body { color:rgba(30,30,100,.6) !important; }
-  .light .notif-item { border-color:rgba(100,100,200,.15); }
-  .light .pres-table th { background:rgba(255,255,255,.9); color:rgba(30,30,100,.5); border-bottom:1px solid rgba(100,100,200,.15); }
-  .light .pres-table td { color:#1a1a4a; border-bottom:1px solid rgba(100,100,200,.1); }
-  .light .chip { background:rgba(255,255,255,.6); border-color:rgba(100,100,200,.2); color:rgba(30,30,100,.55); }
-  .light .chip.active { background:rgba(180,130,0,.12); color:#7a5800; border-color:rgba(180,130,0,.3); }
-  .light .sfida-card { background:rgba(255,255,255,.8); border-color:rgba(200,0,60,.25); }
-  .light .sfida-title { color:#1a1a4a; }
-  .light .sfida-desc { color:rgba(30,30,100,.6); }
-  .light .section-banner-title { color:#fff; }
-  .light .streak-card { background:rgba(255,255,255,.78); border-color:rgba(200,100,0,.2); }
-  .light .streak-val { color:#b86600; }
-  .light .xp-bar-wrap { background:rgba(100,100,200,.15); }
-  .light .player-detail { background:rgba(255,255,255,.95); border-color:rgba(100,100,200,.2); }
-  .light .msg-card { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.12); }
-  .light .msg-hdr { background:rgba(100,100,200,.06); color:#1a1a4a; border-bottom:1px solid rgba(100,100,200,.1); }
-  .light .notif-item { border-bottom:1px solid rgba(100,100,200,.1); }
-  .light .notif-tit { color:#1a1a4a; }
-  .light .notif-body { color:rgba(30,30,100,.55); }
-  .light .diary-entry { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.12); }
-  .light .diary-date { color:#1a1a4a; }
-  .light .lb-av { background:rgba(100,100,200,.08); border-color:rgba(100,100,200,.2); }
-  .light .search-inp { background:rgba(255,255,255,.85); border-color:rgba(100,100,200,.18); color:#1a1a4a; }
-  .light .batch-panel { background:rgba(100,100,200,.06); border-color:rgba(100,100,200,.18); }
-  .light .pres-wrap { border-color:rgba(100,100,200,.15); }
-  .light .squad-row { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.12); }
-  .light .squad-name { color:#1a1a4a; }
-  .light .act-meta { color:rgba(30,30,100,.55); }
-  .light .section-banner { box-shadow:0 2px 12px rgba(100,100,200,.15); }
+  .light .player-nav-btn.active::after { background:#c09000 !important; }
+  .light .pd-tab-title { color:#1a1a3a !important; }
+  .light .lb-list .lb-row { background:#ffffff; border-color:#dde4f8; }
+  .light .lb-name { color:#1a1a3a !important; }
+  .light .lb-xp { color:#1a5fc0 !important; }
+  .light .lb-level { color:#6a6a9a !important; }
+  .light .sfida-card { background:#ffffff !important; border:2px solid #f0b0b0 !important; }
+  .light .sfida-title { color:#1a1a3a !important; }
+  .light .act-card { background:#ffffff; border-left:4px solid currentColor; }
+  .light .act-nm { color:#1a1a3a !important; }
+  .light .act-edu { filter:brightness(.7) saturate(1.3); }
+  .light .adsc { color:#5a5a8a !important; }
+  .light .msg-card { background:#ffffff; border-color:#dde4f8; }
+  .light .mhdr { background:#f8f9ff; color:#3a3a9a; }
+  .light .bb-t { background:#f0f4ff; color:#1a1a3a; border-color:#e0e6f8; }
+  .light .bb-m { background:#e0f0ff; color:#1a5fc0; border-color:#b0d4f8; }
+  .light .notif-item { border-color:#eef0f8; }
+  .light .ntit { color:#1a1a3a !important; }
+  .light .nbdy { color:#5a5a8a !important; }
+  .light .ntim { color:#8a8ab0 !important; }
+  .light .xp-lbl { color:#6a6a9a !important; }
+  .light .xp-sub { color:#6a6a9a !important; }
+  .light .xp-bg { background:rgba(80,80,200,.12); }
+  .light .form-input { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; }
+  .light .pin-input { color:#3a3aaa !important; }
+  .light .pst { background:rgba(100,100,200,.06); border-right:1px solid rgba(80,80,200,.12); }
+  .light .pstv { color:#7a5800 !important; }
+  .light .pstl { color:#6a6a9a !important; }
+  .light .av-glow { background:radial-gradient(circle,rgba(180,180,255,.5) 0%,transparent 70%); }
+  .light .xp-fill { background:linear-gradient(90deg,#5050cc,#aa44ff); }
+  .light .nb.on { color:#7a5800 !important; }
+  .light .nb.on::after { background:#c09000 !important; }
+  .light .nb { color:#8a8ab0; }
+  .light .bb { border-radius:12px; }
+  .light .bav { background:#f0f4ff; border-color:#dde4f8; }
 
   /* ═══ PLAYER DASHBOARD — NEW DESIGN ═══ */
   .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; }
@@ -1020,6 +1065,15 @@ function PlayersView({ sectionColors, setSectionColors }) {
     setTimeout(() => setMsg(""), 3000);
   }
 
+  async function deletePlayer(id, name) {
+    if (!confirm(`Eliminare definitivamente il giocatore "${name}"? L'operazione non è reversibile.`)) return;
+    const { error } = await sb.from("profiles").delete().eq("id", id);
+    if (error) { alert("Errore: " + error.message); return; }
+    setPlayers(prev => prev.filter(p => p.id !== id));
+    setMsg(`Giocatore "${name}" eliminato`);
+    setTimeout(() => setMsg(""), 3000);
+  }
+
   async function createPlayer() {
     setCreatePlayerErr("");
     if (!newPlayer.display_name.trim()) { setCreatePlayerErr("Inserisci il nickname"); return; }
@@ -1046,7 +1100,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
     <div>
       <div className="stats-grid">
         <div className="stat-card"><div className="stat-label">Totali</div><div className="stat-value">{visible.length}</div></div>
-        <div className="stat-card"><div className="stat-label">Attivi</div><div className="stat-value">{visible.filter(p => p.xp > 0).length}</div></div>
+        <div className="stat-card"><div className="stat-label">Attivi</div><div className="stat-value">{visible.filter(p => p.xp > 1).length}</div></div>
         <div className="stat-card"><div className="stat-label">Selezionati</div><div className="stat-value">{selected.size}</div></div>
         <div className="stat-card"><div className="stat-label">Squadre</div><div className="stat-value">{squads.length}</div></div>
       </div>
@@ -1104,6 +1158,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
                     {expandedPlayer === p.id ? "▲ Chiudi" : "🔍 Dettagli"}
                   </button>
                   <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setEditPlayer({ ...p, pin: p.pin || "1234" }); }}>✏️ Modifica</button>
+                  <button className="btn btn-danger btn-xs" style={{ marginTop: 4, width: "100%", fontSize: 11 }} onClick={e => { e.stopPropagation(); deletePlayer(p.id, p.display_name); }}>🗑️ Elimina</button>
                 </div>
               );
             })}
@@ -1613,11 +1668,10 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
     setCreateErr("");
     if (!form.name.trim()) { setCreateErr("Nome obbligatorio"); return; }
     try {
-      // Base payload senza colonne opzionali
-      const payload = {
+      // Insert minimo garantito
+      const { data: newAct, error: e1 } = await sb.from("activities").insert({
         name: form.name.trim(),
         description: form.description.trim() || "",
-        educator_id: form.educator_id || null,
         duration_days: Number(form.duration_days) || 1,
         xp_partial: Number(form.xp_partial) || 0,
         xp_full: Number(form.xp_full) || 0,
@@ -1628,10 +1682,15 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         coin_cost: Number(form.coin_cost) || 0,
         max_participants: form.max_participants ? Number(form.max_participants) : null,
         is_active: true,
-      };
-      if (form.link.trim()) payload.link = form.link.trim();
-      const { error } = await sb.from("activities").insert(payload);
-      if (error) throw error;
+      }).select("id").single();
+      if (e1) throw e1;
+      // Aggiorna educator_id e link separatamente (colonne aggiunte via SQL)
+      if (newAct?.id && (form.educator_id || form.link.trim())) {
+        const upd = {};
+        if (form.educator_id) upd.educator_id = form.educator_id;
+        if (form.link.trim()) upd.link = form.link.trim();
+        await sb.from("activities").update(upd).eq("id", newAct.id);
+      }
       setShowForm(false);
       setForm({ name:"", description:"", link:"", educator_id:"", duration_days:4, xp_partial:10, xp_full:20, xp_completed:35, coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
       load();
