@@ -184,6 +184,7 @@ const css = `
   .mob-bottom-nav-inner { display:flex; height:60px; }
   .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:rgba(255,255,255,.28); font-family:'Funnel Display'; padding:0; transition:color .15s; }
   .mob-nav-btn.active { color:#ffcc00; }
+  .mob-nav-btn { transition:color .2s; }
 
   /* ═══ SECTION BANNERS ═══ */
   .section-banner { border-radius:var(--radius-lg); padding:20px; margin-bottom:18px; position:relative; overflow:hidden; min-height:80px; display:flex; align-items:flex-end; }
@@ -586,20 +587,51 @@ const css = `
   .light .player-card:hover { border-color:rgba(100,100,200,.3); }
   .light .p-name { color:#1a1a4a; }
   .light .p-level { color:rgba(30,30,100,.5); }
-  .light .player-wrap { background:linear-gradient(160deg,#c8d8ff 0%,#b8d0ff 50%,#ccc8ff 100%) !important; }
-  .light .pd-topbar { background:rgba(255,255,255,.8); border-bottom:1px solid rgba(100,100,200,.15); }
-  .light .pd-card { background:rgba(255,255,255,.78); border-color:rgba(100,100,200,.14); }
-  .light .nick-big, .light .pd-name-pill { background:#1a1a4a; color:#fff; }
-  .light .pd-sc { background:rgba(255,255,255,.75); border-color:rgba(100,100,200,.12); }
-  .light .pd-sv { color:#7a5800; }
-  .light .pd-sl { color:rgba(30,30,100,.4); }
-  .light .pd-squad { background:rgba(255,255,255,.75); border-color:rgba(100,100,200,.12); }
-  .light .pd-sfida { background:#1a1a4a; }
-  .light .pd-checkin { background:rgba(255,255,255,.75); border-color:rgba(0,150,80,.25); }
-  .light .player-bottom-nav { background:rgba(255,255,255,.92) !important; border-top:1px solid rgba(100,100,200,.12) !important; }
-  .light .player-nav-btn { color:rgba(30,30,100,.3) !important; }
+  .light .player-wrap { background:linear-gradient(160deg,#dce8ff 0%,#c4d8ff 50%,#dcd0ff 100%) !important; }
+  .light .pd-topbar { background:rgba(255,255,255,.9); border-bottom:1px solid rgba(100,100,200,.2); }
+  .light .pd-topbar * { color:#1a1a4a !important; }
+  .light .pd-card { background:rgba(255,255,255,.85); border-color:rgba(100,100,200,.2); color:#1a1a4a; }
+  .light .pd-name-pill { background:#1a1a4a !important; color:#fff !important; }
+  .light .pd-lv-pill { background:rgba(100,100,200,.1); border-color:rgba(100,100,200,.3); color:#3a3a9a; }
+  .light .pd-sc { background:rgba(255,255,255,.85); border-color:rgba(100,100,200,.2); }
+  .light .pd-sv { color:#7a5800 !important; }
+  .light .pd-sl { color:rgba(30,30,100,.5) !important; }
+  .light .pd-squad { background:rgba(255,255,255,.82); border-color:rgba(100,100,200,.18); }
+  .light .squad-nm { color:#1a1a4a; }
+  .light .squad-role { color:rgba(30,30,100,.45); }
+  .light .pd-sfida { background:#1a1a4a !important; }
+  .light .pd-sfida * { color:#ffe600; }
+  .light .pd-sfida .sfl { color:#ffcc00 !important; }
+  .light .pd-sfida .sft { color:#fff !important; }
+  .light .pd-sfida .sfr { background:rgba(255,204,0,.15); border-color:rgba(255,204,0,.3); color:#ffcc00; }
+  .light .pd-checkin { background:rgba(255,255,255,.82); border-color:rgba(0,150,80,.3); }
+  .light .pd-badges { background:transparent; }
+  .light .pd-badge-item { background:rgba(255,255,255,.82); border-color:rgba(100,100,200,.2); }
+  .light .pd-badge-item div { color:#1a1a4a !important; }
+  .light .streak-card { background:rgba(255,255,255,.82); border-color:rgba(200,100,0,.25); }
+  .light .streak-val { color:#b86600 !important; }
+  .light .streak-lbl { color:rgba(30,30,100,.45) !important; }
+  .light .player-bottom-nav { background:rgba(255,255,255,.95) !important; border-top:1px solid rgba(100,100,200,.2) !important; }
+  .light .player-nav-btn { color:rgba(30,30,100,.35) !important; }
   .light .player-nav-btn.active { color:#7a5800 !important; }
   .light .player-nav-btn.active::after { background:#c08800 !important; box-shadow:0 0 8px rgba(192,136,0,.35) !important; }
+  .light .pd-tab-title { color:#1a1a4a !important; }
+  .light .lb-list .lb-row { background:rgba(255,255,255,.8); border-color:rgba(100,100,200,.15); }
+  .light .form-input { background:rgba(255,255,255,.9); color:#1a1a4a; border-color:rgba(100,100,200,.25); }
+  .light .xp-bg { background:rgba(100,100,200,.15); }
+  .light .month-prog-bg { background:rgba(100,100,200,.15); }
+  .light .sfida-card { background:rgba(255,255,255,.85); border-color:rgba(200,0,60,.2); }
+  .light .sfida-title { color:#1a1a4a !important; }
+  .light .sfida-desc { color:rgba(30,30,100,.6) !important; }
+  .light .act-card { background:rgba(255,255,255,.82); border-color:rgba(0,150,60,.25); }
+  .light .act-nm { color:#1a1a4a; }
+  .light .act-edu { filter:brightness(.7); }
+  .light .msg-card { background:rgba(255,255,255,.82); border-color:rgba(100,100,200,.15); }
+  .light .mhdr { background:rgba(100,100,200,.06); color:#3a3a9a; border-color:rgba(100,100,200,.12); }
+  .light .bb-t { background:rgba(100,100,200,.08); border-color:rgba(100,100,200,.15); color:#1a1a4a; }
+  .light .notif-tit { color:#1a1a4a !important; }
+  .light .notif-body { color:rgba(30,30,100,.6) !important; }
+  .light .notif-item { border-color:rgba(100,100,200,.15); }
   .light .pres-table th { background:rgba(255,255,255,.9); color:rgba(30,30,100,.5); border-bottom:1px solid rgba(100,100,200,.15); }
   .light .pres-table td { color:#1a1a4a; border-bottom:1px solid rgba(100,100,200,.1); }
   .light .chip { background:rgba(255,255,255,.6); border-color:rgba(100,100,200,.2); color:rgba(30,30,100,.55); }
@@ -1579,28 +1611,33 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
 
   async function createActivity() {
     setCreateErr("");
-    if (!form.name.trim()) { setCreateErr("Inserisci il nome dell'attività"); return; }
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim(),
-      link: form.link.trim() || null,
-      educator_id: form.educator_id || null,
-      duration_days: Number(form.duration_days) || 1,
-      xp_partial: Number(form.xp_partial) || 0,
-      xp_full: Number(form.xp_full) || 0,
-      xp_completed: Number(form.xp_completed) || 0,
-      coin_partial: Number(form.coin_partial) || 0,
-      coin_full: Number(form.coin_full) || 0,
-      coin_completed: Number(form.coin_completed) || 0,
-      coin_cost: Number(form.coin_cost) || 0,
-      max_participants: form.max_participants ? Number(form.max_participants) : null,
-      is_active: true,
-    };
-    const { error } = await sb.from("activities").insert(payload);
-    if (error) { setCreateErr("Errore: " + error.message); return; }
-    setShowForm(false);
-    setForm({ name:"", description:"", link:"", educator_id:"", duration_days:4, xp_partial:10, xp_full:20, xp_completed:35, coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
-    load();
+    if (!form.name.trim()) { setCreateErr("Nome obbligatorio"); return; }
+    try {
+      // Base payload senza colonne opzionali
+      const payload = {
+        name: form.name.trim(),
+        description: form.description.trim() || "",
+        educator_id: form.educator_id || null,
+        duration_days: Number(form.duration_days) || 1,
+        xp_partial: Number(form.xp_partial) || 0,
+        xp_full: Number(form.xp_full) || 0,
+        xp_completed: Number(form.xp_completed) || 0,
+        coin_partial: Number(form.coin_partial) || 0,
+        coin_full: Number(form.coin_full) || 0,
+        coin_completed: Number(form.coin_completed) || 0,
+        coin_cost: Number(form.coin_cost) || 0,
+        max_participants: form.max_participants ? Number(form.max_participants) : null,
+        is_active: true,
+      };
+      if (form.link.trim()) payload.link = form.link.trim();
+      const { error } = await sb.from("activities").insert(payload);
+      if (error) throw error;
+      setShowForm(false);
+      setForm({ name:"", description:"", link:"", educator_id:"", duration_days:4, xp_partial:10, xp_full:20, xp_completed:35, coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
+      load();
+    } catch(e) {
+      setCreateErr("Errore: " + (e.message || JSON.stringify(e)));
+    }
   }
 
   async function deleteActivity(id) {
@@ -2312,6 +2349,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [mustChangePin, setMustChangePin] = useState(profile.pin === "1234");
+  const [playerTheme, setPlayerTheme] = useState(() => localStorage.getItem("pug_theme") || "dark");
+
+  useEffect(() => {
+    document.body.classList.toggle("light", playerTheme === "light");
+    localStorage.setItem("pug_theme", playerTheme);
+  }, [playerTheme]);
   const [newPin1, setNewPin1] = useState("");
   const [newPin2, setNewPin2] = useState("");
   const [pinChangeErr, setPinChangeErr] = useState("");
@@ -2516,6 +2559,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           {fullProfile?.squads?.name && (
             <div style={{background:'#111',color:'#ffcc00',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
           )}
+          <button onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,padding:'5px 9px',cursor:'pointer',fontSize:14,lineHeight:1}} title="Cambia tema">
+            {playerTheme==="dark"?"☀️":"🌙"}
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -2821,6 +2867,21 @@ const EDUCATOR_TABS = [
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
+const EduTabColors = {
+  giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
+  classifica:   { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
+  squadre:      { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
+  presenze:     { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
+  attivita:     { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
+  sfida:        { accent:"#ff2244", border:"rgba(255,34,68,.3)",   bg:"rgba(255,34,68,.03)" },
+  badge:        { accent:"#ff00cc", border:"rgba(255,0,204,.3)",   bg:"rgba(255,0,204,.03)" },
+  streak:       { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
+  prenotazioni: { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
+  messaggi:     { accent:"#aa44ff", border:"rgba(170,68,255,.3)",  bg:"rgba(170,68,255,.03)" },
+  diario:       { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
+  qr:           { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
+};
+
 function EducatorShell({ profile, onLogout }) {
   const [tab, setTab] = useState("giocatori");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -2921,13 +2982,14 @@ function EducatorShell({ profile, onLogout }) {
 
       {/* Main */}
       <div className="edu-main">
-        <div className="topbar">
-          <div className="topbar-title">{cur?.[1]} {cur?.[2]}</div>
+        <div className="topbar" style={{borderBottom:`1px solid ${["giocatori","classifica","squadre","presenze","attivita","sfida","badge","streak","prenotazioni","messaggi","diario","qr"].indexOf(tab) >= 0 ? EduTabColors[tab]?.border||"rgba(255,255,255,.08)" : "rgba(255,255,255,.08)"}`}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
+            <div style={{width:6,height:28,borderRadius:3,background:EduTabColors[tab]?.accent||"rgba(255,255,255,.2)",flexShrink:0}}/>
+            <div className="topbar-title">{cur?.[1]} {cur?.[2]}</div>
           </div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
         </div>
-        <div className="content edu-content-wrap">
+        <div className="content edu-content-wrap" style={{background:EduTabColors[tab]?.bg||"transparent"}}>
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
           {tab === "squadre"      && <SquadsView />}
