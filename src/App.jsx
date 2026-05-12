@@ -1743,6 +1743,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(true);
   const [customizing, setCustomizing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("name"); // "name" | "xp" | "squad"
   const config = { xp_daily_checkin: 10, coin_daily_checkin: 5, xp_week_bonus: 50 };
 
   useEffect(() => {
@@ -1772,7 +1774,17 @@ function AttendanceView({ sectionColors, setSectionColors }) {
     setAttendances(prev => ({ ...prev, [playerId]: { ...existing, status, player_id: playerId } }));
   }
 
-  const visible = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
+  const visible = players
+    .filter(p => {
+      const matchSquad = squadFilter === "all" || p.squads?.name === squadFilter;
+      const matchSearch = !search || p.display_name?.toLowerCase().includes(search.toLowerCase()) || (p.first_name||"").toLowerCase().includes(search.toLowerCase());
+      return matchSquad && matchSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "xp")    return (b.xp||0) - (a.xp||0);
+      if (sortBy === "squad")  return (a.squads?.name||"").localeCompare(b.squads?.name||"");
+      return (a.display_name||"").localeCompare(b.display_name||"");
+    });
   const presentCount = Object.values(attendances).filter(a => a.status !== "none").length;
 
   return (
@@ -1787,6 +1799,14 @@ function AttendanceView({ sectionColors, setSectionColors }) {
       <div className="filter-bar">
         <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
         <button className="btn btn-yellow btn-sm" onClick={async () => { for (const p of visible) await setStatus(p.id, "full"); }}>✓ Tutti</button>
+      </div>
+      <div className="filter-bar">
+        <input className="search-inp" placeholder="🔍 Cerca per nome…" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1,minWidth:120}}/>
+        <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:13,width:"auto"}}>
+          <option value="name">A→Z Nome</option>
+          <option value="xp">XP ↓</option>
+          <option value="squad">Squadra</option>
+        </select>
       </div>
       <div className="filter-bar">
         <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
@@ -1819,7 +1839,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                         ))}
                       </div>
                     </td>
-                    <td style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 900, color: "var(--azzurro)" }}>{p.xp}</td>
+                    <td style={{ fontFamily: "'Barlow Condensed'", fontSize: 16, fontWeight: 900, color: "var(--neon-blue)" }}>{p.xp} <span style={{fontSize:10,color:"var(--text3)",fontWeight:400}}>XP</span></td>
                   </tr>
                 );
               })}
@@ -2684,6 +2704,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [qrInput, setQrInput] = useState("");
   const [qrMsg, setQrMsg] = useState("");
   const [showCamera, setShowCamera] = useState(false);
+  const [toast, setToast] = useState(null);
   const [monthPresences, setMonthPresences] = useState(null);
   const [monthTarget, setMonthTarget] = useState(null);
   const [actBookingCounts, setActBookingCounts] = useState({});
@@ -2754,7 +2775,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     load();
     const channel = sb.channel("player_notifs_" + profile.id)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, load)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` }, load)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` }, (payload) => {
+        load();
+        // Show toast for important notifications
+        const n = payload.new;
+        if (n?.type === "booking_confirmed") setToast({ msg:"✅ Prenotazione confermata!", color:"var(--verde)" });
+        else if (n?.type === "booking_rejected") setToast({ msg:"❌ Prenotazione rifiutata", color:"var(--danger)" });
+        else if (n?.type === "badge_assigned") setToast({ msg:"🎖️ " + (n?.title||"Badge sbloccato!"), color:"var(--rosa)" });
+        setTimeout(() => setToast(null), 4000);
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `player_id=eq.${profile.id}` }, load)
       .subscribe();
     return () => sb.removeChannel(channel);
   }, [profile.id, load]);
@@ -2929,6 +2959,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     };
     return (
     <div className="player-wrap" style={{background:TAB_BG[tab]||TAB_BG.profilo,transition:'background 0.5s ease'}}>
+      {/* Toast notification */}
+      {toast && (
+        <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:100,background:"rgba(0,0,0,.9)",border:`1px solid ${toast.color}`,borderRadius:12,padding:"10px 20px",fontSize:14,fontWeight:700,color:toast.color,boxShadow:`0 0 20px ${toast.color}44`,whiteSpace:"nowrap",backdropFilter:"blur(10px)"}}>
+          {toast.msg}
+        </div>
+      )}
       {/* Floral background */}
       <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.07,overflow:'hidden'}}>
         <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
@@ -3305,8 +3341,175 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
 // ─── EDUCATOR SHELL ───────────────────────────────────────
 
+// ─── DASHBOARD VIEW ──────────────────────────────────────
+
+function DashboardView() {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const today = new Date().toISOString().split("T")[0];
+      const weekAgo = new Date(Date.now()-7*86400000).toISOString().split("T")[0];
+      const monthStart = today.slice(0,7)+"-01";
+
+      const [
+        { data: players },
+        { data: todayAtt },
+        { data: weekAtt },
+        { data: bookings },
+        { data: labs },
+        { data: badges },
+      ] = await Promise.all([
+        sb.from("profiles").select("id,xp,coin,squad_id,squads(name)").eq("role","player"),
+        sb.from("attendances").select("player_id,status,xp_awarded").eq("date", today).neq("status","none"),
+        sb.from("attendances").select("date,xp_awarded,player_id").gte("date", weekAgo).neq("status","none"),
+        sb.from("bookings").select("status,created_at").gte("created_at", monthStart),
+        sb.from("activities").select("id,name,max_participants").eq("is_active", true),
+        sb.from("player_badges").select("id,created_at").gte("created_at", monthStart),
+      ]);
+
+      const active = (players||[]).filter(p=>p.xp>1);
+      const totalXP = (players||[]).reduce((s,p)=>s+(p.xp||0),0);
+      const totalCoin = (players||[]).reduce((s,p)=>s+(p.coin||0),0);
+
+      // XP per day last 7 days
+      const days = Array.from({length:7},(_,i)=>{
+        const d = new Date(Date.now()-(6-i)*86400000);
+        return { date: d.toISOString().split("T")[0], label: d.toLocaleDateString("it-IT",{weekday:"short"}) };
+      });
+      const xpByDay = {};
+      const pressByDay = {};
+      (weekAtt||[]).forEach(a => {
+        xpByDay[a.date] = (xpByDay[a.date]||0)+(a.xp_awarded||0);
+        pressByDay[a.date] = (pressByDay[a.date]||0)+1;
+      });
+
+      // Squad distribution
+      const squadMap = {};
+      (players||[]).forEach(p => {
+        const sq = p.squads?.name||"N/A";
+        squadMap[sq] = (squadMap[sq]||0)+1;
+      });
+
+      // Top 5 players
+      const top5 = [...(players||[])].filter(p=>p.xp>1).sort((a,b)=>b.xp-a.xp).slice(0,5);
+
+      setStats({ active, totalXP, totalCoin, todayAtt:todayAtt||[], days, xpByDay, pressByDay, squadMap, bookings:bookings||[], labs:labs||[], badges:badges||[], top5, allPlayers: players||[] });
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) return <div className="loading">⏳ Caricamento dashboard…</div>;
+  if (!stats) return null;
+
+  const maxPressDay = Math.max(...stats.days.map(d=>stats.pressByDay[d.date]||0), 1);
+  const SQUAD_COLORS = { Azzurra:"#A3CFFE", Gialla:"#FDEF26", Verde:"#339966", "N/A":"rgba(255,255,255,.2)" };
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16}}>📊 Dashboard</div>
+
+      {/* Stat cards */}
+      <div className="stats-grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",marginBottom:20}}>
+        {[
+          ["Giocatori attivi", stats.active.length, "🌿", "var(--neon-green)"],
+          ["XP totali", stats.totalXP.toLocaleString(), "⭐", "var(--neon-blue)"],
+          ["Presenti oggi", stats.todayAtt.length, "✅", "#ffcc00"],
+          ["Badge questo mese", stats.badges.length, "🎖️", "var(--rosa)"],
+          ["Lab attivi", stats.labs.length, "⚡", "var(--verde)"],
+          ["Prenotazioni mese", stats.bookings.length, "📋", "var(--azzurro)"],
+        ].map(([label,val,icon,color])=>(
+          <div key={label} className="stat-card">
+            <div style={{fontSize:22,marginBottom:4}}>{icon}</div>
+            <div className="stat-value" style={{color,fontSize:28}}>{val}</div>
+            <div className="stat-label">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Presenze ultimi 7 giorni */}
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:12}}>📅 Presenze ultimi 7 giorni</div>
+        <div style={{display:"flex",gap:6,alignItems:"flex-end",height:80}}>
+          {stats.days.map(d=>{
+            const count = stats.pressByDay[d.date]||0;
+            const pct = Math.round((count/maxPressDay)*100);
+            const isToday = d.date === new Date().toISOString().split("T")[0];
+            return (
+              <div key={d.date} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                <div style={{fontSize:10,color:"var(--neon-blue)",fontWeight:700}}>{count||""}</div>
+                <div style={{width:"100%",background:isToday?"var(--neon-blue)":"rgba(0,212,255,.25)",borderRadius:"4px 4px 0 0",height:Math.max(4,pct*0.7)+"px",transition:"height .4s",minHeight:4}}/>
+                <div style={{fontSize:9,color:isToday?"var(--neon-blue)":"var(--text3)",fontWeight:isToday?700:400,textTransform:"capitalize"}}>{d.label}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+        {/* Top 5 players */}
+        <div className="card">
+          <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>🏆 Top 5 giocatori</div>
+          {stats.top5.map((p,i)=>{
+            const maxXp = stats.top5[0]?.xp||1;
+            return (
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                <div style={{fontSize:12,fontWeight:900,color:["#ffcc00","#aac8e0","#d4916a"][i]||"var(--text3)",width:18,textAlign:"center"}}>{i+1}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"var(--text)",marginBottom:2}}>{p.display_name||"—"}</div>
+                  <div style={{height:4,background:"rgba(255,255,255,.06)",borderRadius:99,overflow:"hidden"}}>
+                    <div style={{height:"100%",background:"linear-gradient(90deg,var(--neon-blue),var(--neon-pink))",borderRadius:99,width:Math.round((p.xp/maxXp)*100)+"%"}}/>
+                  </div>
+                </div>
+                <div style={{fontSize:11,fontWeight:900,color:"var(--neon-blue)"}}>{p.xp}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Squad distribution */}
+        <div className="card">
+          <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>🛡️ Distribuzione squadre</div>
+          {Object.entries(stats.squadMap).map(([sq,count])=>{
+            const total = stats.allPlayers.length||1;
+            const pct = Math.round((count/total)*100);
+            return (
+              <div key={sq} style={{marginBottom:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:11,fontWeight:700,color:SQUAD_COLORS[sq]||"var(--text2)"}}>{sq}</span>
+                  <span style={{fontSize:11,color:"var(--text3)"}}>{count} ({pct}%)</span>
+                </div>
+                <div style={{height:6,background:"rgba(255,255,255,.06)",borderRadius:99,overflow:"hidden"}}>
+                  <div style={{height:"100%",background:SQUAD_COLORS[sq]||"rgba(255,255,255,.2)",borderRadius:99,width:pct+"%"}}/>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Bookings status */}
+          <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid var(--border)"}}>
+            <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:8}}>Prenotazioni mese</div>
+            <div style={{display:"flex",gap:8}}>
+              {[["confirmed","✅","var(--verde)"],["pending","⏳","#ffcc00"],["rejected","❌","var(--danger)"]].map(([status,icon,color])=>{
+                const c = stats.bookings.filter(b=>b.status===status).length;
+                return <div key={status} style={{flex:1,textAlign:"center",padding:"6px 4px",background:"rgba(255,255,255,.03)",borderRadius:8}}>
+                  <div style={{fontSize:14}}>{icon}</div>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color}}>{c}</div>
+                  <div style={{fontSize:8,color:"var(--text3)",textTransform:"capitalize"}}>{status}</div>
+                </div>;
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const EDUCATOR_TABS = [
-  ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
+  ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
   ["diario","📜","Diario"], ["qr","📍","QR"],
@@ -3314,6 +3517,7 @@ const EDUCATOR_TABS = [
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
 const EduTabColors = {
+  dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
   classifica:   { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   squadre:      { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
@@ -3329,7 +3533,7 @@ const EduTabColors = {
 };
 
 function EducatorShell({ profile, onLogout }) {
-  const [tab, setTab] = useState("giocatori");
+  const [tab, setTab] = useState("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
@@ -3343,7 +3547,7 @@ function EducatorShell({ profile, onLogout }) {
     const today = new Date().toISOString().split("T")[0];
     const [{ data: pending }, { data: allPlayers }, { data: todayAtt }] = await Promise.all([
       sb.from("bookings").select("id").eq("status","pending"),
-      sb.from("profiles").select("id").eq("role","player"),
+      sb.from("profiles").select("id").eq("role","player").gt("xp", 1),
       sb.from("attendances").select("player_id").eq("date", today),
     ]);
     const markedIds = new Set((todayAtt||[]).map(a => a.player_id));
@@ -3354,8 +3558,12 @@ function EducatorShell({ profile, onLogout }) {
 
   useEffect(() => {
     loadNotifCounts();
-    const interval = setInterval(loadNotifCounts, 60000); // refresh every minute
-    return () => clearInterval(interval);
+    const interval = setInterval(loadNotifCounts, 60000);
+    const channel = sb.channel("edu_realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, loadNotifCounts)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings" }, loadNotifCounts)
+      .subscribe();
+    return () => { clearInterval(interval); sb.removeChannel(channel); };
   }, [loadNotifCounts]);
 
   const cur = EDUCATOR_TABS.find(t => t[0] === tab);
@@ -3502,6 +3710,7 @@ function EducatorShell({ profile, onLogout }) {
           </div>
         )}
         <div className="content edu-content-wrap" style={{background:EduTabColors[tab]?.bg||"transparent"}}>
+          {tab === "dashboard"   && <DashboardView />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
           {tab === "squadre"      && <SquadsView />}
