@@ -2210,7 +2210,17 @@ function BookingsView() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await sb.from("bookings").select("*, profiles(display_name), activities(name,coin_cost)").order("created_at", { ascending: false });
+      const { data: bkData } = await sb.from("bookings").select("id,player_id,activity_id,coin_held,status,reviewed_at,created_at").order("created_at", { ascending: false });
+      // Fetch names separately to avoid FK join issues
+      const playerIds = [...new Set((bkData||[]).map(b=>b.player_id).filter(Boolean))];
+      const actIds = [...new Set((bkData||[]).map(b=>b.activity_id).filter(Boolean))];
+      const [{ data: pData }, { data: aData }] = await Promise.all([
+        playerIds.length ? sb.from("profiles").select("id,display_name").in("id", playerIds) : Promise.resolve({data:[]}),
+        actIds.length ? sb.from("activities").select("id,name,coin_cost").in("id", actIds) : Promise.resolve({data:[]}),
+      ]);
+      const pMap = Object.fromEntries((pData||[]).map(p=>[p.id,p]));
+      const aMap = Object.fromEntries((aData||[]).map(a=>[a.id,a]));
+      const data = (bkData||[]).map(b=>({...b, profiles: pMap[b.player_id]||null, activities: aMap[b.activity_id]||null }));
       setBookings(data || []); setLoading(false);
     }
     load();
@@ -2517,11 +2527,23 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   async function bookActivity(actId, cost) {
     if ((fullProfile?.coin || 0) < cost) { alert("Coin insufficienti!"); return; }
-    await sb.from("bookings").insert({ player_id: profile.id, activity_id: actId, coin_held: cost });
-    await sb.from("profiles").update({ coin: (fullProfile?.coin || 0) - cost }).eq("id", profile.id);
-    setFullProfile(prev => ({ ...prev, coin: (prev?.coin || 0) - cost }));
-    alert("✅ Prenotazione inviata!");
-    load();
+    try {
+      const { error } = await sb.from("bookings").insert({
+        player_id: profile.id,
+        activity_id: actId,
+        coin_held: cost,
+        status: "pending",
+      });
+      if (error) { alert("❌ Errore prenotazione: " + error.message); return; }
+      if (cost > 0) {
+        await sb.from("profiles").update({ coin: (fullProfile?.coin || 0) - cost }).eq("id", profile.id);
+        setFullProfile(prev => ({ ...prev, coin: (prev?.coin || 0) - cost }));
+      }
+      alert("✅ Prenotazione inviata!");
+      load();
+    } catch(e) {
+      alert("❌ Errore: " + (e?.message || String(e)));
+    }
   }
 
   async function saveFirstName() {
