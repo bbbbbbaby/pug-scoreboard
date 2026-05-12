@@ -1018,7 +1018,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await sb.from("profiles").select("*, squads(name,color)").eq("role", "player").order("xp", { ascending: false });
+    const { data } = await sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false });
     const { data: sq } = await sb.from("squads").select("*");
     setPlayers(data || []); setSquads(sq || []); setLoading(false);
   }, []);
@@ -1406,7 +1406,7 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
       const today = new Date().toISOString().split("T")[0];
       const monthStart = today.slice(0, 7) + "-01";
       const [{ data }, { data: sq }, { data: attToday }, { data: attMonth }] = await Promise.all([
-        sb.from("profiles").select("*, squads(name)").eq("role", "player").order("xp", { ascending: false }),
+        sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role", "player").order("xp", { ascending: false }),
         sb.from("squads").select("*"),
         sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
         sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
@@ -1559,7 +1559,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   useEffect(() => {
     async function load() {
       const [{ data: pl }, { data: sq }, { data: att }] = await Promise.all([
-        sb.from("profiles").select("*, squads(name)").eq("role","player").order("display_name"),
+        sb.from("profiles").select("id,display_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role","player").order("display_name"),
         sb.from("squads").select("*"),
         sb.from("attendances").select("*").eq("date", date).eq("check_type","daily"),
       ]);
@@ -1610,7 +1610,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
           <span><span className="pres-dot pd-none" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>?</span> Assente</span>
           <span><span className="pres-dot pd-partial" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>~</span> Parziale</span>
           <span><span className="pres-dot pd-yes" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>✓</span> Presente (+XP)</span>
-          <span><span className="pres-dot pd-completed" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>★</span> Attività completata</span>
+          <span><span className="pres-dot pd-completed" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>★</span> Lab completata</span>
         </div>
         <div className="pres-wrap">
           <table className="pres-table">
@@ -1668,34 +1668,37 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
     setCreateErr("");
     if (!form.name.trim()) { setCreateErr("Nome obbligatorio"); return; }
     try {
-      // Insert minimo garantito
-      const { data: newAct, error: e1 } = await sb.from("activities").insert({
-        name: form.name.trim(),
-        description: form.description.trim() || "",
-        duration_days: Number(form.duration_days) || 1,
-        xp_partial: Number(form.xp_partial) || 0,
-        xp_full: Number(form.xp_full) || 0,
-        xp_completed: Number(form.xp_completed) || 0,
-        coin_partial: Number(form.coin_partial) || 0,
-        coin_full: Number(form.coin_full) || 0,
-        coin_completed: Number(form.coin_completed) || 0,
-        coin_cost: Number(form.coin_cost) || 0,
-        max_participants: form.max_participants ? Number(form.max_participants) : null,
-        is_active: true,
-      }).select("id").single();
-      if (e1) throw e1;
-      // Aggiorna educator_id e link separatamente (colonne aggiunte via SQL)
-      if (newAct?.id && (form.educator_id || form.link.trim())) {
-        const upd = {};
-        if (form.educator_id) upd.educator_id = form.educator_id;
-        if (form.link.trim()) upd.link = form.link.trim();
-        await sb.from("activities").update(upd).eq("id", newAct.id);
+      // Test con insert minimale
+      const minPayload = { name: form.name.trim() || "Lab", is_active: true };
+      const { data: testAct, error: testErr } = await sb.from("activities").insert(minPayload).select("id").single();
+      if (testErr) {
+        setCreateErr("Errore DB: " + testErr.message + " | Code: " + testErr.code);
+        return;
+      }
+      // Update con tutti i campi
+      if (testAct?.id) {
+        const full = {
+          description: form.description.trim() || "",
+          duration_days: Number(form.duration_days) || 1,
+          xp_partial: Number(form.xp_partial) || 0,
+          xp_full: Number(form.xp_full) || 0,
+          xp_completed: Number(form.xp_completed) || 0,
+          coin_cost: Number(form.coin_cost) || 0,
+          max_participants: form.max_participants ? Number(form.max_participants) : null,
+        };
+        try { full.coin_partial = Number(form.coin_partial) || 0; } catch(_) {}
+        try { full.coin_full = Number(form.coin_full) || 0; } catch(_) {}
+        try { full.coin_completed = Number(form.coin_completed) || 0; } catch(_) {}
+        if (form.educator_id) try { full.educator_id = form.educator_id; } catch(_) {}
+        if (form.link.trim()) try { full.link = form.link.trim(); } catch(_) {}
+        const { error: updErr } = await sb.from("activities").update(full).eq("id", testAct.id);
+        if (updErr) console.warn("Update parziale fallito:", updErr.message);
       }
       setShowForm(false);
       setForm({ name:"", description:"", link:"", educator_id:"", duration_days:4, xp_partial:10, xp_full:20, xp_completed:35, coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
       load();
     } catch(e) {
-      setCreateErr("Errore: " + (e.message || JSON.stringify(e)));
+      setCreateErr("Errore: " + (e?.message || JSON.stringify(e)));
     }
   }
 
@@ -1707,9 +1710,9 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
 
   return (
     <div>
-      <SectionBanner sectionKey="attivita" title="Attività" sub={`${activities.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="attivita" title="Lab" sub={`${activities.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
-        <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuova attività</button>
+        <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuovo Lab</button>
       </div>
       {loading ? <div className="loading">⏳</div> : (
         <div className="act-grid">
@@ -1726,13 +1729,13 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               </div>
             </div>
           ))}
-          {activities.length === 0 && <div className="empty">Nessuna attività.</div>}
+          {activities.length === 0 && <div className="empty">Nessuna lab.</div>}
         </div>
       )}
       {showForm && (
         <div className="modal-bg" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Nuova attività</div>
+            <div className="modal-title">Nuovo Lab</div>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Descrizione</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Link (opzionale)</label><input className="form-input" type="url" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://…" /></div>
@@ -2133,7 +2136,7 @@ function MessagesView({ profile }) {
     setMsgs(m || []); setSending(false);
   }
 
-  const destLabel = destType === "tutti" ? "📢 Tutti i giocatori" : destType === "squad" ? `🛡️ Squadra` : destType === "player" ? "👤 Giocatore singolo" : "⚡ Partecipanti attività";
+  const destLabel = destType === "tutti" ? "📢 Tutti i giocatori" : destType === "squad" ? `🛡️ Squadra` : destType === "player" ? "👤 Giocatore singolo" : "⚡ Partecipanti lab";
 
   return (
     <div>
@@ -2147,7 +2150,7 @@ function MessagesView({ profile }) {
         <div className="form-group">
           <label className="form-label">Destinatario</label>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatore"],["activity","⚡ Attività"]].map(([k,l]) => (
+            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatore"],["activity","⚡ Lab"]].map(([k,l]) => (
               <button key={k} className={`chip ${destType === k ? "active" : ""}`} onClick={() => setDestType(k)}>{l}</button>
             ))}
           </div>
@@ -2165,7 +2168,7 @@ function MessagesView({ profile }) {
           )}
           {destType === "activity" && (
             <select value={destActivity} onChange={e => setDestActivity(e.target.value)}>
-              <option value="">Seleziona attività…</option>
+              <option value="">Seleziona lab…</option>
               {activities.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           )}
@@ -2423,13 +2426,13 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const today = new Date().toISOString().split("T")[0];
     const monthStart = today.slice(0, 7) + "-01";
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }] = await Promise.all([
-      sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single(),
-      sb.from("player_badges").select("*, badges(name,image_url,xp_default,description,link)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
-      sb.from("activities").select("*, profiles(display_name)").eq("is_active", true).order("created_at", { ascending: false }),
-      sb.from("bookings").select("*, activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
-      sb.from("notifications").select("*").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(30),
-      sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)").eq("role","player").order("xp", { ascending: false }),
-      sb.from("messages").select("*, profiles(display_name)").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at", { ascending: false }).limit(30),
+      sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,longest_streak,last_checkin_date,squads(name)").eq("id", profile.id).single(),
+      sb.from("player_badges").select("id,assigned_at,xp_awarded,coin_awarded,badges(name,image_url,xp_default,description,link)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
+      sb.from("activities").select("id,name,description,link,duration_days,xp_completed,coin_completed,coin_cost,is_active,expires_at,profiles(display_name)").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
+      sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
+      sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").order("xp", { ascending: false }),
+      sb.from("messages").select("id,body,is_broadcast,squad_id,recipient_id,read_at,created_at,profiles(display_name)").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at", { ascending: false }).limit(20),
       sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
     ]);
@@ -2581,7 +2584,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const BOTTOM_TABS = [
     ["profilo","👤","Profilo"],
     ["classifica","🏆","Classifica"],
-    ["attivita","⚡","Attività"],
+    ["attivita","⚡","Lab"],
     ["messaggi","💬","Messaggi"],
     ["notifiche","🔔","Notifiche"],
   ];
@@ -2681,9 +2684,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               ))}
             </div>
 
-            {/* Stats grid 2: Attività, Conf., Rank */}
+            {/* Stats grid 2: Lab, Conf., Rank */}
             <div className="pd-sg">
-              {[['🌿',activities.filter(a=>!a.description?.includes('SFIDA')).length,'Attività'],['✅',bookings.filter(b=>b.status==='confirmed').length,'Confermati'],['🏆',(players.findIndex(p=>p.id===profile.id)+1)||'-','Rank']].map(([ic,v,l])=>(
+              {[['🌿',activities.filter(a=>!a.description?.includes('SFIDA')).length,'Lab'],['✅',bookings.filter(b=>b.status==='confirmed').length,'Confermati'],['🏆',(players.findIndex(p=>p.id===profile.id)+1)||'-','Rank']].map(([ic,v,l])=>(
                 <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
               ))}
             </div>
@@ -2803,7 +2806,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {/* ── ATTIVITÀ ── */}
         {tab === "attivita" && (
           <div style={{ marginTop: 8 }}>
-            <div className="pd-tab-title" style={{color:"#00ff88"}}>⚡ Attività</div>
+            <div className="pd-tab-title" style={{color:"#00ff88"}}>⚡ Lab</div>
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
               <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
                 <div className="sfida-label">⚡ Sfida del giorno</div>
@@ -2836,7 +2839,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 </div>
               );
             })}
-            {activities.length === 0 && <div className="empty">Nessuna attività attiva.</div>}
+            {activities.length === 0 && <div className="empty">Nessuna lab attiva.</div>}
           </div>
         )}
 
@@ -2920,7 +2923,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
 const EDUCATOR_TABS = [
   ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
-  ["presenze","✅","Presenze"], ["attivita","⚡","Attività"], ["sfida","🔥","Sfida"],
+  ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
   ["diario","📜","Diario"], ["qr","📍","QR"],
 ];
