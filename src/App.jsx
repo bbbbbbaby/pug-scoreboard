@@ -1665,30 +1665,38 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   const [createErr, setCreateErr] = useState("");
 
   async function createActivity() {
-    setCreateErr("");
-    if (!form.name.trim()) { setCreateErr("Nome obbligatorio"); return; }
-    const { data: { user } } = await sb.auth.getUser();
-    const { data: newAct, error: insertErr } = await sb.from("activities").insert({
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      duration_days: Number(form.duration_days) || 1,
-      xp_partial: Number(form.xp_partial) || 0,
-      xp_full: Number(form.xp_full) || 0,
-      xp_completed: Number(form.xp_completed) || 0,
-      coin_partial: Number(form.coin_partial) || 0,
-      coin_full: Number(form.coin_full) || 0,
-      coin_completed: Number(form.coin_completed) || 0,
-      coin_cost: Number(form.coin_cost) || 0,
-      max_participants: form.max_participants ? Number(form.max_participants) : null,
-      educator_id: form.educator_id || null,
-      link: form.link.trim() || null,
-      created_by: user?.id || null,
-      is_active: true,
-    }).select("id").single();
-    if (insertErr) { setCreateErr("Errore: " + insertErr.message + " (code: " + insertErr.code + ")"); return; }
-    setShowForm(false);
-    setForm({ name:"", description:"", link:"", educator_id:"", duration_days:4, xp_partial:10, xp_full:20, xp_completed:35, coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
-    load();
+    const name = (form.name || "").trim();
+    if (!name) { setCreateErr("Nome obbligatorio"); return; }
+    setCreateErr("Creazione in corso…");
+    try {
+      const { error } = await sb.from("activities").insert({
+        name,
+        description: (form.description || "").trim() || null,
+        duration_days: Number(form.duration_days) || 1,
+        xp_partial:    Number(form.xp_partial)    || 0,
+        xp_full:       Number(form.xp_full)       || 0,
+        xp_completed:  Number(form.xp_completed)  || 0,
+        coin_partial:  Number(form.coin_partial)  || 0,
+        coin_full:     Number(form.coin_full)     || 0,
+        coin_completed:Number(form.coin_completed)|| 0,
+        coin_cost:     Number(form.coin_cost)     || 0,
+        max_participants: form.max_participants ? Number(form.max_participants) : null,
+        educator_id: form.educator_id || null,
+        link: (form.link || "").trim() || null,
+      });
+      if (error) {
+        setCreateErr("❌ " + error.message + " [" + error.code + "]");
+        return;
+      }
+      setCreateErr("");
+      setShowForm(false);
+      setForm({ name:"", description:"", link:"", educator_id:"",
+        duration_days:4, xp_partial:10, xp_full:20, xp_completed:35,
+        coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
+      load();
+    } catch(e) {
+      setCreateErr("❌ Eccezione: " + (e?.message || String(e)));
+    }
   }
 
   async function deleteActivity(id) {
