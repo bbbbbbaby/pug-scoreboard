@@ -705,6 +705,34 @@ const css = `
   .light .bb { border-radius:12px; }
   .light .bav { background:#f0f4ff; border-color:#dde4f8; }
 
+  /* ═══ EDUCATOR NOTIFICATIONS ═══ */
+  .edu-notif-bell { position:relative; cursor:pointer; width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font-size:18px; transition:all .15s; flex-shrink:0; }
+  .edu-notif-bell:hover { background:rgba(255,255,255,.12); }
+  .edu-notif-badge { position:absolute; top:-5px; right:-5px; background:#ff2244; color:#fff; border-radius:99px; font-size:9px; font-weight:900; padding:2px 5px; min-width:16px; text-align:center; line-height:1.3; box-shadow:0 0 6px rgba(255,34,68,.5); }
+  .nav-badge { display:inline-flex; align-items:center; justify-content:center; background:#ff2244; color:#fff; border-radius:99px; font-size:8px; font-weight:900; padding:1px 5px; min-width:14px; margin-left:6px; line-height:1.3; }
+  .edu-notif-panel { position:fixed; top:56px; right:12px; width:300px; background:rgba(10,5,40,.98); border:1px solid rgba(255,255,255,.12); border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.5); z-index:50; overflow:hidden; backdrop-filter:blur(20px); }
+  .edu-notif-header { padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.08); font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; text-transform:uppercase; color:#fff; letter-spacing:.05em; }
+  .edu-notif-item { display:flex; align-items:flex-start; gap:10px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.06); cursor:pointer; transition:background .12s; }
+  .edu-notif-item:hover { background:rgba(255,255,255,.04); }
+  .edu-notif-item:last-child { border-bottom:none; }
+  .edu-notif-icon { font-size:22px; flex-shrink:0; }
+  .edu-notif-text { flex:1; }
+  .edu-notif-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:2px; }
+  .edu-notif-sub { font-size:11px; color:rgba(255,255,255,.45); }
+  .edu-notif-count { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:900; color:#ffcc00; flex-shrink:0; }
+  .edu-notif-empty { padding:20px 16px; text-align:center; color:rgba(255,255,255,.35); font-size:13px; }
+  /* ═══ AVATAR PICKER ═══ */
+  .av-picker-wrap { max-height:340px; overflow-y:auto; scrollbar-width:thin; }
+  .av-picker-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
+  .av-picker-tab { padding:5px 12px; border-radius:99px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:rgba(255,255,255,.45); font-size:11px; font-weight:700; cursor:pointer; transition:all .15s; }
+  .av-picker-tab.on { background:rgba(255,204,0,.15); color:#ffcc00; border-color:rgba(255,204,0,.35); }
+  .av-picker-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:6px; }
+  .av-picker-item { border-radius:10px; padding:5px; text-align:center; cursor:pointer; border:2px solid transparent; background:rgba(255,255,255,.04); transition:all .15s; }
+  .av-picker-item:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.15); }
+  .av-picker-item.sel { border-color:#ffcc00; background:rgba(255,204,0,.1); }
+  .av-picker-item img { width:52px; height:52px; object-fit:contain; display:block; margin:0 auto 3px; }
+  .av-picker-item span { font-size:8px; color:rgba(255,255,255,.45); text-transform:capitalize; line-height:1.2; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .av-picker-item.sel span { color:#ffcc00; }
   /* ═══ PLAYER DASHBOARD — NEW DESIGN ═══ */
   .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; }
   .pd-topbar { position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,0,.85); border-bottom:1px solid rgba(255,255,255,.1); z-index:20; display:flex; align-items:center; padding:0 14px; justify-content:space-between; backdrop-filter:blur(20px); }
@@ -862,6 +890,51 @@ async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = 
   } catch (_) {}
 }
 
+// ─── AVATAR PICKER ───────────────────────────────────────
+
+function AvatarPicker({ selected, onSelect, squadFilter }) {
+  const [manifest, setManifest] = useState(null);
+  const [activeTab, setActiveTab] = useState(squadFilter || "Azzurra");
+
+  useEffect(() => {
+    fetch("/avatars/_manifest.json")
+      .then(r => r.json())
+      .then(data => {
+        setManifest(data);
+        if (squadFilter && data[squadFilter]) setActiveTab(squadFilter);
+      })
+      .catch(() => setManifest(null));
+  }, [squadFilter]);
+
+  if (!manifest) return <div style={{fontSize:13,color:"var(--text3)",padding:"12px 0"}}>⏳ Caricamento avatar…</div>;
+
+  const tabs = Object.keys(manifest).filter(k => k !== "Badge" && k !== "Special");
+
+  return (
+    <div>
+      <div className="av-picker-tabs">
+        {tabs.map(sq => (
+          <button key={sq} className={`av-picker-tab ${activeTab===sq?"on":""}`} onClick={()=>setActiveTab(sq)}>{sq}</button>
+        ))}
+      </div>
+      <div className="av-picker-wrap">
+        <div className="av-picker-grid">
+          {(manifest[activeTab]||[]).map(name => {
+            const url = `/avatars/${name}.webp`;
+            const isSel = selected === url;
+            return (
+              <div key={name} className={`av-picker-item ${isSel?"sel":""}`} onClick={()=>onSelect(isSel ? "" : url)}>
+                <img src={url} alt={name} loading="lazy" onError={e=>{e.target.style.opacity='.3';}}/>
+                <span>{name.replace(/^[agvn]_/,"")}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── LOGIN ────────────────────────────────────────────────
 // Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
 
@@ -1013,7 +1086,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [editPlayer, setEditPlayer] = useState(null);
   const [expandedPlayer, setExpandedPlayer] = useState(null);
   const [showCreatePlayer, setShowCreatePlayer] = useState(false);
-  const [newPlayer, setNewPlayer] = useState({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0 });
+  const [newPlayer, setNewPlayer] = useState({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
   const [createPlayerErr, setCreatePlayerErr] = useState("");
 
   const load = useCallback(async () => {
@@ -1054,7 +1127,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
   }
 
   async function savePlayer(p) {
-    await sb.from("profiles").update({ display_name: p.display_name, squad_id: p.squad_id, xp: p.xp, coin: p.coin, pin: p.pin || "1234" }).eq("id", p.id);
+    await sb.from("profiles").update({ display_name: p.display_name, squad_id: p.squad_id, xp: p.xp, coin: p.coin, pin: p.pin || "1234", avatar_url: p.avatar_url || null }).eq("id", p.id);
     setEditPlayer(null); load();
   }
 
@@ -1086,11 +1159,12 @@ function PlayersView({ sectionColors, setSectionColors }) {
       squad_id: newPlayer.squad_id || null,
       xp: Number(newPlayer.xp) || 0,
       coin: Number(newPlayer.coin) || 0,
+      avatar_url: newPlayer.avatar_url || null,
     };
     const { error } = await sb.from("profiles").insert(payload);
     if (error) { setCreatePlayerErr("Errore: " + error.message); return; }
     setShowCreatePlayer(false);
-    setNewPlayer({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0 });
+    setNewPlayer({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
     setMsg("Giocatore creato! PIN: " + (newPlayer.pin || "1234"));
     setTimeout(() => setMsg(""), 4000);
     load();
@@ -1173,7 +1247,22 @@ function PlayersView({ sectionColors, setSectionColors }) {
             <div className="modal-title">➕ Nuovo giocatore</div>
             <div className="form-group"><label className="form-label">Nickname *</label><input className="form-input" value={newPlayer.display_name} onChange={e=>setNewPlayer(p=>({...p,display_name:e.target.value}))} placeholder="es. FoxTrot99" autoFocus/></div>
             <div className="form-group"><label className="form-label">Nome reale</label><input className="form-input" value={newPlayer.first_name} onChange={e=>setNewPlayer(p=>({...p,first_name:e.target.value}))} placeholder="es. Marco R."/></div>
-            <div className="form-group"><label className="form-label">Squadra</label>
+            <div className="section-label">Avatar pianta</div>
+            {newPlayer.avatar_url && (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
+                <img src={newPlayer.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt="avatar"/>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#ffcc00"}}>{newPlayer.avatar_url.split('/').pop().replace('.webp','')}</div>
+                  <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewPlayer(p=>({...p,avatar_url:""}))}>✕ Rimuovi</button>
+                </div>
+              </div>
+            )}
+            <AvatarPicker
+              selected={newPlayer.avatar_url}
+              onSelect={url=>setNewPlayer(p=>({...p,avatar_url:url}))}
+              squadFilter={squads.find(s=>s.id===newPlayer.squad_id)?.name || "Azzurra"}
+            />
+            <div className="form-group" style={{marginTop:10}}><label className="form-label">Squadra</label>
               <select value={newPlayer.squad_id} onChange={e=>setNewPlayer(p=>({...p,squad_id:e.target.value}))}>
                 <option value="">Nessuna squadra</option>
                 {squads.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
@@ -1198,7 +1287,14 @@ function PlayersView({ sectionColors, setSectionColors }) {
         <div className="modal-bg" onClick={() => setEditPlayer(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Modifica profilo</div>
-            <AvatarUpload playerId={editPlayer.id} currentUrl={editPlayer.avatar_url} onUploaded={url => setEditPlayer(p => ({ ...p, avatar_url: url }))} />
+            {/* Avatar picker - seleziona da predefiniti */}
+            <div className="section-label">Cambia avatar pianta</div>
+            <AvatarPicker
+              selected={editPlayer.avatar_url}
+              onSelect={url => setEditPlayer(p => ({ ...p, avatar_url: url }))}
+              squadFilter={squads.find(s=>s.id===editPlayer.squad_id)?.name || "Azzurra"}
+            />
+            <div style={{height:1,background:"var(--border)",margin:"10px 0"}}/>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={editPlayer.display_name} onChange={e => setEditPlayer(p => ({ ...p, display_name: e.target.value }))} /></div>
             <div className="form-group">
               <label className="form-label">Squadra</label>
@@ -1733,7 +1829,12 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <div className="act-title">{a.name}</div>
               <div className="act-meta">{a.description} · {a.duration_days}g</div>
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
-              {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "var(--azzurro)", display: "block", marginBottom: 6, wordBreak: "break-all" }}>🔗 {a.link}</a>}
+              {a.link && (
+                <a href={a.link} target="_blank" rel="noreferrer"
+                  style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(0,212,255,.06)", border:"1px solid rgba(0,212,255,.18)", borderRadius:8, padding:"4px 10px", marginBottom:8 }}>
+                  🔗 Link / file allegato
+                </a>
+              )}
               <div className="act-rewards" style={{flexWrap:"wrap",gap:6}}>
                 <span className="reward-tag xp-tag">Max {a.xp_completed} XP</span>
                 <span className="reward-tag coin-tag">🪙 {a.coin_cost}</span>
@@ -1925,7 +2026,7 @@ function SfidaView({ sectionColors, setSectionColors }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [customizing, setCustomizing] = useState(false);
-  const [form, setForm] = useState({ title:"", description:"", xp_reward:20, coin_reward:10, expires_at:"" });
+  const [form, setForm] = useState({ title:"", description:"", link:"", xp_reward:20, coin_reward:10, expires_at:"" });
 
   const load = useCallback(async () => {
     const now = new Date().toISOString();
@@ -1954,10 +2055,11 @@ function SfidaView({ sectionColors, setSectionColors }) {
       coin_cost: 0,
       is_active: true,
       expires_at: form.expires_at ? new Date(form.expires_at + "T23:59:59").toISOString() : null,
+      link: form.link.trim() || null,
     };
     await sb.from("activities").insert(payload);
     setShowForm(false);
-    setForm({ title:"", description:"", xp_reward:20, coin_reward:10, expires_at:"" });
+    setForm({ title:"", description:"", link:"", xp_reward:20, coin_reward:10, expires_at:"" });
     load();
   }
 
@@ -1981,7 +2083,7 @@ function SfidaView({ sectionColors, setSectionColors }) {
               <div className="sfida-label">⚡ Sfida attiva</div>
               <div className="sfida-title">{s.name}</div>
               <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:s.link?8:0 }}>
                 <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
                 {s.expires_at && (
                   <span style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700 }}>
@@ -1989,6 +2091,12 @@ function SfidaView({ sectionColors, setSectionColors }) {
                   </span>
                 )}
               </div>
+              {s.link && (
+                <a href={s.link} target="_blank" rel="noreferrer"
+                  style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(0,212,255,.08)", border:"1px solid rgba(0,212,255,.2)", borderRadius:8, padding:"4px 10px" }}>
+                  🔗 Apri link / file
+                </a>
+              )}
             </div>
           ))}
           {sfide.length === 0 && <div className="empty">Nessuna sfida attiva.</div>}
@@ -2003,6 +2111,11 @@ function SfidaView({ sectionColors, setSectionColors }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div className="form-group"><label className="form-label">XP premio</label><input className="form-input" type="number" value={form.xp_reward} onChange={e => setForm(f => ({ ...f, xp_reward: e.target.value }))} /></div>
               <div className="form-group"><label className="form-label">Coin premio</label><input className="form-input" type="number" value={form.coin_reward} onChange={e => setForm(f => ({ ...f, coin_reward: e.target.value }))} /></div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Link o file (opzionale)</label>
+              <input className="form-input" type="url" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https:// oppure link Google Drive, PDF…"/>
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Puoi incollare un link a un sito, Google Drive, Dropbox, PDF online…</div>
             </div>
             <div className="form-group">
               <label className="form-label">Data scadenza (opzionale)</label>
@@ -2780,7 +2893,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'#ffcc00',marginBottom:4}}>⚡ Sfida del Giorno</div>
                 <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:7}}>{s.name}</div>
                 <div style={{fontSize:12,color:'rgba(255,255,255,.5)',marginBottom:10,lineHeight:1.5}}>{s.description?.replace('SFIDA · ','')}</div>
-                <div style={{display:'inline-flex',alignItems:'center',gap:5,background:'rgba(255,220,0,.14)',border:'1px solid rgba(255,220,0,.35)',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:900,color:'#ffcc00'}}>🌟 +{s.xp_completed} XP · +{s.coin_completed} Coin</div>
+                <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                  <div style={{display:'inline-flex',alignItems:'center',gap:5,background:'rgba(255,220,0,.14)',border:'1px solid rgba(255,220,0,.35)',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:900,color:'#ffcc00'}}>🌟 +{s.xp_completed} XP · +{s.coin_completed} Coin</div>
+                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:'#00d4ff',fontWeight:700,textDecoration:'none',background:'rgba(0,212,255,.1)',border:'1px solid rgba(0,212,255,.25)',borderRadius:8,padding:'4px 10px'}}>🔗 Apri</a>}
+                </div>
               </div>
             ))}
 
@@ -2866,7 +2982,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="sfida-label">⚡ Sfida del giorno</div>
                 <div className="sfida-title">{s.name}</div>
                 <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-                <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
+                  <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,color:"var(--azzurro)",fontWeight:700,textDecoration:"none",background:"rgba(0,212,255,.1)",border:"1px solid rgba(0,212,255,.25)",borderRadius:8,padding:"4px 10px"}}>🔗 Apri link</a>}
+                </div>
               </div>
             ))}
             {activities.filter(a => !a.description?.includes("SFIDA")).map(a => {
@@ -3023,6 +3142,28 @@ function EducatorShell({ profile, onLogout }) {
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
   const [theme, setTheme] = useState("dark");
   const [sectionColors, setSectionColors] = useState(DEFAULT_SECTION_COLORS);
+  const [notifCounts, setNotifCounts] = useState({ pendingBookings:0, missingAttendance:0, total:0 });
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+
+  // Load educator notification counts
+  const loadNotifCounts = useCallback(async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const [{ data: pending }, { data: allPlayers }, { data: todayAtt }] = await Promise.all([
+      sb.from("bookings").select("id").eq("status","pending"),
+      sb.from("profiles").select("id").eq("role","player"),
+      sb.from("attendances").select("player_id").eq("date", today),
+    ]);
+    const markedIds = new Set((todayAtt||[]).map(a => a.player_id));
+    const missing = (allPlayers||[]).filter(p => !markedIds.has(p.id)).length;
+    const pBook = (pending||[]).length;
+    setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, total: pBook + (missing > 0 ? 1 : 0) });
+  }, []);
+
+  useEffect(() => {
+    loadNotifCounts();
+    const interval = setInterval(loadNotifCounts, 60000); // refresh every minute
+    return () => clearInterval(interval);
+  }, [loadNotifCounts]);
 
   const cur = EDUCATOR_TABS.find(t => t[0] === tab);
   const lv = getLevel(profile.xp || 0);
@@ -3052,7 +3193,10 @@ function EducatorShell({ profile, onLogout }) {
         <nav className="nav">
           {EDUCATOR_TABS.map(([id, icon, label]) => (
             <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
-              <span className="nav-icon">{icon}</span><span>{label}</span>
+              <span className="nav-icon">{icon}</span>
+              <span style={{flex:1}}>{label}</span>
+              {id === "prenotazioni" && notifCounts.pendingBookings > 0 && <span className="nav-badge">{notifCounts.pendingBookings}</span>}
+              {id === "presenze" && notifCounts.missingAttendance > 0 && <span className="nav-badge">{notifCounts.missingAttendance}</span>}
             </div>
           ))}
         </nav>
@@ -3105,7 +3249,10 @@ function EducatorShell({ profile, onLogout }) {
         <nav style={{flex:1,padding:"8px 0",overflowY:"auto"}}>
           {EDUCATOR_TABS.map(([id, icon, label]) => (
             <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => { setTab(id); setDrawerOpen(false); }}>
-              <span className="nav-icon">{icon}</span><span>{label}</span>
+              <span className="nav-icon">{icon}</span>
+              <span style={{flex:1}}>{label}</span>
+              {id === "prenotazioni" && notifCounts.pendingBookings > 0 && <span className="nav-badge">{notifCounts.pendingBookings}</span>}
+              {id === "presenze" && notifCounts.missingAttendance > 0 && <span className="nav-badge">{notifCounts.missingAttendance}</span>}
             </div>
           ))}
         </nav>
@@ -3116,13 +3263,51 @@ function EducatorShell({ profile, onLogout }) {
 
       {/* Main */}
       <div className="edu-main">
-        <div className="topbar" style={{borderBottom:`1px solid ${["giocatori","classifica","squadre","presenze","attivita","sfida","badge","streak","prenotazioni","messaggi","diario","qr"].indexOf(tab) >= 0 ? EduTabColors[tab]?.border||"rgba(255,255,255,.08)" : "rgba(255,255,255,.08)"}`}}>
+        <div className="topbar" style={{borderBottom:`1px solid ${EduTabColors[tab]?.border||"rgba(255,255,255,.08)"}`}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:6,height:28,borderRadius:3,background:EduTabColors[tab]?.accent||"rgba(255,255,255,.2)",flexShrink:0}}/>
             <div className="topbar-title">{cur?.[1]} {cur?.[2]}</div>
           </div>
-          <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
+            <div className="edu-notif-bell" onClick={()=>setShowNotifPanel(p=>!p)}>
+              🔔
+              {notifCounts.total > 0 && <div className="edu-notif-badge">{notifCounts.total}</div>}
+            </div>
+          </div>
         </div>
+        {/* Notification panel */}
+        {showNotifPanel && (
+          <div className="edu-notif-panel">
+            <div className="edu-notif-header">🔔 Promemoria</div>
+            {notifCounts.pendingBookings > 0 && (
+              <div className="edu-notif-item" onClick={()=>{ setTab("prenotazioni"); setShowNotifPanel(false); loadNotifCounts(); }}>
+                <div className="edu-notif-icon">📋</div>
+                <div className="edu-notif-text">
+                  <div className="edu-notif-title">Prenotazioni in attesa</div>
+                  <div className="edu-notif-sub">Clicca per confermare o rifiutare</div>
+                </div>
+                <div className="edu-notif-count">{notifCounts.pendingBookings}</div>
+              </div>
+            )}
+            {notifCounts.missingAttendance > 0 && (
+              <div className="edu-notif-item" onClick={()=>{ setTab("presenze"); setShowNotifPanel(false); }}>
+                <div className="edu-notif-icon">✅</div>
+                <div className="edu-notif-text">
+                  <div className="edu-notif-title">Presenze da segnare oggi</div>
+                  <div className="edu-notif-sub">{notifCounts.missingAttendance} giocatori senza presenza</div>
+                </div>
+                <div className="edu-notif-count">{notifCounts.missingAttendance}</div>
+              </div>
+            )}
+            {notifCounts.total === 0 && (
+              <div className="edu-notif-empty">✨ Tutto in ordine!</div>
+            )}
+            <div style={{padding:"8px 16px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
+              <button className="btn btn-ghost btn-xs" style={{width:"100%",fontSize:10}} onClick={()=>{loadNotifCounts();setShowNotifPanel(false);}}>Aggiorna</button>
+            </div>
+          </div>
+        )}
         <div className="content edu-content-wrap" style={{background:EduTabColors[tab]?.bg||"transparent"}}>
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
