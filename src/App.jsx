@@ -1521,21 +1521,23 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             {saveMsg && <div style={{color:"var(--verde)",fontWeight:700,fontSize:13,marginBottom:8}}>{saveMsg}</div>}
             <button className="btn btn-primary" onClick={saveEdits}>Salva modifiche</button>
             <div style={{height:1,background:"var(--border)",margin:"12px 0"}}/>
-            <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar pianta</div>
-            {editing.avatar_url ? (
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px 10px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
-                <img src={editing.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt=""/>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:12,fontWeight:700,color:"#ffcc00"}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
-                  <button className="btn btn-danger btn-xs" style={{marginTop:4}} onClick={()=>setEditing(p=>({...p,avatar_url:""}))}>✕ Rimuovi</button>
-                </div>
+            <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar</div>
+            {editing.avatar_url && (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,255,255,.04)",borderRadius:10}}>
+                <img src={editing.avatar_url} style={{width:44,height:44,objectFit:"contain"}} alt=""/>
+                <div style={{fontSize:12,color:"var(--text2)",flex:1}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
               </div>
-            ) : (
-              <div style={{fontSize:12,color:"var(--text3)",marginBottom:8}}>Nessun avatar assegnato</div>
             )}
-            <AvatarPicker selected={editing.avatar_url} onSelect={url=>setEditing(p=>({...p,avatar_url:url}))} squadFilter={squads.find(s=>s.id===editing.squad_id)?.name||"Azzurra"}/>
-            <div style={{marginTop:8}}>
-              <button className="btn btn-primary" onClick={saveEdits}>Salva avatar</button>
+            <div className="form-group">
+              <label className="form-label">URL avatar (es: /avatars/galeopsis.webp)</label>
+              <input className="form-input" value={editing.avatar_url||""} onChange={e=>setEditing(p=>({...p,avatar_url:e.target.value}))} placeholder="/avatars/nomepianta.webp"/>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:4}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={saveEdits}>Salva</button>
+              <button className="btn btn-danger btn-sm" onClick={async()=>{
+                const {error} = await sb.from("profiles").update({avatar_url:null}).eq("id",playerId);
+                if(!error){setSaveMsg("Avatar rimosso ✅");setEditing(p=>({...p,avatar_url:""}));setTimeout(()=>setSaveMsg(""),2500);}
+              }}>🗑️ Reset</button>
             </div>
           </div>
         )}
@@ -1831,6 +1833,40 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   );
 }
 
+function LabQRButton({ actId, actName }) {
+  const [code, setCode] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [show, setShow] = useState(false);
+
+  async function generate() {
+    setLoading(true);
+    const today = new Date().toISOString().split("T")[0];
+    // Check if exists
+    const { data: existing } = await sb.from("lab_qr").select("code").eq("activity_id", actId).eq("date", today).single();
+    if (existing?.code) { setCode(existing.code); setShow(true); setLoading(false); return; }
+    // Create new
+    const newCode = Math.random().toString(36).substring(2,8).toUpperCase();
+    const { data } = await sb.from("lab_qr").insert({ activity_id: actId, date: today, code: newCode }).select("code").single();
+    setCode(data?.code || newCode); setShow(true); setLoading(false);
+  }
+
+  return (
+    <div style={{marginTop:8}}>
+      <button className="btn btn-ghost btn-xs" onClick={show ? ()=>setShow(false) : generate} style={{fontSize:11,width:"100%"}}>
+        {loading ? "⏳ Generazione…" : show ? "▲ Nascondi QR Lab" : "📍 Genera / Mostra QR Lab oggi"}
+      </button>
+      {show && code && (
+        <div style={{marginTop:8,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(0,212,255,.2)"}}>
+          <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".08em"}}>QR Lab · {actName} · {new Date().toLocaleDateString("it-IT")}</div>
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${code}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={code} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8}}>{code}</div>
+          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo oggi — codice diverso dal check-in giornaliero</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ActivitiesView({ sectionColors, setSectionColors }) {
   const [activities, setActivities] = useState([]);
   const [educators, setEducators] = useState([]);
@@ -1846,9 +1882,8 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       sb.from("profiles").select("id,display_name").eq("role","educator").order("display_name"),
     ]);
     const acts = data || [];
-    setActivities(acts);
-    setEducators(edu || []);
-    loadLabQRs(acts);
+    setActivities(acts); setEducators(edu || []);
+
     if (acts.length > 0) {
       const { data: bk } = await sb.from("bookings")
         .select("activity_id,status")
@@ -1864,30 +1899,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   useEffect(() => { load(); }, [load]);
 
   const [createErr, setCreateErr] = useState("");
-  const [labQRs, setLabQRs] = useState({});
-  const [showLabQR, setShowLabQR] = useState(null);
 
-  async function generateLabQR(actId) {
-    const today = new Date().toISOString().split("T")[0];
-    const code = Math.random().toString(36).substring(2,8).toUpperCase();
-    const { data, error } = await sb.from("lab_qr").upsert(
-      { activity_id: actId, date: today, code },
-      { onConflict: "activity_id,date" }
-    ).select().single();
-    if (!error && data) {
-      setLabQRs(prev => ({ ...prev, [actId]: data.code }));
-      setShowLabQR(actId);
-    }
-  }
-
-  async function loadLabQRs(acts) {
-    if (!acts?.length) return;
-    const today = new Date().toISOString().split("T")[0];
-    const { data } = await sb.from("lab_qr").select("activity_id,code").eq("date", today).in("activity_id", acts.map(a=>a.id));
-    const map = {};
-    (data||[]).forEach(r => { map[r.activity_id] = r.code; });
-    setLabQRs(map);
-  }
 
   async function createActivity() {
     const name = (form.name || "").trim();
@@ -1947,19 +1959,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
               {a.schedule && <div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
-              <div style={{marginTop:8,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                <button className="btn btn-ghost btn-xs" onClick={()=>{generateLabQR(a.id);}} style={{fontSize:11}}>
-                  📍 {labQRs[a.id] ? "QR Oggi: " + labQRs[a.id] : "Genera QR Lab"}
-                </button>
-                {labQRs[a.id] && <button className="btn btn-ghost btn-xs" onClick={()=>setShowLabQR(showLabQR===a.id?null:a.id)}>👁️</button>}
-              </div>
-              {showLabQR===a.id && labQRs[a.id] && (
-                <div style={{marginTop:8,background:"rgba(0,0,0,.4)",borderRadius:10,padding:"10px",textAlign:"center"}}>
-                  <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${labQRs[a.id]}&size=160x160&bgcolor=ffffff&color=000000&qzone=1`} alt={labQRs[a.id]} style={{width:160,height:160,borderRadius:8,display:"block",margin:"0 auto 6px"}}/>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,color:"var(--neon-blue)",letterSpacing:6}}>{labQRs[a.id]}</div>
-                  <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>Valido solo oggi · {new Date().toLocaleDateString("it-IT")}</div>
-                </div>
-              )}
+              <LabQRButton actId={a.id} actName={a.name}/>
               {a.link && (
                 <a href={a.link} target="_blank" rel="noreferrer"
                   style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(0,212,255,.06)", border:"1px solid rgba(0,212,255,.18)", borderRadius:8, padding:"4px 10px", marginBottom:8 }}>
@@ -3148,6 +3148,20 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {tab === "attivita" && (
           <div style={{ marginTop: 8 }}>
             <div className="pd-tab-title" style={{color:"#00ff88"}}>⚡ Lab</div>
+            {/* Lab QR check-in */}
+            <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(0,255,136,.2)",borderRadius:14,padding:12,marginBottom:12,position:"relative",zIndex:2}}>
+              <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"var(--neon-green)",marginBottom:8}}>📍 Check-in Lab — scansiona il QR della sessione</div>
+              {showCamera ? (
+                <QRScanner onScan={code=>{setShowCamera(false);doCheckin(code);}} onClose={()=>setShowCamera(false)}/>
+              ) : (
+                <div style={{display:"flex",gap:8}}>
+                  <input className="form-input" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="Codice Lab" style={{flex:1,textAlign:"center",fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,letterSpacing:5}} maxLength={6}/>
+                  <button className="btn btn-primary" style={{flexShrink:0}} onClick={()=>doCheckin()}>✓</button>
+                  <button className="btn btn-ghost btn-sm" style={{flexShrink:0,fontSize:18}} onClick={()=>setShowCamera(true)}>📷</button>
+                </div>
+              )}
+              {qrMsg && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:qrMsg.includes("✅")?"var(--verde)":"var(--danger)",textAlign:"center"}}>{qrMsg}</div>}
+            </div>
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
               <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
                 <div className="sfida-label">⚡ Sfida del giorno</div>
