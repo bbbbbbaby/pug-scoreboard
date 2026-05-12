@@ -3360,7 +3360,7 @@ function DashboardView() {
         { data: labs },
         { data: badges },
       ] = await Promise.all([
-        sb.from("profiles").select("id,xp,coin,squad_id,squads(name)").eq("role","player"),
+        sb.from("profiles").select("id,display_name,xp,coin,squad_id,squads(name)").eq("role","player"),
         sb.from("attendances").select("player_id,status,xp_awarded").eq("date", today).neq("status","none"),
         sb.from("attendances").select("date,xp_awarded,player_id").gte("date", weekAgo).neq("status","none"),
         sb.from("bookings").select("status,created_at").gte("created_at", monthStart),
