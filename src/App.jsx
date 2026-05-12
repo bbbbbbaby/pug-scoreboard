@@ -1667,39 +1667,28 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   async function createActivity() {
     setCreateErr("");
     if (!form.name.trim()) { setCreateErr("Nome obbligatorio"); return; }
-    try {
-      // Test con insert minimale
-      const minPayload = { name: form.name.trim() || "Lab", is_active: true };
-      const { data: testAct, error: testErr } = await sb.from("activities").insert(minPayload).select("id").single();
-      if (testErr) {
-        setCreateErr("Errore DB: " + testErr.message + " | Code: " + testErr.code);
-        return;
-      }
-      // Update con tutti i campi
-      if (testAct?.id) {
-        const full = {
-          description: form.description.trim() || "",
-          duration_days: Number(form.duration_days) || 1,
-          xp_partial: Number(form.xp_partial) || 0,
-          xp_full: Number(form.xp_full) || 0,
-          xp_completed: Number(form.xp_completed) || 0,
-          coin_cost: Number(form.coin_cost) || 0,
-          max_participants: form.max_participants ? Number(form.max_participants) : null,
-        };
-        try { full.coin_partial = Number(form.coin_partial) || 0; } catch(_) {}
-        try { full.coin_full = Number(form.coin_full) || 0; } catch(_) {}
-        try { full.coin_completed = Number(form.coin_completed) || 0; } catch(_) {}
-        if (form.educator_id) try { full.educator_id = form.educator_id; } catch(_) {}
-        if (form.link.trim()) try { full.link = form.link.trim(); } catch(_) {}
-        const { error: updErr } = await sb.from("activities").update(full).eq("id", testAct.id);
-        if (updErr) console.warn("Update parziale fallito:", updErr.message);
-      }
-      setShowForm(false);
-      setForm({ name:"", description:"", link:"", educator_id:"", duration_days:4, xp_partial:10, xp_full:20, xp_completed:35, coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
-      load();
-    } catch(e) {
-      setCreateErr("Errore: " + (e?.message || JSON.stringify(e)));
-    }
+    const { data: { user } } = await sb.auth.getUser();
+    const { data: newAct, error: insertErr } = await sb.from("activities").insert({
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      duration_days: Number(form.duration_days) || 1,
+      xp_partial: Number(form.xp_partial) || 0,
+      xp_full: Number(form.xp_full) || 0,
+      xp_completed: Number(form.xp_completed) || 0,
+      coin_partial: Number(form.coin_partial) || 0,
+      coin_full: Number(form.coin_full) || 0,
+      coin_completed: Number(form.coin_completed) || 0,
+      coin_cost: Number(form.coin_cost) || 0,
+      max_participants: form.max_participants ? Number(form.max_participants) : null,
+      educator_id: form.educator_id || null,
+      link: form.link.trim() || null,
+      created_by: user?.id || null,
+      is_active: true,
+    }).select("id").single();
+    if (insertErr) { setCreateErr("Errore: " + insertErr.message + " (code: " + insertErr.code + ")"); return; }
+    setShowForm(false);
+    setForm({ name:"", description:"", link:"", educator_id:"", duration_days:4, xp_partial:10, xp_full:20, xp_completed:35, coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
+    load();
   }
 
   async function deleteActivity(id) {
@@ -2428,7 +2417,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }] = await Promise.all([
       sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,longest_streak,last_checkin_date,squads(name)").eq("id", profile.id).single(),
       sb.from("player_badges").select("id,assigned_at,xp_awarded,coin_awarded,badges(name,image_url,xp_default,description,link)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
-      sb.from("activities").select("id,name,description,link,duration_days,xp_completed,coin_completed,coin_cost,is_active,expires_at,profiles(display_name)").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,profiles(display_name)").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
       sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").order("xp", { ascending: false }),
