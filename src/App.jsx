@@ -733,6 +733,18 @@ const css = `
   .av-picker-item img { width:52px; height:52px; object-fit:contain; display:block; margin:0 auto 3px; }
   .av-picker-item span { font-size:8px; color:rgba(255,255,255,.45); text-transform:capitalize; line-height:1.2; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .av-picker-item.sel span { color:#ffcc00; }
+  /* ═══ QR SCANNER ═══ */
+  .qr-scanner-wrap { position:relative; width:100%; max-width:320px; margin:0 auto; }
+  .qr-scanner-video { width:100%; border-radius:14px; display:block; background:#000; }
+  .qr-scanner-overlay { position:absolute; inset:0; border-radius:14px; pointer-events:none; }
+  .qr-scanner-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:200px; height:200px; }
+  .qr-scanner-frame::before,.qr-scanner-frame::after { content:''; position:absolute; width:40px; height:40px; border-color:#ffcc00; border-style:solid; }
+  .qr-scanner-frame::before { top:0; left:0; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+  .qr-scanner-frame::after  { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+  .qr-scanner-corner-tr { position:absolute; top:0; right:0; width:40px; height:40px; border-top:3px solid #ffcc00; border-right:3px solid #ffcc00; border-radius:0 4px 0 0; }
+  .qr-scanner-corner-bl { position:absolute; bottom:0; left:0; width:40px; height:40px; border-bottom:3px solid #ffcc00; border-left:3px solid #ffcc00; border-radius:0 0 0 4px; }
+  .qr-scanner-line { position:absolute; left:10%; right:10%; height:2px; background:linear-gradient(90deg,transparent,#ffcc00,transparent); animation:scan-line 2s linear infinite; }
+  @keyframes scan-line { 0%{top:10%} 100%{top:90%} }
   /* ═══ PLAYER DASHBOARD — NEW DESIGN ═══ */
   .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; }
   .pd-topbar { position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,0,.85); border-bottom:1px solid rgba(255,255,255,.1); z-index:20; display:flex; align-items:center; padding:0 14px; justify-content:space-between; backdrop-filter:blur(20px); }
@@ -888,6 +900,68 @@ async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = 
       body: [xpDelta ? `+${xpDelta} XP` : "", coinDelta ? `+${coinDelta} Coin` : "", note].filter(Boolean).join(" · "),
     });
   } catch (_) {}
+}
+
+// ─── QR SCANNER COMPONENT ────────────────────────────────
+
+function QRScanner({ onScan, onClose }) {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [err, setErr] = useState(null);
+  const [scanning, setScanning] = useState(true);
+  const streamRef = useRef(null);
+  const frameRef = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    async function start() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        streamRef.current = stream;
+        if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+        tick();
+      } catch(e) { setErr("Camera non disponibile. " + (e.message || "")); }
+    }
+    function tick() {
+      if (!active) return;
+      const video = videoRef.current; const canvas = canvasRef.current;
+      if (video && canvas && video.readyState === 4) {
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d"); ctx.drawImage(video, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        if (window.jsQR) {
+          const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts:"dontInvert" });
+          if (code?.data) { active = false; setScanning(false); onScan(code.data.toUpperCase()); return; }
+        }
+      }
+      frameRef.current = requestAnimationFrame(tick);
+    }
+    start();
+    return () => { active = false; if (frameRef.current) cancelAnimationFrame(frameRef.current); if (streamRef.current) streamRef.current.getTracks().forEach(t=>t.stop()); };
+  }, [onScan]);
+
+  return (
+    <div style={{padding:"0 0 12px"}}>
+      {err ? (
+        <div style={{color:"#ff4466",fontSize:13,padding:"12px",textAlign:"center",background:"rgba(255,34,68,.08)",borderRadius:10}}>{err}</div>
+      ) : (
+        <div className="qr-scanner-wrap">
+          <video ref={videoRef} className="qr-scanner-video" playsInline muted/>
+          <canvas ref={canvasRef} style={{display:"none"}}/>
+          <div className="qr-scanner-overlay">
+            <div className="qr-scanner-frame">
+              <div className="qr-scanner-corner-tr"/>
+              <div className="qr-scanner-corner-bl"/>
+              <div className="qr-scanner-line"/>
+            </div>
+          </div>
+        </div>
+      )}
+      {!window.jsQR && !err && <div style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:8}}>Caricamento libreria QR…</div>}
+      {scanning && !err && <div style={{fontSize:12,color:"rgba(255,255,255,.5)",textAlign:"center",marginTop:10}}>🔍 Punta la camera al codice QR</div>}
+      <button className="btn btn-ghost btn-sm" style={{width:"100%",marginTop:10}} onClick={onClose}>Annulla</button>
+    </div>
+  );
 }
 
 // ─── AVATAR PICKER ───────────────────────────────────────
@@ -1446,6 +1520,20 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             </div>
             {saveMsg && <div style={{color:"var(--verde)",fontWeight:700,fontSize:13,marginBottom:8}}>{saveMsg}</div>}
             <button className="btn btn-primary" onClick={saveEdits}>Salva modifiche</button>
+            <div style={{height:1,background:"var(--border)",margin:"12px 0"}}/>
+            <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar</div>
+            {editing.avatar_url && (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                <img src={editing.avatar_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt=""/>
+                <div style={{fontSize:12,color:"var(--text2)"}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
+              </div>
+            )}
+            <button className="btn btn-danger btn-sm" style={{width:"100%"}} onClick={async()=>{
+              await sb.from("profiles").update({avatar_url:null}).eq("id",playerId);
+              setSaveMsg("Avatar rimosso ✅");
+              setEditing(p=>({...p,avatar_url:null}));
+              setTimeout(()=>setSaveMsg(""),2000);
+            }}>🗑️ Reset avatar</button>
           </div>
         )}
       </div>
@@ -1757,6 +1845,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
     const acts = data || [];
     setActivities(acts);
     setEducators(edu || []);
+    loadLabQRs(acts);
     if (acts.length > 0) {
       const { data: bk } = await sb.from("bookings")
         .select("activity_id,status")
@@ -1772,6 +1861,30 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   useEffect(() => { load(); }, [load]);
 
   const [createErr, setCreateErr] = useState("");
+  const [labQRs, setLabQRs] = useState({});
+  const [showLabQR, setShowLabQR] = useState(null);
+
+  async function generateLabQR(actId) {
+    const today = new Date().toISOString().split("T")[0];
+    const code = Math.random().toString(36).substring(2,8).toUpperCase();
+    const { data, error } = await sb.from("lab_qr").upsert(
+      { activity_id: actId, date: today, code },
+      { onConflict: "activity_id,date" }
+    ).select().single();
+    if (!error && data) {
+      setLabQRs(prev => ({ ...prev, [actId]: data.code }));
+      setShowLabQR(actId);
+    }
+  }
+
+  async function loadLabQRs(acts) {
+    if (!acts?.length) return;
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await sb.from("lab_qr").select("activity_id,code").eq("date", today).in("activity_id", acts.map(a=>a.id));
+    const map = {};
+    (data||[]).forEach(r => { map[r.activity_id] = r.code; });
+    setLabQRs(map);
+  }
 
   async function createActivity() {
     const name = (form.name || "").trim();
@@ -1829,6 +1942,19 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <div className="act-title">{a.name}</div>
               <div className="act-meta">{a.description} · {a.duration_days}g</div>
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
+              <div style={{marginTop:8,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                <button className="btn btn-ghost btn-xs" onClick={()=>{generateLabQR(a.id);}} style={{fontSize:11}}>
+                  📍 {labQRs[a.id] ? "QR Oggi: " + labQRs[a.id] : "Genera QR Lab"}
+                </button>
+                {labQRs[a.id] && <button className="btn btn-ghost btn-xs" onClick={()=>setShowLabQR(showLabQR===a.id?null:a.id)}>👁️</button>}
+              </div>
+              {showLabQR===a.id && labQRs[a.id] && (
+                <div style={{marginTop:8,background:"rgba(0,0,0,.4)",borderRadius:10,padding:"10px",textAlign:"center"}}>
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${labQRs[a.id]}&size=160x160&bgcolor=ffffff&color=000000&qzone=1`} alt={labQRs[a.id]} style={{width:160,height:160,borderRadius:8,display:"block",margin:"0 auto 6px"}}/>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,color:"var(--neon-blue)",letterSpacing:6}}>{labQRs[a.id]}</div>
+                  <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>Valido solo oggi · {new Date().toLocaleDateString("it-IT")}</div>
+                </div>
+              )}
               {a.link && (
                 <a href={a.link} target="_blank" rel="noreferrer"
                   style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(0,212,255,.06)", border:"1px solid rgba(0,212,255,.18)", borderRadius:8, padding:"4px 10px", marginBottom:8 }}>
@@ -2547,6 +2673,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [xpMonth, setXpMonth] = useState({});
   const [qrInput, setQrInput] = useState("");
   const [qrMsg, setQrMsg] = useState("");
+  const [showCamera, setShowCamera] = useState(false);
   const [monthPresences, setMonthPresences] = useState(null);
   const [monthTarget, setMonthTarget] = useState(null);
   const [actBookingCounts, setActBookingCounts] = useState({});
@@ -2652,11 +2779,36 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     setFullProfile(prev => ({ ...prev, xp: prev.xp + config.xp_reward, coin: prev.coin + config.coin_reward }));
   }
 
-  async function doCheckin() {
+  async function doCheckin(codeOverride) {
     const today = new Date().toISOString().split("T")[0];
+    const code = (codeOverride || qrInput).toUpperCase();
+    if (!code) { setQrMsg("Inserisci o scansiona un codice."); return; }
+    if (codeOverride) setQrInput(codeOverride);
+
+    // Controlla prima se è un codice Lab
+    const { data: labQr } = await sb.from("lab_qr")
+      .select("*, activities(id,name,xp_full,coin_full)")
+      .eq("date", today).eq("code", code).single();
+    if (labQr?.activities) {
+      const act = labQr.activities;
+      const { error: labErr } = await sb.from("attendances").insert({
+        player_id: profile.id, date: today, check_type: "lab",
+        status: "full", xp_awarded: act.xp_full || 20,
+        coin_awarded: act.coin_full || 10, qr_verified: true, activity_id: act.id,
+      });
+      if (labErr?.code === "23505") { setQrMsg("Hai già fatto il check-in per questo Lab oggi!"); return; }
+      const newXp = (fullProfile?.xp||0) + (act.xp_full||20);
+      const newCoin = (fullProfile?.coin||0) + (act.coin_full||10);
+      await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", profile.id);
+      setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin }));
+      setQrInput(""); setQrMsg(`✅ Check-in Lab "${act.name}"! +${act.xp_full||20} XP +${act.coin_full||10} 🪙`);
+      return;
+    }
+
+    // Controlla check-in giornaliero
     const { data: qr } = await sb.from("daily_qr").select("*").eq("date", today).single();
     if (!qr) { setQrMsg("Nessun QR attivo oggi."); return; }
-    if (qrInput.toUpperCase() !== qr.code) { setQrMsg("❌ Codice non valido."); return; }
+    if (code !== qr.code) { setQrMsg("❌ Codice non valido."); return; }
     const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: 10, coin_awarded: 5, qr_verified: true });
     if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
     // Calcola streak
@@ -2917,9 +3069,18 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
             {/* Check-in */}
             <div className="pd-checkin">
-              <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'var(--neon-green)',marginBottom:8}}>📍 Check-in giornaliero</div>
-              <input className="form-input" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{textAlign:'center',fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,letterSpacing:8,marginBottom:10}} maxLength={6}/>
-              <button className="btn btn-primary" onClick={doCheckin}>Conferma presenza · +10 XP +5 🪙</button>
+              <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'var(--neon-green)',marginBottom:8}}>📍 Check-in · Giornaliero o Lab</div>
+              {showCamera ? (
+                <QRScanner onScan={code=>{setShowCamera(false);doCheckin(code);}} onClose={()=>setShowCamera(false)}/>
+              ) : (
+                <>
+                  <input className="form-input" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{textAlign:'center',fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,letterSpacing:8,marginBottom:8}} maxLength={6}/>
+                  <div style={{display:'flex',gap:8,marginBottom:0}}>
+                    <button className="btn btn-primary" style={{flex:1}} onClick={()=>doCheckin()}>✓ Conferma</button>
+                    <button className="btn btn-ghost btn-sm" style={{flexShrink:0,fontSize:18}} onClick={()=>setShowCamera(true)} title="Scansiona con camera">📷</button>
+                  </div>
+                </>
+              )}
               {qrMsg&&<div style={{marginTop:10,fontSize:14,fontWeight:700,color:qrMsg.includes('✅')?'var(--verde)':'var(--danger)',textAlign:'center'}}>{qrMsg}</div>}
             </div>
 
