@@ -1407,14 +1407,14 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
       sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(40),
     ]);
     setData({ profile: p, badges: badges || [], attendances: att || [], history: notifs || [] });
-    if (p) setEditing({ xp: p.xp, coin: p.coin, pin: p.pin || "1234", display_name: p.display_name, squad_id: p.squad_id });
+    if (p) setEditing({ xp: p.xp, coin: p.coin, pin: p.pin || "1234", display_name: p.display_name, squad_id: p.squad_id, avatar_url: p.avatar_url || "" });
   }, [playerId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   async function saveEdits() {
     if (!editing) return;
-    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null }).eq("id", playerId);
+    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null, avatar_url: editing.avatar_url || null }).eq("id", playerId);
     setSaveMsg("Salvato ✅"); setTimeout(() => setSaveMsg(""), 2000);
     loadData();
   }
@@ -1521,19 +1521,22 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             {saveMsg && <div style={{color:"var(--verde)",fontWeight:700,fontSize:13,marginBottom:8}}>{saveMsg}</div>}
             <button className="btn btn-primary" onClick={saveEdits}>Salva modifiche</button>
             <div style={{height:1,background:"var(--border)",margin:"12px 0"}}/>
-            <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar</div>
-            {editing.avatar_url && (
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                <img src={editing.avatar_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt=""/>
-                <div style={{fontSize:12,color:"var(--text2)"}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
+            <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar pianta</div>
+            {editing.avatar_url ? (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px 10px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
+                <img src={editing.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt=""/>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#ffcc00"}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
+                  <button className="btn btn-danger btn-xs" style={{marginTop:4}} onClick={()=>setEditing(p=>({...p,avatar_url:""}))}>✕ Rimuovi</button>
+                </div>
               </div>
+            ) : (
+              <div style={{fontSize:12,color:"var(--text3)",marginBottom:8}}>Nessun avatar assegnato</div>
             )}
-            <button className="btn btn-danger btn-sm" style={{width:"100%"}} onClick={async()=>{
-              await sb.from("profiles").update({avatar_url:null}).eq("id",playerId);
-              setSaveMsg("Avatar rimosso ✅");
-              setEditing(p=>({...p,avatar_url:null}));
-              setTimeout(()=>setSaveMsg(""),2000);
-            }}>🗑️ Reset avatar</button>
+            <AvatarPicker selected={editing.avatar_url} onSelect={url=>setEditing(p=>({...p,avatar_url:url}))} squadFilter={squads.find(s=>s.id===editing.squad_id)?.name||"Azzurra"}/>
+            <div style={{marginTop:8}}>
+              <button className="btn btn-primary" onClick={saveEdits}>Salva avatar</button>
+            </div>
           </div>
         )}
       </div>
@@ -1839,7 +1842,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
 
   const load = useCallback(async () => {
     const [{ data }, { data: edu }] = await Promise.all([
-      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("activities").select("id,name,description,link,schedule,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("profiles").select("id,display_name").eq("role","educator").order("display_name"),
     ]);
     const acts = data || [];
@@ -1894,6 +1897,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       const { error } = await sb.from("activities").insert({
         name,
         description: (form.description || "").trim() || null,
+        schedule: (form.schedule || "").trim() || null,
         duration_days: Number(form.duration_days) || 1,
         xp_partial:    Number(form.xp_partial)    || 0,
         xp_full:       Number(form.xp_full)       || 0,
@@ -1940,7 +1944,8 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
             <div key={a.id} className="act-card">
               <button className="delete-btn" onClick={() => deleteActivity(a.id)}>✕</button>
               <div className="act-title">{a.name}</div>
-              <div className="act-meta">{a.description} · {a.duration_days}g</div>
+              <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
+              {a.schedule && <div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
               <div style={{marginTop:8,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
                 <button className="btn btn-ghost btn-xs" onClick={()=>{generateLabQR(a.id);}} style={{fontSize:11}}>
@@ -1993,7 +1998,12 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
                 {educators.map(e => <option key={e.id} value={e.id}>{e.display_name}</option>)}
               </select>
             </div>
-            {[["duration_days","Durata (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
+            <div className="form-group">
+              <label className="form-label">📅 Giorni e orari Lab (opzionale)</label>
+              <input className="form-input" value={form.schedule||""} onChange={e=>setForm(f=>({...f,schedule:e.target.value}))} placeholder="es. Martedì e Giovedì 15:00–17:00"/>
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Indica i giorni e gli orari delle sessioni</div>
+            </div>
+            {[["duration_days","Durata totale (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
               <div className="form-group" key={k}><label className="form-label">{l}</label><input className="form-input" type={t} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} /></div>
             ))}
             <div className="section-label">XP per livello</div>
@@ -3154,7 +3164,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               return (
                 <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
                   <div className="act-title">{a.name}</div>
-                  <div className="act-meta">{a.description} · {a.duration_days} giorni</div>
+                  <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
+                  {a.schedule && <div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
                   {a.educator_id && <div style={{ fontSize: 12, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab guidato</div>}
                   {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--azzurro)", display: "block", marginBottom: 8 }}>🔗 Scopri di più</a>}
                   <div className="act-rewards" style={{ marginBottom: 10 }}>
@@ -3173,8 +3184,15 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                     </div>
                   )}
                   {booked ? (
-                    <div className={`tag ${booked.status === "confirmed" ? "tag-green" : booked.status === "rejected" ? "tag-red" : "tag-amber"}`}>
-                      {booked.status === "confirmed" ? "✅ Prenotato" : booked.status === "rejected" ? "❌ Rifiutata" : "⏳ In attesa"}
+                    <div>
+                      <div className={`tag ${booked.status === "confirmed" ? "tag-green" : booked.status === "rejected" ? "tag-red" : "tag-amber"}`} style={{marginBottom:booked.status==="confirmed"?6:0}}>
+                        {booked.status === "confirmed" ? "✅ Iscritto" : booked.status === "rejected" ? "❌ Rifiutata" : "⏳ In attesa"}
+                      </div>
+                      {booked.status === "confirmed" && (
+                        <button className="btn btn-ghost btn-xs" style={{width:"100%",fontSize:11}} onClick={()=>setShowCamera(true)}>
+                          📷 Scansiona QR Lab · check-in sessione
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <button
