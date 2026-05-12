@@ -1654,7 +1654,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
 
   const load = useCallback(async () => {
     const [{ data }, { data: edu }] = await Promise.all([
-      sb.from("activities").select("*, profiles(display_name)").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("profiles").select("id,display_name").eq("role","educator").order("display_name"),
     ]);
     setActivities(data || []); setEducators(edu || []); setLoading(false);
@@ -1683,6 +1683,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         max_participants: form.max_participants ? Number(form.max_participants) : null,
         educator_id: form.educator_id || null,
         link: (form.link || "").trim() || null,
+        is_active: true,
       });
       if (error) {
         setCreateErr("❌ " + error.message + " [" + error.code + "]");
@@ -1718,7 +1719,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <button className="delete-btn" onClick={() => deleteActivity(a.id)}>✕</button>
               <div className="act-title">{a.name}</div>
               <div className="act-meta">{a.description} · {a.duration_days}g</div>
-              {a.profiles?.display_name && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Giardiniere: {a.profiles.display_name}</div>}
+              {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
               {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "var(--azzurro)", display: "block", marginBottom: 6, wordBreak: "break-all" }}>🔗 {a.link}</a>}
               <div className="act-rewards">
                 <span className="reward-tag xp-tag">Max {a.xp_completed} XP</span>
@@ -2425,7 +2426,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }] = await Promise.all([
       sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,longest_streak,last_checkin_date,squads(name)").eq("id", profile.id).single(),
       sb.from("player_badges").select("id,assigned_at,xp_awarded,coin_awarded,badges(name,image_url,xp_default,description,link)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
-      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,profiles(display_name)").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,created_by").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
       sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").order("xp", { ascending: false }),
@@ -2818,7 +2819,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
                   <div className="act-title">{a.name}</div>
                   <div className="act-meta">{a.description} · {a.duration_days} giorni</div>
-                  {a.profiles?.display_name && <div style={{ fontSize: 12, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Giardiniere: {a.profiles.display_name}</div>}
+                  {a.educator_id && <div style={{ fontSize: 12, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab guidato</div>}
                   {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--azzurro)", display: "block", marginBottom: 8 }}>🔗 Scopri di più</a>}
                   <div className="act-rewards" style={{ marginBottom: 10 }}>
                     <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
