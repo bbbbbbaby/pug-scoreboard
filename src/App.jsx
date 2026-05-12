@@ -1650,6 +1650,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [customizing, setCustomizing] = useState(false);
+  const [bookingCounts, setBookingCounts] = useState({});
   const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" });
 
   const load = useCallback(async () => {
@@ -1657,7 +1658,19 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("profiles").select("id,display_name").eq("role","educator").order("display_name"),
     ]);
-    setActivities(data || []); setEducators(edu || []); setLoading(false);
+    const acts = data || [];
+    setActivities(acts);
+    setEducators(edu || []);
+    if (acts.length > 0) {
+      const { data: bk } = await sb.from("bookings")
+        .select("activity_id,status")
+        .in("activity_id", acts.map(a => a.id))
+        .in("status", ["confirmed","pending"]);
+      const counts = {};
+      (bk || []).forEach(b => { counts[b.activity_id] = (counts[b.activity_id] || 0) + 1; });
+      setBookingCounts(counts);
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -1721,9 +1734,19 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <div className="act-meta">{a.description} · {a.duration_days}g</div>
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
               {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "var(--azzurro)", display: "block", marginBottom: 6, wordBreak: "break-all" }}>🔗 {a.link}</a>}
-              <div className="act-rewards">
+              <div className="act-rewards" style={{flexWrap:"wrap",gap:6}}>
                 <span className="reward-tag xp-tag">Max {a.xp_completed} XP</span>
                 <span className="reward-tag coin-tag">🪙 {a.coin_cost}</span>
+                {a.max_participants && (
+                  <span className="reward-tag" style={{
+                    background: (bookingCounts[a.id]||0) >= a.max_participants ? "rgba(255,34,68,.12)" : "rgba(0,255,136,.08)",
+                    color: (bookingCounts[a.id]||0) >= a.max_participants ? "#ff4466" : "var(--neon-green)",
+                    border: `1px solid ${(bookingCounts[a.id]||0) >= a.max_participants ? "rgba(255,34,68,.25)" : "rgba(0,255,136,.2)"}`,
+                  }}>
+                    👥 {bookingCounts[a.id]||0}/{a.max_participants} iscritti
+                    {(bookingCounts[a.id]||0) >= a.max_participants ? " · PIENO" : ` · ${a.max_participants-(bookingCounts[a.id]||0)} posti`}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -2413,6 +2436,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [qrMsg, setQrMsg] = useState("");
   const [monthPresences, setMonthPresences] = useState(null);
   const [monthTarget, setMonthTarget] = useState(null);
+  const [actBookingCounts, setActBookingCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
@@ -2445,7 +2469,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
     ]);
     if (p) setFullProfile(p);
-    setBadges(b || []); setActivities(a || []); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
+    const acts = a || [];
+    setBadges(b || []); setActivities(acts); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
+    if (acts.length > 0) {
+      const { data: actBk } = await sb.from("bookings")
+        .select("activity_id,status")
+        .in("activity_id", acts.map(x => x.id))
+        .in("status", ["confirmed","pending"]);
+      const acounts = {};
+      (actBk || []).forEach(b => { acounts[b.activity_id] = (acounts[b.activity_id] || 0) + 1; });
+      setActBookingCounts(acounts);
+    }
     const td = {}; (attToday || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpToday(td);
     const mt = {}; (attMonth || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpMonth(mt);
     // Presenze mese corrente per il giocatore
@@ -2847,13 +2881,31 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                     <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
                     <span className="reward-tag coin-tag">🪙 {a.coin_cost} costo</span>
                   </div>
+                  {a.max_participants && (
+                    <div style={{
+                      fontSize:11, fontWeight:800, marginBottom:8,
+                      color: (actBookingCounts[a.id]||0) >= a.max_participants ? "#ff4466" : "var(--neon-green)",
+                    }}>
+                      👥 {actBookingCounts[a.id]||0}/{a.max_participants} iscritti
+                      {(actBookingCounts[a.id]||0) >= a.max_participants
+                        ? " · PIENO"
+                        : ` · ${a.max_participants-(actBookingCounts[a.id]||0)} posti rimasti`}
+                    </div>
+                  )}
                   {booked ? (
                     <div className={`tag ${booked.status === "confirmed" ? "tag-green" : booked.status === "rejected" ? "tag-red" : "tag-amber"}`}>
                       {booked.status === "confirmed" ? "✅ Prenotato" : booked.status === "rejected" ? "❌ Rifiutata" : "⏳ In attesa"}
                     </div>
                   ) : (
-                    <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={() => bookActivity(a.id, a.coin_cost)} disabled={a.coin_cost > (fullProfile?.coin || 0)}>
-                      {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti" : "Prenota"}
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ width: "100%" }}
+                      onClick={() => bookActivity(a.id, a.coin_cost)}
+                      disabled={a.coin_cost > (fullProfile?.coin || 0) || (a.max_participants && (actBookingCounts[a.id]||0) >= a.max_participants)}
+                    >
+                      {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti"
+                        : (a.max_participants && (actBookingCounts[a.id]||0) >= a.max_participants) ? "🚫 Lab pieno"
+                        : "Prenota"}
                     </button>
                   )}
                 </div>
