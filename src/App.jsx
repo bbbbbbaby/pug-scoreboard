@@ -982,7 +982,12 @@ function AvatarPicker({ selected, onSelect, squadFilter }) {
 
   if (!manifest) return <div style={{fontSize:13,color:"var(--text3)",padding:"12px 0"}}>⏳ Caricamento avatar…</div>;
 
-  const tabs = Object.keys(manifest).filter(k => k !== "Badge" && k !== "Special");
+  const tabs = Object.keys(manifest).filter(k => {
+    if (k === "Special") return false;
+    if (k === "Badge") return squadFilter === "Badge"; // only show Badge tab when picking badges
+    if (squadFilter === "Badge") return false; // in badge mode, only show Badge
+    return true;
+  });
 
   return (
     <div>
@@ -2056,8 +2061,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
   const [assignXp, setAssignXp] = useState(0);
   const [assignCoin, setAssignCoin] = useState(0);
   const [newBadge, setNewBadge] = useState({ name: "", description: "", link: "", xp_default: 20, coin_default: 10, image_url: null });
-  const [uploadingBadge, setUploadingBadge] = useState(false);
-  const badgeFileRef = useRef();
+
 
   const load = useCallback(async () => {
     const [{ data: b }, { data: p }] = await Promise.all([
@@ -2068,17 +2072,6 @@ function BadgesView({ sectionColors, setSectionColors }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
-  async function uploadBadgeImage(e) {
-    const file = e.target.files[0]; if (!file) return;
-    setUploadingBadge(true);
-    const ext = file.name.split(".").pop();
-    const path = `badges/badge_${Date.now()}.${ext}`;
-    await sb.storage.from("avatars").upload(path, file, { upsert: true });
-    const { data } = sb.storage.from("avatars").getPublicUrl(path);
-    setNewBadge(f => ({ ...f, image_url: data.publicUrl + "?t=" + Date.now() }));
-    setUploadingBadge(false);
-  }
 
   async function assignBadge() {
     if (!assignTarget || !showAssign) return;
@@ -2153,11 +2146,17 @@ function BadgesView({ sectionColors, setSectionColors }) {
         <div className="modal-bg" onClick={() => setShowCreate(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Crea badge</div>
-            <div className="avatar-upload-area" onClick={() => badgeFileRef.current.click()}>
-              <input ref={badgeFileRef} type="file" accept="image/*" onChange={uploadBadgeImage} style={{ display: "none" }} />
-              {newBadge.image_url ? <img src={newBadge.image_url} className="avatar-preview" alt="badge" /> : <div style={{ fontSize: 40, marginBottom: 8 }}>🖼️</div>}
-              <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploadingBadge ? "Caricamento…" : "Carica immagine badge"}</div>
-            </div>
+            <div className="section-label">Immagine badge</div>
+            {newBadge.image_url && (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px",background:"rgba(255,0,204,.06)",border:"1px solid rgba(255,0,204,.2)",borderRadius:10}}>
+                <img src={newBadge.image_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt="badge"/>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"var(--rosa)"}}>{newBadge.image_url.split("/").pop().replace(".webp","")}</div>
+                  <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewBadge(f=>({...f,image_url:null}))}>✕ Rimuovi</button>
+                </div>
+              </div>
+            )}
+            <AvatarPicker selected={newBadge.image_url||""} onSelect={url=>setNewBadge(f=>({...f,image_url:url||null}))} squadFilter="Badge"/>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={newBadge.name} onChange={e => setNewBadge(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Descrizione</label><textarea value={newBadge.description} onChange={e => setNewBadge(f => ({ ...f, description: e.target.value }))} placeholder="Racconta questo badge…" /></div>
             <div className="form-group"><label className="form-label">Link (opzionale)</label><input className="form-input" type="url" value={newBadge.link} onChange={e => setNewBadge(f => ({ ...f, link: e.target.value }))} placeholder="https://…" /></div>
