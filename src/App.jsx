@@ -775,9 +775,9 @@ const css = `
   .pres-rank-1 { color:#ffcc00; text-shadow:0 0 16px rgba(255,204,0,.8); }
   .pres-rank-2 { color:#aac8e0; }
   .pres-rank-3 { color:#d4916a; }
-  .pres-list { display:flex; flex-direction:column; gap:6px; width:100%; max-width:500px; padding:0 20px; max-height:30vh; overflow-y:auto; scrollbar-width:none; }
+  .pres-list { display:flex; flex-direction:column; gap:5px; width:100%; max-width:560px; padding:0 16px; max-height:55vh; overflow-y:auto; scrollbar-width:none; }
   .pres-list::-webkit-scrollbar { display:none; }
-  .pres-list-row { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.05); border-radius:10px; padding:8px 14px; animation:fade-in .5s both; }
+  .pres-list-row { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.05); border-radius:10px; padding:10px 14px; animation:fade-in .5s both; }
   @keyframes fade-in { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
   .pres-close { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px 14px; color:rgba(255,255,255,.5); font-size:13px; cursor:pointer; font-weight:700; letter-spacing:.05em; z-index:10; }
   .pres-close:hover { background:rgba(255,255,255,.15); color:#fff; }
@@ -1894,11 +1894,12 @@ function AttendanceView({ sectionColors, setSectionColors }) {
       const [{ data: pl }, { data: sq }, { data: att }, { data: labAtt }] = await Promise.all([
         sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role","player").order("display_name"),
         sb.from("squads").select("*"),
-        sb.from("attendances").select("*").eq("date", date).eq("check_type","daily"),
-        sb.from("attendances").select("id,player_id,activity_id,status,xp_awarded,coin_awarded,created_at").eq("date", date).eq("check_type","lab"),
+        sb.from("attendances").select("*").eq("date", date),
+        sb.from("attendances").select("id,player_id,activity_id,status,xp_awarded,coin_awarded,created_at").eq("date", date).not("check_type","eq","daily"),
       ]);
       setPlayers(pl || []); setSquads(sq || []);
-      const map = {}; (att || []).forEach(a => { map[a.player_id] = a; }); setAttendances(map);
+      const dailyOnly = (att||[]).filter(a => !a.check_type || a.check_type === "daily");
+      const map = {}; dailyOnly.forEach(a => { map[a.player_id] = a; }); setAttendances(map);
       // Enrich lab attendances
       const playerMap = Object.fromEntries((pl||[]).map(p=>[p.id,p]));
       const actIds = [...new Set((labAtt||[]).map(a=>a.activity_id).filter(Boolean))];
@@ -3807,7 +3808,7 @@ function PresentationMode({ onClose }) {
   const [page, setPage] = useState(0); // 0=podio, 1=lista completa
 
   useEffect(() => {
-    sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)").eq("role","player").gt("xp",1).order("xp",{ascending:false}).then(({data})=>{
+    sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)").eq("role","player").gt("xp",0).order("xp",{ascending:false}).then(({data})=>{
       setPlayers(data||[]); setLoading(false);
     });
     const handler = e => { if(e.key==="Escape") onClose(); };
@@ -3817,8 +3818,8 @@ function PresentationMode({ onClose }) {
 
   // Auto-cycle pages every 8 seconds
   useEffect(()=>{
-    if (players.length <= 3) return;
-    const t = setTimeout(()=>setPage(p=>p===0?1:0), 8000);
+    if (players.length === 0) return;
+    const t = setTimeout(()=>setPage(p=>p===0?1:0), 9000);
     return ()=>clearTimeout(t);
   },[page, players]);
 
@@ -3883,7 +3884,7 @@ function PresentationMode({ onClose }) {
 
       {page===1 && (
         <>
-          <div className="pres-title" style={{fontSize:"clamp(22px,4vw,48px)",marginBottom:"clamp(12px,3vh,24px)"}}>🌿 Tutti i giocatori</div>
+          <div className="pres-title" style={{fontSize:"clamp(22px,4vw,48px)",marginBottom:"clamp(12px,3vh,20px)"}}>🌿 Classifica completa · {players.length} giocatori</div>
           <div className="pres-list">
             {players.map((p,i)=>{
               const lv = getLevel(p.xp);
