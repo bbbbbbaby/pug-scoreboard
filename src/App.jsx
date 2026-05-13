@@ -1,5 +1,4 @@
 import { sb } from "./supabase.js";
-import AdminShell from "./AdminShell.jsx";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 // ─── LIVELLI ──────────────────────────────────────────────
@@ -3739,11 +3738,123 @@ function DashboardView() {
   );
 }
 
+// ─── ADMIN VIEW ──────────────────────────────────────────
+
+function AdminView({ profile }) {
+  const [educators, setEducators] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ display_name:"", email:"", password:"", avatar_url:"" });
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [editEdu, setEditEdu] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await sb.from("profiles").select("id,display_name,avatar_url,xp,created_at").eq("role","educator").order("display_name");
+    setEducators(data || []); setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function createEducator() {
+    setErr(""); setMsg("");
+    if (!form.display_name.trim() || !form.email.trim() || !form.password.trim()) { setErr("Nome, email e password obbligatori."); return; }
+    if (form.password.length < 6) { setErr("Password minimo 6 caratteri."); return; }
+    setCreating(true);
+    const adminId = profile.id;
+    const { data: a, error: ae } = await sb.auth.signUp({ email: form.email.trim(), password: form.password.trim() });
+    if (ae) { setErr("Errore: " + ae.message); setCreating(false); return; }
+    const uid = a?.user?.id;
+    if (!uid) { setErr("Account non creato — email già esistente?"); setCreating(false); return; }
+    const { error: pe } = await sb.from("profiles").insert({ id: uid, display_name: form.display_name.trim(), role: "educator", avatar_url: form.avatar_url.trim() || null, pin: "1234" });
+    if (pe) { setErr("Profilo: " + pe.message); setCreating(false); return; }
+    setMsg(`✅ Giardiniere "${form.display_name}" creato! Email: ${form.email} · Password: ${form.password}`);
+    setForm({ display_name:"", email:"", password:"", avatar_url:"" }); setShowCreate(false); load();
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user?.id !== adminId) { await sb.auth.signOut(); window.location.reload(); }
+    setCreating(false);
+  }
+
+  async function saveEdu(e) {
+    await sb.from("profiles").update({ display_name: e.display_name, avatar_url: e.avatar_url || null }).eq("id", e.id);
+    setEditEdu(null); load();
+  }
+
+  async function deleteEdu(id, name) {
+    if (!confirm(`Eliminare il giardiniere "${name}"?`)) return;
+    await sb.from("profiles").delete().eq("id", id); load();
+  }
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#ffcc00",marginBottom:16}}>⚙️ Gestione Giardinieri</div>
+      {msg && <div style={{background:"rgba(0,255,136,.1)",border:"1px solid rgba(0,255,136,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
+      {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
+
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+        <button className="btn btn-yellow btn-sm" onClick={()=>{setShowCreate(true);setErr("");setMsg("");}}>+ Nuovo giardiniere</button>
+      </div>
+
+      {/* Lista educators */}
+      {loading ? <div className="loading">⏳</div> : (
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+          {educators.length === 0 && <div className="empty">Nessun giardiniere ancora.</div>}
+          {educators.map(e => (
+            <div key={e.id} className="card-sm" style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.3)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
+                {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/> : "🌱"}
+              </div>
+              <div style={{flex:1}}>
+                {editEdu?.id === e.id ? (
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    <input className="form-input" value={editEdu.display_name} onChange={ev=>setEditEdu(p=>({...p,display_name:ev.target.value}))} style={{flex:1,minWidth:120,padding:"6px 10px"}} placeholder="Nome"/>
+                    <input className="form-input" value={editEdu.avatar_url||""} onChange={ev=>setEditEdu(p=>({...p,avatar_url:ev.target.value}))} style={{flex:1,minWidth:120,padding:"6px 10px"}} placeholder="/avatars/nome.webp"/>
+                    <button className="btn btn-primary btn-xs" onClick={()=>saveEdu(editEdu)}>✓</button>
+                    <button className="btn btn-ghost btn-xs" onClick={()=>setEditEdu(null)}>✕</button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{e.display_name}</div>
+                    <div style={{fontSize:11,color:"var(--text3)"}}>Creato: {new Date(e.created_at).toLocaleDateString("it-IT")}</div>
+                  </div>
+                )}
+              </div>
+              {editEdu?.id !== e.id && (
+                <div style={{display:"flex",gap:6}}>
+                  <button className="btn btn-ghost btn-xs" onClick={()=>setEditEdu({...e})}>✏️</button>
+                  <button className="btn btn-danger btn-xs" onClick={()=>deleteEdu(e.id,e.display_name)}>🗑️</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Form crea */}
+      {showCreate && (
+        <div className="card" style={{border:"1px solid rgba(255,204,0,.25)"}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:"#ffcc00",marginBottom:14}}>Nuovo giardiniere</div>
+          <div className="form-group"><label className="form-label">Nome visualizzato *</label><input className="form-input" value={form.display_name} onChange={e=>setForm(f=>({...f,display_name:e.target.value}))} placeholder="es. Massi"/></div>
+          <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="giardiniere@email.com"/></div>
+          <div className="form-group"><label className="form-label">Password * (min 6 caratteri)</label><input className="form-input" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="es. pug2026!"/></div>
+          <div className="form-group"><label className="form-label">Avatar URL (opzionale)</label><input className="form-input" value={form.avatar_url} onChange={e=>setForm(f=>({...f,avatar_url:e.target.value}))} placeholder="/avatars/ago.webp"/></div>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button className="btn btn-primary" style={{flex:1}} onClick={createEducator} disabled={creating}>{creating?"⏳ Creazione…":"Crea giardiniere"}</button>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setShowCreate(false)}>Annulla</button>
+          </div>
+          <div style={{fontSize:11,color:"var(--text3)",marginTop:10}}>💡 Comunica email e password al giardiniere. Accede dal tab "Giardiniere" nel login.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -3988,6 +4099,7 @@ function PresentationMode({ onClose }) {
 const EduTabColors = {
   dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
+  admin:        { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
   classifica:   { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   squadre:      { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
@@ -4003,7 +4115,6 @@ const EduTabColors = {
 };
 
 function EducatorShell({ profile, onLogout }) {
-  if (profile?.role === "admin") return <AdminShell profile={profile} onLogout={onLogout} />;
   const [tab, setTab] = useState("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -4064,7 +4175,7 @@ function EducatorShell({ profile, onLogout }) {
           <div className="sidebar-badge">🌱 Pannello Giardiniere</div>
         </div>
         <nav className="nav">
-          {EDUCATOR_TABS.map(([id, icon, label]) => (
+          {EDUCATOR_TABS.filter(([id]) => id !== "admin" || profile.role === "admin").map(([id, icon, label]) => (
             <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
               <span className="nav-icon">{icon}</span>
               <span style={{flex:1}}>{label}</span>
@@ -4120,7 +4231,7 @@ function EducatorShell({ profile, onLogout }) {
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",background:"#111",color:"#ffe600",fontSize:9,fontWeight:900,borderRadius:4,padding:"2px 8px",textTransform:"uppercase",letterSpacing:".07em",display:"inline-block"}}>🌱 Giardiniere</div>
         </div>
         <nav style={{flex:1,padding:"8px 0",overflowY:"auto"}}>
-          {EDUCATOR_TABS.map(([id, icon, label]) => (
+          {EDUCATOR_TABS.filter(([id]) => id !== "admin" || profile.role === "admin").map(([id, icon, label]) => (
             <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => { setTab(id); setDrawerOpen(false); }}>
               <span className="nav-icon">{icon}</span>
               <span style={{flex:1}}>{label}</span>
@@ -4185,6 +4296,7 @@ function EducatorShell({ profile, onLogout }) {
         <div className="content edu-content-wrap" style={{background:EduTabColors[tab]?.bg||"transparent"}}>
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
+          {tab === "admin"        && <AdminView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
           {tab === "squadre"      && <SquadsView />}
@@ -4310,11 +4422,8 @@ export default function App() {
         ? <Login onLogin={setProfile} />
         : profile.role === "player"
           ? <PlayerDashboard profile={profile} onLogout={onLogout} sectionColors={sectionColors} />
-          : profile.role === "admin"
-          ? <AdminShell profile={profile} onLogout={onLogout} />
-: profile.role === "admin"
-? <AdminShell profile={profile} onLogout={onLogout} />
-: <EducatorShell profile={profile} onLogout={onLogout} />      }
+          : <EducatorShell profile={profile} onLogout={onLogout} />
+      }
     </>
   );
 }
