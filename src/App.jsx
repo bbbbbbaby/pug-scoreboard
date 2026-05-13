@@ -1345,8 +1345,8 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
       {msg && <div style={{ background: "rgba(163,207,254,.1)", border: "1.5px solid rgba(163,207,254,.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "var(--azzurro)", fontWeight: 600 }}>{msg}</div>}
 
-      {presTab==="daily" && <>
-      <div className="filter-bar">
+      {presTab==="daily" && (
+      <div><div className="filter-bar">
         <input className="search-inp" placeholder="Cerca giocatore…" value={search} onChange={e => setSearch(e.target.value)} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
@@ -2014,9 +2014,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
             </tbody>
           </table>
           </div>
-        </>
+        </div>
       )}
-      </> }
       {/* Lab check-in tab */}
       {presTab==="lab" && (
         <div>
@@ -2024,7 +2023,6 @@ function AttendanceView({ sectionColors, setSectionColors }) {
           {labAtts.length===0 ? (
             <div className="empty">Nessun check-in Lab per oggi.</div>
           ) : (
-            // Group by lab
             Object.entries(labAtts.reduce((acc,a)=>{
               if (!acc[a.actName]) acc[a.actName]=[];
               acc[a.actName].push(a); return acc;
@@ -3144,15 +3142,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     ["notifiche","🔔","Notifiche"],
   ];
 
+  const TAB_BG = {
+    profilo:    'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',
+    classifica: 'linear-gradient(160deg,#001a6e 0%,#0030b8 50%,#001a6e 100%)',
+    attivita:   'linear-gradient(160deg,#043a14 0%,#0a6a28 50%,#043a14 100%)',
+    messaggi:   'linear-gradient(160deg,#5a0535 0%,#a00860 50%,#5a0535 100%)',
+    notifiche:  'linear-gradient(160deg,#3d2200 0%,#7a4400 50%,#3d2200 100%)',
+  };
+
   const xpPct = (() => { const nxt = LEVELS.find(l => l.xp > (fullProfile?.xp||0)); return nxt ? Math.min(100,Math.round(((fullProfile.xp-lv.xp)/(nxt.xp-lv.xp))*100)) : 100; })();
 
-    const TAB_BG = {
-      profilo:    'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',
-      classifica: 'linear-gradient(160deg,#001a6e 0%,#0030b8 50%,#001a6e 100%)',
-      attivita:   'linear-gradient(160deg,#043a14 0%,#0a6a28 50%,#043a14 100%)',
-      messaggi:   'linear-gradient(160deg,#5a0535 0%,#a00860 50%,#5a0535 100%)',
-      notifiche:  'linear-gradient(160deg,#3d2200 0%,#7a4400 50%,#3d2200 100%)',
-    };
     return (
     <div className="player-wrap" style={{background:TAB_BG[tab]||TAB_BG.profilo,transition:'background 0.5s ease'}}>
       {/* Toast notification */}
