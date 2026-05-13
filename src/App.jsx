@@ -4121,8 +4121,8 @@ function AdminShell({ profile, onLogout }) {
     </div>
   );
 }
-
-function EducatorShell({ profile, onLogout }) {
+: <EducatorShell profile={profile} onLogout={onLogout} />
+  function EducatorShell({ profile, onLogout }) {
   const [tab, setTab] = useState("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
