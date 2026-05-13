@@ -4121,6 +4121,8 @@ function AdminShell({ profile, onLogout }) {
     </div>
   );
 }
+: profile.role === "admin"
+? <AdminShell profile={profile} onLogout={onLogout} />
 : <EducatorShell profile={profile} onLogout={onLogout} />
   function EducatorShell({ profile, onLogout }) {
   const [tab, setTab] = useState("dashboard");
