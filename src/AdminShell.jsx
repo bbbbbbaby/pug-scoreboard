@@ -53,9 +53,7 @@ Password: ${form.password}`;
       // Se signUp ha cambiato sessione, torna al login admin
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user.id !== adminId) {
-        alert(ok + "
-
-⚠️ Devi riaccedere come admin."); await sb.auth.signOut(); window.location.reload();
+        alert(ok + " — Devi riaccedere come admin."); await sb.auth.signOut(); window.location.reload();
       }
     } catch(e) { setErr("Errore: " + (e?.message || String(e))); }
     setCreating(false);
