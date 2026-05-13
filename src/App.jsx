@@ -1878,157 +1878,191 @@ function SquadsView() {
 }
 
 function AttendanceView({ sectionColors, setSectionColors }) {
-  const [players, setPlayers] = useState([]);
-  const [squads, setSquads] = useState([]);
+  const [players, setPlayers]     = useState([]);
+  const [squads, setSquads]       = useState([]);
   const [attendances, setAttendances] = useState({});
-  const [squadFilter, setSquadFilter] = useState("all");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [loading, setLoading] = useState(true);
+  const [labAtts, setLabAtts]     = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [date, setDate]           = useState(new Date().toISOString().split("T")[0]);
+  const [config, setConfig]       = useState({ xp_daily_checkin:10, coin_daily_checkin:5, xp_week_bonus:5 });
   const [customizing, setCustomizing] = useState(false);
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("name"); // "name" | "xp" | "squad"
-  const config = { xp_daily_checkin: 10, coin_daily_checkin: 5, xp_week_bonus: 50 };
+  const [search, setSearch]       = useState("");
+  const [sortBy, setSortBy]       = useState("name");
+  const [squadFilter, setSquadFilter] = useState("all");
+  const [presTab, setPresTab]     = useState("daily");
+  const [err, setErr]             = useState(null);
 
   useEffect(() => {
     async function load() {
-      const [{ data: pl }, { data: sq }, { data: att }, { data: labAtt }] = await Promise.all([
-        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role","player").order("display_name"),
-        sb.from("squads").select("*"),
-        sb.from("attendances").select("*").eq("date", date),
-        sb.from("attendances").select("id,player_id,activity_id,status,xp_awarded,coin_awarded,created_at").eq("date", date).not("check_type","eq","daily"),
-      ]);
-      setPlayers(pl || []); setSquads(sq || []);
-      const dailyOnly = (att||[]).filter(a => !a.check_type || a.check_type === "daily");
-      const map = {}; dailyOnly.forEach(a => { map[a.player_id] = a; }); setAttendances(map);
-      // Enrich lab attendances
-      const playerMap = Object.fromEntries((pl||[]).map(p=>[p.id,p]));
-      const actIds = [...new Set((labAtt||[]).map(a=>a.activity_id).filter(Boolean))];
-      let actMap = {};
-      if (actIds.length > 0) {
-        const { data: acts } = await sb.from("activities").select("id,name").in("id", actIds);
-        actMap = Object.fromEntries((acts||[]).map(a=>[a.id,a.name]));
+      setLoading(true); setErr(null);
+      try {
+        // Load players and squads
+        const [{ data: pl, error: plErr }, { data: sq }] = await Promise.all([
+          sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role","player").order("display_name"),
+          sb.from("squads").select("*"),
+        ]);
+        if (plErr) throw plErr;
+        setPlayers(pl || []); setSquads(sq || []);
+
+        // Load all attendances for date
+        const { data: att } = await sb.from("attendances")
+          .select("id,player_id,activity_id,check_type,status,xp_awarded,coin_awarded,created_at")
+          .eq("date", date);
+
+        // Split daily vs lab
+        const daily = (att||[]).filter(a => !a.check_type || a.check_type === "daily");
+        const labRaw = (att||[]).filter(a => a.check_type === "lab");
+        const map = {}; daily.forEach(a => { map[a.player_id] = a; });
+        setAttendances(map);
+
+        // Enrich lab with player + activity names
+        const playerMap = Object.fromEntries((pl||[]).map(p => [p.id, p]));
+        const actIds = [...new Set(labRaw.map(a => a.activity_id).filter(Boolean))];
+        let actMap = {};
+        if (actIds.length) {
+          const { data: acts } = await sb.from("activities").select("id,name").in("id", actIds);
+          actMap = Object.fromEntries((acts||[]).map(a => [a.id, a.name]));
+        }
+        setLabAtts(labRaw.map(a => ({
+          ...a,
+          playerName: playerMap[a.player_id]?.display_name || "—",
+          actName: actMap[a.activity_id] || "Lab",
+          avatar_url: playerMap[a.player_id]?.avatar_url || null,
+          lv: getLevel(playerMap[a.player_id]?.xp || 0),
+        })));
+
+        // Config
+        const { data: cfg } = await sb.from("streak_config").select("*").single();
+        if (cfg) setConfig(cfg);
+      } catch(e) {
+        setErr("Errore caricamento: " + (e?.message || String(e)));
       }
-      setLabAtts((labAtt||[]).map(a=>({
-        ...a,
-        playerName: playerMap[a.player_id]?.display_name||"—",
-        actName: actMap[a.activity_id]||"Lab",
-        avatar_url: playerMap[a.player_id]?.avatar_url||null,
-        lv: getLevel(playerMap[a.player_id]?.xp||0),
-      })));
       setLoading(false);
     }
     load();
   }, [date]);
 
-  async function setStatus(playerId, status) {
-    const existing = attendances[playerId];
-    const xp = status === "none" ? 0 : config.xp_daily_checkin;
-    const coin = status === "none" ? 0 : config.coin_daily_checkin;
-    if (existing) {
-      await sb.from("attendances").update({ status, xp_awarded: xp, coin_awarded: coin }).eq("id", existing.id);
-    } else {
-      await sb.from("attendances").insert({ player_id: playerId, date, check_type: "daily", status, xp_awarded: xp, coin_awarded: coin, qr_verified: false });
-      if (status !== "none") await logAction({ playerId, action: "Presenza segnata", xpDelta: xp, coinDelta: coin });
-    }
-    setAttendances(prev => ({ ...prev, [playerId]: { ...existing, status, player_id: playerId } }));
-  }
-
   const visible = players
     .filter(p => {
       const matchSquad = squadFilter === "all" || p.squads?.name === squadFilter;
-      const matchSearch = !search || p.display_name?.toLowerCase().includes(search.toLowerCase()) || (p.first_name||"").toLowerCase().includes(search.toLowerCase());
+      const matchSearch = !search || (p.display_name||"").toLowerCase().includes(search.toLowerCase()) || (p.first_name||"").toLowerCase().includes(search.toLowerCase());
       return matchSquad && matchSearch;
     })
-    .sort((a, b) => {
+    .sort((a,b) => {
       if (sortBy === "xp")    return (b.xp||0) - (a.xp||0);
-      if (sortBy === "squad")  return (a.squads?.name||"").localeCompare(b.squads?.name||"");
+      if (sortBy === "squad") return (a.squads?.name||"").localeCompare(b.squads?.name||"");
       return (a.display_name||"").localeCompare(b.display_name||"");
     });
+
   const presentCount = Object.values(attendances).filter(a => a.status !== "none").length;
+
+  async function setStatus(playerId, status) {
+    const today = date;
+    const xp = status === "full" ? (config.xp_daily_checkin||10) : status === "completed" ? (config.xp_daily_checkin||10) + 5 : status === "partial" ? Math.round((config.xp_daily_checkin||10)/2) : 0;
+    const coin = status === "full" ? (config.coin_daily_checkin||5) : 0;
+    const existing = attendances[playerId];
+    if (existing) {
+      await sb.from("attendances").update({ status, xp_awarded:xp, coin_awarded:coin }).eq("id", existing.id);
+    } else {
+      await sb.from("attendances").insert({ player_id:playerId, date:today, status, xp_awarded:xp, coin_awarded:coin, check_type:"daily" });
+    }
+    if (status !== "none") {
+      await sb.from("profiles").update({ xp: sb.rpc ? undefined : undefined, coin: undefined }).eq("id", playerId);
+    }
+    setAttendances(prev => ({ ...prev, [playerId]: { ...(existing||{}), player_id:playerId, status, xp_awarded:xp } }));
+  }
 
   return (
     <div>
-      <SectionBanner sectionKey="presenze" title="Presenze" sub={presTab==="daily"?`${presentCount}/${visible.length} presenti oggi`:`${labAtts.length} check-in Lab oggi`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="presenze" title="Presenze"
+        sub={presTab==="daily" ? `${presentCount}/${visible.length} presenti` : `${labAtts.length} check-in Lab`}
+        sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+
       {/* Tab switcher */}
-      <div style={{display:"flex",gap:6,marginBottom:14}}>
-        <button className={`chip ${presTab==="daily"?"active":""}`} onClick={()=>setPresTab("daily")} style={presTab==="daily"?{background:"rgba(0,212,255,.15)",color:"var(--neon-blue)",borderColor:"rgba(0,212,255,.4)"}:{}}>📍 Giornaliere</button>
-        <button className={`chip ${presTab==="lab"?"active":""}`} onClick={()=>setPresTab("lab")} style={presTab==="lab"?{background:"rgba(255,204,0,.15)",color:"#ffcc00",borderColor:"rgba(255,204,0,.4)"}:{}}>
-          ⚡ Lab {labAtts.length>0&&<span style={{background:"#ffcc00",color:"#111",borderRadius:99,fontSize:8,fontWeight:900,padding:"1px 5px",marginLeft:4}}>{labAtts.length}</span>}
+      <div style={{display:"flex",gap:6,marginBottom:12}}>
+        <button className={`chip ${presTab==="daily"?"active":""}`} onClick={()=>setPresTab("daily")}
+          style={presTab==="daily"?{background:"rgba(0,212,255,.15)",color:"var(--neon-blue)",borderColor:"rgba(0,212,255,.4)"}:{}}>
+          📍 Giornaliere
+        </button>
+        <button className={`chip ${presTab==="lab"?"active":""}`} onClick={()=>setPresTab("lab")}
+          style={presTab==="lab"?{background:"rgba(255,204,0,.15)",color:"#ffcc00",borderColor:"rgba(255,204,0,.4)"}:{}}>
+          ⚡ Lab {labAtts.length>0 && <span style={{background:"#ffcc00",color:"#111",borderRadius:99,fontSize:8,fontWeight:900,padding:"1px 5px",marginLeft:4}}>{labAtts.length}</span>}
         </button>
       </div>
+
+      {/* Date picker */}
+      <div className="filter-bar">
+        <input type="date" value={date} onChange={e=>setDate(e.target.value)}
+          style={{padding:10,background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:14,flex:1}}/>
+        {presTab==="daily" && <button className="btn btn-yellow btn-sm" onClick={async()=>{ for(const p of visible) await setStatus(p.id,"full"); }}>✓ Tutti</button>}
+      </div>
+
+      {err && <div style={{color:"var(--danger)",padding:"10px",background:"rgba(255,34,68,.08)",borderRadius:10,marginBottom:10,fontSize:13}}>{err}</div>}
+
+      {/* ── DAILY TAB ── */}
       {presTab==="daily" && (
-      <div className="stats-grid">
-        <div className="stat-card"><div className="stat-label">Presenti</div><div className="stat-value">{presentCount}</div></div>
-        <div className="stat-card"><div className="stat-label">Totale</div><div className="stat-value">{visible.length}</div></div>
-        <div className="stat-card"><div className="stat-label">XP pres.</div><div className="stat-value">{config.xp_daily_checkin}</div></div>
-        <div className="stat-card"><div className="stat-label">Bonus sett.</div><div className="stat-value">{config.xp_week_bonus}</div></div>
-      </div>
-      )}
-      <div className="filter-bar">
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
-        <button className="btn btn-yellow btn-sm" onClick={async () => { for (const p of visible) await setStatus(p.id, "full"); }}>✓ Tutti</button>
-      </div>
-      <div className="filter-bar">
-        <input className="search-inp" placeholder="🔍 Cerca per nome…" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1,minWidth:120}}/>
-        <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:13,width:"auto"}}>
-          <option value="name">A→Z Nome</option>
-          <option value="xp">XP ↓</option>
-          <option value="squad">Squadra</option>
-        </select>
-      </div>
-      <div className="filter-bar">
-        <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
-        {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
-      </div>
-      {loading ? <div className="loading">⏳</div> : (
-        <>
-        <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:10, padding:"8px 10px", background:"rgba(255,255,255,.03)", border:"1px solid var(--border)", borderRadius:10, fontSize:11, color:"var(--text3)" }}>
-          <span><strong style={{color:"var(--text2)"}}>Legenda stati:</strong></span>
-          <span><span className="pres-dot pd-none" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>?</span> Assente</span>
-          <span><span className="pres-dot pd-partial" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>~</span> Parziale</span>
-          <span><span className="pres-dot pd-yes" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>✓</span> Presente (+XP)</span>
-          <span><span className="pres-dot pd-completed" style={{display:"inline-flex",width:22,height:22,fontSize:10}}>★</span> Lab completata</span>
-        </div>
-        <div className="pres-wrap">
-          <table className="pres-table">
-            <thead><tr><th>Giocatore</th><th>Squadra</th><th>Stato</th><th>XP</th></tr></thead>
-            <tbody>
-              {visible.map(p => {
-                const lv = getLevel(p.xp);
-                const status = attendances[p.id]?.status || "none";
-                return (
-                  <tr key={p.id}>
-                    <td><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Avatar url={p.avatar_url} emoji={lv.emoji} size={28} /><span style={{ fontWeight: 600 }}>{p.display_name}</span></div></td>
-                    <td>{p.squads?.name && <SquadPill name={p.squads.name} />}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        {[["none","?","pd-none"],["partial","~","pd-partial"],["full","✓","pd-yes"],["completed","★","pd-completed"]].map(([s, label, cls]) => (
-                          <button key={s} className={`pres-dot ${cls}`} style={{ opacity: status === s ? 1 : 0.3 }} onClick={() => setStatus(p.id, s)}>{label}</button>
-                        ))}
-                      </div>
-                    </td>
-                    <td style={{ fontFamily: "'Barlow Condensed'", fontSize: 16, fontWeight: 900, color: "var(--neon-blue)" }}>{p.xp} <span style={{fontSize:10,color:"var(--text3)",fontWeight:400}}>XP</span></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div>
+          <div className="stats-grid">
+            <div className="stat-card"><div className="stat-label">Presenti</div><div className="stat-value">{presentCount}</div></div>
+            <div className="stat-card"><div className="stat-label">Totale</div><div className="stat-value">{visible.length}</div></div>
+            <div className="stat-card"><div className="stat-label">XP pres.</div><div className="stat-value">{config.xp_daily_checkin||10}</div></div>
+            <div className="stat-card"><div className="stat-label">Coin</div><div className="stat-value">{config.coin_daily_checkin||5}</div></div>
           </div>
-        </>
+          <div className="filter-bar">
+            <input className="search-inp" placeholder="🔍 Cerca nome…" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1}}/>
+            <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
+              style={{padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:13}}>
+              <option value="name">A→Z</option>
+              <option value="xp">XP ↓</option>
+              <option value="squad">Squadra</option>
+            </select>
+          </div>
+          <div className="filter-bar">
+            <button className={`chip ${squadFilter==="all"?"active":""}`} onClick={()=>setSquadFilter("all")}>Tutti</button>
+            {squads.map(s=><button key={s.id} className={`chip ${squadFilter===s.name?"active":""}`} onClick={()=>setSquadFilter(s.name)}>{s.name}</button>)}
+          </div>
+          {loading ? <div className="loading">⏳ Caricamento…</div> : (
+            <div className="pres-wrap">
+              <table className="pres-table">
+                <thead><tr><th>Giocatore</th><th>Squadra</th><th>Stato</th><th>XP</th></tr></thead>
+                <tbody>
+                  {visible.map(p => {
+                    const lv = getLevel(p.xp);
+                    const status = attendances[p.id]?.status || "none";
+                    return (
+                      <tr key={p.id}>
+                        <td><div style={{display:"flex",alignItems:"center",gap:8}}><Avatar url={p.avatar_url} emoji={lv.emoji} size={28}/><span style={{fontWeight:600}}>{p.display_name}</span></div></td>
+                        <td>{p.squads?.name && <SquadPill name={p.squads.name}/>}</td>
+                        <td>
+                          <div style={{display:"flex",gap:4}}>
+                            {[["none","?","pd-none"],["partial","~","pd-partial"],["full","✓","pd-yes"],["completed","★","pd-completed"]].map(([s,label,cls])=>(
+                              <button key={s} className={`pres-dot ${cls}`} style={{opacity:status===s?1:0.3}} onClick={()=>setStatus(p.id,s)}>{label}</button>
+                            ))}
+                          </div>
+                        </td>
+                        <td style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:900,color:"var(--neon-blue)"}}>{p.xp} <span style={{fontSize:10,color:"var(--text3)",fontWeight:400}}>XP</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
-      {/* Lab check-in tab */}
+
+      {/* ── LAB TAB ── */}
       {presTab==="lab" && (
         <div>
-          <div style={{marginBottom:12,fontSize:12,color:"var(--text3)"}}>Check-in Lab registrati automaticamente via QR per il {date}</div>
-          {labAtts.length===0 ? (
+          <div style={{marginBottom:10,fontSize:12,color:"var(--text3)"}}>Check-in Lab via QR — {date}</div>
+          {loading ? <div className="loading">⏳</div> : labAtts.length===0 ? (
             <div className="empty">Nessun check-in Lab per oggi.</div>
           ) : (
-            Object.entries(labAtts.reduce((acc,a)=>{
-              if (!acc[a.actName]) acc[a.actName]=[];
-              acc[a.actName].push(a); return acc;
-            },{})).map(([labName, entries])=>(
-              <div key={labName} style={{marginBottom:14,background:"rgba(255,204,0,.04)",border:"1px solid rgba(255,204,0,.2)",borderRadius:"var(--radius)",padding:"12px 14px"}}>
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#ffcc00",marginBottom:8}}>⚡ {labName} <span style={{fontSize:13,color:"var(--text3)",fontWeight:400}}>· {entries.length} check-in</span></div>
+            Object.entries(labAtts.reduce((acc,a)=>{ (acc[a.actName]=acc[a.actName]||[]).push(a); return acc; },{})).map(([labName,entries])=>(
+              <div key={labName} style={{marginBottom:14,background:"rgba(255,204,0,.04)",border:"1px solid rgba(255,204,0,.2)",borderRadius:14,padding:"12px 14px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#ffcc00",marginBottom:8}}>
+                  ⚡ {labName} <span style={{fontSize:13,color:"var(--text3)",fontWeight:400}}>· {entries.length} check-in</span>
+                </div>
                 {entries.map(a=>(
                   <div key={a.id} style={{display:"flex",gap:10,alignItems:"center",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
                     <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"1.5px solid rgba(255,204,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -2044,7 +2078,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
           )}
         </div>
       )}
-      {customizing && <BannerCustomizer sectionKey="presenze" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
+
+      {customizing && <BannerCustomizer sectionKey="presenze" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={()=>setCustomizing(false)}/>}
     </div>
   );
 }
@@ -3805,32 +3840,50 @@ function ExportView() {
 function PresentationMode({ onClose }) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(0); // 0=podio, 1=lista completa
+  const [phase, setPhase]     = useState("podio"); // "podio" | "lista"
+  const scrollRef = useRef(null);
+  const animRef   = useRef(null);
 
   useEffect(() => {
-    sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)").eq("role","player").gt("xp",0).order("xp",{ascending:false}).then(({data})=>{
-      setPlayers(data||[]); setLoading(false);
-    });
+    sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)")
+      .eq("role","player").gt("xp",0).order("xp",{ascending:false})
+      .then(({data}) => { setPlayers(data||[]); setLoading(false); });
     const handler = e => { if(e.key==="Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  },[onClose]);
+  }, [onClose]);
 
-  // Auto-cycle pages every 8 seconds
-  useEffect(()=>{
-    if (players.length === 0) return;
-    const t = setTimeout(()=>setPage(p=>p===0?1:0), 9000);
-    return ()=>clearTimeout(t);
-  },[page, players]);
+  // Switch to lista after 10s
+  useEffect(() => {
+    if (loading) return;
+    const t = setTimeout(() => setPhase("lista"), 10000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
-  // Generate stars
+  // Auto-scroll ticker on lista phase
+  useEffect(() => {
+    if (phase !== "lista") return;
+    const el = scrollRef.current;
+    if (!el) return;
+    let pos = 0;
+    const speed = 0.6; // px per frame
+    function tick() {
+      pos += speed;
+      if (pos >= el.scrollHeight / 2) pos = 0; // loop (list is doubled)
+      el.scrollTop = pos;
+      animRef.current = requestAnimationFrame(tick);
+    }
+    animRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [phase, players]);
+
   const stars = Array.from({length:60},(_,i)=>({
-    left: Math.random()*100+"%", top: Math.random()*100+"%",
-    animationDelay: (Math.random()*3)+"s", opacity: Math.random()*.8+.2,
-    width: (Math.random()*3+1)+"px", height: (Math.random()*3+1)+"px",
+    left:Math.random()*100+"%", top:Math.random()*100+"%",
+    animationDelay:(Math.random()*3)+"s", opacity:Math.random()*.8+.2,
+    width:(Math.random()*3+1)+"px", height:(Math.random()*3+1)+"px",
   }));
 
-  const order = [1,0,2]; // silver, gold, bronze visual order
+  const order = [1,0,2];
   const medals = ["🥈","🥇","🥉"];
   const medalColors = ["#aac8e0","#ffcc00","#d4916a"];
 
@@ -3840,67 +3893,87 @@ function PresentationMode({ onClose }) {
     </div>
   );
 
+  // Doubled list for seamless loop
+  const doubled = [...players, ...players];
+
   return (
     <div className="pres-overlay">
-      {/* Stars */}
       <div className="pres-stars">{stars.map((s,i)=><div key={i} className="pres-star" style={s}/>)}</div>
+      <button className="pres-close" onClick={onClose}>✕ ESC</button>
 
-      <button className="pres-close" onClick={onClose}>✕ ESC per uscire</button>
-
-      {/* Page toggle */}
-      <div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)",display:"flex",gap:8,zIndex:5}}>
-        <button onClick={()=>setPage(0)} style={{width:10,height:10,borderRadius:"50%",background:page===0?"#ffcc00":"rgba(255,255,255,.2)",border:"none",cursor:"pointer",transition:"background .3s"}}/>
-        <button onClick={()=>setPage(1)} style={{width:10,height:10,borderRadius:"50%",background:page===1?"#ffcc00":"rgba(255,255,255,.2)",border:"none",cursor:"pointer",transition:"background .3s"}}/>
+      {/* Phase dots */}
+      <div style={{position:"absolute",bottom:14,left:"50%",transform:"translateX(-50%)",display:"flex",gap:8,zIndex:5}}>
+        <button onClick={()=>setPhase("podio")} style={{width:10,height:10,borderRadius:"50%",background:phase==="podio"?"#ffcc00":"rgba(255,255,255,.2)",border:"none",cursor:"pointer"}}/>
+        <button onClick={()=>setPhase("lista")} style={{width:10,height:10,borderRadius:"50%",background:phase==="lista"?"#ffcc00":"rgba(255,255,255,.2)",border:"none",cursor:"pointer"}}/>
       </div>
 
-      {page===0 && (
+      {/* ── PODIO ── */}
+      {phase==="podio" && (
         <>
           <div className="pres-title">🏆 Classifica PUG</div>
-          {/* Podium */}
           <div className="pres-podium-wrap">
-            {order.map((pos,i)=>{
+            {order.map((pos,i) => {
               const p = players[pos];
-              if (!p) return <div key={i} style={{width:"clamp(80px,14vw,130px)"}}/>;
+              if (!p) return <div key={i} style={{width:"clamp(80px,12vw,120px)"}}/>;
               const lv = getLevel(p.xp);
-              const avClass = ["pres-av pres-av-2","pres-av pres-av-1","pres-av pres-av-3"][i];
-              const baseClass = ["pres-base pres-base-2","pres-base pres-base-1","pres-base pres-base-3"][i];
-              const rankClass = ["pres-rank","pres-rank pres-rank-1","pres-rank"][i] + (i===1?" pres-rank-1":i===0?" pres-rank-2":" pres-rank-3");
-              const colClass = "pres-col pres-col-" + (i===1?"1":i===0?"2":"3");
+              const avCls = ["pres-av pres-av-2","pres-av pres-av-1","pres-av pres-av-3"][i];
+              const baseCls = ["pres-base pres-base-2","pres-base pres-base-1","pres-base pres-base-3"][i];
+              const rnkCls = ["pres-rank pres-rank-2","pres-rank pres-rank-1","pres-rank pres-rank-3"][i];
+              const colCls = ["pres-col pres-col-2","pres-col pres-col-1","pres-col pres-col-3"][i];
               return (
-                <div key={p.id} className={colClass}>
+                <div key={p.id} className={colCls}>
                   {i===1 && <div className="pres-crown">👑</div>}
-                  <div className={avClass} style={{fontSize:i===1?"56px":i===0?"44px":"38px"}}>
+                  <div className={avCls} style={{fontSize:i===1?"52px":i===0?"40px":"34px"}}>
                     {p.avatar_url ? <img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : lv.emoji}
                   </div>
                   <div className="pres-pname" style={{color:medalColors[i]}}>{p.display_name}</div>
-                  <div className="pres-pxp" style={{color:medalColors[i]}}>{p.xp.toLocaleString()} XP</div>
-                  <div className={baseClass}><span className={rankClass}>{medals[i]}</span></div>
+                  <div className="pres-pxp" style={{color:medalColors[i]}}>{(p.xp||0).toLocaleString()} XP</div>
+                  <div className={baseCls}><span className={rnkCls}>{medals[i]}</span></div>
                 </div>
               );
             })}
           </div>
+          {/* Mini lista sotto il podio */}
+          <div style={{display:"flex",flexDirection:"column",gap:4,width:"100%",maxWidth:400,padding:"0 20px"}}>
+            {players.slice(3,8).map((p,i)=>(
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,.04)",borderRadius:8,padding:"6px 12px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:900,color:"var(--text3)",width:28,textAlign:"center"}}>{i+4}°</div>
+                <div style={{fontSize:14,fontWeight:700,color:"#fff",flex:1}}>{p.display_name}</div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:900,color:"var(--neon-blue)"}}>{(p.xp||0).toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
         </>
       )}
 
-      {page===1 && (
+      {/* ── LISTA SCORREVOLE ── */}
+      {phase==="lista" && (
         <>
-          <div className="pres-title" style={{fontSize:"clamp(22px,4vw,48px)",marginBottom:"clamp(12px,3vh,20px)"}}>🌿 Classifica completa · {players.length} giocatori</div>
-          <div className="pres-list">
-            {players.map((p,i)=>{
-              const lv = getLevel(p.xp);
+          <div className="pres-title" style={{fontSize:"clamp(20px,4vw,44px)",marginBottom:"clamp(8px,2vh,16px)"}}>
+            🌿 Tutti i giocatori · {players.length}
+          </div>
+          <div ref={scrollRef} style={{width:"100%",maxWidth:560,overflow:"hidden",height:"65vh",padding:"0 16px"}}>
+            {doubled.map((p,i) => {
+              const lv = getLevel(p.xp||0);
+              const rank = (i % players.length) + 1;
+              const isTop = rank <= 3;
               const colors = ["#ffcc00","#aac8e0","#d4916a"];
-              const isTop = i < 3;
               return (
-                <div key={p.id} className="pres-list-row" style={{animationDelay:(i*0.05)+"s",background:isTop?"rgba(255,204,0,.06)":"rgba(255,255,255,.04)",borderLeft:isTop?`3px solid ${colors[i]}`:"none"}}>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,width:36,textAlign:"center",color:isTop?colors[i]:"var(--text3)"}}>{i+1}°</div>
-                  <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:`2px solid ${isTop?colors[i]:"rgba(255,255,255,.15)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+                <div key={i} style={{
+                  display:"flex",alignItems:"center",gap:12,
+                  background:isTop?"rgba(255,204,0,.07)":"rgba(255,255,255,.04)",
+                  borderRadius:10,padding:"10px 14px",marginBottom:6,
+                  borderLeft:isTop?`3px solid ${colors[rank-1]}`:"3px solid transparent",
+                }}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,width:38,textAlign:"center",color:isTop?colors[rank-1]:"var(--text3)"}}>{rank}°</div>
+                  <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",border:`2px solid ${isTop?colors[rank-1]:"rgba(255,255,255,.15)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
                     {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:lv.emoji}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                    <div style={{fontSize:10,color:"var(--text3)"}}>{lv.emoji} {lv.name}</div>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                    <div style={{fontSize:10,color:p.squads?.name?"var(--azzurro)":"var(--text3)",fontWeight:600}}>{p.squads?.name||lv.name}</div>
                   </div>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:isTop?colors[i]:"var(--neon-blue)"}}>{p.xp.toLocaleString()}</div>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:isTop?colors[rank-1]:"var(--neon-blue)",flexShrink:0}}>{(p.xp||0).toLocaleString()}</div>
                 </div>
               );
             })}
