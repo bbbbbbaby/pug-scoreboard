@@ -745,6 +745,42 @@ const css = `
   .qr-scanner-corner-bl { position:absolute; bottom:0; left:0; width:40px; height:40px; border-bottom:3px solid #ffcc00; border-left:3px solid #ffcc00; border-radius:0 0 0 4px; }
   .qr-scanner-line { position:absolute; left:10%; right:10%; height:2px; background:linear-gradient(90deg,transparent,#ffcc00,transparent); animation:scan-line 2s linear infinite; }
   @keyframes scan-line { 0%{top:10%} 100%{top:90%} }
+  /* ═══ PRESENTATION MODE ═══ */
+  .pres-overlay { position:fixed; inset:0; background:linear-gradient(160deg,#0a0530 0%,#0d1a60 45%,#150838 100%); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
+  .pres-stars { position:absolute; inset:0; pointer-events:none; }
+  .pres-star { position:absolute; width:3px; height:3px; border-radius:50%; background:#fff; animation:twinkle 3s infinite; }
+  @keyframes twinkle { 0%,100%{opacity:.2;transform:scale(1)} 50%{opacity:1;transform:scale(1.5)} }
+  .pres-title { font-family:'Barlow Condensed',sans-serif; font-size:clamp(28px,6vw,64px); font-weight:900; text-transform:uppercase; letter-spacing:.1em; background:linear-gradient(135deg,#00d4ff,#fff,#ffcc00); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:clamp(16px,4vh,40px); text-align:center; filter:drop-shadow(0 0 20px rgba(0,212,255,.4)); }
+  .pres-podium-wrap { display:flex; align-items:flex-end; gap:clamp(10px,3vw,32px); margin-bottom:clamp(16px,4vh,40px); }
+  .pres-col { display:flex; flex-direction:column; align-items:center; animation:rise .8s cubic-bezier(.34,1.56,.64,1) both; }
+  .pres-col-1 { animation-delay:.1s; }
+  .pres-col-2 { animation-delay:.3s; }
+  .pres-col-3 { animation-delay:.5s; }
+  @keyframes rise { from{transform:translateY(80px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .pres-crown { font-size:clamp(20px,4vw,36px); margin-bottom:4px; animation:bounce 2s infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  .pres-av { border-radius:50%; border:4px solid; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:clamp(6px,1.5vh,12px); }
+  .pres-av img, .pres-av span { width:100%; height:100%; object-fit:cover; }
+  .pres-av-1 { width:clamp(80px,14vw,130px); height:clamp(80px,14vw,130px); border-color:#ffcc00; box-shadow:0 0 30px rgba(255,204,0,.6),0 0 80px rgba(255,204,0,.2); animation:glow-gold 2s infinite; }
+  .pres-av-2 { width:clamp(60px,10vw,100px); height:clamp(60px,10vw,100px); border-color:#aac8e0; box-shadow:0 0 20px rgba(170,200,224,.4); }
+  .pres-av-3 { width:clamp(50px,8vw,84px); height:clamp(50px,8vw,84px); border-color:#d4916a; box-shadow:0 0 16px rgba(212,145,106,.4); }
+  @keyframes glow-gold { 0%,100%{box-shadow:0 0 30px rgba(255,204,0,.6),0 0 80px rgba(255,204,0,.2)} 50%{box-shadow:0 0 60px rgba(255,204,0,.9),0 0 120px rgba(255,204,0,.4)} }
+  .pres-pname { font-family:'Barlow Condensed',sans-serif; font-size:clamp(14px,2.5vw,26px); font-weight:900; text-transform:uppercase; color:#fff; text-align:center; text-shadow:0 0 20px rgba(255,255,255,.3); max-width:clamp(80px,14vw,160px); line-height:1.1; }
+  .pres-pxp { font-size:clamp(11px,1.8vw,18px); font-weight:700; text-align:center; margin-top:2px; }
+  .pres-base { border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; margin-top:8px; }
+  .pres-base-1 { background:rgba(255,204,0,.15); border:2px solid rgba(255,204,0,.4); width:clamp(80px,14vw,130px); height:clamp(70px,12vh,100px); }
+  .pres-base-2 { background:rgba(170,200,224,.1); border:2px solid rgba(170,200,224,.3); width:clamp(60px,10vw,100px); height:clamp(50px,9vh,76px); }
+  .pres-base-3 { background:rgba(212,145,106,.1); border:2px solid rgba(212,145,106,.25); width:clamp(50px,8vw,84px); height:clamp(36px,7vh,56px); }
+  .pres-rank { font-family:'Barlow Condensed',sans-serif; font-size:clamp(20px,4vw,40px); font-weight:900; }
+  .pres-rank-1 { color:#ffcc00; text-shadow:0 0 16px rgba(255,204,0,.8); }
+  .pres-rank-2 { color:#aac8e0; }
+  .pres-rank-3 { color:#d4916a; }
+  .pres-list { display:flex; flex-direction:column; gap:6px; width:100%; max-width:500px; padding:0 20px; max-height:30vh; overflow-y:auto; scrollbar-width:none; }
+  .pres-list::-webkit-scrollbar { display:none; }
+  .pres-list-row { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.05); border-radius:10px; padding:8px 14px; animation:fade-in .5s both; }
+  @keyframes fade-in { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+  .pres-close { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px 14px; color:rgba(255,255,255,.5); font-size:13px; cursor:pointer; font-weight:700; letter-spacing:.05em; z-index:10; }
+  .pres-close:hover { background:rgba(255,255,255,.15); color:#fff; }
   /* ═══ PLAYER DASHBOARD — NEW DESIGN ═══ */
   .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; }
   .pd-topbar { position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,0,.85); border-bottom:1px solid rgba(255,255,255,.1); z-index:20; display:flex; align-items:center; padding:0 14px; justify-content:space-between; backdrop-filter:blur(20px); }
@@ -1309,6 +1345,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
       {msg && <div style={{ background: "rgba(163,207,254,.1)", border: "1.5px solid rgba(163,207,254,.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "var(--azzurro)", fontWeight: 600 }}>{msg}</div>}
 
+      {presTab==="daily" && <>
       <div className="filter-bar">
         <input className="search-inp" placeholder="Cerca giocatore…" value={search} onChange={e => setSearch(e.target.value)} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -1855,13 +1892,29 @@ function AttendanceView({ sectionColors, setSectionColors }) {
 
   useEffect(() => {
     async function load() {
-      const [{ data: pl }, { data: sq }, { data: att }] = await Promise.all([
-        sb.from("profiles").select("id,display_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role","player").order("display_name"),
+      const [{ data: pl }, { data: sq }, { data: att }, { data: labAtt }] = await Promise.all([
+        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role","player").order("display_name"),
         sb.from("squads").select("*"),
         sb.from("attendances").select("*").eq("date", date).eq("check_type","daily"),
+        sb.from("attendances").select("id,player_id,activity_id,status,xp_awarded,coin_awarded,created_at").eq("date", date).eq("check_type","lab"),
       ]);
       setPlayers(pl || []); setSquads(sq || []);
       const map = {}; (att || []).forEach(a => { map[a.player_id] = a; }); setAttendances(map);
+      // Enrich lab attendances
+      const playerMap = Object.fromEntries((pl||[]).map(p=>[p.id,p]));
+      const actIds = [...new Set((labAtt||[]).map(a=>a.activity_id).filter(Boolean))];
+      let actMap = {};
+      if (actIds.length > 0) {
+        const { data: acts } = await sb.from("activities").select("id,name").in("id", actIds);
+        actMap = Object.fromEntries((acts||[]).map(a=>[a.id,a.name]));
+      }
+      setLabAtts((labAtt||[]).map(a=>({
+        ...a,
+        playerName: playerMap[a.player_id]?.display_name||"—",
+        actName: actMap[a.activity_id]||"Lab",
+        avatar_url: playerMap[a.player_id]?.avatar_url||null,
+        lv: getLevel(playerMap[a.player_id]?.xp||0),
+      })));
       setLoading(false);
     }
     load();
@@ -1895,13 +1948,22 @@ function AttendanceView({ sectionColors, setSectionColors }) {
 
   return (
     <div>
-      <SectionBanner sectionKey="presenze" title="Presenze" sub={`${presentCount}/${visible.length} presenti`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="presenze" title="Presenze" sub={presTab==="daily"?`${presentCount}/${visible.length} presenti oggi`:`${labAtts.length} check-in Lab oggi`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      {/* Tab switcher */}
+      <div style={{display:"flex",gap:6,marginBottom:14}}>
+        <button className={`chip ${presTab==="daily"?"active":""}`} onClick={()=>setPresTab("daily")} style={presTab==="daily"?{background:"rgba(0,212,255,.15)",color:"var(--neon-blue)",borderColor:"rgba(0,212,255,.4)"}:{}}>📍 Giornaliere</button>
+        <button className={`chip ${presTab==="lab"?"active":""}`} onClick={()=>setPresTab("lab")} style={presTab==="lab"?{background:"rgba(255,204,0,.15)",color:"#ffcc00",borderColor:"rgba(255,204,0,.4)"}:{}}>
+          ⚡ Lab {labAtts.length>0&&<span style={{background:"#ffcc00",color:"#111",borderRadius:99,fontSize:8,fontWeight:900,padding:"1px 5px",marginLeft:4}}>{labAtts.length}</span>}
+        </button>
+      </div>
+      {presTab==="daily" && (
       <div className="stats-grid">
         <div className="stat-card"><div className="stat-label">Presenti</div><div className="stat-value">{presentCount}</div></div>
         <div className="stat-card"><div className="stat-label">Totale</div><div className="stat-value">{visible.length}</div></div>
         <div className="stat-card"><div className="stat-label">XP pres.</div><div className="stat-value">{config.xp_daily_checkin}</div></div>
         <div className="stat-card"><div className="stat-label">Bonus sett.</div><div className="stat-value">{config.xp_week_bonus}</div></div>
       </div>
+      )}
       <div className="filter-bar">
         <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
         <button className="btn btn-yellow btn-sm" onClick={async () => { for (const p of visible) await setStatus(p.id, "full"); }}>✓ Tutti</button>
@@ -1953,6 +2015,36 @@ function AttendanceView({ sectionColors, setSectionColors }) {
           </table>
           </div>
         </>
+      )}
+      </> }
+      {/* Lab check-in tab */}
+      {presTab==="lab" && (
+        <div>
+          <div style={{marginBottom:12,fontSize:12,color:"var(--text3)"}}>Check-in Lab registrati automaticamente via QR per il {date}</div>
+          {labAtts.length===0 ? (
+            <div className="empty">Nessun check-in Lab per oggi.</div>
+          ) : (
+            // Group by lab
+            Object.entries(labAtts.reduce((acc,a)=>{
+              if (!acc[a.actName]) acc[a.actName]=[];
+              acc[a.actName].push(a); return acc;
+            },{})).map(([labName, entries])=>(
+              <div key={labName} style={{marginBottom:14,background:"rgba(255,204,0,.04)",border:"1px solid rgba(255,204,0,.2)",borderRadius:"var(--radius)",padding:"12px 14px"}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#ffcc00",marginBottom:8}}>⚡ {labName} <span style={{fontSize:13,color:"var(--text3)",fontWeight:400}}>· {entries.length} check-in</span></div>
+                {entries.map(a=>(
+                  <div key={a.id} style={{display:"flex",gap:10,alignItems:"center",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
+                    <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"1.5px solid rgba(255,204,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <Avatar url={a.avatar_url} emoji={a.lv?.emoji} size={30}/>
+                    </div>
+                    <div style={{flex:1,fontSize:13,fontWeight:600,color:"var(--text)"}}>{a.playerName}</div>
+                    <div style={{fontSize:11,color:"var(--neon-blue)",fontWeight:700}}>+{a.xp_awarded||0} XP</div>
+                    <div style={{fontSize:10,color:"var(--text3)"}}>{new Date(a.created_at).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</div>
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
       )}
       {customizing && <BannerCustomizer sectionKey="presenze" sectionColors={sectionColors} setSectionColors={setSectionColors} onClose={() => setCustomizing(false)} />}
     </div>
@@ -3616,12 +3708,213 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
+// ─── CSV EXPORT UTILITY ──────────────────────────────────
+
+function downloadCSV(rows, filename) {
+  const csv = rows.map(r => r.map(c => `"${String(c==null?"":c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function ExportView() {
+  const [loading, setLoading] = useState("");
+
+  async function exportPlayers() {
+    setLoading("players");
+    const { data } = await sb.from("profiles").select("display_name,first_name,xp,coin,current_streak,longest_streak,squads(name)").eq("role","player").order("xp",{ascending:false});
+    const rows = [["Nickname","Nome","Squadra","XP","Coin","Streak attuale","Streak record","Livello"]];
+    (data||[]).forEach(p => rows.push([p.display_name, p.first_name||"", p.squads?.name||"", p.xp, p.coin, p.current_streak||0, p.longest_streak||0, getLevel(p.xp).name]));
+    downloadCSV(rows, `pug_giocatori_${new Date().toISOString().split("T")[0]}.csv`);
+    setLoading("");
+  }
+
+  async function exportAttendances() {
+    setLoading("att");
+    const { data: att } = await sb.from("attendances").select("date,check_type,status,xp_awarded,coin_awarded,qr_verified,activity_id,profiles(display_name)").order("date",{ascending:false}).limit(2000);
+    const actIds = [...new Set((att||[]).map(a=>a.activity_id).filter(Boolean))];
+    let actMap = {};
+    if (actIds.length) {
+      const { data: acts } = await sb.from("activities").select("id,name").in("id",actIds);
+      actMap = Object.fromEntries((acts||[]).map(a=>[a.id,a.name]));
+    }
+    const rows = [["Giocatore","Data","Tipo","Lab","Stato","XP","Coin","QR Verificato"]];
+    (att||[]).forEach(a => rows.push([a.profiles?.display_name||"—", a.date, a.check_type==="lab"?"Lab":"Giornaliero", a.activity_id?actMap[a.activity_id]||"Lab":"—", a.status, a.xp_awarded||0, a.coin_awarded||0, a.qr_verified?"Sì":"No"]));
+    downloadCSV(rows, `pug_presenze_${new Date().toISOString().split("T")[0]}.csv`);
+    setLoading("");
+  }
+
+  async function exportLabs() {
+    setLoading("labs");
+    const { data: acts } = await sb.from("activities").select("id,name,schedule,duration_days,max_participants,xp_completed,coin_cost").eq("is_active",true);
+    const { data: bk } = await sb.from("bookings").select("activity_id,player_id,status");
+    const { data: att } = await sb.from("attendances").select("activity_id,player_id").eq("check_type","lab");
+    const rows = [["Lab","Giorni/Orari","Durata (gg)","Max partecipanti","XP max","Prenotazioni confermate","Check-in totali"]];
+    (acts||[]).forEach(a => {
+      const confirmed = (bk||[]).filter(b=>b.activity_id===a.id&&b.status==="confirmed").length;
+      const checkins = (att||[]).filter(b=>b.activity_id===a.id).length;
+      rows.push([a.name, a.schedule||"—", a.duration_days, a.max_participants||"∞", a.xp_completed, confirmed, checkins]);
+    });
+    downloadCSV(rows, `pug_lab_${new Date().toISOString().split("T")[0]}.csv`);
+    setLoading("");
+  }
+
+  async function exportHistory() {
+    setLoading("hist");
+    const { data } = await sb.from("notifications").select("title,body,type,created_at,profiles(display_name)").order("created_at",{ascending:false}).limit(2000);
+    const rows = [["Giocatore","Azione","Dettaglio","Tipo","Data"]];
+    (data||[]).filter(n=>n.profiles).forEach(n => rows.push([n.profiles?.display_name||"—", n.title, n.body||"", n.type, new Date(n.created_at).toLocaleDateString("it-IT")]));
+    downloadCSV(rows, `pug_storico_${new Date().toISOString().split("T")[0]}.csv`);
+    setLoading("");
+  }
+
+  const exports = [
+    { id:"players", label:"👥 Giocatori", desc:"Nickname, nome, squadra, XP, Coin, streak, livello", fn: exportPlayers, color:"var(--azzurro)" },
+    { id:"att",     label:"📅 Presenze complete", desc:"Tutte le presenze: data, tipo, lab, XP, QR verificato", fn: exportAttendances, color:"var(--neon-green)" },
+    { id:"labs",    label:"⚡ Riepilogo Lab", desc:"Lab attivi con prenotazioni e check-in totali", fn: exportLabs, color:"#ffcc00" },
+    { id:"hist",    label:"📜 Storico azioni", desc:"Tutte le azioni: badge, punti, messaggi, prenotazioni", fn: exportHistory, color:"var(--rosa)" },
+  ];
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:8}}>📤 Export dati</div>
+      <div style={{fontSize:13,color:"var(--text3)",marginBottom:20}}>I file vengono scaricati in formato CSV, compatibile con Excel, Google Fogli e Numbers.</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {exports.map(ex=>(
+          <div key={ex.id} style={{background:"rgba(0,0,0,.3)",border:`1px solid rgba(255,255,255,.08)`,borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:ex.color,marginBottom:3}}>{ex.label}</div>
+              <div style={{fontSize:12,color:"var(--text3)"}}>{ex.desc}</div>
+            </div>
+            <button className="btn btn-ghost btn-sm" style={{flexShrink:0,borderColor:ex.color,color:ex.color,minWidth:100}} onClick={ex.fn} disabled={loading===ex.id}>
+              {loading===ex.id ? "⏳ Export…" : "⬇️ Scarica"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── PRESENTATION MODE ────────────────────────────────────
+
+function PresentationMode({ onClose }) {
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0); // 0=podio, 1=lista completa
+
+  useEffect(() => {
+    sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)").eq("role","player").gt("xp",1).order("xp",{ascending:false}).then(({data})=>{
+      setPlayers(data||[]); setLoading(false);
+    });
+    const handler = e => { if(e.key==="Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  },[onClose]);
+
+  // Auto-cycle pages every 8 seconds
+  useEffect(()=>{
+    if (players.length <= 3) return;
+    const t = setTimeout(()=>setPage(p=>p===0?1:0), 8000);
+    return ()=>clearTimeout(t);
+  },[page, players]);
+
+  // Generate stars
+  const stars = Array.from({length:60},(_,i)=>({
+    left: Math.random()*100+"%", top: Math.random()*100+"%",
+    animationDelay: (Math.random()*3)+"s", opacity: Math.random()*.8+.2,
+    width: (Math.random()*3+1)+"px", height: (Math.random()*3+1)+"px",
+  }));
+
+  const order = [1,0,2]; // silver, gold, bronze visual order
+  const medals = ["🥈","🥇","🥉"];
+  const medalColors = ["#aac8e0","#ffcc00","#d4916a"];
+
+  if (loading) return (
+    <div className="pres-overlay">
+      <div style={{color:"#00d4ff",fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,fontWeight:900}}>⏳ Caricamento…</div>
+    </div>
+  );
+
+  return (
+    <div className="pres-overlay">
+      {/* Stars */}
+      <div className="pres-stars">{stars.map((s,i)=><div key={i} className="pres-star" style={s}/>)}</div>
+
+      <button className="pres-close" onClick={onClose}>✕ ESC per uscire</button>
+
+      {/* Page toggle */}
+      <div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)",display:"flex",gap:8,zIndex:5}}>
+        <button onClick={()=>setPage(0)} style={{width:10,height:10,borderRadius:"50%",background:page===0?"#ffcc00":"rgba(255,255,255,.2)",border:"none",cursor:"pointer",transition:"background .3s"}}/>
+        <button onClick={()=>setPage(1)} style={{width:10,height:10,borderRadius:"50%",background:page===1?"#ffcc00":"rgba(255,255,255,.2)",border:"none",cursor:"pointer",transition:"background .3s"}}/>
+      </div>
+
+      {page===0 && (
+        <>
+          <div className="pres-title">🏆 Classifica PUG</div>
+          {/* Podium */}
+          <div className="pres-podium-wrap">
+            {order.map((pos,i)=>{
+              const p = players[pos];
+              if (!p) return <div key={i} style={{width:"clamp(80px,14vw,130px)"}}/>;
+              const lv = getLevel(p.xp);
+              const avClass = ["pres-av pres-av-2","pres-av pres-av-1","pres-av pres-av-3"][i];
+              const baseClass = ["pres-base pres-base-2","pres-base pres-base-1","pres-base pres-base-3"][i];
+              const rankClass = ["pres-rank","pres-rank pres-rank-1","pres-rank"][i] + (i===1?" pres-rank-1":i===0?" pres-rank-2":" pres-rank-3");
+              const colClass = "pres-col pres-col-" + (i===1?"1":i===0?"2":"3");
+              return (
+                <div key={p.id} className={colClass}>
+                  {i===1 && <div className="pres-crown">👑</div>}
+                  <div className={avClass} style={{fontSize:i===1?"56px":i===0?"44px":"38px"}}>
+                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : lv.emoji}
+                  </div>
+                  <div className="pres-pname" style={{color:medalColors[i]}}>{p.display_name}</div>
+                  <div className="pres-pxp" style={{color:medalColors[i]}}>{p.xp.toLocaleString()} XP</div>
+                  <div className={baseClass}><span className={rankClass}>{medals[i]}</span></div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {page===1 && (
+        <>
+          <div className="pres-title" style={{fontSize:"clamp(22px,4vw,48px)",marginBottom:"clamp(12px,3vh,24px)"}}>🌿 Tutti i giocatori</div>
+          <div className="pres-list">
+            {players.map((p,i)=>{
+              const lv = getLevel(p.xp);
+              const colors = ["#ffcc00","#aac8e0","#d4916a"];
+              const isTop = i < 3;
+              return (
+                <div key={p.id} className="pres-list-row" style={{animationDelay:(i*0.05)+"s",background:isTop?"rgba(255,204,0,.06)":"rgba(255,255,255,.04)",borderLeft:isTop?`3px solid ${colors[i]}`:"none"}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,width:36,textAlign:"center",color:isTop?colors[i]:"var(--text3)"}}>{i+1}°</div>
+                  <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:`2px solid ${isTop?colors[i]:"rgba(255,255,255,.15)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+                    {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:lv.emoji}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                    <div style={{fontSize:10,color:"var(--text3)"}}>{lv.emoji} {lv.name}</div>
+                  </div>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:isTop?colors[i]:"var(--neon-blue)"}}>{p.xp.toLocaleString()}</div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 const EduTabColors = {
   dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
+  export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
   classifica:   { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   squadre:      { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
@@ -3643,6 +3936,7 @@ function EducatorShell({ profile, onLogout }) {
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
   const [theme, setTheme] = useState("dark");
   const [sectionColors, setSectionColors] = useState(DEFAULT_SECTION_COLORS);
+  const [showPresentation, setShowPresentation] = useState(false);
   const [notifCounts, setNotifCounts] = useState({ pendingBookings:0, missingAttendance:0, total:0 });
   const [showNotifPanel, setShowNotifPanel] = useState(false);
 
@@ -3775,6 +4069,7 @@ function EducatorShell({ profile, onLogout }) {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
+            <button onClick={()=>setShowPresentation(true)} style={{background:"rgba(255,204,0,.1)",border:"1px solid rgba(255,204,0,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#ffcc00",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
             <div className="edu-notif-bell" onClick={()=>setShowNotifPanel(p=>!p)}>
               🔔
               {notifCounts.total > 0 && <div className="edu-notif-badge">{notifCounts.total}</div>}
@@ -3815,6 +4110,7 @@ function EducatorShell({ profile, onLogout }) {
         )}
         <div className="content edu-content-wrap" style={{background:EduTabColors[tab]?.bg||"transparent"}}>
           {tab === "dashboard"   && <DashboardView />}
+          {tab === "export"       && <ExportView />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
           {tab === "squadre"      && <SquadsView />}
@@ -3845,6 +4141,8 @@ function EducatorShell({ profile, onLogout }) {
           </button>
         </div>
       </div>
+
+      {showPresentation && <PresentationMode onClose={()=>setShowPresentation(false)}/>}
 
       {showAvatarModal && (
         <div className="modal-bg" onClick={() => setShowAvatarModal(false)}>
