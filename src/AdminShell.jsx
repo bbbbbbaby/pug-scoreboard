@@ -38,9 +38,7 @@ function AdminShell({ profile, onLogout }) {
       if (authErr) { setErr("❌ Errore: " + authErr.message); setCreating(false); return; }
       const uid = authData.user?.id;
       if (!uid) {
-        setErr("❌ Account non creato. Cause possibili:
-• Email già esistente
-• Conferma email attiva → vai su Supabase → Authentication → Settings → disattiva 'Enable email confirmations'");
+        setErr("❌ Account non creato: email già esistente, oppure vai su Supabase → Authentication → Sign In/Providers → Email → disattiva Confirm email.");
         setCreating(false); return;
       }
       const { error: profErr } = await sb.from("profiles").insert({
