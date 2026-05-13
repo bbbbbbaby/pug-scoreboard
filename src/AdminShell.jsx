@@ -80,7 +80,7 @@ Password: ${form.password}`;
       {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:12,padding:"12px 16px",marginBottom:16,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
 
       {/* Educators list */}
-      <div style={{background:"rgba(0,0,0,.3)",borderRadius:16,border:"1px solid rgba(255,255,255,.08)",overflow:"hidden",marginBottom:16}}>
+      <div style={{background:"rgba(255,255,255,.06)",borderRadius:16,border:"1px solid rgba(255,255,255,.15)",overflow:"hidden",marginBottom:16}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:"#fff"}}>🌱 Giardinieri ({educators.length})</div>
           <button className="btn btn-primary btn-sm" onClick={()=>{setShowCreate(true);setErr("");setMsg("");}}>+ Nuovo</button>
@@ -106,12 +106,13 @@ Password: ${form.password}`;
 
       {/* Create form */}
       {showCreate && (
-        <div style={{background:"rgba(0,0,0,.5)",borderRadius:16,border:"1px solid rgba(255,204,0,.2)",padding:"20px"}}>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:"#ffcc00",marginBottom:16}}>Nuovo giardiniere</div>
+        <div style={{background:"rgba(255,255,255,.06)",borderRadius:16,border:"1px solid rgba(255,204,0,.35)",padding:"20px",marginTop:12}}>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:"#ffcc00",marginBottom:16}}>🌱 Nuovo giardiniere</div>
           {[["display_name","Nome visualizzato *","text","es. Massi"],["email","Email *","email","giardiniere@pug.it"],["password","Password temporanea *","text","min 6 caratteri"],["avatar_url","Avatar URL (opzionale)","text","/avatars/massi.webp"]].map(([k,l,t,ph])=>(
-            <div key={k} className="form-group">
-              <label className="form-label">{l}</label>
-              <input className="form-input" type={t} value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={ph}/>
+            <div key={k} style={{marginBottom:12}}>
+              <label style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:".1em",display:"block",marginBottom:5}}>{l}</label>
+              <input type={t} value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={ph}
+                style={{width:"100%",padding:"12px 14px",background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",borderRadius:10,color:"#fff",fontSize:15,outline:"none"}}/>
             </div>
           ))}
           <div style={{display:"flex",gap:8,marginTop:8}}>
