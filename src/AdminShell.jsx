@@ -20,33 +20,47 @@ function AdminShell({ profile, onLogout }) {
   }
   useEffect(()=>{ load(); },[]);
 
+  const [creating, setCreating] = useState(false);
+
   async function createEducator() {
     setErr(""); setMsg("");
     if (!form.email.trim() || !form.password.trim() || !form.display_name.trim()) {
       setErr("Nome, email e password sono obbligatori."); return;
     }
+    if (form.password.length < 6) { setErr("Password minimo 6 caratteri."); return; }
+    setCreating(true);
     try {
-      // Create auth user
+      const adminId = profile.id;
       const { data: authData, error: authErr } = await sb.auth.signUp({
         email: form.email.trim(),
         password: form.password.trim(),
       });
-      if (authErr) { setErr("Errore auth: " + authErr.message); return; }
+      if (authErr) { setErr("❌ Errore: " + authErr.message); setCreating(false); return; }
       const uid = authData.user?.id;
-      if (!uid) { setErr("Utente non creato, controlla se l'email esiste già."); return; }
-      // Create profile
+      if (!uid) {
+        setErr("❌ Account non creato. Cause possibili:
+• Email già esistente
+• Conferma email attiva → vai su Supabase → Authentication → Settings → disattiva 'Enable email confirmations'");
+        setCreating(false); return;
+      }
       const { error: profErr } = await sb.from("profiles").insert({
-        id: uid,
-        display_name: form.display_name.trim(),
-        role: "educator",
-        avatar_url: form.avatar_url.trim() || null,
-        pin: "1234",
+        id: uid, display_name: form.display_name.trim(),
+        role: "educator", avatar_url: form.avatar_url.trim() || null, pin: "1234",
       });
-      if (profErr) { setErr("Auth OK ma profilo fallito: " + profErr.message); return; }
-      setMsg(`✅ Giardiniere "${form.display_name}" creato! Email: ${form.email} — Password temporanea: ${form.password}`);
-      setForm({ display_name:"", email:"", password:"", avatar_url:"" });
-      setShowCreate(false); load();
-    } catch(e) { setErr("Errore: " + e.message); }
+      if (profErr) { setErr("Account creato ma profilo fallito: " + profErr.message); setCreating(false); return; }
+      const ok = `✅ "${form.display_name}" creato!
+Email: ${form.email}
+Password: ${form.password}`;
+      setMsg(ok); setForm({ display_name:"", email:"", password:"", avatar_url:"" }); setShowCreate(false); load();
+      // Se signUp ha cambiato sessione, torna al login admin
+      const { data: { session } } = await sb.auth.getSession();
+      if (session && session.user.id !== adminId) {
+        alert(ok + "
+
+⚠️ Devi riaccedere come admin."); await sb.auth.signOut(); window.location.reload();
+      }
+    } catch(e) { setErr("Errore: " + (e?.message || String(e))); }
+    setCreating(false);
   }
 
   async function deleteEducator(id, name) {
@@ -105,7 +119,7 @@ function AdminShell({ profile, onLogout }) {
             </div>
           ))}
           <div style={{display:"flex",gap:8,marginTop:8}}>
-            <button className="btn btn-primary" style={{flex:1}} onClick={createEducator}>Crea giardiniere</button>
+            <button className="btn btn-primary" style={{flex:1}} onClick={createEducator} disabled={creating}>{creating?"⏳ Creazione…":"Crea giardiniere"}</button>
             <button className="btn btn-ghost btn-sm" onClick={()=>setShowCreate(false)}>Annulla</button>
           </div>
           <div style={{fontSize:11,color:"var(--text3)",marginTop:10}}>
