@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="version" content="2.1.0" />
     <meta name="theme-color" content="#1a3590" />
     <meta name="description" content="PUG Scoreboard – Gestione club gamificata" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -10,12 +14,20 @@
     <meta name="apple-mobile-web-app-title" content="PUG" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512x512.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
     <title>PUG Scoreboard</title>
-    <!-- jsQR per scansione QR con camera -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+    <script>
+      // Force service worker update and clear old caches
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(r => r.unregister());
+        });
+        caches.keys().then(keys => {
+          keys.forEach(k => caches.delete(k));
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
