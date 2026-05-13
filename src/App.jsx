@@ -866,6 +866,29 @@ function BannerCustomizer({ sectionKey, sectionColors, setSectionColors, onClose
   );
 }
 
+// ─── IMAGE COMPRESSION ──────────────────────────────────
+
+async function compressToWebP(file, maxPx = 400, quality = 0.85) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width: w, height: h } = img;
+      if (w > maxPx || h > maxPx) {
+        if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+        else        { w = Math.round(w * maxPx / h); h = maxPx; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => resolve(blob || file), "image/webp", quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   const fileRef = useRef();
   const [uploading, setUploading] = useState(false);
@@ -874,14 +897,21 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   async function handleFile(e) {
     const file = e.target.files[0]; if (!file) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `avatars/${playerId}.${ext}`;
-    const { error } = await sb.storage.from("avatars").upload(path, file, { upsert: true });
-    if (error) { alert("Errore upload: " + error.message); setUploading(false); return; }
-    const { data } = sb.storage.from("avatars").getPublicUrl(path);
-    const url = data.publicUrl + "?t=" + Date.now();
-    await sb.from("profiles").update({ avatar_url: url }).eq("id", playerId);
-    setPreview(url); onUploaded && onUploaded(url); setUploading(false);
+    try {
+      // Comprimi a max 400px WebP prima dell'upload
+      const compressed = await compressToWebP(file, 400, 0.85);
+      const origKB = Math.round(file.size / 1024);
+      const compKB = Math.round(compressed.size / 1024);
+      console.log(`Compressione: ${origKB}KB → ${compKB}KB (${Math.round((1-compKB/origKB)*100)}% riduzione)`);
+      const path = `avatars/${playerId}.webp`;
+      const { error } = await sb.storage.from("avatars").upload(path, compressed, { upsert: true, contentType: "image/webp" });
+      if (error) { alert("Errore upload: " + error.message); setUploading(false); return; }
+      const { data } = sb.storage.from("avatars").getPublicUrl(path);
+      const url = data.publicUrl + "?t=" + Date.now();
+      await sb.from("profiles").update({ avatar_url: url }).eq("id", playerId);
+      setPreview(url); onUploaded && onUploaded(url);
+    } catch(err) { alert("Errore: " + err.message); }
+    setUploading(false);
   }
 
   return (
@@ -1411,7 +1441,14 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
       sb.from("attendances").select("*").eq("player_id", playerId).order("date", { ascending: false }).limit(30),
       sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(40),
     ]);
-    setData({ profile: p, badges: badges || [], attendances: att || [], history: notifs || [] });
+    // Fetch lab names for lab attendances
+      const labIds = [...new Set((att||[]).map(a=>a.activity_id).filter(Boolean))];
+      let labNames = {};
+      if (labIds.length > 0) {
+        const { data: labs } = await sb.from("activities").select("id,name").in("id", labIds);
+        labNames = Object.fromEntries((labs||[]).map(l=>[l.id,l.name]));
+      }
+      setData({ profile: p, badges: badges || [], attendances: att || [], history: notifs || [], labNames });
     if (p) setEditing({ xp: p.xp, coin: p.coin, pin: p.pin || "1234", display_name: p.display_name, squad_id: p.squad_id, avatar_url: p.avatar_url || "" });
   }, [playerId]);
 
@@ -1432,7 +1469,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
     </div>
   );
 
-  const { profile, badges, attendances, history } = data;
+  const { profile, badges, attendances, history, labNames = {} } = data;
   const lv = getLevel(profile?.xp || 0);
   const presentDays = attendances.filter(a => a.status !== "none").length;
 
@@ -1493,19 +1530,45 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
         )}
 
         {tab==="presenze" && (
-          <div style={{display:"flex",flexDirection:"column",gap:5}}>
-            {attendances.length===0 && <div className="empty">Nessuna presenza.</div>}
-            {attendances.map(a => {
-              const icons={full:"✅",partial:"🟡",completed:"⭐",none:"❌"};
-              return (
-                <div key={a.id} style={{display:"flex",gap:10,alignItems:"center",padding:"8px 12px",background:"rgba(0,0,0,.15)",borderRadius:8}}>
-                  <span style={{fontSize:16}}>{icons[a.status]||"—"}</span>
-                  <span style={{flex:1,fontSize:13,color:"var(--text)"}}>{a.date}</span>
-                  <span style={{fontSize:12,color:"var(--azzurro)",fontWeight:700}}>+{a.xp_awarded||0} XP</span>
-                  <span style={{fontSize:12,color:"var(--neon-gold)",fontWeight:700}}>🪙 +{a.coin_awarded||0}</span>
+          <div>
+            {/* Summary */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12}}>
+              {[
+                ["Totale",attendances.filter(a=>a.status!=="none").length,"var(--neon-blue)"],
+                ["XP presenze",attendances.reduce((s,a)=>s+(a.xp_awarded||0),0),"var(--neon-blue)"],
+                ["Lab frequentati",[...new Set(attendances.filter(a=>a.activity_id).map(a=>a.activity_id))].length,"#ffcc00"],
+              ].map(([l,v,c])=>(
+                <div key={l} style={{background:"rgba(0,0,0,.25)",borderRadius:10,padding:"8px",textAlign:"center"}}>
+                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:c}}>{v}</div>
+                  <div style={{fontSize:9,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",marginTop:2}}>{l}</div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+            {/* List */}
+            <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:300,overflowY:"auto"}}>
+              {attendances.length===0 && <div className="empty">Nessuna presenza.</div>}
+              {attendances.map(a=>{
+                const isLab = a.check_type==="lab" || !!a.activity_id;
+                const labName = a.activity_id ? (labNames[a.activity_id]||"Lab") : null;
+                const statusIcon = {full:"✅",partial:"🟡",completed:"⭐",none:"❌"}[a.status]||"—";
+                return (
+                  <div key={a.id} style={{display:"flex",gap:8,alignItems:"center",padding:"8px 10px",background:isLab?"rgba(255,204,0,.05)":"rgba(0,0,0,.15)",borderRadius:8,borderLeft:`3px solid ${isLab?"#ffcc00":"rgba(0,212,255,.25)"}`}}>
+                    <span style={{fontSize:14}}>{statusIcon}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,color:"var(--text)",fontWeight:600}}>{a.date}</div>
+                      <div style={{fontSize:10,color:isLab?"#ffcc00":"var(--text3)",fontWeight:700}}>
+                        {isLab ? `⚡ ${labName}` : "📍 Presenza giornaliera"}
+                        {a.qr_verified && <span style={{marginLeft:5,fontSize:9,color:"var(--neon-green)"}}>• QR ✓</span>}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700}}>+{a.xp_awarded||0} XP</div>
+                      {(a.coin_awarded||0)>0 && <div style={{fontSize:10,color:"var(--neon-gold)"}}>🪙 +{a.coin_awarded}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -2303,19 +2366,23 @@ function DiaryView() {
         sb.from("notifications").select("*, profiles(display_name)")
           .gte("created_at", dayStart).lte("created_at", dayEnd)
           .order("created_at", { ascending: false }).limit(200),
-        sb.from("attendances").select("*, profiles(display_name)")
+        sb.from("attendances").select("id,date,status,xp_awarded,coin_awarded,check_type,activity_id,created_at,profiles(display_name)")
           .eq("date", dateFilter).neq("status","none")
           .order("created_at", { ascending: false }),
       ]);
       // Merge: notifiche + presenze come eventi
-      const presEvents = (atts || []).filter(a => a.profiles).map(a => ({
-        id: "att_" + a.id,
-        type: "presenza",
-        title: `Presenza ${a.status === "full" ? "completa" : a.status === "partial" ? "parziale" : "completata"}`,
-        body: `+${a.xp_awarded || 0} XP · +${a.coin_awarded || 0} Coin`,
-        profiles: a.profiles,
-        created_at: a.created_at || (dateFilter + "T12:00:00"),
-      }));
+      const presEvents = (atts || []).filter(a => a.profiles).map(a => {
+        const isLab = a.check_type === "lab" || !!a.activity_id;
+        return {
+          id: "att_" + a.id,
+          type: "presenza",
+          activity_id: a.activity_id,
+          title: isLab ? `⚡ Lab check-in` : `📍 Presenza ${a.status === "full" ? "completa" : a.status === "partial" ? "parziale" : "completata"}`,
+          body: `+${a.xp_awarded || 0} XP · +${a.coin_awarded || 0} Coin`,
+          profiles: a.profiles,
+          created_at: a.created_at || (dateFilter + "T12:00:00"),
+        };
+      });
       const allEntries = [...(notifs||[]).filter(n => n.profiles), ...presEvents]
         .sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
       setEntries(allEntries); setLoading(false);
