@@ -1,7 +1,6 @@
 import { sb } from "./supabase.js";
 import AdminShell from "./AdminShell.jsx";
 import { useState, useEffect, useCallback, useRef } from "react";
-import AdminShell from "./AdminShell.jsx";
 
 // ─── LIVELLI ──────────────────────────────────────────────
 const LEVELS = [
