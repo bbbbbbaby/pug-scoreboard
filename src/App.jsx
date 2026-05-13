@@ -1428,6 +1428,37 @@ function PlayersView({ sectionColors, setSectionColors }) {
   );
 }
 
+function InlineAvatarUpload({ playerId, onUploaded }) {
+  const ref = useRef();
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(e) {
+    const file = e.target.files[0]; if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressToWebP(file, 400, 0.85);
+      const path = `avatars/${playerId}_custom.webp`;
+      const { error } = await sb.storage.from("avatars").upload(path, compressed, { upsert: true, contentType: "image/webp" });
+      if (error) { alert("Errore upload: " + error.message); setUploading(false); return; }
+      const { data } = sb.storage.from("avatars").getPublicUrl(path);
+      const url = data.publicUrl + "?t=" + Date.now();
+      await sb.from("profiles").update({ avatar_url: url }).eq("id", playerId);
+      onUploaded(url);
+    } catch(err) { alert("Errore: " + err.message); }
+    setUploading(false);
+  }
+
+  return (
+    <div>
+      <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{display:"none"}}/>
+      <button className="btn btn-ghost btn-sm" style={{width:"100%"}} onClick={()=>ref.current.click()} disabled={uploading}>
+        {uploading ? "⏳ Caricamento e compressione…" : "📷 Carica foto da dispositivo"}
+      </button>
+      {!uploading && <div style={{fontSize:10,color:"var(--text3)",marginTop:4,textAlign:"center"}}>Compressa automaticamente in WebP prima dell'upload</div>}
+    </div>
+  );
+}
+
 function PlayerDetailPanel({ playerId, squads, onClose }) {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("storia");
@@ -1496,7 +1527,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 
         {/* Tabs */}
         <div className="detail-tabs" style={{marginBottom:14}}>
-          {[["storia","📜 Storia"],["badge","🎖️ Badge"],["presenze","✅ Presenze"],["modifica","✏️ Modifica"]].map(([id,label]) => (
+          {[["storia","📜 Storia"],["badge","🎖️ Badge"],["presenze","📍 Giornaliere"],["labpres","⚡ Lab"],["modifica","✏️ Modifica"]].map(([id,label]) => (
             <button key={id} className={`detail-tab ${tab===id?"active":""}`} onClick={()=>setTab(id)}>{label}</button>
           ))}
         </div>
@@ -1529,48 +1560,54 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
           </div>
         )}
 
-        {tab==="presenze" && (
-          <div>
-            {/* Summary */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12}}>
-              {[
-                ["Totale",attendances.filter(a=>a.status!=="none").length,"var(--neon-blue)"],
-                ["XP presenze",attendances.reduce((s,a)=>s+(a.xp_awarded||0),0),"var(--neon-blue)"],
-                ["Lab frequentati",[...new Set(attendances.filter(a=>a.activity_id).map(a=>a.activity_id))].length,"#ffcc00"],
-              ].map(([l,v,c])=>(
-                <div key={l} style={{background:"rgba(0,0,0,.25)",borderRadius:10,padding:"8px",textAlign:"center"}}>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:c}}>{v}</div>
-                  <div style={{fontSize:9,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",marginTop:2}}>{l}</div>
-                </div>
-              ))}
-            </div>
-            {/* List */}
-            <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:300,overflowY:"auto"}}>
-              {attendances.length===0 && <div className="empty">Nessuna presenza.</div>}
-              {attendances.map(a=>{
-                const isLab = a.check_type==="lab" || !!a.activity_id;
-                const labName = a.activity_id ? (labNames[a.activity_id]||"Lab") : null;
-                const statusIcon = {full:"✅",partial:"🟡",completed:"⭐",none:"❌"}[a.status]||"—";
-                return (
-                  <div key={a.id} style={{display:"flex",gap:8,alignItems:"center",padding:"8px 10px",background:isLab?"rgba(255,204,0,.05)":"rgba(0,0,0,.15)",borderRadius:8,borderLeft:`3px solid ${isLab?"#ffcc00":"rgba(0,212,255,.25)"}`}}>
-                    <span style={{fontSize:14}}>{statusIcon}</span>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,color:"var(--text)",fontWeight:600}}>{a.date}</div>
-                      <div style={{fontSize:10,color:isLab?"#ffcc00":"var(--text3)",fontWeight:700}}>
-                        {isLab ? `⚡ ${labName}` : "📍 Presenza giornaliera"}
-                        {a.qr_verified && <span style={{marginLeft:5,fontSize:9,color:"var(--neon-green)"}}>• QR ✓</span>}
+        {(tab==="presenze"||tab==="labpres") && (() => {
+          const daily = attendances.filter(a => !(a.check_type==="lab"||!!a.activity_id));
+          const labs  = attendances.filter(a => a.check_type==="lab"||!!a.activity_id);
+          const list  = tab==="labpres" ? labs : daily;
+          return (
+            <div>
+              {/* Summary cards */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12}}>
+                {(tab==="presenze" ? [
+                  ["Totali", daily.length, "var(--neon-blue)"],
+                  ["XP", daily.reduce((s,a)=>s+(a.xp_awarded||0),0), "var(--neon-blue)"],
+                  ["QR verificati", daily.filter(a=>a.qr_verified).length, "var(--neon-green)"],
+                ] : [
+                  ["Sessioni Lab", labs.length, "#ffcc00"],
+                  ["XP Lab", labs.reduce((s,a)=>s+(a.xp_awarded||0),0), "#ffcc00"],
+                  ["Lab diversi", [...new Set(labs.map(a=>a.activity_id).filter(Boolean))].length, "var(--rosa)"],
+                ]).map(([l,v,c])=>(
+                  <div key={l} style={{background:"rgba(0,0,0,.25)",borderRadius:10,padding:"8px",textAlign:"center"}}>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:c}}>{v}</div>
+                    <div style={{fontSize:9,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",marginTop:2}}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              {/* List */}
+              <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:280,overflowY:"auto"}}>
+                {list.length===0 && <div className="empty">{tab==="labpres"?"Nessun check-in Lab.":"Nessuna presenza giornaliera."}</div>}
+                {list.map(a=>{
+                  const labName = a.activity_id ? (labNames[a.activity_id]||"Lab") : null;
+                  const statusIcon = {full:"✅",partial:"🟡",completed:"⭐",none:"❌"}[a.status]||"—";
+                  return (
+                    <div key={a.id} style={{display:"flex",gap:8,alignItems:"center",padding:"8px 10px",background:tab==="labpres"?"rgba(255,204,0,.05)":"rgba(0,212,255,.04)",borderRadius:8,borderLeft:`3px solid ${tab==="labpres"?"#ffcc00":"rgba(0,212,255,.3)"}`}}>
+                      <span style={{fontSize:14}}>{statusIcon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,color:"var(--text)",fontWeight:600}}>{a.date}</div>
+                        {labName && <div style={{fontSize:10,color:"#ffcc00",fontWeight:700}}>⚡ {labName}</div>}
+                        {a.qr_verified && <span style={{fontSize:9,color:"var(--neon-green)"}}>QR verificato ✓</span>}
+                      </div>
+                      <div style={{textAlign:"right",flexShrink:0}}>
+                        <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700}}>+{a.xp_awarded||0} XP</div>
+                        {(a.coin_awarded||0)>0&&<div style={{fontSize:10,color:"var(--neon-gold)"}}>🪙+{a.coin_awarded}</div>}
                       </div>
                     </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700}}>+{a.xp_awarded||0} XP</div>
-                      {(a.coin_awarded||0)>0 && <div style={{fontSize:10,color:"var(--neon-gold)"}}>🪙 +{a.coin_awarded}</div>}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {tab==="modifica" && editing && (
           <div>
@@ -1592,19 +1629,20 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar</div>
             {editing.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,255,255,.04)",borderRadius:10}}>
-                <img src={editing.avatar_url} style={{width:44,height:44,objectFit:"contain"}} alt=""/>
-                <div style={{fontSize:12,color:"var(--text2)",flex:1}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
+                <img src={editing.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt=""/>
+                <div style={{fontSize:12,color:"var(--text2)",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis"}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
               </div>
             )}
-            <div className="form-group">
-              <label className="form-label">URL avatar (es: /avatars/galeopsis.webp)</label>
-              <input className="form-input" value={editing.avatar_url||""} onChange={e=>setEditing(p=>({...p,avatar_url:e.target.value}))} placeholder="/avatars/nomepianta.webp"/>
+            <InlineAvatarUpload playerId={playerId} onUploaded={url=>{setEditing(p=>({...p,avatar_url:url}));setSaveMsg("Avatar aggiornato ✅");setTimeout(()=>setSaveMsg(""),2500);}}/>
+            <div className="form-group" style={{marginTop:8}}>
+              <label className="form-label">Oppure URL pianta predefinita (/avatars/nome.webp)</label>
+              <input className="form-input" value={editing.avatar_url||""} onChange={e=>setEditing(p=>({...p,avatar_url:e.target.value}))} placeholder="/avatars/nomepianta.webp" style={{fontSize:13}}/>
             </div>
             <div style={{display:"flex",gap:8,marginTop:4}}>
               <button className="btn btn-primary" style={{flex:1}} onClick={saveEdits}>Salva</button>
               <button className="btn btn-danger btn-sm" onClick={async()=>{
-                const {error} = await sb.from("profiles").update({avatar_url:null}).eq("id",playerId);
-                if(!error){setSaveMsg("Avatar rimosso ✅");setEditing(p=>({...p,avatar_url:""}));setTimeout(()=>setSaveMsg(""),2500);}
+                await sb.from("profiles").update({avatar_url:null}).eq("id",playerId);
+                setSaveMsg("Avatar rimosso ✅"); setEditing(p=>({...p,avatar_url:""})); setTimeout(()=>setSaveMsg(""),2500);
               }}>🗑️ Reset</button>
             </div>
           </div>
