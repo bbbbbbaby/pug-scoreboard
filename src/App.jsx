@@ -4002,8 +4002,8 @@ const EduTabColors = {
   qr:           { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
 };
 
-function EducatorShell({ profile, onLogout }) {
-  const [tab, setTab] = useState("dashboard");
+function EducatorShell({ profile, onLogout }) {function EducatorShell({ profile, onLogout }) {
+  if (profile?.role === "admin") return <AdminShell profile={profile} onLogout={onLogout} />;  const [tab, setTab] = useState("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
