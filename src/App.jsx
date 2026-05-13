@@ -1,4 +1,5 @@
 import { sb } from "./supabase.js";
+import AdminShell from "./AdminShell.jsx";
 import { useState, useEffect, useCallback, useRef } from "react";
 import AdminShell from "./AdminShell.jsx";
 
@@ -4312,8 +4313,9 @@ export default function App() {
           ? <PlayerDashboard profile={profile} onLogout={onLogout} sectionColors={sectionColors} />
           : profile.role === "admin"
           ? <AdminShell profile={profile} onLogout={onLogout} />
-          : <EducatorShell profile={profile} onLogout={onLogout} />
-      }
+: profile.role === "admin"
+? <AdminShell profile={profile} onLogout={onLogout} />
+: <EducatorShell profile={profile} onLogout={onLogout} />      }
     </>
   );
 }
