@@ -3749,6 +3749,7 @@ function AdminView({ profile }) {
   const [err, setErr] = useState("");
   const [creating, setCreating] = useState(false);
   const [editEdu, setEditEdu] = useState(null);
+  const [editAvatar, setEditAvatar] = useState(null); // {id, avatar_url}
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -3779,6 +3780,11 @@ function AdminView({ profile }) {
   async function saveEdu(e) {
     await sb.from("profiles").update({ display_name: e.display_name, avatar_url: e.avatar_url || null }).eq("id", e.id);
     setEditEdu(null); load();
+  }
+
+  async function saveAvatar(id, url) {
+    await sb.from("profiles").update({ avatar_url: url || null }).eq("id", id);
+    setEditAvatar(null); load();
   }
 
   async function deleteEdu(id, name) {
@@ -3823,11 +3829,37 @@ function AdminView({ profile }) {
               {editEdu?.id !== e.id && (
                 <div style={{display:"flex",gap:6}}>
                   <button className="btn btn-ghost btn-xs" onClick={()=>setEditEdu({...e})}>✏️</button>
+                  <button className="btn btn-ghost btn-xs" onClick={()=>setEditAvatar({id:e.id,avatar_url:e.avatar_url||""})} title="Cambia avatar">🖼️</button>
                   <button className="btn btn-danger btn-xs" onClick={()=>deleteEdu(e.id,e.display_name)}>🗑️</button>
                 </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal avatar editor */}
+      {editAvatar && (
+        <div className="modal-bg" onClick={()=>setEditAvatar(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">🖼️ Cambia avatar giardiniere</div>
+            {editAvatar.avatar_url && (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
+                <img src={editAvatar.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt=""/>
+                <div style={{fontSize:12,color:"#ffcc00",flex:1}}>{editAvatar.avatar_url.split("/").pop().replace(".webp","")}</div>
+                <button className="btn btn-ghost btn-xs" onClick={()=>setEditAvatar(p=>({...p,avatar_url:""}))}>✕</button>
+              </div>
+            )}
+            <div className="section-label">Scegli dall'archivio giardinieri</div>
+            <AvatarPicker selected={editAvatar.avatar_url} onSelect={url=>setEditAvatar(p=>({...p,avatar_url:url}))} squadFilter="Giardinieri"/>
+            <div style={{height:1,background:"var(--border)",margin:"12px 0"}}/>
+            <div className="section-label">Oppure carica una foto</div>
+            <InlineAvatarUpload playerId={editAvatar.id} onUploaded={url=>{setEditAvatar(p=>({...p,avatar_url:url}));saveAvatar(editAvatar.id,url);}}/>
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={()=>saveAvatar(editAvatar.id,editAvatar.avatar_url)}>Salva avatar</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setEditAvatar(null)}>Annulla</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -3838,7 +3870,20 @@ function AdminView({ profile }) {
           <div className="form-group"><label className="form-label">Nome visualizzato *</label><input className="form-input" value={form.display_name} onChange={e=>setForm(f=>({...f,display_name:e.target.value}))} placeholder="es. Massi"/></div>
           <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="giardiniere@email.com"/></div>
           <div className="form-group"><label className="form-label">Password * (min 6 caratteri)</label><input className="form-input" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="es. pug2026!"/></div>
-          <div className="form-group"><label className="form-label">Avatar URL (opzionale)</label><input className="form-input" value={form.avatar_url} onChange={e=>setForm(f=>({...f,avatar_url:e.target.value}))} placeholder="/avatars/ago.webp"/></div>
+          <div className="form-group">
+            <label className="form-label">Avatar</label>
+            {form.avatar_url && (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
+                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt=""/>
+                <div style={{flex:1,fontSize:12,color:"#ffcc00"}}>{form.avatar_url.split("/").pop().replace(".webp","")}</div>
+                <button className="btn btn-ghost btn-xs" onClick={()=>setForm(f=>({...f,avatar_url:""}))}>✕</button>
+              </div>
+            )}
+            <AvatarPicker selected={form.avatar_url} onSelect={url=>setForm(f=>({...f,avatar_url:url}))} squadFilter="Giardinieri"/>
+            <div style={{height:1,background:"var(--border)",margin:"8px 0"}}/>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Oppure carica una foto:</div>
+            <InlineAvatarUpload playerId={"new_edu_" + Date.now()} onUploaded={url=>setForm(f=>({...f,avatar_url:url}))}/>
+          </div>
           <div style={{display:"flex",gap:8,marginTop:4}}>
             <button className="btn btn-primary" style={{flex:1}} onClick={createEducator} disabled={creating}>{creating?"⏳ Creazione…":"Crea giardiniere"}</button>
             <button className="btn btn-ghost btn-sm" onClick={()=>setShowCreate(false)}>Annulla</button>
