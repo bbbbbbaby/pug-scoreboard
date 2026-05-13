@@ -1345,8 +1345,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
       {msg && <div style={{ background: "rgba(163,207,254,.1)", border: "1.5px solid rgba(163,207,254,.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "var(--azzurro)", fontWeight: 600 }}>{msg}</div>}
 
-      {presTab==="daily" && (
-      <div><div className="filter-bar">
+      <div className="filter-bar">
         <input className="search-inp" placeholder="Cerca giocatore…" value={search} onChange={e => setSearch(e.target.value)} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
