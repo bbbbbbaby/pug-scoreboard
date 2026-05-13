@@ -2013,7 +2013,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
             </tbody>
           </table>
           </div>
-        </div>
+        </>
       )}
       {/* Lab check-in tab */}
       {presTab==="lab" && (
