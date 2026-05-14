@@ -3969,12 +3969,27 @@ function PuliziaView() {
     setNotifs(n||[]); setBookings(b||[]); setLoading(false);
   }
 
+  async function loadAllPlayers() {
+    setLoading(true); setMsg("");
+    const { data: allNotifs } = await sb.from("notifications").select("*,profiles(display_name)").order("created_at",{ascending:false}).limit(500);
+    const { data: allBookings } = await sb.from("bookings").select("id,status,coin_held,created_at,player_id,activities(name),profiles(display_name)").order("created_at",{ascending:false}).limit(500);
+    setNotifs((allNotifs||[]).map(n=>({...n, _playerName: n.profiles?.display_name})));
+    setBookings((allBookings||[]).map(b=>({...b, _playerName: b.profiles?.display_name})));
+    setLoading(false);
+  }
+
   async function deleteNotif(id) {
     await sb.from("notifications").delete().eq("id",id);
     setNotifs(prev => prev.filter(n=>n.id!==id));
   }
 
   async function deleteAllNotifs() {
+    if (selected?.id === "__all__") {
+      if (!confirm("Cancellare TUTTE le notifiche di TUTTI i giocatori? Operazione irreversibile.")) return;
+      for (const p of players) { await sb.from("notifications").delete().eq("user_id",p.id); }
+      setNotifs([]); setMsg("✅ Notifiche di tutti i giocatori cancellate");
+      return;
+    }
     if (!confirm(`Cancellare tutte le notifiche di ${selected.display_name}?`)) return;
     await sb.from("notifications").delete().eq("user_id",selected.id);
     setNotifs([]); setMsg("✅ Notifiche cancellate");
@@ -4016,13 +4031,17 @@ function PuliziaView() {
       {/* Player selector */}
       <div style={{marginBottom:16}}>
         <label className="form-label">Giocatore</label>
-        <select onChange={e=>{
-          const p = players.find(p=>p.id===e.target.value);
-          if (p) loadPlayer(p);
-        }} style={{width:"100%",padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:15}}>
-          <option value="">Seleziona un giocatore…</option>
-          {players.map(p=><option key={p.id} value={p.id}>{p.display_name} · {p.xp} XP</option>)}
-        </select>
+        <div style={{display:"flex",gap:8}}>
+          <select onChange={e=>{
+            if (e.target.value === "__all__") { setSelected({id:"__all__",display_name:"Tutti i giocatori"}); loadAllPlayers(); return; }
+            const p = players.find(p=>p.id===e.target.value);
+            if (p) loadPlayer(p);
+          }} style={{flex:1,padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:15}}>
+            <option value="">Seleziona un giocatore…</option>
+            <option value="__all__">🌍 Tutti i giocatori</option>
+            {players.map(p=><option key={p.id} value={p.id}>{p.display_name} · {p.xp} XP</option>)}
+          </select>
+        </div>
       </div>
 
       {loading && <div className="loading">⏳ Caricamento…</div>}
@@ -4031,12 +4050,14 @@ function PuliziaView() {
         <div>
           {/* Player header */}
           <div style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
-            <div style={{width:44,height:44,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,140,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>
-              {selected.avatar_url?<img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:getLevel(selected.xp||0).emoji}
+            <div style={{width:44,height:44,borderRadius:"50%",border:"2px solid rgba(255,140,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+              {selected.id==="__all__" ? "🌍" : selected.avatar_url ? <img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt=""/> : getLevel(selected.xp||0).emoji}
             </div>
             <div style={{flex:1}}>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff"}}>{selected.display_name}</div>
-              <div style={{fontSize:12,color:"var(--text3)"}}>{selected.squads?.name||"Nessuna squadra"} · {selected.xp} XP</div>
+              <div style={{fontSize:12,color:"var(--text3)"}}>
+                {selected.id==="__all__" ? `${players.length} giocatori · ${notifs.length} notifiche · ${bookings.length} prenotazioni` : `${selected.squads?.name||"Nessuna squadra"} · ${selected.xp} XP`}
+              </div>
             </div>
           </div>
 
@@ -4052,6 +4073,7 @@ function PuliziaView() {
                   <div key={n.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
                     <span style={{fontSize:16,flexShrink:0}}>{typeIcon[n.type]||"🔔"}</span>
                     <div style={{flex:1,minWidth:0}}>
+                      {selected?.id==="__all__" && n._playerName && <div style={{fontSize:10,color:"#ffcc00",fontWeight:700,marginBottom:1}}>{n._playerName}</div>}
                       <div style={{fontSize:12,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.title}</div>
                       {n.body&&<div style={{fontSize:10,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.body}</div>}
                       <div style={{fontSize:9,color:"var(--text3)"}}>{new Date(n.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
@@ -4075,6 +4097,7 @@ function PuliziaView() {
                   <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
                     <span style={{fontSize:14,flexShrink:0}}>{statusTag[b.status]||"?"}</span>
                     <div style={{flex:1,minWidth:0}}>
+                      {selected?.id==="__all__" && b._playerName && <div style={{fontSize:10,color:"#ffcc00",fontWeight:700,marginBottom:1}}>{b._playerName}</div>}
                       <div style={{fontSize:12,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.activities?.name||"Lab eliminato"}</div>
                       <div style={{fontSize:10,color:"var(--text3)"}}>🪙 {b.coin_held||0} · {new Date(b.created_at).toLocaleDateString("it-IT")}</div>
                     </div>
