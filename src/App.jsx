@@ -781,8 +781,15 @@ const css = `
   @keyframes fade-in { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
   .pres-close { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px 14px; color:rgba(255,255,255,.5); font-size:13px; cursor:pointer; font-weight:700; letter-spacing:.05em; z-index:10; }
   .pres-close:hover { background:rgba(255,255,255,.15); color:#fff; }
+  /* ═══ SMOOTH TRANSITIONS ═══ */
+  .content { animation:fade-up .2s ease; }
+  @keyframes fade-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .player-bottom-nav { transition:background .3s; }
+  img { transition:opacity .2s; }
+  img[loading="lazy"] { opacity:0; }
+  img[loading="lazy"].loaded { opacity:1; }
   /* ═══ PLAYER DASHBOARD — NEW DESIGN ═══ */
-  .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; }
+  .player-wrap { background:linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%); min-height:100vh; position:relative; z-index:1; transition:background .4s ease; }
   .pd-topbar { position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,0,.85); border-bottom:1px solid rgba(255,255,255,.1); z-index:20; display:flex; align-items:center; padding:0 14px; justify-content:space-between; backdrop-filter:blur(20px); }
   .pd-logo-box { background:#cc1111; border-radius:9px 12px 9px 14px; padding:4px 10px; transform:rotate(-1.5deg); box-shadow:2px 3px 0 rgba(0,0,0,.2); }
   .pd-logo-t { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:900; color:#111; line-height:1.05; text-transform:uppercase; letter-spacing:-.3px; }
@@ -4402,33 +4409,48 @@ export default function App() {
         regs.forEach(r => r.unregister());
       });
     }
-    // Controlla prima sessione player (localStorage)
+    // Controlla prima sessione player (localStorage) — mostra subito dalla cache
     const savedPlayer = localStorage.getItem("pug_player");
     if (savedPlayer) {
       try {
         const p = JSON.parse(savedPlayer);
         if (p?._playerSession && p?.id) {
-          // Verifica che il profilo esista ancora
+          // Mostra subito il profilo dalla cache locale
+          setProfile({ ...p, _playerSession: true });
+          setChecking(false);
+          // Aggiorna in background dal DB senza bloccare
           sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
             .then(({ data }) => {
               if (data) setProfile({ ...data, _playerSession: true });
-              else localStorage.removeItem("pug_player");
+              else { localStorage.removeItem("pug_player"); setProfile(null); }
             })
-            .catch(() => { localStorage.removeItem("pug_player"); })
-            .finally(() => setChecking(false));
+            .catch(console.error);
           return;
         }
       } catch (_) { localStorage.removeItem("pug_player"); }
     }
 
     // Poi controlla sessione educator (Supabase Auth)
-    const _t = setTimeout(() => setChecking(false), 5000); // fallback timeout
+    const _t = setTimeout(() => setChecking(false), 1500); // fallback timeout
+    // Mostra subito profilo educator dalla cache se disponibile
+    const cachedEdu = sessionStorage.getItem("pug_edu");
+    if (cachedEdu) {
+      try {
+        const cached = JSON.parse(cachedEdu);
+        if (cached?.id) { setProfile(cached); setChecking(false); clearTimeout(_t); }
+      } catch(_) {}
+    }
     sb.auth.getSession()
       .then(async ({ data: { session } }) => {
         clearTimeout(_t);
         if (session) {
           const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-          setProfile(p || { id: session.user.id, role: "educator", display_name: session.user.email?.split("@")[0], xp: 0, coin: 100 });
+          if (p) { setProfile(p); sessionStorage.setItem("pug_edu", JSON.stringify(p)); }
+          else setProfile({ id: session.user.id, role: "educator", display_name: session.user.email?.split("@")[0], xp: 0, coin: 100 });
+        } else if (!cachedEdu) {
+          setChecking(false);
+        } else {
+          setChecking(false);
         }
         setChecking(false);
       })
@@ -4438,7 +4460,7 @@ export default function App() {
       if (event === "SIGNED_OUT") setProfile(null);
       if (event === "SIGNED_IN" && session) {
         const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-        if (p) setProfile(p);
+        if (p) { setProfile(p); sessionStorage.setItem("pug_edu", JSON.stringify(p)); }
       }
     });
     return () => subscription.unsubscribe();
@@ -4446,6 +4468,7 @@ export default function App() {
 
   async function onLogout() {
     localStorage.removeItem("pug_player");
+    sessionStorage.removeItem("pug_edu");
     await sb.auth.signOut();
     setProfile(null);
     document.body.classList.remove("light");
