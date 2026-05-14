@@ -1374,12 +1374,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
                   <div className="p-coin">🪙 {p.coin}</div>
                   {p.squads?.name && <SquadPill name={p.squads.name} />}
                   <div style={{ fontSize: 10, color: "var(--text3)", marginTop: 4 }}>PIN: <span style={{ color: "var(--azzurro)", fontWeight: 700 }}>{p.pin || "1234"}</span></div>
-                  <div className="pts-row" onClick={e => e.stopPropagation()}>
-                    <button className="pts-btn rem" onClick={() => changeXP(p.id, -10)}>−</button>
-                    <button className="pts-btn add" onClick={() => changeXP(p.id, 10)}>+</button>
-                    <button className="pts-btn rem" style={{ fontSize: 10, width: 34, borderRadius: 8 }} onClick={() => changeXP(p.id, -5, "coin")}>🪙−</button>
-                    <button className="pts-btn add" style={{ fontSize: 10, width: 34, borderRadius: 8 }} onClick={() => changeXP(p.id, 5, "coin")}>🪙+</button>
-                  </div>
+
                   <button className="btn btn-ghost btn-xs" style={{ marginTop: 8, width: "100%" }} onClick={e => { e.stopPropagation(); setExpandedPlayer(expandedPlayer === p.id ? null : p.id); }}>
                     {expandedPlayer === p.id ? "▲ Chiudi" : "🔍 Dettagli"}
                   </button>
@@ -1898,6 +1893,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   const [squadFilter, setSquadFilter] = useState("all");
   const [presTab, setPresTab]     = useState("daily");
   const [err, setErr]             = useState(null);
+  const [editConfig, setEditConfig] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -2012,9 +2008,55 @@ function AttendanceView({ sectionColors, setSectionColors }) {
           <div className="stats-grid">
             <div className="stat-card"><div className="stat-label">Presenti</div><div className="stat-value">{presentCount}</div></div>
             <div className="stat-card"><div className="stat-label">Totale</div><div className="stat-value">{visible.length}</div></div>
-            <div className="stat-card"><div className="stat-label">XP pres.</div><div className="stat-value">{config.xp_daily_checkin||10}</div></div>
-            <div className="stat-card"><div className="stat-label">Coin</div><div className="stat-value">{config.coin_daily_checkin||5}</div></div>
+            <div className="stat-card" style={{cursor:"pointer"}} onClick={()=>setEditConfig(c=>!c)}>
+              <div className="stat-label">XP pres. ✏️</div>
+              <div className="stat-value">{config.xp_daily_checkin||10}</div>
+            </div>
+            <div className="stat-card" style={{cursor:"pointer"}} onClick={()=>setEditConfig(c=>!c)}>
+              <div className="stat-label">Coin ✏️</div>
+              <div className="stat-value">{config.coin_daily_checkin||5}</div>
+            </div>
           </div>
+          {editConfig && (
+            <div style={{background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.25)",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#ffcc00",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>⚙️ Valore presenza oggi</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                <div>
+                  <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>XP presenza</label>
+                  <input type="number" value={config.xp_daily_checkin||10}
+                    onChange={e=>setConfig(c=>({...c,xp_daily_checkin:Number(e.target.value)}))}
+                    style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>Coin presenza</label>
+                  <input type="number" value={config.coin_daily_checkin||5}
+                    onChange={e=>setConfig(c=>({...c,coin_daily_checkin:Number(e.target.value)}))}
+                    style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>XP bonus settimana</label>
+                  <input type="number" value={config.xp_week_bonus||5}
+                    onChange={e=>setConfig(c=>({...c,xp_week_bonus:Number(e.target.value)}))}
+                    style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
+                </div>
+              </div>
+              <button className="btn btn-yellow btn-sm" style={{width:"100%"}} onClick={async()=>{
+                const now = new Date();
+                await sb.from("streak_config").upsert({
+                  month: now.getMonth()+1, year: now.getFullYear(),
+                  xp_daily_checkin: config.xp_daily_checkin||10,
+                  coin_daily_checkin: config.coin_daily_checkin||5,
+                  xp_week_bonus: config.xp_week_bonus||5,
+                  min_days: config.min_days||10,
+                  xp_reward: config.xp_reward||50,
+                  coin_reward: config.coin_reward||25,
+                  badge_name: config.badge_name||"Badge mese",
+                }, {onConflict:"month,year"});
+                setEditConfig(false);
+              }}>💾 Salva configurazione</button>
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:6}}>Le nuove presenze di oggi useranno questi valori. Le presenze già segnate non cambiano.</div>
+            </div>
+          )}
           <div className="filter-bar">
             <input className="search-inp" placeholder="🔍 Cerca nome…" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1}}/>
             <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
@@ -2041,11 +2083,17 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                         <td><div style={{display:"flex",alignItems:"center",gap:8}}><Avatar url={p.avatar_url} emoji={lv.emoji} size={28}/><span style={{fontWeight:600}}>{p.display_name}</span></div></td>
                         <td>{p.squads?.name && <SquadPill name={p.squads.name}/>}</td>
                         <td>
-                          <div style={{display:"flex",gap:4}}>
-                            {[["none","?","pd-none"],["partial","~","pd-partial"],["full","✓","pd-yes"],["completed","★","pd-completed"]].map(([s,label,cls])=>(
-                              <button key={s} className={`pres-dot ${cls}`} style={{opacity:status===s?1:0.3}} onClick={()=>setStatus(p.id,s)}>{label}</button>
-                            ))}
-                          </div>
+                          <button
+                            onClick={()=>setStatus(p.id, status!=="none"?"none":"full")}
+                            style={{
+                              width:40,height:40,borderRadius:10,border:"none",cursor:"pointer",
+                              fontSize:18,fontWeight:900,transition:"all .15s",
+                              background: status!=="none" ? "rgba(0,255,136,.2)" : "rgba(255,255,255,.06)",
+                              color: status!=="none" ? "var(--neon-green)" : "rgba(255,255,255,.25)",
+                              boxShadow: status!=="none" ? "0 0 12px rgba(0,255,136,.3)" : "none",
+                            }}>
+                            {status!=="none" ? "✓" : "○"}
+                          </button>
                         </td>
                         <td style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:900,color:"var(--neon-blue)"}}>{p.xp} <span style={{fontSize:10,color:"var(--text3)",fontWeight:400}}>XP</span></td>
                       </tr>
@@ -2602,10 +2650,12 @@ function MessagesView({ profile }) {
   const [activities, setActivities] = useState([]);
   const [msgs, setMsgs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [destType, setDestType] = useState("tutti"); // tutti | squad | player | activity
+  const [destType, setDestType] = useState("tutti");
   const [destSquad, setDestSquad] = useState("");
-  const [destPlayer, setDestPlayer] = useState("");
+  const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [destActivity, setDestActivity] = useState("");
+  const [playerSort, setPlayerSort] = useState("alpha"); // alpha | level
+  const [playerSearch, setPlayerSearch] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState("");
@@ -2629,7 +2679,7 @@ function MessagesView({ profile }) {
     const msgData = { sender_id: profile.id, body: body.trim(), is_broadcast: false, squad_id: null, recipient_id: null };
     if (destType === "tutti") msgData.is_broadcast = true;
     else if (destType === "squad") msgData.squad_id = destSquad || null;
-    else if (destType === "player") msgData.recipient_id = destPlayer || null;
+    else if (destType === "player") msgData.recipient_id = selectedPlayers[0] || null;
     else if (destType === "activity") {
       // Send to all confirmed bookings for this activity
       const { data: bookings } = await sb.from("bookings").select("player_id").eq("activity_id", destActivity).eq("status","confirmed");
@@ -2643,18 +2693,22 @@ function MessagesView({ profile }) {
     }
     await sb.from("messages").insert(msgData);
     // Notify recipients
+    const senderName = profile?.display_name || "Giardiniere";
     if (destType === "tutti") {
       const { data: allPlayers } = await sb.from("profiles").select("id").eq("role","player");
       for (const p of (allPlayers || [])) {
-        await sb.from("notifications").insert({ user_id: p.id, type: "new_message", title: "Nuovo messaggio dal Giardiniere", body: body.trim() });
+        await sb.from("notifications").insert({ user_id: p.id, type: "new_message", title: "Hai un nuovo messaggio", body: `${senderName} ha scritto a tutti` });
       }
     } else if (destType === "squad" && destSquad) {
+      const sq = squads.find(s=>s.id===destSquad);
       const { data: squadPlayers } = await sb.from("profiles").select("id").eq("squad_id", destSquad);
       for (const p of (squadPlayers || [])) {
-        await sb.from("notifications").insert({ user_id: p.id, type: "new_message", title: "Nuovo messaggio dal Giardiniere", body: body.trim() });
+        await sb.from("notifications").insert({ user_id: p.id, type: "new_message", title: "Hai un nuovo messaggio", body: `${senderName} ha scritto alla squadra ${sq?.name||""}` });
       }
-    } else if (destType === "player" && destPlayer) {
-      await sb.from("notifications").insert({ user_id: destPlayer, type: "new_message", title: "Nuovo messaggio dal Giardiniere", body: body.trim() });
+    } else if (destType === "player") {
+      for (const pid of selectedPlayers) {
+        await sb.from("notifications").insert({ user_id: pid, type: "new_message", title: "Hai un nuovo messaggio", body: `${senderName} ti ha scritto` });
+      }
     }
     setBody(""); setSent("Messaggio inviato ✅"); setTimeout(() => setSent(""), 3000);
     // Reload messages
@@ -2662,7 +2716,7 @@ function MessagesView({ profile }) {
     setMsgs(m || []); setSending(false);
   }
 
-  const destLabel = destType === "tutti" ? "📢 Tutti i giocatori" : destType === "squad" ? `🛡️ Squadra` : destType === "player" ? "👤 Giocatore singolo" : "⚡ Partecipanti lab";
+  const destLabel = destType === "tutti" ? "📢 Tutti i giocatori" : destType === "squad" ? "🛡️ Squadra" : destType === "player" ? (selectedPlayers.length > 1 ? `👥 ${selectedPlayers.length} giocatori` : "👤 Giocatore") : "⚡ Partecipanti lab";
 
   return (
     <div>
@@ -2687,10 +2741,41 @@ function MessagesView({ profile }) {
             </select>
           )}
           {destType === "player" && (
-            <select value={destPlayer} onChange={e => setDestPlayer(e.target.value)}>
-              <option value="">Seleziona giocatore…</option>
-              {players.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-            </select>
+            <div>
+              <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+                <input className="search-inp" placeholder="🔍 Cerca…" value={playerSearch} onChange={e=>setPlayerSearch(e.target.value)} style={{flex:1,minWidth:100}}/>
+                <select value={playerSort} onChange={e=>setPlayerSort(e.target.value)} style={{padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:12}}>
+                  <option value="alpha">A→Z</option>
+                  <option value="level">Livello ↓</option>
+                </select>
+                {selectedPlayers.length > 0 && <button className="btn btn-ghost btn-xs" onClick={()=>setSelectedPlayers([])}>✕ Deseleziona tutti</button>}
+              </div>
+              <div style={{maxHeight:200,overflowY:"auto",border:"1px solid var(--border)",borderRadius:10}}>
+                {[...players]
+                  .filter(p => !playerSearch || p.display_name.toLowerCase().includes(playerSearch.toLowerCase()))
+                  .sort((a,b) => playerSort==="level" ? (b.xp||0)-(a.xp||0) : (a.display_name||"").localeCompare(b.display_name||""))
+                  .map(p => {
+                    const lv = getLevel(p.xp||0);
+                    const sel = selectedPlayers.includes(p.id);
+                    return (
+                      <div key={p.id} onClick={()=>setSelectedPlayers(prev=>sel?prev.filter(id=>id!==p.id):[...prev,p.id])}
+                        style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:sel?"rgba(0,212,255,.1)":"transparent",borderBottom:"1px solid var(--border)",transition:"background .1s"}}>
+                        <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${sel?"var(--neon-blue)":"var(--border2)"}`,background:sel?"var(--neon-blue)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"#000",fontWeight:900}}>
+                          {sel?"✓":""}
+                        </div>
+                        <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
+                          {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:lv.emoji}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:600,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                          <div style={{fontSize:10,color:"var(--text3)"}}>{lv.emoji} Lv.{lv.id} · {p.xp} XP</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+              {selectedPlayers.length > 0 && <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700,marginTop:6}}>✓ {selectedPlayers.length} giocator{selectedPlayers.length===1?"e":"i"} selezionat{selectedPlayers.length===1?"o":"i"}</div>}
+            </div>
           )}
           {destType === "activity" && (
             <select value={destActivity} onChange={e => setDestActivity(e.target.value)}>
@@ -2704,7 +2789,7 @@ function MessagesView({ profile }) {
           <textarea value={body} onChange={e => setBody(e.target.value)} placeholder={`Scrivi un messaggio per ${destLabel}…`} />
         </div>
         {sent && <div style={{ fontSize: 13, color: "var(--verde)", fontWeight: 700, marginBottom: 8 }}>{sent}</div>}
-        <button className="btn btn-primary" onClick={sendMessage} disabled={sending || !body.trim() || (destType === "squad" && !destSquad) || (destType === "player" && !destPlayer) || (destType === "activity" && !destActivity)}>
+        <button className="btn btn-primary" onClick={sendMessage} disabled={sending || !body.trim() || (destType === "squad" && !destSquad) || (destType === "player" && selectedPlayers.length===0) || (destType === "activity" && !destActivity)}>
           {sending ? "Invio…" : "Invia messaggio"}
         </button>
       </div>
@@ -2769,8 +2854,17 @@ function BookingsView() {
   return (
     <div>
       {loading ? <div className="loading">⏳</div> : (
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+          <div style={{fontSize:13,color:"var(--text3)"}}>
+            {showArchive ? `Tutte le prenotazioni (${bookings.length})` : `Ultimi 7 giorni (${bookings.filter(b=>b.created_at>=cutoff).length})`}
+          </div>
+          <div style={{display:"flex",gap:8"}}>
+            <button className={`chip ${!showArchive?"active":""}`} onClick={()=>setShowArchive(false)}>📅 7 giorni</button>
+            <button className={`chip ${showArchive?"active":""}`} onClick={()=>setShowArchive(true)}>📦 Archivio</button>
+          </div>
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {bookings.map(b => {
+          {bookings.filter(b => showArchive || b.created_at >= cutoff).map(b => {
             const [tc, tl] = statusTag[b.status] || ["tag-gray", b.status];
             return (
               <div key={b.id} className="card-sm">
@@ -2790,7 +2884,7 @@ function BookingsView() {
               </div>
             );
           })}
-          {bookings.length === 0 && <div className="empty">Nessuna prenotazione</div>}
+          {bookings.filter(b => showArchive || b.created_at >= cutoff).length === 0 && <div className="empty">Nessuna prenotazione negli ultimi 7 giorni</div>}
         </div>
       )}
     </div>
