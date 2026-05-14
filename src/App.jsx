@@ -4774,63 +4774,60 @@ export default function App() {
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
   useEffect(() => {
-    // Warmup Supabase connection subito (evita cold start visibile)
     sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
-    // Deregistra service worker se presente (evita cache stale)
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.unregister());
-      });
+      navigator.serviceWorker.getRegistrations().then(r => r.forEach(sw => sw.unregister()));
     }
-    // Controlla prima sessione player (localStorage) — mostra subito dalla cache
-    const savedPlayer = localStorage.getItem("pug_player");
-    if (savedPlayer) {
-      try {
-        const p = JSON.parse(savedPlayer);
+    // ── PLAYER cache ──
+    try {
+      const sp = localStorage.getItem("pug_player");
+      if (sp) {
+        const p = JSON.parse(sp);
         if (p?._playerSession && p?.id) {
-          // Mostra subito il profilo dalla cache locale
-          setProfile({ ...p, _playerSession: true });
-          setChecking(false);
-          // Aggiorna in background dal DB senza bloccare
+          setProfile({ ...p, _playerSession: true }); setChecking(false);
           sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
-            .then(({ data }) => {
-              if (data) setProfile({ ...data, _playerSession: true });
-              else { localStorage.removeItem("pug_player"); setProfile(null); }
-            })
+            .then(({ data }) => { if (data) setProfile({...data,_playerSession:true}); else { localStorage.removeItem("pug_player"); setProfile(null); } })
             .catch(console.error);
           return;
         }
-      } catch (_) { localStorage.removeItem("pug_player"); }
-    }
-
-    // Poi controlla sessione educator (Supabase Auth)
-    const _t = setTimeout(() => setChecking(false), 800); // fallback timeout
-    // Mostra subito profilo educator dalla cache se disponibile
-    const cachedEdu = localStorage.getItem("pug_edu");
-    if (cachedEdu) {
-      try {
-        const cached = JSON.parse(cachedEdu);
-        if (cached?.id) { setProfile(cached); setChecking(false); clearTimeout(_t); }
-      } catch(_) {}
-    }
-    sb.auth.getSession()
-      .then(async ({ data: { session } }) => {
-        clearTimeout(_t);
-        if (session) {
-          const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-          if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
-          else setProfile({ id: session.user.id, role: "educator", display_name: session.user.email?.split("@")[0], xp: 0, coin: 100 });
-        } else if (!cachedEdu) {
-          setChecking(false);
-        } else {
-          setChecking(false);
+      }
+    } catch(_) { localStorage.removeItem("pug_player"); }
+    // ── EDUCATOR cache: mostra SUBITO, verifica in background ──
+    try {
+      const se = localStorage.getItem("pug_edu");
+      if (se) {
+        const cached = JSON.parse(se);
+        if (cached?.id) {
+          setProfile(cached); setChecking(false);
+          sb.auth.getSession().then(async ({ data: { session } }) => {
+            if (session) {
+              const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
+              if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+            } else { localStorage.removeItem("pug_edu"); setProfile(null); }
+          }).catch(console.error);
+          const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange(async (event, session) => {
+            if (event === "SIGNED_OUT") { setProfile(null); localStorage.removeItem("pug_edu"); }
+            if (event === "SIGNED_IN" && session) {
+              const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
+              if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+            }
+          });
+          return () => sub1.unsubscribe();
         }
-        setChecking(false);
-      })
-      .catch(() => { clearTimeout(_t); setChecking(false); });
-
+      }
+    } catch(_) { localStorage.removeItem("pug_edu"); }
+    // ── Nessuna cache: primo accesso ──
+    const _t = setTimeout(() => setChecking(false), 800);
+    sb.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(_t);
+      if (session) {
+        const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
+        if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+      }
+      setChecking(false);
+    }).catch(() => { clearTimeout(_t); setChecking(false); });
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") setProfile(null);
+      if (event === "SIGNED_OUT") { setProfile(null); localStorage.removeItem("pug_edu"); }
       if (event === "SIGNED_IN" && session) {
         const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
         if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
@@ -4838,7 +4835,6 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
-
   async function onLogout() {
     localStorage.removeItem("pug_player");
     localStorage.removeItem("pug_edu");
