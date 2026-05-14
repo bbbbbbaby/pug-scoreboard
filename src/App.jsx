@@ -2245,7 +2245,19 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   }
 
   async function deleteActivity(id) {
-    if (!confirm("Eliminare?")) return;
+    if (!confirm("Eliminare il lab? Le prenotazioni verranno annullate e le coin rimborsate.")) return;
+    // Rimborsa coin per prenotazioni pending/confirmed
+    const { data: bks } = await sb.from("bookings").select("player_id,coin_held,status").eq("activity_id",id).in("status",["pending","confirmed"]);
+    for (const b of (bks||[])) {
+      if ((b.coin_held||0) > 0) {
+        const { data: p } = await sb.from("profiles").select("coin").eq("id",b.player_id).single();
+        await sb.from("profiles").update({ coin:(p?.coin||0)+b.coin_held }).eq("id",b.player_id);
+        await sb.from("notifications").insert({ user_id:b.player_id, type:"booking_rejected", title:"Lab cancellato", body:"Le tue coin sono state rimborsate." });
+      }
+    }
+    // Cancella prenotazioni
+    await sb.from("bookings").delete().eq("activity_id", id);
+    // Disattiva lab
     await sb.from("activities").update({ is_active: false }).eq("id", id);
     setActivities(prev => prev.filter(a => a.id !== id));
   }
@@ -2681,21 +2693,23 @@ function MessagesView({ profile }) {
 
     if (destType === "tutti") {
       const { data: allP } = await sb.from("profiles").select("id").eq("role","player");
-      await sb.from("messages").insert({...base, is_broadcast:true});
+      const { data: newMsg } = await sb.from("messages").insert({...base, is_broadcast:true}).select("id").single();
+      const msgId = newMsg?.id || null;
       for (const p of (allP||[])) {
-        await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto a tutti`});
+        await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto a tutti`, message_id:msgId});
       }
     } else if (destType === "squad" && destSquad) {
       const sq = squads.find(s=>s.id===destSquad);
-      await sb.from("messages").insert({...base, squad_id:destSquad});
+      const { data: sqMsg } = await sb.from("messages").insert({...base, squad_id:destSquad}).select("id").single();
+      const sqMsgId = sqMsg?.id || null;
       const { data: sqP } = await sb.from("profiles").select("id").eq("squad_id",destSquad);
       for (const p of (sqP||[])) {
-        await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`});
+        await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`, message_id:sqMsgId});
       }
     } else if (destType === "player" && selectedPlayers.length > 0) {
       for (const pid of selectedPlayers) {
-        await sb.from("messages").insert({...base, recipient_id:pid});
-        await sb.from("notifications").insert({user_id:pid, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ti ha scritto`});
+        const { data: pm } = await sb.from("messages").insert({...base, recipient_id:pid}).select("id").single();
+        await sb.from("notifications").insert({user_id:pid, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ti ha scritto`, message_id:pm?.id||null});
       }
     } else if (destType === "activity" && destActivity) {
       const { data: bk } = await sb.from("bookings").select("player_id").eq("activity_id",destActivity).eq("status","confirmed");
@@ -2717,6 +2731,19 @@ function MessagesView({ profile }) {
   async function cancelMsg(id) {
     if (!confirm("Annullare questo messaggio? I giocatori non lo vedranno più.")) return;
     await sb.from("messages").update({ cancelled_at: new Date().toISOString() }).eq("id", id);
+    // Cancella notifiche collegate
+    await sb.from("notifications").delete().eq("message_id", id);
+    // Fallback: cancella notifiche di tipo new_message create nello stesso minuto del messaggio
+    const msg = msgs.find(m=>m.id===id);
+    if (msg?.created_at) {
+      const t0 = new Date(msg.created_at);
+      const t1 = new Date(t0.getTime() + 2*60000).toISOString();
+      await sb.from("notifications")
+        .delete()
+        .eq("type","new_message")
+        .gte("created_at", msg.created_at)
+        .lte("created_at", t1);
+    }
     setMsgs(prev => prev.map(m => m.id===id ? {...m, cancelled_at: new Date().toISOString()} : m));
   }
 
@@ -3617,7 +3644,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                         : ` · ${a.max_participants-(actBookingCounts[a.id]||0)} posti rimasti`}
                     </div>
                   )}
-                  {booked ? (
+                  {booked && booked.status !== "cancelled" ? (
                     <div>
                       <div className={`tag ${booked.status === "confirmed" ? "tag-green" : booked.status === "rejected" ? "tag-red" : "tag-amber"}`} style={{marginBottom:booked.status==="confirmed"?6:0}}>
                         {booked.status === "confirmed" ? "✅ Iscritto" : booked.status === "rejected" ? "❌ Rifiutata" : "⏳ In attesa"}
@@ -3788,6 +3815,7 @@ function DashboardView() {
       const top5 = [...(players||[])].filter(p=>p.xp>1).sort((a,b)=>b.xp-a.xp).slice(0,5);
 
       setStats({ active, totalXP, totalCoin, todayAtt:todayAtt||[], days, xpByDay, pressByDay, squadMap, bookings:bookings||[], labs:labs||[], badges:badges||[], top5, allPlayers: players||[] });
+      } catch(e) { console.error("Dashboard error:", e); }
       setLoading(false);
     }
     load();
