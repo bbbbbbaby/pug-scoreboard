@@ -781,6 +781,7 @@ const css = `
   @keyframes fade-in { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
   .pres-close { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px 14px; color:rgba(255,255,255,.5); font-size:13px; cursor:pointer; font-weight:700; letter-spacing:.05em; z-index:10; }
   .pres-close:hover { background:rgba(255,255,255,.15); color:#fff; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   /* ═══ SMOOTH TRANSITIONS ═══ */
   .content { animation:fade-up .2s ease; }
   @keyframes fade-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -4773,6 +4774,8 @@ export default function App() {
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
   useEffect(() => {
+    // Warmup Supabase connection subito (evita cold start visibile)
+    sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
     // Deregistra service worker se presente (evita cache stale)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
@@ -4801,7 +4804,7 @@ export default function App() {
     }
 
     // Poi controlla sessione educator (Supabase Auth)
-    const _t = setTimeout(() => setChecking(false), 1500); // fallback timeout
+    const _t = setTimeout(() => setChecking(false), 800); // fallback timeout
     // Mostra subito profilo educator dalla cache se disponibile
     const cachedEdu = localStorage.getItem("pug_edu");
     if (cachedEdu) {
@@ -4844,11 +4847,14 @@ export default function App() {
     document.body.classList.remove("light");
   }
 
+  // Mentre verifica la sessione, mostra il login con indicatore sottile
+  // così l'utente vede subito qualcosa e può anche interagire
   if (checking) return (
     <>
       <style>{css}</style>
-      <div className="loading" style={{ minHeight: "100vh" }}>
-        <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)" }}>Per·You Garden</span>
+      <div style={{position:"relative"}}>
+        <div style={{position:"fixed",top:0,left:0,right:0,height:3,zIndex:9999,background:"linear-gradient(90deg,var(--neon-blue),var(--neon-pink),var(--neon-blue))",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}}/>
+        <Login onLogin={setProfile} />
       </div>
     </>
   );
