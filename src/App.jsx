@@ -2645,102 +2645,112 @@ function DiaryView() {
 }
 
 function MessagesView({ profile }) {
-  const [squads, setSquads] = useState([]);
-  const [players, setPlayers] = useState([]);
+  const [squads, setSquads]     = useState([]);
+  const [players, setPlayers]   = useState([]);
   const [activities, setActivities] = useState([]);
-  const [msgs, setMsgs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [msgs, setMsgs]         = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [destType, setDestType] = useState("tutti");
-  const [destSquad, setDestSquad] = useState("");
+  const [destSquad, setDestSquad]     = useState("");
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [destActivity, setDestActivity] = useState("");
-  const [playerSort, setPlayerSort] = useState("alpha"); // alpha | level
+  const [playerSort, setPlayerSort]   = useState("alpha");
   const [playerSearch, setPlayerSearch] = useState("");
-  const [body, setBody] = useState("");
+  const [body, setBody]   = useState("");
+  const [expiry, setExpiry] = useState(""); // optional expiry date
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState("");
+  const [sent, setSent]   = useState("");
 
-  useEffect(() => {
-    async function load() {
-      const [{ data: sq }, { data: pl }, { data: act }, { data: m }] = await Promise.all([
-        sb.from("squads").select("*").order("name"),
-        sb.from("profiles").select("id,display_name").eq("role","player").order("display_name"),
-        sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-        sb.from("messages").select("*, profiles(display_name)").order("created_at", { ascending: false }).limit(50),
-      ]);
-      setSquads(sq || []); setPlayers(pl || []); setActivities(act || []); setMsgs(m || []); setLoading(false);
-    }
-    load();
-  }, []);
+  async function loadAll() {
+    const [{ data: sq }, { data: pl }, { data: act }, { data: m }] = await Promise.all([
+      sb.from("squads").select("*").order("name"),
+      sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
+      sb.from("activities").select("id,name").eq("is_active",true).order("name"),
+      sb.from("messages").select("*, profiles(display_name)").order("created_at",{ascending:false}).limit(60),
+    ]);
+    setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
+  }
+  useEffect(() => { loadAll(); }, []);
 
   async function sendMessage() {
     if (!body.trim()) return;
     setSending(true);
-    const msgData = { sender_id: profile.id, body: body.trim(), is_broadcast: false, squad_id: null, recipient_id: null };
-    if (destType === "tutti") msgData.is_broadcast = true;
-    else if (destType === "squad") msgData.squad_id = destSquad || null;
-    else if (destType === "player") msgData.recipient_id = selectedPlayers[0] || null;
-    else if (destType === "activity") {
-      // Send to all confirmed bookings for this activity
-      const { data: bookings } = await sb.from("bookings").select("player_id").eq("activity_id", destActivity).eq("status","confirmed");
-      if (bookings?.length) {
-        for (const bk of bookings) {
-          await sb.from("messages").insert({ ...msgData, recipient_id: bk.player_id });
-          await sb.from("notifications").insert({ user_id: bk.player_id, type: "new_message", title: "Nuovo messaggio dal Giardiniere", body: body.trim() });
-        }
-        setBody(""); setSent(`Inviato a ${bookings.length} partecipanti ✅`); setTimeout(() => setSent(""), 3000); setSending(false); return;
-      } else { setSent("Nessun partecipante confermato"); setTimeout(() => setSent(""), 3000); setSending(false); return; }
-    }
-    await sb.from("messages").insert(msgData);
-    // Notify recipients
     const senderName = profile?.display_name || "Giardiniere";
+    const expiresAt = expiry ? new Date(expiry + "T23:59:59").toISOString() : null;
+    const base = { sender_id: profile.id, body: body.trim(), is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt };
+
     if (destType === "tutti") {
-      const { data: allPlayers } = await sb.from("profiles").select("id").eq("role","player");
-      for (const p of (allPlayers || [])) {
-        await sb.from("notifications").insert({ user_id: p.id, type: "new_message", title: "Hai un nuovo messaggio", body: `${senderName} ha scritto a tutti` });
+      const { data: allP } = await sb.from("profiles").select("id").eq("role","player");
+      await sb.from("messages").insert({...base, is_broadcast:true});
+      for (const p of (allP||[])) {
+        await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto a tutti`});
       }
     } else if (destType === "squad" && destSquad) {
       const sq = squads.find(s=>s.id===destSquad);
-      const { data: squadPlayers } = await sb.from("profiles").select("id").eq("squad_id", destSquad);
-      for (const p of (squadPlayers || [])) {
-        await sb.from("notifications").insert({ user_id: p.id, type: "new_message", title: "Hai un nuovo messaggio", body: `${senderName} ha scritto alla squadra ${sq?.name||""}` });
+      await sb.from("messages").insert({...base, squad_id:destSquad});
+      const { data: sqP } = await sb.from("profiles").select("id").eq("squad_id",destSquad);
+      for (const p of (sqP||[])) {
+        await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`});
       }
-    } else if (destType === "player") {
+    } else if (destType === "player" && selectedPlayers.length > 0) {
       for (const pid of selectedPlayers) {
-        await sb.from("notifications").insert({ user_id: pid, type: "new_message", title: "Hai un nuovo messaggio", body: `${senderName} ti ha scritto` });
+        await sb.from("messages").insert({...base, recipient_id:pid});
+        await sb.from("notifications").insert({user_id:pid, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ti ha scritto`});
       }
+    } else if (destType === "activity" && destActivity) {
+      const { data: bk } = await sb.from("bookings").select("player_id").eq("activity_id",destActivity).eq("status","confirmed");
+      if (bk?.length) {
+        for (const b of bk) {
+          await sb.from("messages").insert({...base, recipient_id:b.player_id});
+          await sb.from("notifications").insert({user_id:b.player_id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto ai partecipanti del Lab`});
+        }
+        setSent(`Inviato a ${bk.length} partecipanti ✅`);
+      } else { setSent("Nessun partecipante confermato"); }
+      setSending(false); setTimeout(()=>setSent(""),3000); setBody(""); setExpiry(""); return;
     }
-    setBody(""); setSent("Messaggio inviato ✅"); setTimeout(() => setSent(""), 3000);
-    // Reload messages
-    const { data: m } = await sb.from("messages").select("*, profiles(display_name)").order("created_at", { ascending: false }).limit(50);
-    setMsgs(m || []); setSending(false);
+
+    setBody(""); setExpiry(""); setSelectedPlayers([]);
+    setSent("Messaggio inviato ✅"); setTimeout(()=>setSent(""),3000);
+    loadAll(); setSending(false);
   }
 
-  const destLabel = destType === "tutti" ? "📢 Tutti i giocatori" : destType === "squad" ? "🛡️ Squadra" : destType === "player" ? (selectedPlayers.length > 1 ? `👥 ${selectedPlayers.length} giocatori` : "👤 Giocatore") : "⚡ Partecipanti lab";
+  async function cancelMsg(id) {
+    if (!confirm("Annullare questo messaggio? I giocatori non lo vedranno più.")) return;
+    await sb.from("messages").update({ cancelled_at: new Date().toISOString() }).eq("id", id);
+    setMsgs(prev => prev.map(m => m.id===id ? {...m, cancelled_at: new Date().toISOString()} : m));
+  }
+
+  const sortedPlayers = [...players]
+    .filter(p => !playerSearch || p.display_name.toLowerCase().includes(playerSearch.toLowerCase()))
+    .sort((a,b) => playerSort==="level" ? (b.xp||0)-(a.xp||0) : (a.display_name||"").localeCompare(b.display_name||""));
+
+  const now = new Date().toISOString();
+  const activeMsgs = msgs.filter(m => !m.cancelled_at && (!m.expires_at || m.expires_at > now));
+  const cancelledMsgs = msgs.filter(m => m.cancelled_at || (m.expires_at && m.expires_at <= now));
 
   return (
     <div>
-      <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginBottom: 16 }}>💬 Messaggi</div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16}}>💬 Messaggi</div>
 
       {/* Compose */}
-      <div className="card" style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Nuovo messaggio</div>
+      <div className="card" style={{marginBottom:18}}>
+        <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>Nuovo messaggio</div>
 
-        {/* Destinatario */}
+        {/* Tipo destinatario */}
         <div className="form-group">
           <label className="form-label">Destinatario</label>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatore"],["activity","⚡ Lab"]].map(([k,l]) => (
-              <button key={k} className={`chip ${destType === k ? "active" : ""}`} onClick={() => setDestType(k)}>{l}</button>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatori"],["activity","⚡ Lab"]].map(([k,l])=>(
+              <button key={k} className={`chip ${destType===k?"active":""}`} onClick={()=>setDestType(k)}>{l}</button>
             ))}
           </div>
-          {destType === "squad" && (
-            <select value={destSquad} onChange={e => setDestSquad(e.target.value)}>
+          {destType==="squad" && (
+            <select value={destSquad} onChange={e=>setDestSquad(e.target.value)}>
               <option value="">Seleziona squadra…</option>
-              {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {squads.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
-          {destType === "player" && (
+          {destType==="player" && (
             <div>
               <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
                 <input className="search-inp" placeholder="🔍 Cerca…" value={playerSearch} onChange={e=>setPlayerSearch(e.target.value)} style={{flex:1,minWidth:100}}/>
@@ -2748,70 +2758,104 @@ function MessagesView({ profile }) {
                   <option value="alpha">A→Z</option>
                   <option value="level">Livello ↓</option>
                 </select>
-                {selectedPlayers.length > 0 && <button className="btn btn-ghost btn-xs" onClick={()=>setSelectedPlayers([])}>✕ Deseleziona tutti</button>}
+                {selectedPlayers.length>0 && <button className="btn btn-ghost btn-xs" onClick={()=>setSelectedPlayers([])}>✕ Reset</button>}
               </div>
               <div style={{maxHeight:200,overflowY:"auto",border:"1px solid var(--border)",borderRadius:10}}>
-                {[...players]
-                  .filter(p => !playerSearch || p.display_name.toLowerCase().includes(playerSearch.toLowerCase()))
-                  .sort((a,b) => playerSort==="level" ? (b.xp||0)-(a.xp||0) : (a.display_name||"").localeCompare(b.display_name||""))
-                  .map(p => {
-                    const lv = getLevel(p.xp||0);
-                    const sel = selectedPlayers.includes(p.id);
-                    return (
-                      <div key={p.id} onClick={()=>setSelectedPlayers(prev=>sel?prev.filter(id=>id!==p.id):[...prev,p.id])}
-                        style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:sel?"rgba(0,212,255,.1)":"transparent",borderBottom:"1px solid var(--border)",transition:"background .1s"}}>
-                        <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${sel?"var(--neon-blue)":"var(--border2)"}`,background:sel?"var(--neon-blue)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"#000",fontWeight:900}}>
-                          {sel?"✓":""}
-                        </div>
-                        <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
-                          {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:lv.emoji}
-                        </div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:13,fontWeight:600,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                          <div style={{fontSize:10,color:"var(--text3)"}}>{lv.emoji} Lv.{lv.id} · {p.xp} XP</div>
-                        </div>
+                {sortedPlayers.map(p=>{
+                  const lv = getLevel(p.xp||0);
+                  const sel = selectedPlayers.includes(p.id);
+                  return (
+                    <div key={p.id} onClick={()=>setSelectedPlayers(prev=>sel?prev.filter(id=>id!==p.id):[...prev,p.id])}
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:sel?"rgba(0,212,255,.1)":"transparent",borderBottom:"1px solid var(--border)",transition:"background .1s"}}>
+                      <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${sel?"var(--neon-blue)":"var(--border2)"}`,background:sel?"var(--neon-blue)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"#000",fontWeight:900}}>
+                        {sel?"✓":""}
                       </div>
-                    );
-                  })}
+                      <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
+                        {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:lv.emoji}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                        <div style={{fontSize:10,color:"var(--text3)"}}>{lv.emoji} Lv.{lv.id} · {p.xp} XP</div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              {selectedPlayers.length > 0 && <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700,marginTop:6}}>✓ {selectedPlayers.length} giocator{selectedPlayers.length===1?"e":"i"} selezionat{selectedPlayers.length===1?"o":"i"}</div>}
+              {selectedPlayers.length>0 && <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700,marginTop:6}}>✓ {selectedPlayers.length} selezionat{selectedPlayers.length===1?"o":"i"}</div>}
             </div>
           )}
-          {destType === "activity" && (
-            <select value={destActivity} onChange={e => setDestActivity(e.target.value)}>
+          {destType==="activity" && (
+            <select value={destActivity} onChange={e=>setDestActivity(e.target.value)}>
               <option value="">Seleziona lab…</option>
-              {activities.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {activities.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           )}
         </div>
+
+        {/* Testo */}
         <div className="form-group">
           <label className="form-label">Testo</label>
-          <textarea value={body} onChange={e => setBody(e.target.value)} placeholder={`Scrivi un messaggio per ${destLabel}…`} />
+          <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Scrivi un messaggio…" />
         </div>
-        {sent && <div style={{ fontSize: 13, color: "var(--verde)", fontWeight: 700, marginBottom: 8 }}>{sent}</div>}
-        <button className="btn btn-primary" onClick={sendMessage} disabled={sending || !body.trim() || (destType === "squad" && !destSquad) || (destType === "player" && selectedPlayers.length===0) || (destType === "activity" && !destActivity)}>
-          {sending ? "Invio…" : "Invia messaggio"}
+
+        {/* Scadenza opzionale */}
+        <div className="form-group">
+          <label className="form-label">Scadenza (opzionale) — dopo questa data il messaggio sparisce</label>
+          <input type="date" className="form-input" value={expiry} onChange={e=>setExpiry(e.target.value)} min={new Date().toISOString().split("T")[0]}/>
+        </div>
+
+        {sent && <div style={{fontSize:13,color:"var(--verde)",fontWeight:700,marginBottom:8}}>{sent}</div>}
+        <button className="btn btn-primary"
+          onClick={sendMessage}
+          disabled={sending || !body.trim() || (destType==="squad"&&!destSquad) || (destType==="player"&&selectedPlayers.length===0) || (destType==="activity"&&!destActivity)}>
+          {sending?"Invio…":"Invia messaggio"}
         </button>
       </div>
 
-      {/* Storico */}
-      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Storico messaggi</div>
+      {/* Storico attivi */}
+      <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>
+        Messaggi attivi ({activeMsgs.length})
+      </div>
       {loading ? <div className="loading">⏳</div> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {msgs.map(m => {
-            const dest = m.is_broadcast ? "📢 Tutti" : m.squad_id ? "🛡️ Squadra" : m.recipient_id ? "👤 Diretto" : "—";
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+          {activeMsgs.map(m=>{
+            const dest = m.is_broadcast?"📢 Tutti":m.squad_id?"🛡️ Squadra":m.recipient_id?"👤 Diretto":"—";
             return (
               <div key={m.id} className="card-sm">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--azzurro)" }}>{dest}</span>
-                  <span style={{ fontSize: 10, color: "var(--text3)" }}>{new Date(m.created_at).toLocaleDateString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <span style={{fontSize:11,fontWeight:700,color:"var(--azzurro)"}}>{dest}</span>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    {m.expires_at && <span style={{fontSize:9,color:"var(--text3)",fontWeight:700}}>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
+                    <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
+                    <button className="btn btn-danger btn-xs" onClick={()=>cancelMsg(m.id)} title="Annulla messaggio">✕</button>
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: "var(--text)" }}>{m.body}</div>
+                <div style={{fontSize:13,color:"var(--text)"}}>{m.body}</div>
               </div>
             );
           })}
-          {msgs.length === 0 && <div className="empty">Nessun messaggio inviato.</div>}
+          {activeMsgs.length===0 && <div className="empty">Nessun messaggio attivo</div>}
         </div>
+      )}
+
+      {/* Storico annullati/scaduti */}
+      {cancelledMsgs.length>0 && (
+        <>
+          <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>
+            Annullati / scaduti ({cancelledMsgs.length})
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {cancelledMsgs.map(m=>(
+              <div key={m.id} className="card-sm" style={{opacity:0.45}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                  <span style={{fontSize:11,fontWeight:700,color:"var(--text3)"}}>{m.is_broadcast?"📢 Tutti":m.squad_id?"🛡️ Squadra":"👤 Diretto"}</span>
+                  <span style={{fontSize:10,color:"var(--danger)",fontWeight:700}}>{m.cancelled_at?"✕ Annullato":"⏰ Scaduto"}</span>
+                </div>
+                <div style={{fontSize:12,color:"var(--text2)"}}>{m.body}</div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -2820,74 +2864,81 @@ function MessagesView({ profile }) {
 function BookingsView() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showArchive, setShowArchive] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      const { data: bkData } = await sb.from("bookings").select("id,player_id,activity_id,coin_held,status,reviewed_at,created_at").order("created_at", { ascending: false });
-      // Fetch names separately to avoid FK join issues
+  const cutoff = new Date(Date.now() - 7*86400000).toISOString();
+
+  async function load() {
+    setLoading(true);
+    try {
+      const { data: bkData } = await sb.from("bookings")
+        .select("id,player_id,activity_id,coin_held,status,reviewed_at,created_at")
+        .order("created_at", { ascending: false });
       const playerIds = [...new Set((bkData||[]).map(b=>b.player_id).filter(Boolean))];
-      const actIds = [...new Set((bkData||[]).map(b=>b.activity_id).filter(Boolean))];
+      const actIds    = [...new Set((bkData||[]).map(b=>b.activity_id).filter(Boolean))];
       const [{ data: pData }, { data: aData }] = await Promise.all([
         playerIds.length ? sb.from("profiles").select("id,display_name").in("id", playerIds) : Promise.resolve({data:[]}),
-        actIds.length ? sb.from("activities").select("id,name,coin_cost").in("id", actIds) : Promise.resolve({data:[]}),
+        actIds.length    ? sb.from("activities").select("id,name,coin_cost").in("id", actIds)  : Promise.resolve({data:[]}),
       ]);
       const pMap = Object.fromEntries((pData||[]).map(p=>[p.id,p]));
       const aMap = Object.fromEntries((aData||[]).map(a=>[a.id,a]));
-      const data = (bkData||[]).map(b=>({...b, profiles: pMap[b.player_id]||null, activities: aMap[b.activity_id]||null }));
-      setBookings(data || []); setLoading(false);
-    }
-    load();
-  }, []);
+      setBookings((bkData||[]).map(b=>({...b, profiles: pMap[b.player_id]||null, activities: aMap[b.activity_id]||null })));
+    } catch(e) { console.error(e); }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
 
   async function review(id, status, playerId, coinHeld) {
     await sb.from("bookings").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
     if (status === "rejected") {
       const { data: p } = await sb.from("profiles").select("coin").eq("id", playerId).single();
-      await sb.from("profiles").update({ coin: (p?.coin || 0) + coinHeld }).eq("id", playerId);
+      await sb.from("profiles").update({ coin: (p?.coin||0) + coinHeld }).eq("id", playerId);
     }
-    await sb.from("notifications").insert({ user_id: playerId, type: status === "confirmed" ? "booking_confirmed" : "booking_rejected", title: status === "confirmed" ? "Prenotazione confermata!" : "Prenotazione rifiutata", body: status === "confirmed" ? "Sei dentro!" : "Coin restituite." });
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
+    await sb.from("notifications").insert({ user_id: playerId, type: status==="confirmed"?"booking_confirmed":"booking_rejected", title: status==="confirmed"?"Prenotazione confermata!":"Prenotazione rifiutata", body: status==="confirmed"?"Sei dentro!":"Coin restituite." });
+    load();
   }
 
-  const statusTag = { pending: ["tag-amber","In attesa"], confirmed: ["tag-green","Confermata"], rejected: ["tag-red","Rifiutata"], cancelled: ["tag-gray","Annullata"] };
+  const visible = showArchive ? bookings : bookings.filter(b => (b.created_at||"") >= cutoff);
+  const statusTag = { pending:["tag-amber","In attesa"], confirmed:["tag-green","Confermata"], rejected:["tag-red","Rifiutata"], cancelled:["tag-gray","Annullata"] };
 
   return (
     <div>
-      {loading ? <div className="loading">⏳</div> : (
-        <>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-          <div style={{fontSize:13,color:"var(--text3)"}}>
-            {showArchive ? `Tutte le prenotazioni (${bookings.length})` : `Ultimi 7 giorni (${bookings.filter(b=>b.created_at>=cutoff).length})`}
-          </div>
-          <div style={{display:"flex",gap:8}}>
-            <button className={`chip ${!showArchive?"active":""}`} onClick={()=>setShowArchive(false)}>📅 7 giorni</button>
-            <button className={`chip ${showArchive?"active":""}`} onClick={()=>setShowArchive(true)}>📦 Archivio</button>
-          </div>
+      {/* Filtro */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div style={{fontSize:13,color:"var(--text3)"}}>
+          {showArchive ? `Tutte · ${bookings.length}` : `Ultimi 7 giorni · ${visible.length}`}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {bookings.filter(b => showArchive || b.created_at >= cutoff).map(b => {
+        <div style={{display:"flex",gap:6}}>
+          <button className={`chip ${!showArchive?"active":""}`} onClick={()=>setShowArchive(false)}>📅 7 giorni</button>
+          <button className={`chip ${showArchive?"active":""}`} onClick={()=>setShowArchive(true)}>📦 Archivio</button>
+        </div>
+      </div>
+      {loading ? <div className="loading">⏳</div> : (
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {visible.map(b => {
             const [tc, tl] = statusTag[b.status] || ["tag-gray", b.status];
             return (
               <div key={b.id} className="card-sm">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>{b.profiles?.display_name}</div>
-                    <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 2 }}>{b.activities?.name} · 🪙 {b.coin_held}</div>
+                    <div style={{fontSize:15,fontWeight:700}}>{b.profiles?.display_name||"—"}</div>
+                    <div style={{fontSize:12,color:"var(--text2)",marginTop:2}}>{b.activities?.name||"—"} · 🪙 {b.coin_held}</div>
+                    <div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{new Date(b.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
                   </div>
                   <span className={`tag ${tc}`}>{tl}</span>
                 </div>
                 {b.status === "pending" && (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button className="btn btn-sm" style={{ flex: 1, background: "rgba(51,153,102,.15)", color: "var(--verde)", border: "1px solid rgba(51,153,102,.3)" }} onClick={() => review(b.id, "confirmed", b.player_id, b.coin_held)}>✓ Conferma</button>
-                    <button className="btn btn-danger btn-sm" style={{ flex: 1 }} onClick={() => review(b.id, "rejected", b.player_id, b.coin_held)}>✗ Rifiuta</button>
+                  <div style={{display:"flex",gap:8}}>
+                    <button className="btn btn-sm" style={{flex:1,background:"rgba(51,153,102,.15)",color:"var(--verde)",border:"1px solid rgba(51,153,102,.3)"}} onClick={()=>review(b.id,"confirmed",b.player_id,b.coin_held)}>✓ Conferma</button>
+                    <button className="btn btn-danger btn-sm" style={{flex:1}} onClick={()=>review(b.id,"rejected",b.player_id,b.coin_held)}>✗ Rifiuta</button>
                   </div>
                 )}
               </div>
             );
           })}
-          {bookings.filter(b => showArchive || b.created_at >= cutoff).length === 0 && <div className="empty">Nessuna prenotazione negli ultimi 7 giorni</div>}
+          {visible.length === 0 && <div className="empty">Nessuna prenotazione{!showArchive?" negli ultimi 7 giorni":""}</div>}
         </div>
-        </>
       )}
     </div>
   );
@@ -4529,7 +4580,7 @@ export default function App() {
     // Poi controlla sessione educator (Supabase Auth)
     const _t = setTimeout(() => setChecking(false), 1500); // fallback timeout
     // Mostra subito profilo educator dalla cache se disponibile
-    const cachedEdu = sessionStorage.getItem("pug_edu");
+    const cachedEdu = localStorage.getItem("pug_edu");
     if (cachedEdu) {
       try {
         const cached = JSON.parse(cachedEdu);
@@ -4541,7 +4592,7 @@ export default function App() {
         clearTimeout(_t);
         if (session) {
           const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-          if (p) { setProfile(p); sessionStorage.setItem("pug_edu", JSON.stringify(p)); }
+          if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
           else setProfile({ id: session.user.id, role: "educator", display_name: session.user.email?.split("@")[0], xp: 0, coin: 100 });
         } else if (!cachedEdu) {
           setChecking(false);
@@ -4556,7 +4607,7 @@ export default function App() {
       if (event === "SIGNED_OUT") setProfile(null);
       if (event === "SIGNED_IN" && session) {
         const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-        if (p) { setProfile(p); sessionStorage.setItem("pug_edu", JSON.stringify(p)); }
+        if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
       }
     });
     return () => subscription.unsubscribe();
@@ -4564,7 +4615,7 @@ export default function App() {
 
   async function onLogout() {
     localStorage.removeItem("pug_player");
-    sessionStorage.removeItem("pug_edu");
+    localStorage.removeItem("pug_edu");
     await sb.auth.signOut();
     setProfile(null);
     document.body.classList.remove("light");
