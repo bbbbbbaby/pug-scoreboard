@@ -6,14 +6,17 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Chunk splitting per caricare solo quello che serve
         manualChunks: {
-          react: ['react', 'react-dom'],
-          supabase: ['@supabase/supabase-js'],
+          'react-vendor': ['react', 'react-dom'],
+          'supabase': ['@supabase/supabase-js'],
         }
       }
     },
-    // Aumenta il limite avvisi bundle
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 1500,
+    minify: 'esbuild',
+    target: 'es2020',
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', '@supabase/supabase-js'],
   }
 })
