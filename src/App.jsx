@@ -2666,7 +2666,7 @@ function MessagesView({ profile }) {
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
       sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-      sb.from("messages").select("*, profiles(display_name)").eq("sender_id", profile.id).order("created_at",{ascending:false}).limit(60),
+      sb.from("messages").select("id,body,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).limit(100),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
   }
@@ -3118,7 +3118,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
       sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").order("xp", { ascending: false }),
-      sb.from("messages").select("id,body,is_broadcast,squad_id,recipient_id,read_at,created_at,profiles(display_name)").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at", { ascending: false }).limit(20),
+      sb.from("messages").select("id,body,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
       sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
     ]);
@@ -3651,22 +3651,30 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {tab === "messaggi" && (
           <div>
             <div className="pd-tab-title" style={{color:"#FF6DEC"}}>💬 Messaggi</div>
-            {messages.length === 0 ? <div className="empty">Nessun messaggio ricevuto.</div> : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {messages.map(m => (
-                  <div key={m.id} className="card-sm">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 18 }}>🌱</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--verde)" }}>Giardiniere</span>
+            {(() => {
+              const now = new Date().toISOString();
+              const visibleMsgs = messages.filter(m => !m.cancelled_at && (!m.expires_at || m.expires_at > now));
+              return visibleMsgs.length === 0 ? <div className="empty">Nessun messaggio ricevuto.</div> : (
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {visibleMsgs.map(m => (
+                    <div key={m.id} className="card-sm">
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{fontSize:18}}>🌱</span>
+                          <span style={{fontSize:12,fontWeight:700,color:"var(--verde)"}}>Giardiniere</span>
+                          {m.is_broadcast && <span style={{fontSize:9,color:"var(--text3)",background:"rgba(255,255,255,.06)",borderRadius:4,padding:"1px 5px"}}>a tutti</span>}
+                        </div>
+                        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                          {m.expires_at && <span style={{fontSize:9,color:"var(--text3)"}}>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
+                          <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
+                        </div>
                       </div>
-                      <span style={{ fontSize: 10, color: "var(--text3)" }}>{new Date(m.created_at).toLocaleDateString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                      <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
                     </div>
-                    <div style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.5 }}>{m.body}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
