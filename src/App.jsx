@@ -2854,6 +2854,7 @@ function BookingsView() {
   return (
     <div>
       {loading ? <div className="loading">⏳</div> : (
+        <>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
           <div style={{fontSize:13,color:"var(--text3)"}}>
             {showArchive ? `Tutte le prenotazioni (${bookings.length})` : `Ultimi 7 giorni (${bookings.filter(b=>b.created_at>=cutoff).length})`}
@@ -2886,6 +2887,7 @@ function BookingsView() {
           })}
           {bookings.filter(b => showArchive || b.created_at >= cutoff).length === 0 && <div className="empty">Nessuna prenotazione negli ultimi 7 giorni</div>}
         </div>
+        </>
       )}
     </div>
   );
