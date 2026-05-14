@@ -2666,7 +2666,7 @@ function MessagesView({ profile }) {
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
       sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-      sb.from("messages").select("*, profiles(display_name)").order("created_at",{ascending:false}).limit(60),
+      sb.from("messages").select("*, profiles(display_name)").eq("sender_id", profile.id).order("created_at",{ascending:false}).limit(60),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
   }
