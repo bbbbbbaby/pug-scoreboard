@@ -2255,6 +2255,11 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         await sb.from("notifications").insert({ user_id:b.player_id, type:"booking_rejected", title:"Lab cancellato", body:"Le tue coin sono state rimborsate." });
       }
     }
+    // Cancella notifiche prenotazioni correlate
+    const playerIdsToClean = (bks||[]).map(b=>b.player_id).filter(Boolean);
+    for (const pid of playerIdsToClean) {
+      await sb.from("notifications").delete().eq("user_id",pid).in("type",["booking_confirmed","booking_rejected"]);
+    }
     // Cancella prenotazioni
     await sb.from("bookings").delete().eq("activity_id", id);
     // Disattiva lab
@@ -3708,7 +3713,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {/* ── NOTIFICHE ── */}
         {tab === "notifiche" && (
           <div style={{ marginTop: 8 }}>
-            <div className="pd-tab-title" style={{color:"#ffcc00"}}>🔔 Notifiche</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div className="pd-tab-title" style={{color:"#ffcc00",marginBottom:0}}>🔔 Notifiche</div>
+            {notifications.length > 0 && (
+              <button onClick={async()=>{
+                await sb.from("notifications").delete().eq("user_id",profile.id);
+                setNotifications([]);
+              }} style={{background:"rgba(255,34,68,.12)",border:"1px solid rgba(255,34,68,.3)",borderRadius:8,padding:"6px 12px",color:"#ff4466",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                🗑️ Cancella tutte
+              </button>
+            )}
+          </div>
             {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
               const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬" };
               return (
@@ -3929,6 +3944,152 @@ function DashboardView() {
   );
 }
 
+// ─── PULIZIA VIEW ────────────────────────────────────────
+
+function PuliziaView() {
+  const [players, setPlayers]   = useState([]);
+  const [selected, setSelected] = useState(null); // player object
+  const [notifs, setNotifs]     = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [msg, setMsg]           = useState("");
+
+  useEffect(() => {
+    sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)")
+      .eq("role","player").order("display_name")
+      .then(({ data }) => setPlayers(data||[]));
+  }, []);
+
+  async function loadPlayer(p) {
+    setSelected(p); setLoading(true); setMsg("");
+    const [{ data: n }, { data: b }] = await Promise.all([
+      sb.from("notifications").select("*").eq("user_id",p.id).order("created_at",{ascending:false}),
+      sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id",p.id).order("created_at",{ascending:false}),
+    ]);
+    setNotifs(n||[]); setBookings(b||[]); setLoading(false);
+  }
+
+  async function deleteNotif(id) {
+    await sb.from("notifications").delete().eq("id",id);
+    setNotifs(prev => prev.filter(n=>n.id!==id));
+  }
+
+  async function deleteAllNotifs() {
+    if (!confirm(`Cancellare tutte le notifiche di ${selected.display_name}?`)) return;
+    await sb.from("notifications").delete().eq("user_id",selected.id);
+    setNotifs([]); setMsg("✅ Notifiche cancellate");
+  }
+
+  async function deleteBooking(bk) {
+    if (!confirm(`Eliminare prenotazione di ${selected.display_name}?`)) return;
+    if ((bk.coin_held||0) > 0 && bk.status !== "rejected") {
+      const { data: p } = await sb.from("profiles").select("coin").eq("id",selected.id).single();
+      await sb.from("profiles").update({ coin:(p?.coin||0)+bk.coin_held }).eq("id",selected.id);
+      setMsg(`✅ Prenotazione eliminata · +${bk.coin_held} 🪙 rimborsate`);
+    }
+    await sb.from("bookings").delete().eq("id",bk.id);
+    setBookings(prev=>prev.filter(b=>b.id!==bk.id));
+  }
+
+  async function deleteAllBookings() {
+    if (!confirm(`Eliminare tutte le prenotazioni di ${selected.display_name}? Le coin verranno rimborsate.`)) return;
+    for (const b of bookings) {
+      if ((b.coin_held||0)>0 && b.status!=="rejected") {
+        const { data: p } = await sb.from("profiles").select("coin").eq("id",selected.id).single();
+        await sb.from("profiles").update({ coin:(p?.coin||0)+b.coin_held }).eq("id",selected.id);
+      }
+      await sb.from("bookings").delete().eq("id",b.id);
+    }
+    setBookings([]); setMsg("✅ Prenotazioni cancellate e coin rimborsate");
+  }
+
+  const typeIcon = { badge_assigned:"🎖️", booking_confirmed:"✅", booking_rejected:"❌", new_message:"💬", level_up:"🆙", log_action:"📌" };
+  const statusTag = { pending:"⏳", confirmed:"✅", rejected:"❌", cancelled:"🚫" };
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#ff8c00",marginBottom:4}}>🧹 Pulizia account</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Seleziona un giocatore per vedere e gestire notifiche e prenotazioni</div>
+
+      {msg && <div style={{background:"rgba(0,255,136,.08)",border:"1px solid rgba(0,255,136,.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
+
+      {/* Player selector */}
+      <div style={{marginBottom:16}}>
+        <label className="form-label">Giocatore</label>
+        <select onChange={e=>{
+          const p = players.find(p=>p.id===e.target.value);
+          if (p) loadPlayer(p);
+        }} style={{width:"100%",padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:15}}>
+          <option value="">Seleziona un giocatore…</option>
+          {players.map(p=><option key={p.id} value={p.id}>{p.display_name} · {p.xp} XP</option>)}
+        </select>
+      </div>
+
+      {loading && <div className="loading">⏳ Caricamento…</div>}
+
+      {selected && !loading && (
+        <div>
+          {/* Player header */}
+          <div style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
+            <div style={{width:44,height:44,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,140,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>
+              {selected.avatar_url?<img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:getLevel(selected.xp||0).emoji}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff"}}>{selected.display_name}</div>
+              <div style={{fontSize:12,color:"var(--text3)"}}>{selected.squads?.name||"Nessuna squadra"} · {selected.xp} XP</div>
+            </div>
+          </div>
+
+          {/* Notifiche */}
+          <div className="card" style={{marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff"}}>🔔 Notifiche ({notifs.length})</div>
+              {notifs.length>0 && <button className="btn btn-danger btn-sm" onClick={deleteAllNotifs}>🗑️ Cancella tutte</button>}
+            </div>
+            {notifs.length===0 ? <div className="empty" style={{padding:"12px 0"}}>Nessuna notifica</div> : (
+              <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:260,overflowY:"auto"}}>
+                {notifs.map(n=>(
+                  <div key={n.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
+                    <span style={{fontSize:16,flexShrink:0}}>{typeIcon[n.type]||"🔔"}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.title}</div>
+                      {n.body&&<div style={{fontSize:10,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.body}</div>}
+                      <div style={{fontSize:9,color:"var(--text3)"}}>{new Date(n.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+                    </div>
+                    <button onClick={()=>deleteNotif(n.id)} style={{background:"none",border:"none",color:"rgba(255,34,68,.6)",cursor:"pointer",fontSize:14,flexShrink:0,padding:"2px 6px"}}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Prenotazioni */}
+          <div className="card">
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff"}}>📋 Prenotazioni ({bookings.length})</div>
+              {bookings.length>0 && <button className="btn btn-danger btn-sm" onClick={deleteAllBookings}>🗑️ Cancella tutte</button>}
+            </div>
+            {bookings.length===0 ? <div className="empty" style={{padding:"12px 0"}}>Nessuna prenotazione</div> : (
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {bookings.map(b=>(
+                  <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
+                    <span style={{fontSize:14,flexShrink:0}}>{statusTag[b.status]||"?"}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.activities?.name||"Lab eliminato"}</div>
+                      <div style={{fontSize:10,color:"var(--text3)"}}>🪙 {b.coin_held||0} · {new Date(b.created_at).toLocaleDateString("it-IT")}</div>
+                    </div>
+                    <button onClick={()=>deleteBooking(b)} style={{background:"none",border:"none",color:"rgba(255,34,68,.6)",cursor:"pointer",fontSize:14,flexShrink:0,padding:"2px 6px"}}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── ADMIN VIEW ──────────────────────────────────────────
 
 function AdminView({ profile }) {
@@ -4090,7 +4251,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -4335,6 +4496,7 @@ function PresentationMode({ onClose }) {
 const EduTabColors = {
   dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
+  pulizia:      { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
   admin:        { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
   classifica:   { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
@@ -4532,6 +4694,7 @@ function EducatorShell({ profile, onLogout }) {
         <div className="content edu-content-wrap" style={{background:EduTabColors[tab]?.bg||"transparent"}}>
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
+          {tab === "pulizia"      && <PuliziaView />}
           {tab === "admin"        && <AdminView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
