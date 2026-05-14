@@ -2858,7 +2858,7 @@ function BookingsView() {
           <div style={{fontSize:13,color:"var(--text3)"}}>
             {showArchive ? `Tutte le prenotazioni (${bookings.length})` : `Ultimi 7 giorni (${bookings.filter(b=>b.created_at>=cutoff).length})`}
           </div>
-          <div style={{display:"flex",gap:8"}}>
+          <div style={{display:"flex",gap:8}}>
             <button className={`chip ${!showArchive?"active":""}`} onClick={()=>setShowArchive(false)}>📅 7 giorni</button>
             <button className={`chip ${showArchive?"active":""}`} onClick={()=>setShowArchive(true)}>📦 Archivio</button>
           </div>
