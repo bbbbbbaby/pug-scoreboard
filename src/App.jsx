@@ -3537,6 +3537,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [visConfig, setVisConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
   });
+
+  // Carica visibilità subito al mount (prima del load principale)
+  useEffect(() => {
+    sb.from("app_settings").select("data").eq("key","visibility").single()
+      .then(({ data }) => {
+        if (data?.data) {
+          localStorage.setItem("pug_visibility", JSON.stringify(data.data));
+          setVisConfig(data.data);
+        }
+      }).catch(()=>{});
+  }, []);
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
@@ -3553,15 +3564,15 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [pinChangeErr, setPinChangeErr] = useState("");
 
   const load = useCallback(async () => {
-  // Sync visibility settings from Supabase → aggiorna stato React per re-render
-  sb.from("app_settings").select("data").eq("key","visibility").single()
-    .then(({ data }) => {
-      if (data?.data) {
-        localStorage.setItem("pug_visibility", JSON.stringify(data.data));
-        setVisConfig(data.data);
-      }
-    })
-    .catch(()=>{});
+  try {
+    // Carica visibilità PRIMA di tutto — evita flash con vecchi dati
+    const { data: visData } = await sb.from("app_settings")
+      .select("data").eq("key","visibility").single();
+    if (visData?.data) {
+      localStorage.setItem("pug_visibility", JSON.stringify(visData.data));
+      setVisConfig(visData.data);
+    }
+  } catch(_) {}
   try {
     const today = new Date().toISOString().split("T")[0];
     const monthStart = today.slice(0, 7) + "-01";
