@@ -1271,6 +1271,35 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   const fileRef = useRef();
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(currentUrl);
+  async function handleFile(e) {
+    const file = e.target.files[0]; if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressToWebP(file, 400, 0.82);
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64url = ev.target.result;
+        const kb = Math.round(base64url.length * 0.75 / 1024);
+        if (kb > 200) { alert(`Immagine troppo grande (${kb}KB). Usa una foto più piccola.`); setUploading(false); return; }
+        await sb.from("profiles").update({ avatar_url: base64url }).eq("id", playerId);
+        setPreview(base64url); onUploaded && onUploaded(base64url);
+        setUploading(false);
+      };
+      reader.onerror = () => { alert("Errore lettura file"); setUploading(false); };
+      reader.readAsDataURL(compressed);
+    } catch(err) { alert("Errore: " + err.message); setUploading(false); }
+  }
+  return (
+    <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{display:"none"}}/>
+      {preview ? <img src={preview} className="avatar-preview" alt="avatar"/> : <div style={{fontSize:40,marginBottom:8}}>📷</div>}
+      <div style={{fontSize:13,color:"var(--text2)"}}>{uploading ? "⏳ Compressione…" : "Tocca per cambiare foto"}</div>
+    </div>
+  );
+}) {
+  const fileRef = useRef();
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(currentUrl);
 
   async function handleFile(e) {
     const file = e.target.files[0]; if (!file) return;
@@ -1802,6 +1831,38 @@ function PlayersView({ sectionColors, setSectionColors }) {
 }
 
 function InlineAvatarUpload({ playerId, onUploaded }) {
+  const ref = useRef();
+  const [uploading, setUploading] = useState(false);
+  async function handleFile(e) {
+    const file = e.target.files[0]; if (!file) return;
+    setUploading(true);
+    try {
+      const compressed = await compressToWebP(file, 400, 0.82);
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64url = ev.target.result;
+        const kb = Math.round(base64url.length * 0.75 / 1024);
+        if (kb > 200) { alert(`Foto troppo grande (${kb}KB). Usa un'immagine più piccola o ridotta.`); setUploading(false); return; }
+        if (playerId && !playerId.startsWith("new_edu_")) {
+          await sb.from("profiles").update({ avatar_url: base64url }).eq("id", playerId);
+        }
+        onUploaded(base64url);
+        setUploading(false);
+      };
+      reader.onerror = () => { alert("Errore lettura file"); setUploading(false); };
+      reader.readAsDataURL(compressed);
+    } catch(err) { alert("Errore: " + err.message); setUploading(false); }
+  }
+  return (
+    <div>
+      <input ref={ref} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{display:"none"}}/>
+      <button className="btn btn-ghost btn-sm" style={{width:"100%"}} onClick={()=>ref.current.click()} disabled={uploading}>
+        {uploading ? "⏳ Compressione…" : "📷 Carica foto da dispositivo"}
+      </button>
+      {!uploading && <div style={{fontSize:10,color:"var(--text3)",marginTop:4,textAlign:"center"}}>Compressa in WebP · salvata nel profilo senza Storage</div>}
+    </div>
+  );
+}) {
   const ref = useRef();
   const [uploading, setUploading] = useState(false);
 
