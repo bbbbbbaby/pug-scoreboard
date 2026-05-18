@@ -1504,7 +1504,10 @@ function Login({ onLogin }) {
                           <div>
                             <div style={{ fontSize: 14, fontWeight: 700 }}>{p.display_name}</div>
                             {p.squads?.name && (() => {
-                              try { const v = JSON.parse(localStorage.getItem("pug_visibility")||"{}"); return v.squadre !== false ? <SquadPill name={p.squads.name}/> : null; } catch(_) { return <SquadPill name={p.squads.name}/>; }
+                              try {
+                                const v = JSON.parse(localStorage.getItem("pug_visibility")||"{}");
+                                return v.squadre !== false ? <SquadPill name={p.squads.name}/> : null;
+                              } catch(_) { return null; }
                             })()}
                           </div>
                         </div>
@@ -3549,8 +3552,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
     sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { console.warn("Vis config not found:", error.message); return; }
         const cfg = data?.app_config;
+        console.log("Vis config loaded:", cfg);
         if (cfg && typeof cfg === "object") {
           localStorage.setItem("pug_visibility", JSON.stringify(cfg));
           setVisConfig(cfg);
@@ -3854,7 +3859,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           <div className="pd-logo-sub">gratuito &amp; popolare</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          {fullProfile?.squads?.name && (
+          {visConfig.squadre !== false && fullProfile?.squads?.name && (
             <div style={{background:'#111',color:'#ffcc00',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
           )}
           <button onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,padding:'5px 9px',cursor:'pointer',fontSize:14,lineHeight:1}} title="Cambia tema">
@@ -3889,7 +3894,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 </div>
                 <div style={{flex:1}}>
                   <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:2}}>{fullProfile.display_name}</div>
-                  {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
+                  {visConfig.squadre !== false && fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
                 </div>
               </div>
               {editingFirstName ? (
