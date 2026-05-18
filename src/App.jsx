@@ -581,7 +581,7 @@ const css = `
     --glow-pink: 0 2px 12px rgba(170,24,112,0.2);
   }
   .light body {
-    background: #e8d8a0;
+    background: #f2efe8;
     color: #1a0e00;
   }
   .light body::before {
@@ -620,7 +620,7 @@ const css = `
   .light .stat-value { color: #1a0e00; }
 
   /* ── Educator layout ── */
-  .light .edu-layout { background: linear-gradient(160deg, #d4c080 0%, #e0cc90 50%, #d8c07a 100%); }
+  .light .edu-layout { background: linear-gradient(160deg, #ede8d8 0%, #f2efe5 50%, #e8e3d0 100%); }
   .light .sidebar {
     background: linear-gradient(180deg, #2a1a00, #3d2800);
     border-right: 3px solid rgba(200,144,10,.5);
@@ -819,7 +819,7 @@ const css = `
 
   /* ── Player dashboard light ── */
   .light .player-wrap {
-    background: linear-gradient(160deg, #c8b870 0%, #d8c88a 45%, #c0aa60 100%) !important;
+    background: linear-gradient(160deg, #e8e0c8 0%, #f0ebd8 45%, #e4dcc4 100%) !important;
   }
   .light .pd-topbar {
     background: rgba(42,26,0,.9) !important;
@@ -897,6 +897,33 @@ const css = `
   .light .squad-row { background: #fff8e8; border: 2px solid rgba(180,130,60,.2); }
   .light .squad-name { color: #1a0e00; }
 
+  /* ── StreakConfig month cards ── */
+  .light .streak-month-card {
+    background: #fff8e8 !important;
+    border-color: rgba(180,130,60,.25) !important;
+  }
+  .light .streak-month-card * { color: #1a0e00 !important; }
+  .light .streak-month-card .streak-month-title { color: #1a0e00 !important; }
+  .light .streak-month-card .streak-month-sub { color: #7a5a2a !important; }
+  /* ── Avatar picker light ── */
+  .light .av-picker-tab {
+    background: rgba(180,130,60,.1) !important;
+    color: #7a5a2a !important;
+    border-color: rgba(180,130,60,.25) !important;
+  }
+  .light .av-picker-tab.on {
+    background: linear-gradient(135deg,#c8900a,#e0aa20) !important;
+    color: #fff !important;
+    border-color: #c8900a !important;
+  }
+  .light .av-picker-item {
+    background: #fff8e8 !important;
+    border-color: rgba(180,130,60,.2) !important;
+  }
+  .light .av-picker-item:hover { background: #fff0cc !important; border-color: rgba(200,144,10,.4) !important; }
+  .light .av-picker-item.sel { border-color: #c8900a !important; background: rgba(200,144,10,.08) !important; }
+  .light .av-picker-item span { color: #7a5a2a !important; }
+  .light .av-picker-wrap { background: #f8f2e0; border-radius: 8px; padding: 4px; }
   /* ── Section banner ── */
   .light .section-banner-title { color: #1a0e00 !important; }
   .light .section-banner-sub { color: rgba(0,0,0,.55) !important; }
@@ -3248,6 +3275,60 @@ function QrView() {
   );
 }
 
+// ─── VISIBILITY VIEW ─────────────────────────────────────
+
+function VisibilityView() {
+  const [vis, setVis] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_){ return {}; }
+  });
+  function toggle(key) {
+    const next = { ...vis, [key]: vis[key] === false ? true : false };
+    setVis(next);
+    localStorage.setItem("pug_visibility", JSON.stringify(next));
+  }
+  const sections = [
+    { key:"squadre",    label:"🛡️ Squadra",           desc:"Mostra la squadra del giocatore nel suo profilo" },
+    { key:"streak",     label:"🔥 Streak & presenze",  desc:"Mostra il contatore di presenze consecutive" },
+    { key:"sfida",      label:"⚡ Sfida del giorno",   desc:"Mostra la sfida attiva nel profilo player" },
+    { key:"badge",      label:"🎖️ Badge",             desc:"Mostra la collezione badge nel profilo" },
+    { key:"classifica", label:"🏆 Classifica",         desc:"Mostra la posizione in classifica" },
+    { key:"coin",       label:"🪙 Coin",               desc:"Mostra il saldo coin nel profilo" },
+    { key:"xp",         label:"⭐ XP",                 desc:"Mostra i punti XP nel profilo" },
+    { key:"lab",        label:"⚡ Tab Lab",            desc:"Mostra la tab Lab nel menu player" },
+    { key:"messaggi",   label:"💬 Messaggi",           desc:"Mostra la tab messaggi nel menu player" },
+  ];
+  const allVisible = sections.every(s => vis[s.key] !== false);
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:4}}>👁️ Visibilità player</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Controlla cosa vedono i giocatori nel loro profilo. Le modifiche sono immediate.</div>
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <button className="btn btn-ghost btn-sm" onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=true); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>✅ Mostra tutto</button>
+        <button className="btn btn-ghost btn-sm" onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=false); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>🙈 Nascondi tutto</button>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {sections.map(s => {
+          const on = vis[s.key] !== false;
+          return (
+            <div key={s.key} className="card-sm" style={{display:"flex",alignItems:"center",gap:14,cursor:"pointer",border:`1px solid ${on?"rgba(0,255,136,.2)":"rgba(255,34,68,.15)"}`,background:on?"rgba(0,255,136,.03)":"rgba(255,34,68,.03)"}}>
+              <div style={{flex:1}} onClick={()=>toggle(s.key)}>
+                <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{s.label}</div>
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{s.desc}</div>
+              </div>
+              <div onClick={()=>toggle(s.key)} style={{width:44,height:24,borderRadius:99,background:on?"var(--neon-green)":"rgba(255,255,255,.1)",border:`2px solid ${on?"var(--neon-green)":"rgba(255,255,255,.2)"}`,position:"relative",cursor:"pointer",flexShrink:0,transition:"all .2s"}}>
+                <div style={{position:"absolute",top:2,left:on?20:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.3)"}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{background:"rgba(0,212,255,.05)",border:"1px solid rgba(0,212,255,.12)",borderRadius:10,padding:"10px 14px",marginTop:16,fontSize:11,color:"var(--text3)"}}>
+        💡 Le modifiche si applicano subito per tutti i giocatori. Usa "Squadre coming soon" per mostrare la sezione squadra ma senza assegnazione.
+      </div>
+    </div>
+  );
+}
+
 // ─── STREAK CONFIG VIEW ───────────────────────────────────
 
 function StreakConfigView() {
@@ -3297,7 +3378,7 @@ function StreakConfigView() {
             const isPast = m.month < now.getMonth() + 1;
             const isCurrent = m.month === now.getMonth() + 1;
             return (
-              <div key={m.month} style={{background:"rgba(8,18,40,0.9)",border:`1px solid ${isCurrent?"rgba(255,140,0,.3)":isPast?"rgba(0,255,136,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
+              <div key={m.month} className="streak-month-card" style={{background:"rgba(8,18,40,0.9)",border:`1px solid ${isCurrent?"rgba(255,140,0,.3)":isPast?"rgba(0,255,136,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:editing?.month===m.month?12:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <span style={{fontSize:20}}>{isPast?"✅":isCurrent?"🔥":"📅"}</span>
@@ -3689,11 +3770,21 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             </div>
 
             {/* Stats grid 1: XP, Coin, Badge */}
-            <div className="pd-sg">
-              {[['⭐',fullProfile.xp,'XP'],['🪙',fullProfile.coin,'Coin'],['🎖️',badges.length,'Badge']].map(([ic,v,l])=>(
-                <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
-              ))}
-            </div>
+            {(() => {
+              const vis2 = (() => { try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_){ return {}; } })();
+              const stats = [
+                vis2.xp !== false ? ['⭐',fullProfile.xp,'XP'] : null,
+                vis2.coin !== false ? ['🪙',fullProfile.coin,'Coin'] : null,
+                vis2.badge !== false ? ['🎖️',badges.length,'Badge'] : null,
+              ].filter(Boolean);
+              return stats.length > 0 ? (
+                <div className="pd-sg" style={{gridTemplateColumns:`repeat(${stats.length},1fr)`}}>
+                  {stats.map(([ic,v,l])=>(
+                    <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
+                  ))}
+                </div>
+              ) : null;
+            })()}
 
             {/* Stats grid 2: Lab, Conf., Rank */}
             <div className="pd-sg">
@@ -3721,15 +3812,29 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             )}
 
             {/* Squadra */}
-            {fullProfile.squads?.name && (
-              <div className="pd-squad">
-                <div style={{width:36,height:36,borderRadius:8,background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>⚡</div>
-                <div>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
-                  <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>
+            {(() => {
+              const vis = (() => { try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_){ return {}; } })();
+              const showSquad = vis.squadre !== false;
+              if (!showSquad) return null;
+              if (!fullProfile.squads?.name) return (
+                <div className="pd-squad" style={{opacity:.5}}>
+                  <div style={{width:36,height:36,borderRadius:8,background:'rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔒</div>
+                  <div>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadre</div>
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>🚧 Coming soon</div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+              return (
+                <div className="pd-squad">
+                  <div style={{width:36,height:36,borderRadius:8,background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>⚡</div>
+                  <div>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Sfida del giorno */}
             {activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
@@ -4504,7 +4609,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Visibilità"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -4599,45 +4704,52 @@ function ExportView() {
 
 // ─── PRESENTATION MODE ────────────────────────────────────
 
-function PresentationMode({ onClose }) {
-  const [players, setPlayers] = useState([]);
+function PresentationMode({ onClose, settings }) {
+  const cfg = settings || { title:"🏆 Classifica PUG", squadFilter:"all", topN:0, podioDuration:10, scrollSpeed:"medium" };
+  const speedMap = { slow:0.3, medium:0.6, fast:1.2 };
+  const [allPlayers, setAllPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [phase, setPhase]     = useState("podio"); // "podio" | "lista"
+  const [phase, setPhase]     = useState("podio");
   const scrollRef = useRef(null);
   const animRef   = useRef(null);
 
   useEffect(() => {
     sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)")
       .eq("role","player").gt("xp",0).order("xp",{ascending:false})
-      .then(({data}) => { setPlayers(data||[]); setLoading(false); });
+      .then(({data}) => { setAllPlayers(data||[]); setLoading(false); });
     const handler = e => { if(e.key==="Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  // Switch to lista after 10s
+  // Filter and limit players
+  const players = allPlayers
+    .filter(p => cfg.squadFilter === "all" || p.squads?.name === cfg.squadFilter)
+    .slice(0, cfg.topN > 0 ? cfg.topN : allPlayers.length);
+
+  // Switch to lista after podioDuration seconds
   useEffect(() => {
     if (loading) return;
-    const t = setTimeout(() => setPhase("lista"), 10000);
+    const t = setTimeout(() => setPhase("lista"), (cfg.podioDuration || 10) * 1000);
     return () => clearTimeout(t);
-  }, [loading]);
+  }, [loading, cfg.podioDuration]);
 
-  // Auto-scroll ticker on lista phase
+  // Auto-scroll ticker
   useEffect(() => {
     if (phase !== "lista") return;
     const el = scrollRef.current;
     if (!el) return;
     let pos = 0;
-    const speed = 0.6; // px per frame
+    const speed = speedMap[cfg.scrollSpeed] || 0.6;
     function tick() {
       pos += speed;
-      if (pos >= el.scrollHeight / 2) pos = 0; // loop (list is doubled)
+      if (pos >= el.scrollHeight / 2) pos = 0;
       el.scrollTop = pos;
       animRef.current = requestAnimationFrame(tick);
     }
     animRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animRef.current);
-  }, [phase, players]);
+  }, [phase, players, cfg.scrollSpeed]);
 
   const stars = Array.from({length:60},(_,i)=>({
     left:Math.random()*100+"%", top:Math.random()*100+"%",
@@ -4672,7 +4784,7 @@ function PresentationMode({ onClose }) {
       {/* ── PODIO ── */}
       {phase==="podio" && (
         <>
-          <div className="pres-title">🏆 Classifica PUG</div>
+          <div className="pres-title">{cfg.title || "🏆 Classifica PUG"}</div>
           <div className="pres-podium-wrap">
             {order.map((pos,i) => {
               const p = players[pos];
@@ -4712,7 +4824,7 @@ function PresentationMode({ onClose }) {
       {phase==="lista" && (
         <>
           <div className="pres-title" style={{fontSize:"clamp(20px,4vw,44px)",marginBottom:"clamp(8px,2vh,16px)"}}>
-            🌿 Tutti i giocatori · {players.length}
+            {cfg.squadFilter !== "all" ? `🛡️ Squadra ${cfg.squadFilter}` : "🌿 Tutti i giocatori"} · {players.length}
           </div>
           <div ref={scrollRef} style={{width:"100%",maxWidth:560,overflow:"hidden",height:"65vh",padding:"0 16px"}}>
             {doubled.map((p,i) => {
@@ -4750,6 +4862,7 @@ const EduTabColors = {
   dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   pulizia:      { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
+  visibilita:   { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   admin:        { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
   classifica:   { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
@@ -4773,6 +4886,22 @@ function EducatorShell({ profile, onLogout }) {
   const [theme, setTheme] = useState("dark");
   const [sectionColors, setSectionColors] = useState(DEFAULT_SECTION_COLORS);
   const [showPresentation, setShowPresentation] = useState(false);
+  const [showPresSettings, setShowPresSettings] = useState(false);
+  const [visibility, setVisibility] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pug_visibility") || "{}"); } catch(_) { return {}; }
+  });
+  function saveVisibility(key, val) {
+    const next = { ...visibility, [key]: val };
+    setVisibility(next);
+    localStorage.setItem("pug_visibility", JSON.stringify(next));
+  }
+  const [presSettings, setPresSettings] = useState({
+    title: "🏆 Classifica PUG",
+    squadFilter: "all",
+    topN: 0, // 0 = tutti
+    podioDuration: 10,
+    scrollSpeed: "medium", // slow/medium/fast
+  });
   const [notifCounts, setNotifCounts] = useState({ pendingBookings:0, missingAttendance:0, total:0 });
   const [showNotifPanel, setShowNotifPanel] = useState(false);
 
@@ -4905,7 +5034,7 @@ function EducatorShell({ profile, onLogout }) {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
-            <button onClick={()=>setShowPresentation(true)} style={{background:"rgba(255,204,0,.1)",border:"1px solid rgba(255,204,0,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#ffcc00",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
+            <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(255,204,0,.1)",border:"1px solid rgba(255,204,0,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#ffcc00",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
             <div className="edu-notif-bell" onClick={()=>setShowNotifPanel(p=>!p)}>
               🔔
               {notifCounts.total > 0 && <div className="edu-notif-badge">{notifCounts.total}</div>}
@@ -4948,6 +5077,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
+          {tab === "visibilita"   && <VisibilityView />}
           {tab === "admin"        && <AdminView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
@@ -4980,7 +5110,49 @@ function EducatorShell({ profile, onLogout }) {
         </div>
       </div>
 
-      {showPresentation && <PresentationMode onClose={()=>setShowPresentation(false)}/>}
+      {showPresSettings && (
+        <div className="modal-bg" onClick={()=>setShowPresSettings(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">🎮 Impostazioni Presentazione</div>
+            <div className="form-group">
+              <label className="form-label">Titolo</label>
+              <input className="form-input" value={presSettings.title} onChange={e=>setPresSettings(p=>({...p,title:e.target.value}))} placeholder="🏆 Classifica PUG"/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Mostra solo squadra</label>
+              <select value={presSettings.squadFilter} onChange={e=>setPresSettings(p=>({...p,squadFilter:e.target.value}))}>
+                <option value="all">Tutti i giocatori</option>
+                <option value="Verde">🟢 Squadra Verde</option>
+                <option value="Azzurra">🔵 Squadra Azzurra</option>
+                <option value="Gialla">🟡 Squadra Gialla</option>
+              </select>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div className="form-group">
+                <label className="form-label">Top N giocatori (0 = tutti)</label>
+                <input type="number" min="0" max="200" className="form-input" value={presSettings.topN} onChange={e=>setPresSettings(p=>({...p,topN:Number(e.target.value)}))}/>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Secondi fase podio</label>
+                <input type="number" min="3" max="60" className="form-input" value={presSettings.podioDuration} onChange={e=>setPresSettings(p=>({...p,podioDuration:Number(e.target.value)}))}/>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Velocità scorrimento lista</label>
+              <div style={{display:"flex",gap:8}}>
+                {[["slow","🐢 Lento"],["medium","🚶 Medio"],["fast","⚡ Veloce"]].map(([v,l])=>(
+                  <button key={v} className={`chip ${presSettings.scrollSpeed===v?"active":""}`} onClick={()=>setPresSettings(p=>({...p,scrollSpeed:v}))}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:8}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={()=>{setShowPresSettings(false);setShowPresentation(true);}}>▶ Avvia presentazione</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setShowPresSettings(false)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPresentation && <PresentationMode settings={presSettings} onClose={()=>setShowPresentation(false)}/>}
 
       {showAvatarModal && (
         <div className="modal-bg" onClick={() => setShowAvatarModal(false)}>
