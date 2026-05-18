@@ -1830,36 +1830,7 @@ function InlineAvatarUpload({ playerId, onUploaded }) {
       {!uploading && <div style={{fontSize:10,color:"var(--text3)",marginTop:4,textAlign:"center"}}>Compressa in WebP · salvata nel profilo senza Storage</div>}
     </div>
   );
-}) {
-  const ref = useRef();
-  const [uploading, setUploading] = useState(false);
 
-  async function handleFile(e) {
-    const file = e.target.files[0]; if (!file) return;
-    setUploading(true);
-    try {
-      const compressed = await compressToWebP(file, 400, 0.85);
-      const path = `avatars/${playerId}_custom.webp`;
-      const { error } = await sb.storage.from("avatars").upload(path, compressed, { upsert: true, contentType: "image/webp" });
-      if (error) { alert("Errore upload: " + error.message); setUploading(false); return; }
-      const { data } = sb.storage.from("avatars").getPublicUrl(path);
-      const url = data.publicUrl + "?t=" + Date.now();
-      await sb.from("profiles").update({ avatar_url: url }).eq("id", playerId);
-      onUploaded(url);
-    } catch(err) { alert("Errore: " + err.message); }
-    setUploading(false);
-  }
-
-  return (
-    <div>
-      <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{display:"none"}}/>
-      <button className="btn btn-ghost btn-sm" style={{width:"100%"}} onClick={()=>ref.current.click()} disabled={uploading}>
-        {uploading ? "⏳ Caricamento e compressione…" : "📷 Carica foto da dispositivo"}
-      </button>
-      {!uploading && <div style={{fontSize:10,color:"var(--text3)",marginTop:4,textAlign:"center"}}>Compressa automaticamente in WebP prima dell'upload</div>}
-    </div>
-  );
-}
 
 function PlayerDetailPanel({ playerId, squads, onClose }) {
   const [data, setData] = useState(null);
