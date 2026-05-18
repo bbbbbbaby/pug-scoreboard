@@ -555,9 +555,9 @@ const css = `
   /* ═══ LIGHT MODE — Game UI (CoC / Clash Royale style) ═══ */
   .light {
     /* ── Root variables override ── */
-    --text: #1a0e00;
-    --text2: #5a3e1a;
-    --text3: #8a6a3a;
+    --text: #1a1a2e;
+    --text2: #4a5068;
+    --text3: #7a86a0;
     --surface: rgba(255,248,230,0.95);
     --surface2: rgba(255,242,210,0.9);
     --surface3: rgba(255,235,190,0.85);
@@ -581,8 +581,8 @@ const css = `
     --glow-pink: 0 2px 12px rgba(170,24,112,0.2);
   }
   .light body {
-    background: #f2efe8;
-    color: #1a0e00;
+    background: #f0f2f5;
+    color: #1a1a2e;
   }
   .light body::before {
     background:
@@ -598,19 +598,19 @@ const css = `
 
   /* ── Cards & surfaces ── */
   .light .card {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.3);
-    box-shadow: 0 2px 12px rgba(100,60,0,.1), inset 0 1px 0 rgba(255,255,255,.8);
-    color: #1a0e00;
+    background: #ffffff;
+    border: 2px solid rgba(26,95,165,.15);
+    box-shadow: 0 2px 12px rgba(26,50,120,.08), inset 0 1px 0 rgba(255,255,255,.9);
+    color: #1a1a2e;
   }
   .light .card-sm {
-    background: #fff8e8;
-    border: 1px solid rgba(180,130,60,.25);
-    color: #1a0e00;
+    background: #ffffff;
+    border: 1px solid rgba(26,95,165,.12);
+    color: #1a1a2e;
   }
   .light .stat-card {
-    background: linear-gradient(160deg, #fff8e8, #fff0cc);
-    border: 2px solid rgba(180,130,60,.35);
+    background: linear-gradient(160deg, #ffffff, #f4f6ff);
+    border: 2px solid rgba(26,95,165,.15);
     box-shadow: 0 2px 8px rgba(100,60,0,.1), inset 0 1px 0 rgba(255,255,255,.9);
   }
   .light .stat-card::before {
@@ -620,20 +620,20 @@ const css = `
   .light .stat-value { color: #1a0e00; }
 
   /* ── Educator layout ── */
-  .light .edu-layout { background: linear-gradient(160deg, #ede8d8 0%, #f2efe5 50%, #e8e3d0 100%); }
+  .light .edu-layout { background: linear-gradient(160deg, #e8ecf4 0%, #f0f2f8 50%, #e4e8f2 100%); }
   .light .sidebar {
-    background: linear-gradient(180deg, #2a1a00, #3d2800);
-    border-right: 3px solid rgba(200,144,10,.5);
-    box-shadow: 4px 0 20px rgba(0,0,0,.3);
+    background: linear-gradient(180deg, #1a2035, #252d45);
+    border-right: 3px solid rgba(163,207,254,.3);
+    box-shadow: 4px 0 20px rgba(0,0,0,.25);
   }
   .light .sidebar-logo-box { background: #cc1111; }
   .light .sidebar-badge {
-    background: rgba(200,144,10,.2);
-    border-color: rgba(200,144,10,.5);
-    color: #ffcc00;
+    background: rgba(163,207,254,.15);
+    border-color: rgba(163,207,254,.3);
+    color: #a3cffe;
   }
-  .light .nav-item { color: rgba(255,220,150,.5); }
-  .light .nav-item:hover { background: rgba(255,200,100,.1); color: rgba(255,220,150,.85); }
+  .light .nav-item { color: rgba(163,207,254,.5); }
+  .light .nav-item:hover { background: rgba(163,207,254,.1); color: rgba(163,207,254,.85); }
   .light .nav-item.active {
     background: rgba(200,144,10,.15);
     color: #ffcc00;
@@ -643,20 +643,20 @@ const css = `
   .light .sidebar-user { border-top: 1px solid rgba(200,144,10,.3); }
 
   .light .topbar {
-    background: rgba(42,26,0,.85);
-    border-bottom: 2px solid rgba(200,144,10,.4);
+    background: rgba(26,32,52,.88);
+    border-bottom: 2px solid rgba(163,207,254,.25);
     backdrop-filter: blur(12px);
   }
-  .light .topbar-title { color: #ffeeaa; }
+  .light .topbar-title { color: #e0eeff; }
   .light .mob-header {
-    background: rgba(42,26,0,.9);
-    border-bottom: 2px solid rgba(200,144,10,.35);
+    background: rgba(26,32,52,.92);
+    border-bottom: 2px solid rgba(163,207,254,.2);
   }
-  .light .mob-header-title { color: #ffeeaa; }
-  .light .mob-drawer { background: linear-gradient(180deg, #2a1a00, #3d2800); }
+  .light .mob-header-title { color: #e0eeff; }
+  .light .mob-drawer { background: linear-gradient(180deg, #1a2035, #252d45); }
   .light .mob-bottom-nav {
-    background: rgba(42,26,0,.95);
-    border-top: 2px solid rgba(200,144,10,.4);
+    background: rgba(26,32,52,.95);
+    border-top: 2px solid rgba(163,207,254,.2);
   }
   .light .mob-nav-btn { color: rgba(255,220,150,.4); }
   .light .mob-nav-btn.active { color: #ffcc00; }
@@ -819,13 +819,13 @@ const css = `
 
   /* ── Player dashboard light ── */
   .light .player-wrap {
-    background: linear-gradient(160deg, #e8e0c8 0%, #f0ebd8 45%, #e4dcc4 100%) !important;
+    background: linear-gradient(160deg, #dce8f8 0%, #e8f0fc 45%, #d8e4f4 100%) !important;
   }
   .light .pd-topbar {
-    background: rgba(42,26,0,.9) !important;
-    border-bottom: 2px solid rgba(200,144,10,.4) !important;
+    background: rgba(26,32,52,.9) !important;
+    border-bottom: 2px solid rgba(163,207,254,.25) !important;
   }
-  .light .pd-name-pill { background: #2a1a00 !important; color: #ffeeaa !important; }
+  .light .pd-name-pill { background: #1a2035 !important; color: #e0eeff !important; }
   .light .pd-lv-pill {
     background: rgba(200,144,10,.15);
     border-color: rgba(200,144,10,.4);
@@ -847,7 +847,7 @@ const css = `
     background: rgba(255,248,230,.8) !important;
     border: 1px solid rgba(180,130,60,.25) !important;
   }
-  .light .pd-sfida { background: #2a1a00 !important; }
+  .light .pd-sfida { background: #1a2035 !important; }
   .light .pd-checkin {
     background: rgba(255,248,230,.85) !important;
     border: 1px solid rgba(26,122,58,.3) !important;
@@ -869,10 +869,10 @@ const css = `
   .light .xp-bar-wrap { background: rgba(26,95,165,.1); }
   .light .xp-bar { background: linear-gradient(90deg, #1a5fa5, #2a7fc5); }
   .light .player-bottom-nav {
-    background: rgba(42,26,0,.92) !important;
-    border-top: 2px solid rgba(200,144,10,.4) !important;
+    background: rgba(26,32,52,.95) !important;
+    border-top: 2px solid rgba(163,207,254,.2) !important;
   }
-  .light .player-nav-btn { color: rgba(255,200,100,.35) !important; }
+  .light .player-nav-btn { color: rgba(163,207,254,.35) !important; }
   .light .player-nav-btn.active { color: #ffcc00 !important; }
   .light .player-nav-btn.active::after { background: #ffcc00 !important; }
 
@@ -3281,10 +3281,32 @@ function VisibilityView() {
   const [vis, setVis] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_){ return {}; }
   });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    // Load from Supabase on mount
+    sb.from("app_settings").select("data").eq("key","visibility").single()
+      .then(({ data }) => {
+        if (data?.data) {
+          setVis(data.data);
+          localStorage.setItem("pug_visibility", JSON.stringify(data.data));
+        }
+      }).catch(console.error);
+  }, []);
+
   function toggle(key) {
     const next = { ...vis, [key]: vis[key] === false ? true : false };
     setVis(next);
     localStorage.setItem("pug_visibility", JSON.stringify(next));
+  }
+
+  async function saveToSupabase() {
+    setSaving(true);
+    await sb.from("app_settings").upsert({ key:"visibility", data: vis, updated_at: new Date().toISOString() }, { onConflict:"key" });
+    localStorage.setItem("pug_visibility", JSON.stringify(vis));
+    setSaving(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   }
   const sections = [
     { key:"squadre",    label:"🛡️ Squadra",           desc:"Mostra la squadra del giocatore nel suo profilo" },
@@ -3322,8 +3344,13 @@ function VisibilityView() {
           );
         })}
       </div>
-      <div style={{background:"rgba(0,212,255,.05)",border:"1px solid rgba(0,212,255,.12)",borderRadius:10,padding:"10px 14px",marginTop:16,fontSize:11,color:"var(--text3)"}}>
-        💡 Le modifiche si applicano subito per tutti i giocatori. Usa "Squadre coming soon" per mostrare la sezione squadra ma senza assegnazione.
+      <div style={{display:"flex",gap:8,marginTop:16}}>
+        <button className="btn btn-primary" style={{flex:1}} onClick={saveToSupabase} disabled={saving}>
+          {saving ? "⏳ Salvataggio…" : saved ? "✅ Salvato!" : "💾 Salva impostazioni"}
+        </button>
+      </div>
+      <div style={{background:"rgba(0,212,255,.05)",border:"1px solid rgba(0,212,255,.12)",borderRadius:10,padding:"10px 14px",marginTop:12,fontSize:11,color:"var(--text3)"}}>
+        💡 Le modifiche locali sono immediate. Clicca "Salva" per renderle permanenti e condividerle su tutti i dispositivi.
       </div>
     </div>
   );
@@ -3451,6 +3478,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [pinChangeErr, setPinChangeErr] = useState("");
 
   const load = useCallback(async () => {
+  // Sync visibility settings from Supabase
+  sb.from("app_settings").select("data").eq("key","visibility").single()
+    .then(({ data }) => { if (data?.data) localStorage.setItem("pug_visibility", JSON.stringify(data.data)); })
+    .catch(()=>{});
   try {
     const today = new Date().toISOString().split("T")[0];
     const monthStart = today.slice(0, 7) + "-01";
@@ -4994,8 +5025,14 @@ function EducatorShell({ profile, onLogout }) {
           </div>
         </div>
         <span className="mob-header-title" style={{flex:1,marginLeft:8}}>{cur?.[2]}</span>
-        <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={() => setShowAvatarModal(true)}>
-          <Avatar url={avatarUrl} emoji={lv.emoji} size={32}/>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(255,204,0,.15)",border:"1px solid rgba(255,204,0,.3)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#ffcc00",lineHeight:1}} title="Presentazione">🎮</button>
+          <button onClick={()=>setTheme(t=>t==="dark"?"light":"dark")} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,lineHeight:1}} title="Tema">
+            {theme==="dark"?"☀️":"🌙"}
+          </button>
+          <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={() => setShowAvatarModal(true)}>
+            <Avatar url={avatarUrl} emoji={lv.emoji} size={30}/>
+          </div>
         </div>
       </div>
 
