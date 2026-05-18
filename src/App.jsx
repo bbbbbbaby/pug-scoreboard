@@ -282,6 +282,27 @@ const css = `
   .pres-table th { padding:10px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--text3); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.1em; background:rgba(4,8,20,0.95); }
   .pres-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text); }
   .pres-dot { width:32px; height:32px; border-radius:8px; border:none; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; transition:all .12s; }
+  /* Toggle presenza: variabili per light/dark */
+  :root {
+    --pt-empty-bg:     rgba(255,255,255,.07);
+    --pt-empty-color:  rgba(255,255,255,.3);
+    --pt-empty-border: 1.5px solid rgba(255,255,255,.18);
+    --pt-done-bg:      rgba(0,255,136,.18);
+    --pt-done-color:   #00ff88;
+    --pt-done-border:  1.5px solid rgba(0,255,136,.4);
+  }
+  .light {
+    --pt-empty-bg:     #ffffff;
+    --pt-empty-color:  #9e9e9e;
+    --pt-empty-border: 2px solid #9e9e9e;
+    --pt-done-bg:      #e8f5e9;
+    --pt-done-color:   #2e7d32;
+    --pt-done-border:  2px solid #2e7d32;
+  }
+  .pres-toggle { width:40px; height:40px; border-radius:10px; cursor:pointer; font-size:18px; font-weight:900; transition:all .15s; display:inline-flex; align-items:center; justify-content:center; }
+  .pres-toggle.done  { background:var(--pt-done-bg);  color:var(--pt-done-color);  border:var(--pt-done-border);  box-shadow:0 0 10px rgba(0,255,136,.2); }
+  .pres-toggle.empty { background:var(--pt-empty-bg); color:var(--pt-empty-color); border:var(--pt-empty-border); box-shadow:none; }
+  .light .pres-toggle.done  { box-shadow:0 2px 8px rgba(46,125,50,.2); }
   .pd-yes { background:rgba(0,255,136,.15); color:var(--neon-green); border:1px solid rgba(0,255,136,.3); }
   .pd-partial { background:rgba(255,204,0,.12); color:var(--neon-gold); border:1px solid rgba(255,204,0,.25); }
   .pd-completed { background:rgba(0,255,136,.25); color:#00ff88; border:1px solid rgba(0,255,136,.4); }
@@ -2398,14 +2419,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                         <td>{p.squads?.name && <SquadPill name={p.squads.name}/>}</td>
                         <td>
                           <button
-                            onClick={()=>setStatus(p.id, status!=="none"?"none":"full")}
-                            style={{
-                              width:40,height:40,borderRadius:10,border:"none",cursor:"pointer",
-                              fontSize:18,fontWeight:900,transition:"all .15s",
-                              background: status!=="none" ? "rgba(0,255,136,.2)" : "rgba(255,255,255,.06)",
-                              color: status!=="none" ? "var(--neon-green)" : "rgba(255,255,255,.25)",
-                              boxShadow: status!=="none" ? "0 0 12px rgba(0,255,136,.3)" : "none",
-                            }}>
+                            className={`pres-toggle ${status!=="none"?"done":"empty"}`}
+                            onClick={()=>setStatus(p.id, status!=="none"?"none":"full")}>
                             {status!=="none" ? "✓" : "○"}
                           </button>
                         </td>
