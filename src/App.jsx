@@ -3363,9 +3363,10 @@ function VisibilityView() {
     sb.from("profiles").select("app_config").in("role",["admin","educator"]).limit(1)
       .then(({ data }) => {
         const cfg = data?.[0]?.app_config;
-        if (cfg && typeof cfg === "object" && Object.keys(cfg).length > 0) {
-          setVis(cfg);
-          localStorage.setItem("pug_visibility", JSON.stringify(cfg));
+        if (cfg?._saved) {
+          const { _saved, ...rest } = cfg;
+          setVis(rest);
+          localStorage.setItem("pug_visibility", JSON.stringify(rest));
         }
       }).catch(console.error);
   }, []);
@@ -3382,7 +3383,7 @@ function VisibilityView() {
     const { data: admins } = await sb.from("profiles").select("id").in("role",["admin","educator"]).limit(1);
     const adminId = admins?.[0]?.id;
     if (!adminId) { alert("Nessun account educator trovato."); setSaving(false); return; }
-    const { error } = await sb.from("profiles").update({ app_config: vis }).eq("id", adminId);
+    const { error } = await sb.from("profiles").update({ app_config: { ...vis, _saved: true } }).eq("id", adminId);
     if (error) { alert("Errore: " + error.message); setSaving(false); return; }
     localStorage.setItem("pug_visibility", JSON.stringify(vis));
     setSaving(false); setSaved(true);
@@ -3552,7 +3553,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     sb.from("profiles").select("app_config").in("role",["admin","educator"]).limit(1)
       .then(({ data }) => {
         const cfg = data?.[0]?.app_config;
-        if (cfg && typeof cfg === "object" && Object.keys(cfg).length > 0) {
+        if (cfg?._saved) {
           localStorage.setItem("pug_visibility", JSON.stringify(cfg));
           setVisConfig(cfg);
         }
@@ -3581,7 +3582,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const { data: visRows } = await sb.from("profiles")
       .select("app_config").in("role",["admin","educator"]).limit(1);
     const visCfg = visRows?.[0]?.app_config;
-    if (visCfg && typeof visCfg === "object") {
+    if (visCfg?._saved) {
       localStorage.setItem("pug_visibility", JSON.stringify(visCfg));
       setVisConfig(visCfg);
     }
