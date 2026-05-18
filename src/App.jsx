@@ -3548,12 +3548,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   // Carica visibilità subito al mount (prima del load principale)
   useEffect(() => {
     sb.from("app_settings").select("data").eq("key","visibility").single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { console.error("Visibility load error:", error); return; }
         if (data?.data) {
+          console.log("Visibility loaded:", data.data);
           localStorage.setItem("pug_visibility", JSON.stringify(data.data));
           setVisConfig(data.data);
         }
-      }).catch(()=>{});
+      }).catch(e => console.error("Visibility catch:", e));
   }, []);
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
@@ -3573,9 +3575,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const load = useCallback(async () => {
   try {
     // Carica visibilità PRIMA di tutto — evita flash con vecchi dati
-    const { data: visData } = await sb.from("app_settings")
+    const { data: visData, error: visErr } = await sb.from("app_settings")
       .select("data").eq("key","visibility").single();
+    if (visErr) console.error("Visibility in load error:", visErr);
     if (visData?.data) {
+      console.log("Visibility in load:", visData.data);
       localStorage.setItem("pug_visibility", JSON.stringify(visData.data));
       setVisConfig(visData.data);
     }
