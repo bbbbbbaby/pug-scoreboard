@@ -1296,7 +1296,7 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
       <div style={{fontSize:13,color:"var(--text2)"}}>{uploading ? "⏳ Compressione…" : "Tocca per cambiare foto"}</div>
     </div>
   );
-
+}
 
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
   try {
@@ -1830,7 +1830,7 @@ function InlineAvatarUpload({ playerId, onUploaded }) {
       {!uploading && <div style={{fontSize:10,color:"var(--text3)",marginTop:4,textAlign:"center"}}>Compressa in WebP · salvata nel profilo senza Storage</div>}
     </div>
   );
-
+}
 
 function PlayerDetailPanel({ playerId, squads, onClose }) {
   const [data, setData] = useState(null);
