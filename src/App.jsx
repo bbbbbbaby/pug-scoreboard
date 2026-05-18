@@ -53,7 +53,7 @@ const css = `
 
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
-  body { font-family:'Funnel Display',sans-serif; background:#04080f; color:#e8f4ff; min-height:100vh; -webkit-font-smoothing:antialiased; }
+  body { font-family:'Funnel Display',sans-serif; background:#04080f; color:#e8f4ff; min-height:100vh; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
 
   :root {
     --azzurro:#A3CFFE; --rosa:#FF6DEC; --giallo:#FDEF26; --verde:#339966; --rosso:#D41323;
@@ -506,17 +506,20 @@ const css = `
   }
   @media (max-width:767px) {
     .sidebar { display:none; }
-    .edu-main { margin-left:0; }
+    .edu-main { margin-left:0; overflow-x:hidden; }
+    .edu-layout { overflow-x:hidden; }
     .topbar { display:none; }
-    .content { padding:14px; }
+    .content { padding:12px; overflow-x:hidden; }
     .mob-header { display:flex; }
     .mob-bottom-nav { display:block; }
-    .edu-content-wrap { padding-top:58px; padding-bottom:calc(62px + env(safe-area-inset-bottom,0px) + 8px); }
+    .edu-content-wrap { padding-top:58px; padding-bottom:calc(62px + env(safe-area-inset-bottom,0px) + 8px); overflow-x:hidden; }
     .player-grid { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
     .msg-layout { flex-direction:column; height:auto; }
     .msg-list { width:100%; flex-direction:row; overflow-x:auto; flex-wrap:nowrap; padding-bottom:4px; height:auto; }
     .msg-thread { flex-shrink:0; width:130px; }
     .msg-main { height:340px; }
+    .stats-grid { grid-template-columns:repeat(2,1fr) !important; }
+    .lb-list { width:100%; }
   }
 
   /* ═══ PODIUM ═══ */
@@ -4075,7 +4078,7 @@ function DashboardView() {
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16}}>📊 Dashboard</div>
 
       {/* Stat cards */}
-      <div className="stats-grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",marginBottom:20}}>
+      <div className="stats-grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",marginBottom:16}}>
         {[
           ["Giocatori attivi", stats.active.length, "🌿", "var(--neon-green)"],
           ["XP totali", stats.totalXP.toLocaleString(), "⭐", "var(--neon-blue)"],
@@ -4111,7 +4114,7 @@ function DashboardView() {
         </div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:14,marginBottom:16}}>
         {/* Top 5 players */}
         <div className="card">
           <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>🏆 Top 5 giocatori</div>
@@ -4808,7 +4811,7 @@ function EducatorShell({ profile, onLogout }) {
   return (
     <div className="edu-layout">
       {/* Floral background */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.04,overflow:'hidden'}}>
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.04,overflow:'hidden',maxWidth:'100vw'}}>
         <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
           <defs><g id="ef"><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="5" fill="white"/></g></defs>
           <use href="#ef" transform="translate(80,80) scale(1.4)"/><use href="#ef" transform="translate(350,60) scale(1.1)"/><use href="#ef" transform="translate(700,90) scale(1.3)"/><use href="#ef" transform="translate(1050,70) scale(1)"/><use href="#ef" transform="translate(200,300) scale(.9)"/><use href="#ef" transform="translate(550,280) scale(1.2)"/><use href="#ef" transform="translate(900,310) scale(1)"/><use href="#ef" transform="translate(100,550) scale(1.1)"/><use href="#ef" transform="translate(450,520) scale(.8)"/><use href="#ef" transform="translate(800,560) scale(1.3)"/><use href="#ef" transform="translate(250,780) scale(1)"/><use href="#ef" transform="translate(650,760) scale(1.2)"/><use href="#ef" transform="translate(1000,790) scale(.9)"/>
