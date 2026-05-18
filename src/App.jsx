@@ -1296,39 +1296,7 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
       <div style={{fontSize:13,color:"var(--text2)"}}>{uploading ? "⏳ Compressione…" : "Tocca per cambiare foto"}</div>
     </div>
   );
-}) {
-  const fileRef = useRef();
-  const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState(currentUrl);
 
-  async function handleFile(e) {
-    const file = e.target.files[0]; if (!file) return;
-    setUploading(true);
-    try {
-      // Comprimi a max 400px WebP prima dell'upload
-      const compressed = await compressToWebP(file, 400, 0.85);
-      const origKB = Math.round(file.size / 1024);
-      const compKB = Math.round(compressed.size / 1024);
-      console.log(`Compressione: ${origKB}KB → ${compKB}KB (${Math.round((1-compKB/origKB)*100)}% riduzione)`);
-      const path = `avatars/${playerId}.webp`;
-      const { error } = await sb.storage.from("avatars").upload(path, compressed, { upsert: true, contentType: "image/webp" });
-      if (error) { alert("Errore upload: " + error.message); setUploading(false); return; }
-      const { data } = sb.storage.from("avatars").getPublicUrl(path);
-      const url = data.publicUrl + "?t=" + Date.now();
-      await sb.from("profiles").update({ avatar_url: url }).eq("id", playerId);
-      setPreview(url); onUploaded && onUploaded(url);
-    } catch(err) { alert("Errore: " + err.message); }
-    setUploading(false);
-  }
-
-  return (
-    <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
-      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
-      {preview ? <img src={preview} className="avatar-preview" alt="avatar" /> : <div style={{ fontSize: 40, marginBottom: 8 }}>📷</div>}
-      <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploading ? "Caricamento…" : "Tocca per cambiare foto"}</div>
-    </div>
-  );
-}
 
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
   try {
