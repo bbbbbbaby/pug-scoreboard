@@ -3375,7 +3375,14 @@ function VisibilityView() {
 
   async function saveToSupabase() {
     setSaving(true);
-    await sb.from("app_settings").upsert({ key:"visibility", data: vis, updated_at: new Date().toISOString() }, { onConflict:"key" });
+    const { error } = await sb.from("app_settings").upsert(
+      { key:"visibility", data: vis, updated_at: new Date().toISOString() },
+      { onConflict:"key" }
+    );
+    if (error) {
+      alert("Errore salvataggio: " + error.message + "\nControlla le policy RLS su Supabase.");
+      setSaving(false); return;
+    }
     localStorage.setItem("pug_visibility", JSON.stringify(vis));
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
