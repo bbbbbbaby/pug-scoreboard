@@ -552,414 +552,471 @@ const css = `
   .month-prog-fill { height:100%; background:linear-gradient(90deg,#ff6600,#ffaa00); border-radius:99px; }
 
 
-  /* ═══ LIGHT MODE — Game UI (CoC / Clash Royale style) ═══ */
+  /* ═══ LIGHT MODE — Redesign sistematico ═══ */
+
+  /* ─ Step 1: Override di tutte le variabili root ─ */
   .light {
-    /* ── Root variables override ── */
-    --text: #1a1a2e;
-    --text2: #4a5068;
-    --text3: #7a86a0;
-    --surface: rgba(255,248,230,0.95);
-    --surface2: rgba(255,242,210,0.9);
-    --surface3: rgba(255,235,190,0.85);
-    --border: rgba(180,130,60,0.25);
-    --border2: rgba(180,130,60,0.45);
-    --accent: #c8900a;
-    --accent2: #2a8a4a;
-    --danger: #cc2200;
-    --warning: #c8900a;
-    --neon-blue: #1a5fa5;
-    --neon-pink: #aa1870;
-    --neon-gold: #c8900a;
-    --neon-green: #1a7a3a;
-    --azzurro: #1a5fa5;
-    --rosa: #aa1870;
-    --giallo: #c8900a;
-    --verde: #1a7a3a;
-    --glow-blue: 0 2px 12px rgba(26,95,165,0.2);
-    --glow-gold: 0 2px 12px rgba(200,144,10,0.3);
-    --glow-green: 0 2px 10px rgba(26,122,58,0.2);
-    --glow-pink: 0 2px 12px rgba(170,24,112,0.2);
+    --neon-blue:  #1565c0;
+    --neon-pink:  #ad1457;
+    --neon-gold:  #f57f17;
+    --neon-green: #2e7d32;
+    --azzurro:    #1976d2;
+    --rosa:       #c2185b;
+    --giallo:     #f9a825;
+    --verde:      #388e3c;
+    --rosso:      #c62828;
+    --text:       #0d1117;
+    --text2:      #3a4a5c;
+    --text3:      #6b7e94;
+    --surface:    rgba(255,255,255,0.95);
+    --surface2:   rgba(240,244,255,0.9);
+    --surface3:   rgba(230,236,252,0.85);
+    --border:     rgba(0,0,0,0.10);
+    --border2:    rgba(0,0,0,0.18);
+    --accent:     #1565c0;
+    --accent2:    #2e7d32;
+    --danger:     #c62828;
+    --warning:    #e65100;
+    --glow-blue:  0 2px 12px rgba(21,101,192,.2);
+    --glow-gold:  0 2px 12px rgba(245,127,23,.25);
+    --glow-green: 0 2px 10px rgba(46,125,50,.2);
+    --glow-pink:  0 2px 12px rgba(173,20,87,.2);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --radius-lg: 20px;
   }
+
+  /* ─ Step 2: Base page ─ */
   .light body {
-    background: #f0f2f5;
-    color: #1a1a2e;
+    background: #eef2fb;
+    color: #0d1117;
   }
   .light body::before {
     background:
-      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(220,180,80,.3) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(180,120,40,.2) 0%, transparent 55%),
-      #e8d8a0;
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(21,101,192,.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(173,20,87,.06) 0%, transparent 55%),
+      #eef2fb;
   }
   .light body::after {
     background-image:
-      linear-gradient(rgba(150,100,20,.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(150,100,20,.06) 1px, transparent 1px);
+      linear-gradient(rgba(21,101,192,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21,101,192,.04) 1px, transparent 1px);
   }
 
-  /* ── Cards & surfaces ── */
-  .light .card {
-    background: #ffffff;
-    border: 2px solid rgba(26,95,165,.15);
-    box-shadow: 0 2px 12px rgba(26,50,120,.08), inset 0 1px 0 rgba(255,255,255,.9);
-    color: #1a1a2e;
-  }
-  .light .card-sm {
-    background: #ffffff;
-    border: 1px solid rgba(26,95,165,.12);
-    color: #1a1a2e;
-  }
-  .light .stat-card {
-    background: linear-gradient(160deg, #ffffff, #f4f6ff);
-    border: 2px solid rgba(26,95,165,.15);
-    box-shadow: 0 2px 8px rgba(100,60,0,.1), inset 0 1px 0 rgba(255,255,255,.9);
-  }
-  .light .stat-card::before {
-    background: linear-gradient(90deg, transparent, rgba(200,144,10,.4), transparent);
-  }
-  .light .stat-label { color: #7a5a2a; font-weight: 800; }
-  .light .stat-value { color: #1a0e00; }
+  /* ─ Step 3: Educator layout ─ */
+  .light .edu-layout { background: #eef2fb; }
 
-  /* ── Educator layout ── */
-  .light .edu-layout { background: linear-gradient(160deg, #e8ecf4 0%, #f0f2f8 50%, #e4e8f2 100%); }
   .light .sidebar {
-    background: linear-gradient(180deg, #1a2035, #252d45);
-    border-right: 3px solid rgba(163,207,254,.3);
-    box-shadow: 4px 0 20px rgba(0,0,0,.25);
+    background: linear-gradient(180deg, #0d1428 0%, #1a2540 100%);
+    border-right: 1px solid rgba(255,255,255,.06);
+    box-shadow: 4px 0 24px rgba(0,0,0,.2);
   }
   .light .sidebar-logo-box { background: #cc1111; }
   .light .sidebar-badge {
-    background: rgba(163,207,254,.15);
-    border-color: rgba(163,207,254,.3);
-    color: #a3cffe;
+    background: rgba(100,160,255,.15);
+    border-color: rgba(100,160,255,.3);
+    color: #90caff;
   }
-  .light .nav-item { color: rgba(163,207,254,.5); }
-  .light .nav-item:hover { background: rgba(163,207,254,.1); color: rgba(163,207,254,.85); }
+  .light .nav-item { color: rgba(255,255,255,.38); }
+  .light .nav-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.75); }
   .light .nav-item.active {
-    background: rgba(200,144,10,.15);
-    color: #ffcc00;
-    border-left-color: #ffcc00;
+    background: rgba(100,160,255,.12);
+    color: #90caff;
+    border-left-color: #90caff;
   }
-  .light .nav-badge { background: #cc2200; }
-  .light .sidebar-user { border-top: 1px solid rgba(200,144,10,.3); }
+  .light .nav-badge { background: #c62828; color: #fff; }
+  .light .sidebar-user { border-top: 1px solid rgba(255,255,255,.08); }
 
   .light .topbar {
-    background: rgba(26,32,52,.88);
-    border-bottom: 2px solid rgba(163,207,254,.25);
-    backdrop-filter: blur(12px);
+    background: rgba(13,20,40,.9);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(20px);
   }
-  .light .topbar-title { color: #e0eeff; }
-  .light .mob-header {
-    background: rgba(26,32,52,.92);
-    border-bottom: 2px solid rgba(163,207,254,.2);
-  }
-  .light .mob-header-title { color: #e0eeff; }
-  .light .mob-drawer { background: linear-gradient(180deg, #1a2035, #252d45); }
-  .light .mob-bottom-nav {
-    background: rgba(26,32,52,.95);
-    border-top: 2px solid rgba(163,207,254,.2);
-  }
-  .light .mob-nav-btn { color: rgba(255,220,150,.4); }
-  .light .mob-nav-btn.active { color: #ffcc00; }
-  .light .content { background: transparent; }
+  .light .topbar-title { color: rgba(255,255,255,.9); }
 
-  /* ── Forms & inputs ── */
+  .light .mob-header {
+    background: rgba(13,20,40,.92);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .light .mob-header-title { color: rgba(255,255,255,.9); }
+  .light .mob-drawer { background: linear-gradient(180deg, #0d1428, #1a2540); }
+  .light .mob-bottom-nav {
+    background: rgba(13,20,40,.95);
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .light .mob-nav-btn { color: rgba(255,255,255,.3); }
+  .light .mob-nav-btn.active { color: #90caff; }
+  .light .content { background: transparent; }
+  .light .edu-content-wrap { background: transparent; }
+
+  /* ─ Step 4: Cards ─ */
+  .light .card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 2px 16px rgba(0,0,0,.06);
+    color: #0d1117;
+  }
+  .light .card-sm {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.07);
+    color: #0d1117;
+  }
+  .light .stat-card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  }
+  .light .stat-card::before {
+    background: linear-gradient(90deg, transparent, rgba(21,101,192,.2), transparent);
+  }
+  .light .stat-label { color: #6b7e94; }
+  .light .stat-value { color: #0d1117; }
+
+  /* ─ Step 5: Forms & Inputs ─ */
   .light .form-input {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.4);
-    color: #1a0e00;
-    font-weight: 600;
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.18);
+    color: #0d1117;
+    font-weight: 500;
   }
   .light .form-input:focus {
-    border-color: #c8900a;
-    box-shadow: 0 0 0 3px rgba(200,144,10,.15);
-    background: #fffdf5;
+    border-color: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21,101,192,.1);
+    background: #ffffff;
   }
-  .light .form-label { color: #7a5a2a; font-weight: 800; }
+  .light .form-label { color: #3a4a5c; font-weight: 700; }
   .light select {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.4);
-    color: #1a0e00;
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.15);
+    color: #0d1117;
   }
   .light textarea {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.35);
-    color: #1a0e00;
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.15);
+    color: #0d1117;
   }
   .light .search-inp {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.35);
-    color: #1a0e00;
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.15);
+    color: #0d1117;
   }
-  .light .pin-input { color: #1a5fa5 !important; }
+  .light .search-inp:focus { border-color: #1565c0; box-shadow: 0 0 0 3px rgba(21,101,192,.1); }
 
-  /* ── Buttons ── */
+  /* ─ Step 6: Buttons ─ */
+  .light .btn-primary {
+    background: linear-gradient(135deg, #1565c0, #1976d2);
+    border-color: rgba(21,101,192,.6);
+    box-shadow: 0 2px 8px rgba(21,101,192,.3);
+  }
   .light .btn-ghost {
-    background: rgba(180,130,60,.12);
-    color: #5a3e1a;
-    border: 2px solid rgba(180,130,60,.3);
+    background: rgba(0,0,0,.05);
+    color: #3a4a5c;
+    border: 1.5px solid rgba(0,0,0,.15);
   }
-  .light .btn-ghost:hover { background: rgba(180,130,60,.2); }
+  .light .btn-ghost:hover { background: rgba(0,0,0,.09); }
+  .light .btn-yellow {
+    background: linear-gradient(135deg, #e65100, #f57f17);
+    border-color: rgba(230,81,0,.5);
+    box-shadow: 0 2px 8px rgba(230,81,0,.25);
+    color: #fff;
+  }
   .light .btn-danger {
-    background: rgba(204,34,0,.1);
-    color: #cc2200;
-    border: 2px solid rgba(204,34,0,.3);
+    background: rgba(198,40,40,.08);
+    color: #c62828;
+    border: 1.5px solid rgba(198,40,40,.25);
   }
 
-  /* ── Chips ── */
+  /* ─ Step 7: Chips ─ */
   .light .chip {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.3);
-    color: #7a5a2a;
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.15);
+    color: #3a4a5c;
     font-weight: 700;
   }
   .light .chip.active {
-    background: linear-gradient(135deg, #c8900a, #e0aa20);
-    color: #fff8e0;
-    border-color: #c8900a;
-    box-shadow: 0 2px 8px rgba(200,144,10,.3);
+    background: #1565c0;
+    color: #ffffff;
+    border-color: #1565c0;
+    box-shadow: 0 2px 8px rgba(21,101,192,.3);
   }
+  .light .chip:hover { background: rgba(21,101,192,.06); border-color: rgba(21,101,192,.3); }
 
-  /* ── Tags ── */
-  .light .tag-green { background: rgba(26,122,58,.12); color: #1a7a3a; border-color: rgba(26,122,58,.25); }
-  .light .tag-blue { background: rgba(26,95,165,.1); color: #1a5fa5; border-color: rgba(26,95,165,.2); }
-  .light .tag-amber { background: rgba(200,144,10,.12); color: #c8900a; border-color: rgba(200,144,10,.25); }
-  .light .tag-red { background: rgba(204,34,0,.1); color: #cc2200; border-color: rgba(204,34,0,.2); }
-  .light .tag-gray { background: rgba(0,0,0,.06); color: #7a5a2a; border-color: rgba(0,0,0,.12); }
+  /* ─ Step 8: Tags ─ */
+  .light .tag-green  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  .light .tag-blue   { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+  .light .tag-amber  { background: #fff8e1; color: #e65100; border: 1px solid #ffe082; }
+  .light .tag-red    { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+  .light .tag-gray   { background: #f5f5f5; color: #546e7a; border: 1px solid #b0bec5; }
 
-  /* ── Leaderboard ── */
-  .light .lb-row {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.2);
-    box-shadow: 0 2px 8px rgba(100,60,0,.06);
+  /* ─ Step 9: Presenze (checkbox) ─ */
+  .light .pres-wrap {
+    border: 1.5px solid rgba(0,0,0,.1);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
   }
-  .light .lb-row:nth-child(1) { border-color: rgba(200,144,10,.5); box-shadow: 0 2px 16px rgba(200,144,10,.15); }
-  .light .lb-row:nth-child(2) { border-color: rgba(150,150,180,.4); }
-  .light .lb-row:nth-child(3) { border-color: rgba(180,120,60,.4); }
-  .light .lb-name { color: #1a0e00; font-weight: 800; }
-  .light .lb-level { color: #7a5a2a; }
-  .light .lb-xp { color: #1a5fa5; }
-  .light .lb-av { background: #fff0cc; border-color: rgba(180,130,60,.4); }
-  .light .lb-rank { color: #7a5a2a; }
-  .light .lb-rank.gold { color: #c8900a; }
-  .light .lb-rank.silver { color: #6a8aaa; }
-  .light .lb-rank.bronze { color: #8a6040; }
-
-  /* ── Player grid & cards ── */
-  .light .player-card {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.25);
-    box-shadow: 0 2px 8px rgba(100,60,0,.08);
-  }
-  .light .player-card:hover { border-color: rgba(200,144,10,.5); box-shadow: 0 4px 16px rgba(100,60,0,.15); }
-  .light .player-card.selected { border-color: #c8900a; box-shadow: var(--glow-gold); background: rgba(200,144,10,.06); }
-  .light .p-name { color: #1a0e00; }
-  .light .p-level { color: #7a5a2a; }
-  .light .p-xp { color: #1a5fa5; }
-  .light .p-coin { color: #c8900a; }
-  .light .avatar-wrap { border-color: rgba(200,144,10,.4); }
-
-  /* ── Presenze ── */
-  .light .pres-wrap { border: 2px solid rgba(180,130,60,.25); border-radius: 12px; }
   .light .pres-table th {
-    background: linear-gradient(90deg, #f5e8c0, #fff0d0);
-    color: #7a5a2a;
-    border-bottom: 2px solid rgba(180,130,60,.3);
+    background: #f5f7ff;
+    color: #3a4a5c;
+    border-bottom: 2px solid rgba(0,0,0,.08);
+    font-weight: 800;
   }
-  .light .pres-table td { color: #1a0e00; border-bottom: 1px solid rgba(180,130,60,.12); }
-  .light .pres-table tr:hover td { background: rgba(200,144,10,.04); }
+  .light .pres-table td {
+    color: #0d1117;
+    border-bottom: 1px solid rgba(0,0,0,.05);
+    background: #ffffff;
+  }
+  .light .pres-table tr:hover td { background: #f8f9ff; }
+  /* Checkbox presenze: visibile e solido */
+  .light .pd-yes {
+    background: #2e7d32 !important;
+    color: #ffffff !important;
+    border-color: #2e7d32 !important;
+    box-shadow: 0 2px 6px rgba(46,125,50,.3) !important;
+  }
+  .light .pd-none {
+    background: #ffffff !important;
+    color: #9e9e9e !important;
+    border: 2px solid #bdbdbd !important;
+  }
 
-  /* ── Activities ── */
+  /* ─ Step 10: Leaderboard ─ */
+  .light .lb-row {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.07);
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  }
+  .light .lb-row:nth-child(1) { border-color: rgba(245,127,23,.4); box-shadow: 0 2px 12px rgba(245,127,23,.12); }
+  .light .lb-row:nth-child(2) { border-color: rgba(96,125,139,.3); }
+  .light .lb-row:nth-child(3) { border-color: rgba(121,85,72,.3); }
+  .light .lb-rank      { color: #6b7e94; }
+  .light .lb-rank.gold { color: #e65100; text-shadow: none; }
+  .light .lb-rank.silver { color: #546e7a; }
+  .light .lb-rank.bronze { color: #6d4c41; }
+  .light .lb-name  { color: #0d1117; font-weight: 700; }
+  .light .lb-level { color: #6b7e94; }
+  .light .lb-xp    { color: #1565c0; }
+  .light .lb-av    { background: #f5f7ff; border-color: rgba(0,0,0,.1); }
+
+  /* ─ Step 11: Player grid ─ */
+  .light .player-card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  }
+  .light .player-card:hover { border-color: rgba(21,101,192,.3); box-shadow: 0 4px 16px rgba(21,101,192,.1); }
+  .light .player-card.selected { border-color: #1565c0; background: rgba(21,101,192,.04); box-shadow: var(--glow-blue); }
+  .light .p-name  { color: #0d1117; }
+  .light .p-level { color: #6b7e94; }
+  .light .p-xp    { color: #1565c0; }
+  .light .p-coin  { color: #e65100; }
+  .light .avatar-wrap { border-color: rgba(21,101,192,.25); }
+
+  /* ─ Step 12: Activities ─ */
   .light .act-card {
-    background: #f5fff5;
-    border: 2px solid rgba(26,122,58,.25);
-    box-shadow: 0 2px 8px rgba(26,122,58,.08);
+    background: #f0fff4;
+    border: 1.5px solid rgba(46,125,50,.25);
+    box-shadow: 0 2px 8px rgba(46,125,50,.06);
   }
-  .light .act-card:hover { border-color: rgba(26,122,58,.5); }
-  .light .act-title { color: #1a0e00; }
-  .light .act-meta { color: #5a3e1a; }
+  .light .act-card:hover { border-color: rgba(46,125,50,.5); box-shadow: 0 4px 16px rgba(46,125,50,.1); }
+  .light .act-title { color: #0d1117; }
+  .light .act-meta  { color: #3a4a5c; }
 
-  /* ── Badges ── */
+  /* ─ Step 13: Badges ─ */
   .light .badge-card {
-    background: #fff5ff;
-    border: 2px solid rgba(170,24,112,.2);
-    box-shadow: 0 2px 8px rgba(170,24,112,.06);
+    background: #fff0f7;
+    border: 1.5px solid rgba(173,20,87,.2);
+    box-shadow: 0 2px 8px rgba(173,20,87,.05);
   }
-  .light .badge-card:hover { border-color: rgba(170,24,112,.5); }
-  .light .badge-name { color: #1a0e00; }
-  .light .badge-pts { color: #aa1870; }
+  .light .badge-card:hover { border-color: rgba(173,20,87,.45); }
+  .light .badge-name { color: #0d1117; }
+  .light .badge-pts  { color: #ad1457; }
 
-  /* ── Sfida ── */
+  /* ─ Step 14: Sfida ─ */
   .light .sfida-card {
-    background: linear-gradient(160deg, #fff0ee, #ffe8e5);
-    border: 2px solid rgba(204,34,0,.3);
+    background: #fff8f8;
+    border: 1.5px solid rgba(198,40,40,.25);
   }
-  .light .sfida-label { color: #cc2200; }
-  .light .sfida-title { color: #1a0e00; }
-  .light .sfida-desc { color: #5a3e1a; }
-  .light .sfida-reward { background: rgba(200,144,10,.1); border-color: rgba(200,144,10,.3); color: #8a6000; }
+  .light .sfida-label  { color: #c62828; }
+  .light .sfida-title  { color: #0d1117; text-shadow: none; }
+  .light .sfida-desc   { color: #3a4a5c; }
+  .light .sfida-reward { background: rgba(230,81,0,.08); border-color: rgba(230,81,0,.25); color: #bf360c; }
 
-  /* ── Modal ── */
+  /* ─ Step 15: Modal ─ */
   .light .modal {
-    background: #fff8e8;
-    border: 2px solid rgba(180,130,60,.4);
-    box-shadow: 0 -20px 60px rgba(100,60,0,.2);
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.12);
+    box-shadow: 0 -16px 48px rgba(0,0,0,.12);
   }
-  .light .modal::before {
-    background: linear-gradient(90deg, transparent, #c8900a, #e0aa20, transparent);
-  }
-  .light .modal-title { color: #1a0e00; }
-  .light .section-label { color: #7a5a2a; }
+  .light .modal::before { background: linear-gradient(90deg, transparent, #1565c0, #ad1457, transparent); }
+  .light .modal-title  { color: #0d1117; }
+  .light .section-label { color: #3a4a5c; }
+  .light .modal-bg { background: rgba(0,0,0,.45); }
 
-  /* ── Podium ── */
-  .light .pod-av-wrap { box-shadow: 0 4px 16px rgba(0,0,0,.15) !important; }
-  .light .pod-1 .pod-base { background: rgba(200,144,10,.1); border-color: rgba(200,144,10,.3); }
-  .light .pod-2 .pod-base { background: rgba(100,120,160,.08); border-color: rgba(100,120,160,.2); }
-  .light .pod-3 .pod-base { background: rgba(160,100,60,.08); border-color: rgba(160,100,60,.2); }
-  .light .pod-name { color: #1a0e00; }
+  /* ─ Step 16: Section banner ─ */
+  .light .section-banner-title { color: #0d1117 !important; }
+  .light .section-banner-sub   { color: rgba(0,0,0,.5) !important; }
 
-  /* ── Player dashboard light ── */
-  .light .player-wrap {
-    background: linear-gradient(160deg, #dce8f8 0%, #e8f0fc 45%, #d8e4f4 100%) !important;
-  }
-  .light .pd-topbar {
-    background: rgba(26,32,52,.9) !important;
-    border-bottom: 2px solid rgba(163,207,254,.25) !important;
-  }
-  .light .pd-name-pill { background: #1a2035 !important; color: #e0eeff !important; }
-  .light .pd-lv-pill {
-    background: rgba(200,144,10,.15);
-    border-color: rgba(200,144,10,.4);
-    color: #c8900a;
-  }
-  .light .pd-card {
-    background: rgba(255,248,230,.85) !important;
-    border: 1px solid rgba(180,130,60,.3) !important;
-    color: #1a0e00;
-  }
-  .light .pd-card * { color: #1a0e00; }
-  .light .pd-sg .pd-sc {
-    background: rgba(255,248,230,.9) !important;
-    border: 1px solid rgba(180,130,60,.25) !important;
-  }
-  .light .pd-sv { color: #c8900a !important; }
-  .light .pd-sl { color: #7a5a2a !important; }
-  .light .pd-squad {
-    background: rgba(255,248,230,.8) !important;
-    border: 1px solid rgba(180,130,60,.25) !important;
-  }
-  .light .pd-sfida { background: #1a2035 !important; }
-  .light .pd-checkin {
-    background: rgba(255,248,230,.85) !important;
-    border: 1px solid rgba(26,122,58,.3) !important;
-  }
-  .light .pd-tab-title { color: #1a0e00 !important; }
-  .light .pd-badge-item {
-    background: rgba(255,248,230,.9) !important;
-    border: 1px solid rgba(180,130,60,.2) !important;
-  }
-  .light .pd-badge-item div { color: #1a0e00 !important; }
-  .light .streak-card {
-    background: rgba(255,248,230,.85) !important;
-    border: 1px solid rgba(200,100,20,.3) !important;
-  }
-  .light .streak-val { color: #c05000 !important; }
-  .light .streak-lbl { color: #7a5a2a !important; }
-  .light .month-prog-bg { background: rgba(180,130,60,.15); }
-  .light .month-prog-fill { background: linear-gradient(90deg, #c05000, #e08000); }
-  .light .xp-bar-wrap { background: rgba(26,95,165,.1); }
-  .light .xp-bar { background: linear-gradient(90deg, #1a5fa5, #2a7fc5); }
-  .light .player-bottom-nav {
-    background: rgba(26,32,52,.95) !important;
-    border-top: 2px solid rgba(163,207,254,.2) !important;
-  }
-  .light .player-nav-btn { color: rgba(163,207,254,.35) !important; }
-  .light .player-nav-btn.active { color: #ffcc00 !important; }
-  .light .player-nav-btn.active::after { background: #ffcc00 !important; }
+  /* ─ Step 17: Misc ─ */
+  .light .empty   { color: #6b7e94; }
+  .light .loading { color: #6b7e94; }
+  .light .batch-panel { background: rgba(21,101,192,.06); border: 1.5px solid rgba(21,101,192,.2); }
+  .light .batch-info  { color: #1565c0; }
+  .light .filter-bar .chip { background: #ffffff; }
+  .light .squad-row  { background: #ffffff; border: 1.5px solid rgba(0,0,0,.08); }
+  .light .squad-name { color: #0d1117; }
+  .light .diary-entry { background: #ffffff; border: 1px solid rgba(0,0,0,.07); }
+  .light .diary-date  { color: #1565c0; }
+  .light .diary-text  { color: #0d1117; }
+  .light .notif-item  { border-bottom: 1px solid rgba(0,0,0,.06); }
+  .light .notif-title { color: #0d1117; }
+  .light .notif-body  { color: #3a4a5c; }
+  .light .notif-time  { color: #6b7e94; }
+  .light .notif-dot   { background: #c2185b; }
+  .light .player-detail { background: #ffffff; border: 1.5px solid rgba(21,101,192,.2); }
+  .light .detail-tab { background: #f5f7ff; border: 1px solid rgba(0,0,0,.1); color: #3a4a5c; }
+  .light .detail-tab.active { background: #1565c0; color: #ffffff; border-color: #1565c0; }
+  .light .color-swatch.active { border-color: #1565c0; box-shadow: var(--glow-blue); }
+  .light .section-banner { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .light .podium-wrap .pod-name { color: #0d1117; }
+  .light .lb-list .lb-row { background: #ffffff; }
 
-  /* ── Messaggi ── */
-  .light .msg-hdr { background: #f5e8c0; color: #1a0e00; border-bottom: 1px solid rgba(180,130,60,.2); }
-  .light .bubble.them { background: #fff8e8; color: #1a0e00; border-color: rgba(180,130,60,.2); }
-  .light .bubble.mine { background: rgba(26,95,165,.12); color: #1a5fa5; border-color: rgba(26,95,165,.25); }
-
-  /* ── Notifiche ── */
-  .light .notif-item { border-bottom: 1px solid rgba(180,130,60,.15); }
-  .light .notif-title { color: #1a0e00; }
-  .light .notif-body { color: #5a3e1a; }
-  .light .notif-time { color: #8a6a3a; }
-
-  /* ── Diario ── */
-  .light .diary-entry { background: #fff8e8; border: 1px solid rgba(180,130,60,.2); }
-  .light .diary-date { color: #1a5fa5; }
-  .light .diary-text { color: #1a0e00; }
-  .light .diary-pts { color: #1a5fa5; }
-
-  /* ── Squad ── */
-  .light .squad-row { background: #fff8e8; border: 2px solid rgba(180,130,60,.2); }
-  .light .squad-name { color: #1a0e00; }
-
-  /* ── StreakConfig month cards ── */
+  /* ─ Step 18: StreakConfig month cards ─ */
   .light .streak-month-card {
-    background: #fff8e8 !important;
-    border-color: rgba(180,130,60,.25) !important;
+    background: #ffffff !important;
+    border-color: rgba(0,0,0,.08) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
   }
-  .light .streak-month-card * { color: #1a0e00 !important; }
-  .light .streak-month-card .streak-month-title { color: #1a0e00 !important; }
-  .light .streak-month-card .streak-month-sub { color: #7a5a2a !important; }
-  /* ── Avatar picker light ── */
+  .light .streak-month-card * { color: #0d1117 !important; }
+  .light .streak-month-card div[style*="color:"var(--text3)""] { color: #6b7e94 !important; }
+
+  /* ─ Step 19: Avatar picker ─ */
+  .light .av-picker-wrap { background: #f5f7ff; border-radius: 8px; padding: 4px; }
   .light .av-picker-tab {
-    background: rgba(180,130,60,.1) !important;
-    color: #7a5a2a !important;
-    border-color: rgba(180,130,60,.25) !important;
+    background: #ffffff !important;
+    color: #3a4a5c !important;
+    border: 1.5px solid rgba(0,0,0,.12) !important;
   }
   .light .av-picker-tab.on {
-    background: linear-gradient(135deg,#c8900a,#e0aa20) !important;
-    color: #fff !important;
-    border-color: #c8900a !important;
+    background: #1565c0 !important;
+    color: #ffffff !important;
+    border-color: #1565c0 !important;
   }
   .light .av-picker-item {
-    background: #fff8e8 !important;
-    border-color: rgba(180,130,60,.2) !important;
+    background: #ffffff !important;
+    border: 1.5px solid rgba(0,0,0,.08) !important;
   }
-  .light .av-picker-item:hover { background: #fff0cc !important; border-color: rgba(200,144,10,.4) !important; }
-  .light .av-picker-item.sel { border-color: #c8900a !important; background: rgba(200,144,10,.08) !important; }
-  .light .av-picker-item span { color: #7a5a2a !important; }
-  .light .av-picker-wrap { background: #f8f2e0; border-radius: 8px; padding: 4px; }
-  /* ── Section banner ── */
-  .light .section-banner-title { color: #1a0e00 !important; }
-  .light .section-banner-sub { color: rgba(0,0,0,.55) !important; }
+  .light .av-picker-item:hover { background: #f0f4ff !important; border-color: rgba(21,101,192,.3) !important; }
+  .light .av-picker-item.sel   { border-color: #1565c0 !important; background: rgba(21,101,192,.06) !important; }
+  .light .av-picker-item span  { color: #3a4a5c !important; }
 
-  /* ── Batch & misc ── */
-  .light .batch-panel { background: rgba(200,144,10,.08); border: 2px solid rgba(200,144,10,.25); }
-  .light .batch-info { color: #8a6000; }
-  .light .player-detail { background: #fff8e8; border: 2px solid rgba(180,130,60,.3); }
-  .light .detail-tab { background: #fff0cc; border: 1px solid rgba(180,130,60,.25); color: #7a5a2a; }
-  .light .detail-tab.active { background: linear-gradient(135deg, #c8900a, #e0aa20); color: #fff; border-color: #c8900a; }
-  .light .empty { color: #8a6a3a; }
-  .light .loading { color: #8a6a3a; }
+  /* ─ Step 20: Player dashboard light ─ */
+  .light .player-wrap {
+    background: linear-gradient(160deg, #dce8ff 0%, #eef2ff 45%, #d8e4ff 100%) !important;
+    transition: background .4s ease;
+  }
+  .light .pd-topbar {
+    background: rgba(13,20,40,.92) !important;
+    border-bottom: 1px solid rgba(255,255,255,.1) !important;
+  }
+  .light .pd-name-pill { background: #0d1428 !important; color: #e0eeff !important; }
+  .light .pd-lv-pill {
+    background: rgba(21,101,192,.1);
+    border-color: rgba(21,101,192,.3);
+    color: #1565c0;
+  }
+  .light .pd-card {
+    background: rgba(255,255,255,.85) !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+    color: #0d1117;
+  }
+  .light .pd-card * { color: #0d1117; }
+  .light .pd-sg .pd-sc {
+    background: rgba(255,255,255,.9) !important;
+    border: 1px solid rgba(0,0,0,.07) !important;
+  }
+  .light .pd-sv { color: #e65100 !important; }
+  .light .pd-sl { color: #6b7e94 !important; }
+  .light .pd-squad {
+    background: rgba(255,255,255,.85) !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+  }
+  .light .pd-sfida { background: #0d1428 !important; }
+  .light .pd-checkin {
+    background: rgba(255,255,255,.85) !important;
+    border: 1px solid rgba(46,125,50,.25) !important;
+  }
+  .light .pd-tab-title { color: #0d1117 !important; }
+  .light .pd-badge-item {
+    background: rgba(255,255,255,.9) !important;
+    border: 1px solid rgba(0,0,0,.07) !important;
+  }
+  .light .pd-badge-item div { color: #0d1117 !important; }
+  .light .streak-card {
+    background: rgba(255,255,255,.85) !important;
+    border: 1px solid rgba(230,81,0,.25) !important;
+  }
+  .light .streak-val { color: #bf360c !important; }
+  .light .streak-lbl { color: #6b7e94 !important; }
+  .light .month-prog-bg   { background: rgba(0,0,0,.08); }
+  .light .month-prog-fill { background: linear-gradient(90deg, #bf360c, #e65100); }
+  .light .xp-bar-wrap { background: rgba(21,101,192,.08); }
+  .light .xp-bar { background: linear-gradient(90deg, #1565c0, #1976d2); }
+  .light .player-bottom-nav {
+    background: rgba(13,20,40,.95) !important;
+    border-top: 1px solid rgba(255,255,255,.08) !important;
+  }
+  .light .player-nav-btn       { color: rgba(255,255,255,.28) !important; }
+  .light .player-nav-btn.active { color: #90caff !important; }
+  .light .player-nav-btn.active::after { background: #90caff !important; }
 
-  /* ── Login light ── */
+  /* ─ Step 21: Login ─ */
+  .light .login-wrap { background: #eef2fb; }
   .light .login-card {
-    background: rgba(255,248,230,.97);
-    border: 2px solid rgba(180,130,60,.4);
-    box-shadow: 0 8px 40px rgba(100,60,0,.2), inset 0 1px 0 rgba(255,255,255,.9);
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.1);
+    box-shadow: 0 8px 40px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,1);
+  }
+  .light .login-card::before {
+    background: linear-gradient(90deg, transparent, #1565c0, #ad1457, transparent);
   }
   .light .login-title {
-    background: linear-gradient(135deg, #1a5fa5 0%, #2a1a00 40%, #c8900a 100%);
+    background: linear-gradient(135deg, #1565c0 0%, #0d1117 40%, #e65100 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
-  .light .login-sub { color: #7a5a2a; }
-  .light .login-tabs { background: rgba(180,130,60,.08); border-color: rgba(180,130,60,.2); }
-  .light .login-tab { color: #7a5a2a; }
+  .light .login-sub { color: #6b7e94; }
+  .light .login-tabs { background: rgba(0,0,0,.04); border: 1px solid rgba(0,0,0,.08); }
+  .light .login-tab  { color: #6b7e94; }
   .light .login-tab.active {
-    background: linear-gradient(135deg, rgba(200,144,10,.15), rgba(200,144,10,.06));
-    color: #c8900a;
-    border-color: rgba(200,144,10,.4);
+    background: rgba(21,101,192,.08);
+    color: #1565c0;
+    border-color: rgba(21,101,192,.3);
+    box-shadow: none;
   }
-  .light .nickname-list { background: #fff8e8; border-color: rgba(180,130,60,.3); }
-  .light .nickname-item { color: #1a0e00; border-bottom-color: rgba(180,130,60,.1); }
-  .light .nickname-item:hover { background: rgba(200,144,10,.08); }
-  .light .err-msg { color: #cc2200; }
+  .light .nickname-list { background: #ffffff; border-color: rgba(0,0,0,.1); }
+  .light .nickname-item { color: #0d1117; border-bottom-color: rgba(0,0,0,.06); }
+  .light .nickname-item:hover { background: rgba(21,101,192,.04); }
+  .light .err-msg { color: #c62828; }
+  .light .pin-display { background: rgba(21,101,192,.06); border-color: rgba(21,101,192,.2); color: #1565c0; }
+
+  /* ─ Step 22: Edu notifications bell ─ */
+  .light .edu-notif-bell {
+    background: rgba(255,255,255,.1);
+    border-color: rgba(255,255,255,.15);
+  }
+  .light .edu-notif-panel {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,.12);
+  }
+  .light .edu-notif-header { color: #0d1117; border-bottom-color: rgba(0,0,0,.08); }
+  .light .edu-notif-item:hover { background: rgba(0,0,0,.03); }
+  .light .edu-notif-title { color: #0d1117; }
+  .light .edu-notif-sub   { color: #6b7e94; }
+  .light .edu-notif-count { color: #1565c0; }
+  .light .edu-notif-empty { color: #6b7e94; }
 
   /* ═══ EDUCATOR NOTIFICATIONS ═══ */
   .edu-notif-bell { position:relative; cursor:pointer; width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font-size:18px; transition:all .15s; flex-shrink:0; }
