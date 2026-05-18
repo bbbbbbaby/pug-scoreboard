@@ -3357,12 +3357,13 @@ function VisibilityView() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    // Load from Supabase on mount
-    sb.from("app_settings").select("data").eq("key","visibility").single()
+    // Carica da profiles — sempre accessibile
+    sb.from("profiles").select("app_config").in("role",["admin","educator"]).limit(1)
       .then(({ data }) => {
-        if (data?.data) {
-          setVis(data.data);
-          localStorage.setItem("pug_visibility", JSON.stringify(data.data));
+        const cfg = data?.[0]?.app_config;
+        if (cfg && typeof cfg === "object" && Object.keys(cfg).length > 0) {
+          setVis(cfg);
+          localStorage.setItem("pug_visibility", JSON.stringify(cfg));
         }
       }).catch(console.error);
   }, []);
@@ -3375,14 +3376,12 @@ function VisibilityView() {
 
   async function saveToSupabase() {
     setSaving(true);
-    const { error } = await sb.from("app_settings").upsert(
-      { key:"visibility", data: vis, updated_at: new Date().toISOString() },
-      { onConflict:"key" }
-    );
-    if (error) {
-      alert("Errore salvataggio: " + error.message + "\nControlla le policy RLS su Supabase.");
-      setSaving(false); return;
-    }
+    // Salva in profiles del primo admin/educator — profiles è sempre accessibile
+    const { data: admins } = await sb.from("profiles").select("id").in("role",["admin","educator"]).limit(1);
+    const adminId = admins?.[0]?.id;
+    if (!adminId) { alert("Nessun account educator trovato."); setSaving(false); return; }
+    const { error } = await sb.from("profiles").update({ app_config: vis }).eq("id", adminId);
+    if (error) { alert("Errore: " + error.message); setSaving(false); return; }
     localStorage.setItem("pug_visibility", JSON.stringify(vis));
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -3545,17 +3544,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
   });
 
-  // Carica visibilità subito al mount (prima del load principale)
+  // Carica visibilità da profiles (sempre accessibile, no problemi RLS)
   useEffect(() => {
-    sb.from("app_settings").select("data").eq("key","visibility").single()
-      .then(({ data, error }) => {
-        if (error) { console.error("Visibility load error:", error); return; }
-        if (data?.data) {
-          console.log("Visibility loaded:", data.data);
-          localStorage.setItem("pug_visibility", JSON.stringify(data.data));
-          setVisConfig(data.data);
+    sb.from("profiles").select("app_config").in("role",["admin","educator"]).limit(1)
+      .then(({ data }) => {
+        const cfg = data?.[0]?.app_config;
+        if (cfg && typeof cfg === "object") {
+          localStorage.setItem("pug_visibility", JSON.stringify(cfg));
+          setVisConfig(cfg);
         }
-      }).catch(e => console.error("Visibility catch:", e));
+      }).catch(console.error);
   }, []);
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
@@ -3575,13 +3573,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const load = useCallback(async () => {
   try {
     // Carica visibilità PRIMA di tutto — evita flash con vecchi dati
-    const { data: visData, error: visErr } = await sb.from("app_settings")
-      .select("data").eq("key","visibility").single();
-    if (visErr) console.error("Visibility in load error:", visErr);
-    if (visData?.data) {
-      console.log("Visibility in load:", visData.data);
-      localStorage.setItem("pug_visibility", JSON.stringify(visData.data));
-      setVisConfig(visData.data);
+    const { data: visRows } = await sb.from("profiles")
+      .select("app_config").in("role",["admin","educator"]).limit(1);
+    const visCfg = visRows?.[0]?.app_config;
+    if (visCfg && typeof visCfg === "object") {
+      localStorage.setItem("pug_visibility", JSON.stringify(visCfg));
+      setVisConfig(visCfg);
     }
   } catch(_) {}
   try {
