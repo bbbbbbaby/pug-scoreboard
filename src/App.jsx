@@ -3534,6 +3534,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [monthTarget, setMonthTarget] = useState(null);
   const [actBookingCounts, setActBookingCounts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [visConfig, setVisConfig] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
+  });
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
@@ -3550,9 +3553,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [pinChangeErr, setPinChangeErr] = useState("");
 
   const load = useCallback(async () => {
-  // Sync visibility settings from Supabase
+  // Sync visibility settings from Supabase → aggiorna stato React per re-render
   sb.from("app_settings").select("data").eq("key","visibility").single()
-    .then(({ data }) => { if (data?.data) localStorage.setItem("pug_visibility", JSON.stringify(data.data)); })
+    .then(({ data }) => {
+      if (data?.data) {
+        localStorage.setItem("pug_visibility", JSON.stringify(data.data));
+        setVisConfig(data.data);
+      }
+    })
     .catch(()=>{});
   try {
     const today = new Date().toISOString().split("T")[0];
@@ -3771,11 +3779,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const BOTTOM_TABS = [
     ["profilo","👤","Profilo"],
-    ["classifica","🏆","Classifica"],
-    ["attivita","⚡","Lab"],
-    ["messaggi","💬","Messaggi"],
+    visConfig.classifica !== false ? ["classifica","🏆","Classifica"] : null,
+    visConfig.lab !== false ? ["attivita","⚡","Lab"] : null,
+    visConfig.messaggi !== false ? ["messaggi","💬","Messaggi"] : null,
     ["notifiche","🔔","Notifiche"],
-  ];
+  ].filter(Boolean);
 
   const TAB_BG = {
     profilo:    'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',
@@ -3874,11 +3882,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
             {/* Stats grid 1: XP, Coin, Badge */}
             {(() => {
-              const vis2 = (() => { try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_){ return {}; } })();
               const stats = [
-                vis2.xp !== false ? ['⭐',fullProfile.xp,'XP'] : null,
-                vis2.coin !== false ? ['🪙',fullProfile.coin,'Coin'] : null,
-                vis2.badge !== false ? ['🎖️',badges.length,'Badge'] : null,
+                visConfig.xp !== false ? ['⭐',fullProfile.xp,'XP'] : null,
+                visConfig.coin !== false ? ['🪙',fullProfile.coin,'Coin'] : null,
+                visConfig.badge !== false ? ['🎖️',badges.length,'Badge'] : null,
               ].filter(Boolean);
               return stats.length > 0 ? (
                 <div className="pd-sg" style={{gridTemplateColumns:`repeat(${stats.length},1fr)`}}>
@@ -3897,7 +3904,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             </div>
 
             {/* Streak */}
-            {((fullProfile.current_streak||0) > 0 || (fullProfile.longest_streak||0) > 0) && (
+            {visConfig.streak !== false && ((fullProfile.current_streak||0) > 0 || (fullProfile.longest_streak||0) > 0) && (
               <div className="streak-card">
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(255,140,0,.7)',marginBottom:8}}>🔥 Streak presenze</div>
                 <div className="streak-row">
@@ -3916,8 +3923,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
             {/* Squadra */}
             {(() => {
-              const vis = (() => { try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_){ return {}; } })();
-              const showSquad = vis.squadre !== false;
+              const showSquad = visConfig.squadre !== false;
               if (!showSquad) return null;
               if (!fullProfile.squads?.name) return (
                 <div className="pd-squad" style={{opacity:.5}}>
@@ -3940,7 +3946,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             })()}
 
             {/* Sfida del giorno */}
-            {activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
+            {visConfig.sfida !== false && activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
               <div key={s.id} className="pd-sfida">
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'#ffcc00',marginBottom:4}}>⚡ Sfida del Giorno</div>
                 <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:7}}>{s.name}</div>
@@ -3953,7 +3959,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             ))}
 
             {/* Badge */}
-            {badges.length > 0 && (
+            {visConfig.badge !== false && badges.length > 0 && (
               <div className="pd-badges">
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',textAlign:'center',marginBottom:6}}>— Badge —</div>
                 <div className="pd-badge-row">
