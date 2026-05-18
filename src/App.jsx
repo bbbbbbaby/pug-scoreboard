@@ -1503,7 +1503,9 @@ function Login({ onLogin }) {
                           </div>
                           <div>
                             <div style={{ fontSize: 14, fontWeight: 700 }}>{p.display_name}</div>
-                            {p.squads?.name && <SquadPill name={p.squads.name} />}
+                            {p.squads?.name && (() => {
+                              try { const v = JSON.parse(localStorage.getItem("pug_visibility")||"{}"); return v.squadre !== false ? <SquadPill name={p.squads.name}/> : null; } catch(_) { return <SquadPill name={p.squads.name}/>; }
+                            })()}
                           </div>
                         </div>
                       );
@@ -3543,17 +3545,20 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [visConfig, setVisConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
   });
+  const [visReady, setVisReady] = useState(false);
 
-  // Carica visibilità da profiles (sempre accessibile, no problemi RLS)
+  // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
     sb.from("profiles").select("app_config").in("role",["admin","educator"]).limit(1)
       .then(({ data }) => {
         const cfg = data?.[0]?.app_config;
-        if (cfg && typeof cfg === "object") {
+        if (cfg && typeof cfg === "object" && Object.keys(cfg).length > 0) {
           localStorage.setItem("pug_visibility", JSON.stringify(cfg));
           setVisConfig(cfg);
         }
-      }).catch(console.error);
+      })
+      .catch(console.error)
+      .finally(() => setVisReady(true));
   }, []);
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
@@ -3767,6 +3772,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     localStorage.setItem("pug_player", JSON.stringify({ ...saved, pin: newPin1 }));
     setMustChangePin(false);
   }
+
+  // Aspetta caricamento visibilità (evita flash con dati sbagliati)
+  if (!visReady) return (
+    <>
+      <style>{css}</style>
+      <div className="player-wrap" style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,textTransform:"uppercase",color:"var(--azzurro)",letterSpacing:".1em",opacity:.6}}>🌿</div>
+      </div>
+    </>
+  );
 
   if (mustChangePin) return (
     <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
