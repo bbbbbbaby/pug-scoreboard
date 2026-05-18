@@ -3360,13 +3360,12 @@ function VisibilityView() {
 
   useEffect(() => {
     // Carica da profiles — sempre accessibile
-    sb.from("profiles").select("app_config").in("role",["admin","educator"]).limit(1)
+    sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
       .then(({ data }) => {
-        const cfg = data?.[0]?.app_config;
-        if (cfg?._saved) {
-          const { _saved, ...rest } = cfg;
-          setVis(rest);
-          localStorage.setItem("pug_visibility", JSON.stringify(rest));
+        const cfg = data?.app_config;
+        if (cfg && typeof cfg === "object") {
+          setVis(cfg);
+          localStorage.setItem("pug_visibility", JSON.stringify(cfg));
         }
       }).catch(console.error);
   }, []);
@@ -3380,10 +3379,9 @@ function VisibilityView() {
   async function saveToSupabase() {
     setSaving(true);
     // Salva in profiles del primo admin/educator — profiles è sempre accessibile
-    const { data: admins } = await sb.from("profiles").select("id").in("role",["admin","educator"]).limit(1);
-    const adminId = admins?.[0]?.id;
-    if (!adminId) { alert("Nessun account educator trovato."); setSaving(false); return; }
-    const { error } = await sb.from("profiles").update({ app_config: { ...vis, _saved: true } }).eq("id", adminId);
+    const { error } = await sb.from("profiles")
+      .update({ app_config: vis })
+      .eq("id", "00000000-0000-0000-0000-000000000099");
     if (error) { alert("Errore: " + error.message); setSaving(false); return; }
     localStorage.setItem("pug_visibility", JSON.stringify(vis));
     setSaving(false); setSaved(true);
@@ -3550,15 +3548,15 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
-    sb.from("profiles").select("app_config").in("role",["admin","educator"]).limit(1)
+    sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
       .then(({ data }) => {
-        const cfg = data?.[0]?.app_config;
-        if (cfg?._saved) {
+        const cfg = data?.app_config;
+        if (cfg && typeof cfg === "object") {
           localStorage.setItem("pug_visibility", JSON.stringify(cfg));
           setVisConfig(cfg);
         }
       })
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setVisReady(true));
   }, []);
   const [editingFirstName, setEditingFirstName] = useState(false);
@@ -3579,10 +3577,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const load = useCallback(async () => {
   try {
     // Carica visibilità PRIMA di tutto — evita flash con vecchi dati
-    const { data: visRows } = await sb.from("profiles")
-      .select("app_config").in("role",["admin","educator"]).limit(1);
-    const visCfg = visRows?.[0]?.app_config;
-    if (visCfg?._saved) {
+    const { data: visRow } = await sb.from("profiles")
+      .select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single();
+    const visCfg = visRow?.app_config;
+    if (visCfg && typeof visCfg === "object") {
       localStorage.setItem("pug_visibility", JSON.stringify(visCfg));
       setVisConfig(visCfg);
     }
