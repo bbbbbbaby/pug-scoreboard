@@ -1481,19 +1481,17 @@ const ANIMATED_STICKERS = [
 
 
 
-const TENOR_API_KEY = ""; // Inserisci qui la tua chiave Tenor gratuita
-
 async function searchGifs(query) {
-  if (!TENOR_API_KEY) return [];
+  const KEY = "dc6zaTOxFJmzC"; // Giphy public dev key
   try {
     const res = await fetch(
-      `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${TENOR_API_KEY}&limit=16&media_filter=gif`
+      `https://api.giphy.com/v1/gifs/search?api_key=${KEY}&q=${encodeURIComponent(query)}&limit=16&rating=g`
     );
     const data = await res.json();
-    return (data.results || []).map(r => ({
+    return (data.data || []).map(r => ({
       id: r.id,
-      url: r.media_formats?.gif?.url || r.media_formats?.tinygif?.url,
-      preview: r.media_formats?.tinygif?.url || r.media_formats?.gif?.url,
+      url: r.images?.fixed_height?.url || r.images?.original?.url,
+      preview: r.images?.fixed_height_small?.url || r.images?.fixed_height?.url,
     })).filter(r => r.url);
   } catch(_) { return []; }
 }
@@ -3342,14 +3340,7 @@ function MessagesView({ profile }) {
           {/* GIF search */}
           {mediaPanel==="gif" && !mediaData && (
             <div style={{marginTop:8,background:"var(--surface2)",borderRadius:12,border:"1px solid var(--border)",padding:10}}>
-              {TENOR_API_KEY ? (
-                <GifSearch onSelect={(url)=>{setMediaData(url);setMediaType("gif");setMediaPanel(null);}}/>
-              ) : (
-                <div style={{fontSize:12,color:"var(--text3)",padding:"8px 0",textAlign:"center"}}>
-                  Per attivare la ricerca GIF aggiungi la chiave Tenor nella variabile TENOR_API_KEY nel codice.
-                  <br/><a href="https://developers.google.com/tenor" target="_blank" rel="noreferrer" style={{color:"var(--neon-blue)",fontWeight:700}}>Ottieni chiave gratuita →</a>
-                </div>
-              )}
+              <GifSearch onSelect={(url)=>{setMediaData(url);setMediaType("gif");setMediaPanel(null);}}/>
             </div>
           )}
           <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>Sticker: zero peso · GIF: da Tenor CDN · Foto: compressa in WebP</div>
