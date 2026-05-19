@@ -1347,6 +1347,13 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   );
 }
 
+async function logXPGain(playerId, xpGained, xpTotal, reason) {
+  if (!xpGained || xpGained <= 0) return;
+  try {
+    await sb.from("xp_history").insert({ player_id:playerId, xp_gained:xpGained, xp_total:xpTotal, reason });
+  } catch(e) { console.warn("xp_history log failed:", e.message); }
+}
+
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
   try {
     await sb.from("notifications").insert({
@@ -1983,7 +1990,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 
   async function saveEdits() {
     if (!editing) return;
-    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null, avatar_url: editing.avatar_url || null }).eq("id", playerId);
+    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId);
     setSaveMsg("Salvato ✅"); setTimeout(() => setSaveMsg(""), 2000);
     loadData();
   }
@@ -3778,6 +3785,239 @@ function StreakConfigView() {
 
 // ─── PLAYER DASHBOARD ─────────────────────────────────────
 
+
+
+
+// ─── COMMUNITY TAB + REACTIONS ───────────────────────────
+function CommunityTab({ players, myId, myProfile }) {
+  const [selected, setSelected] = useState(null);
+  const [playerBadges, setPlayerBadges] = useState([]);
+  const [reactions, setReactions] = useState({}); // badge_id -> { type: count }
+  const [myReactions, setMyReactions] = useState({}); // badge_id -> type
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const REACT_TYPES = ["❤️","🔥","👏","😮","⭐"];
+
+  async function openPlayer(p) {
+    if (p.id === myId) return;
+    setSelected(p); setLoadingProfile(true);
+    const [{ data: badges }, { data: rxns }, { data: mine }] = await Promise.all([
+      sb.from("player_badges").select("id,badge_id,badges(name,icon),created_at").eq("player_id", p.id).order("created_at",{ascending:false}),
+      sb.from("reactions").select("badge_id,type").eq("target_player_id", p.id),
+      sb.from("reactions").select("badge_id,type").eq("player_id", myId).eq("target_player_id", p.id),
+    ]);
+    // Aggregate reactions
+    const rxMap = {};
+    (rxns||[]).forEach(r => {
+      if (!rxMap[r.badge_id]) rxMap[r.badge_id] = {};
+      rxMap[r.badge_id][r.type] = (rxMap[r.badge_id][r.type]||0)+1;
+    });
+    const myMap = {};
+    (mine||[]).forEach(r => { myMap[r.badge_id] = r.type; });
+    setPlayerBadges(badges||[]); setReactions(rxMap); setMyReactions(myMap);
+    setLoadingProfile(false);
+  }
+
+  async function react(badgeId, type) {
+    const current = myReactions[badgeId];
+    if (current === type) {
+      // Remove reaction
+      await sb.from("reactions").delete().eq("player_id", myId).eq("badge_id", badgeId);
+      setMyReactions(p=>({...p, [badgeId]:null}));
+      setReactions(p=>({ ...p, [badgeId]:{ ...p[badgeId], [type]: Math.max(0,(p[badgeId]?.[type]||1)-1) } }));
+    } else {
+      // Upsert reaction
+      await sb.from("reactions").upsert({ player_id:myId, target_player_id:selected.id, badge_id:badgeId, type }, { onConflict:"player_id,badge_id" });
+      const prev = myReactions[badgeId];
+      setMyReactions(p=>({...p,[badgeId]:type}));
+      setReactions(p=>({
+        ...p,
+        [badgeId]:{
+          ...p[badgeId],
+          [type]:(p[badgeId]?.[type]||0)+1,
+          ...(prev?{[prev]:Math.max(0,(p[badgeId]?.[prev]||1)-1)}:{})
+        }
+      }));
+    }
+  }
+
+  const others = players.filter(p=>p.id!==myId && (p.xp||0)>0);
+
+  if (selected) {
+    const lv = getLevel(selected.xp||0);
+    return (
+      <div>
+        <button className="btn btn-ghost btn-sm" onClick={()=>setSelected(null)} style={{marginBottom:12}}>← Indietro</button>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+          <div style={{width:56,height:56,borderRadius:"50%",overflow:"hidden",border:"2px solid var(--border2)",flexShrink:0}}>
+            <Avatar url={selected.avatar_url} emoji={lv.emoji} size={56}/>
+          </div>
+          <div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:"var(--text)"}}>{selected.display_name}</div>
+            <div style={{fontSize:12,color:"var(--text3)"}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
+          </div>
+        </div>
+        {loadingProfile ? <div className="loading">⏳</div> : (
+          <div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:900,color:"var(--text2)",marginBottom:8,textTransform:"uppercase"}}>🎖️ Badge ({playerBadges.length})</div>
+            {playerBadges.length===0 ? <div className="empty">Nessun badge ancora.</div> : (
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {playerBadges.map(pb=>{
+                  const rxns = reactions[pb.id]||{};
+                  const myR = myReactions[pb.id];
+                  return (
+                    <div key={pb.id} className="card-sm" style={{padding:"10px 12px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                        <span style={{fontSize:28}}>{pb.badges?.icon||"🎖️"}</span>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>{pb.badges?.name}</div>
+                          <div style={{fontSize:10,color:"var(--text3)"}}>{new Date(pb.created_at).toLocaleDateString("it-IT")}</div>
+                        </div>
+                      </div>
+                      {/* Reactions */}
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                        {REACT_TYPES.map(r=>{
+                          const count = rxns[r]||0;
+                          const isMe = myR===r;
+                          return (
+                            <button key={r} onClick={()=>react(pb.id,r)}
+                              style={{padding:"3px 8px",borderRadius:99,border:`1.5px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
+                                background:isMe?"rgba(0,212,255,.12)":"rgba(255,255,255,.04)",
+                                cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",gap:4,
+                                transform:isMe?"scale(1.1)":"scale(1)",transition:"all .15s",
+                              }}>
+                              <span>{r}</span>
+                              {count>0&&<span style={{fontSize:10,fontWeight:700,color:isMe?"var(--neon-blue)":"var(--text3)"}}>{count}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="pd-tab-title">👥 Community</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:12}}>Esplora i profili degli altri giocatori e metti reaction ai loro badge.</div>
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {others.length===0 ? <div className="empty">Nessun altro giocatore.</div> : others.map(p=>{
+          const lv = getLevel(p.xp||0);
+          return (
+            <div key={p.id} className="card-sm" onClick={()=>openPlayer(p)}
+              style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",transition:"all .15s"}}
+              onMouseOver={e=>e.currentTarget.style.borderColor="var(--neon-blue)"}
+              onMouseOut={e=>e.currentTarget.style.borderColor=""}>
+              <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",border:"2px solid var(--border2)",flexShrink:0}}>
+                <Avatar url={p.avatar_url} emoji={lv.emoji} size={40}/>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                <div style={{fontSize:11,color:"var(--text3)"}}>{lv.emoji} {lv.name} · ⭐ {p.xp}</div>
+              </div>
+              <div style={{fontSize:12,color:"var(--text3)"}}>→</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── XP HISTORY CHART ────────────────────────────────────
+function XPHistoryChart({ playerId }) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const since = new Date(Date.now()-30*86400000).toISOString();
+    sb.from("xp_history").select("xp_gained,xp_total,reason,created_at")
+      .eq("player_id", playerId).gte("created_at", since)
+      .order("created_at", {ascending:true})
+      .then(({ data: rows }) => {
+        // Aggregate by day
+        const byDay = {};
+        (rows||[]).forEach(r => {
+          const day = r.created_at.slice(0,10);
+          byDay[day] = (byDay[day]||0) + r.xp_gained;
+        });
+        // Last 14 days
+        const days = [];
+        for (let i=13; i>=0; i--) {
+          const d = new Date(Date.now()-i*86400000);
+          const key = d.toISOString().slice(0,10);
+          days.push({ label: d.toLocaleDateString("it-IT",{day:"numeric",month:"short"}), xp: byDay[key]||0, key });
+        }
+        setData(days); setLoading(false);
+      }).catch(()=>setLoading(false));
+  }, [playerId]);
+
+  if (loading) return <div style={{padding:12,textAlign:"center",fontSize:12,color:"var(--text3)"}}>⏳</div>;
+  if (data.every(d=>d.xp===0)) return <div className="empty" style={{padding:12}}>Nessuna attività nelle ultime 2 settimane.</div>;
+
+  const max = Math.max(...data.map(d=>d.xp), 1);
+  return (
+    <div style={{marginTop:8}}>
+      <div style={{display:"flex",alignItems:"flex-end",gap:3,height:80}}>
+        {data.map(d=>(
+          <div key={d.key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <div style={{fontSize:8,color:"var(--text3)",fontWeight:700,opacity:d.xp>0?1:.3}}>{d.xp>0?`+${d.xp}`:""}</div>
+            <div style={{
+              width:"100%",borderRadius:"3px 3px 0 0",
+              height:`${Math.max((d.xp/max)*60,d.xp>0?4:0)}px`,
+              background:d.xp>0?"linear-gradient(180deg,var(--neon-blue),rgba(0,212,255,.4))":"rgba(255,255,255,.06)",
+              transition:"height .3s ease",
+            }}/>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+        <span style={{fontSize:8,color:"var(--text3)"}}>{data[0]?.label}</span>
+        <span style={{fontSize:8,color:"var(--text3)"}}>{data[data.length-1]?.label}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── LEVEL UP ANIMATION ──────────────────────────────────
+function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t); }, [onDone]);
+  const colors = ["#ffcc00","#00d4ff","#ff2d78","#00ff88","#ff8c00","#a78bfa"];
+  const particles = Array.from({length:28},(_,i)=>({ id:i, left:Math.random()*100, delay:Math.random()*1.2, dur:1.8+Math.random()*1.5, color:colors[i%6], size:6+Math.random()*10, shape:i%3===0?"50%":"3px" }));
+  return (
+    <div onClick={onDone} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,.88)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+      <style>{`
+        @keyframes cffall{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(540deg);opacity:0}}
+        @keyframes lvlpop{0%{transform:scale(0) rotate(-8deg);opacity:0}60%{transform:scale(1.15) rotate(2deg)}100%{transform:scale(1);opacity:1}}
+        @keyframes lvlshine{0%{transform:translateX(-100%) skew(-15deg)}100%{transform:translateX(300%) skew(-15deg)}}
+        @keyframes pulse2{0%,100%{opacity:1}50%{opacity:.6}}
+      `}</style>
+      {particles.map(p=>(
+        <div key={p.id} style={{position:"absolute",top:-10,left:`${p.left}%`,width:p.size,height:p.size,background:p.color,borderRadius:p.shape,animation:`cffall ${p.dur}s ${p.delay}s ease-in infinite`}}/>
+      ))}
+      <div style={{background:"linear-gradient(135deg,#0d1428,#1a2540)",border:"2px solid rgba(255,204,0,.5)",borderRadius:28,padding:"40px 48px",textAlign:"center",animation:"lvlpop .6s cubic-bezier(.34,1.56,.64,1) forwards",position:"relative",overflow:"hidden",maxWidth:340,width:"90%",boxShadow:"0 0 60px rgba(255,204,0,.25)"}}>
+        <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"linear-gradient(105deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%)",animation:"lvlshine 2.5s .6s ease-in-out infinite"}}/>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".2em",color:"rgba(255,255,255,.4)",marginBottom:8}}>🎉 LEVEL UP!</div>
+        <div style={{fontSize:76,lineHeight:1,marginBottom:10,filter:"drop-shadow(0 0 16px rgba(255,204,0,.5))"}}>{newLevel.emoji}</div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:34,fontWeight:900,textTransform:"uppercase",background:"linear-gradient(135deg,#ffcc00,#ff8c00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>{newLevel.name}</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:20}}>Hai sbloccato il livello <strong style={{color:"#ffcc00"}}>{newLevel.name}</strong>!</div>
+        <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:18}}>
+          <div style={{textAlign:"center",opacity:.6}}><div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>PRIMA</div><div style={{fontSize:20}}>{oldLevel.emoji}</div><div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{oldLevel.name}</div></div>
+          <div style={{display:"flex",alignItems:"center",fontSize:18,color:"#ffcc00"}}>→</div>
+          <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#ffcc00",marginBottom:4,fontWeight:700}}>ORA</div><div style={{fontSize:24}}>{newLevel.emoji}</div><div style={{fontSize:13,color:"#ffcc00",fontWeight:700}}>{newLevel.name}</div></div>
+        </div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.2)",animation:"pulse2 2s infinite"}}>Tocca per continuare</div>
+      </div>
+    </div>
+  );
+}
+
 function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [tab, setTab] = useState("profilo");
   const [fullProfile, setFullProfile] = useState(profile);
@@ -3801,6 +4041,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
   });
   const [visReady, setVisReady] = useState(false);
+  const [levelUpData, setLevelUpData] = useState(null);
 
   // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
@@ -3858,6 +4099,13 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
     ]);
     if (p) setFullProfile(p);
+    const prevXP = parseInt(localStorage.getItem("pug_xp_"+p.id)||"0");
+    const curXP = p.xp||0;
+    if (prevXP > 0 && curXP > prevXP) {
+      const oldLv = getLevel(prevXP); const newLv = getLevel(curXP);
+      if (newLv.name !== oldLv.name) setLevelUpData({ oldLevel:oldLv, newLevel:newLv });
+    }
+    localStorage.setItem("pug_xp_"+p.id, String(curXP));
     const acts = a || [];
     setBadges(b || []); setActivities(acts); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
     if (acts.length > 0) {
@@ -4044,6 +4292,13 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     </>
   );
 
+  if (levelUpData) return (
+    <>
+      <style>{css}</style>
+      <LevelUpOverlay oldLevel={levelUpData.oldLevel} newLevel={levelUpData.newLevel} onDone={()=>setLevelUpData(null)}/>
+    </>
+  );
+
   if (mustChangePin) return (
     <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
       <div style={{background:'rgba(0,0,20,.7)',border:'1px solid rgba(255,255,255,.15)',borderRadius:20,padding:'32px 24px',width:'100%',maxWidth:360,backdropFilter:'blur(20px)'}}>
@@ -4074,6 +4329,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const BOTTOM_TABS = [
     ["profilo","👤","Profilo"],
+    ["community","👥","Community"],
     visConfig.classifica !== false ? ["classifica","🏆","Classifica"] : null,
     visConfig.lab !== false ? ["attivita","⚡","Lab"] : null,
     visConfig.messaggi !== false ? ["messaggi","💬","Messaggi"] : null,
@@ -4154,7 +4410,24 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   {visConfig.squadre !== false && fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
                 </div>
               </div>
-              {editingFirstName ? (
+              {/* Goal XP personale */}
+            {(() => {
+              const goal = fullProfile.xp_goal || 0;
+              const pct = goal > 0 ? Math.min(100, Math.round((fullProfile.xp/goal)*100)) : 0;
+              return goal > 0 ? (
+                <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                    <span style={{fontSize:12,fontWeight:700,color:"var(--text2)"}}>🎯 Obiettivo XP</span>
+                    <span style={{fontSize:12,fontWeight:700,color:"var(--neon-blue)"}}>{fullProfile.xp} / {goal} XP ({pct}%)</span>
+                  </div>
+                  <div style={{height:8,borderRadius:99,background:"rgba(255,255,255,.08)",overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,borderRadius:99,background:pct>=100?"var(--neon-green)":"linear-gradient(90deg,var(--neon-blue),var(--azzurro))",transition:"width .5s ease"}}/>
+                  </div>
+                  {pct>=100 && <div style={{fontSize:11,color:"var(--neon-green)",marginTop:4,fontWeight:700}}>🏆 Obiettivo raggiunto!</div>}
+                </div>
+              ) : null;
+            })()}
+            {editingFirstName ? (
                 <div style={{display:'flex',gap:8,marginBottom:8}}>
                   <input className="form-input" value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} placeholder="Il tuo nome…" style={{flex:1}} maxLength={30} autoFocus/>
                   <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
@@ -4458,6 +4731,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
 
         {/* ── NOTIFICHE ── */}
+        {tab === "community" && (
+          <div style={{ marginTop: 8 }}>
+            <CommunityTab players={players} myId={profile.id} myProfile={fullProfile}/>
+          </div>
+        )}
         {tab === "notifiche" && (
           <div style={{ marginTop: 8 }}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
