@@ -35,6 +35,22 @@ export default function AdminShell({ profile, onLogout }) {
     setCreating(false);
   }
 
+  async function deleteEducator(id, name) {
+    if (!confirm(`Eliminare completamente "${name}"?\nElimina profilo E account login. Irreversibile.`)) return;
+    setMsg("⏳ Eliminazione…"); setErr("");
+    try {
+      const res = await fetch("https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/delete-educator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI` },
+        body: JSON.stringify({ educator_id: id }),
+      });
+      const data = await res.json();
+      if (data.error) { setErr("Errore: " + data.error); setMsg(""); return; }
+      setMsg(`✅ "${name}" eliminato completamente.`);
+      setEducators(prev => prev.filter(e => e.id !== id));
+    } catch(e) { setErr("Errore: " + e.message); setMsg(""); }
+  }
+
   return (
     <div style={{ minHeight:"100vh", background:"#0a0530", padding:20, color:"#fff", fontFamily:"sans-serif" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
@@ -65,6 +81,10 @@ export default function AdminShell({ profile, onLogout }) {
                 <div style={{ fontWeight:700 }}>{e.display_name}</div>
                 <div style={{ fontSize:11, color:"rgba(255,255,255,.4)" }}>{new Date(e.created_at).toLocaleDateString("it-IT")}</div>
               </div>
+              <button onClick={()=>deleteEducator(e.id, e.display_name)}
+                style={{ padding:"6px 12px", background:"rgba(255,34,68,.15)", border:"1px solid rgba(255,34,68,.3)", borderRadius:8, color:"#ff4466", cursor:"pointer", fontSize:12, fontWeight:700 }}>
+                🗑️ Elimina
+              </button>
             </div>
           ))}
       </div>

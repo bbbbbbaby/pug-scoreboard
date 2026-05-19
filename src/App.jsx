@@ -1,6 +1,55 @@
 import { sb } from "./supabase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 
+// ─── PUSH NOTIFICATIONS ───────────────────────────────
+const VAPID_PUBLIC_KEY = "BB29nPfLuESEo3G7G7yKcIZ6pERzx13f9_kR8EIe-4BpE8tReQ-nHAjOniz0vCK95-TmbaRx5sVkZRx5lmsMTNg";
+const PUSH_EDGE_URL = "https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/send-push";
+const PUSH_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function registerPush(playerId) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    await sb.from('push_subscriptions').upsert(
+      { player_id: playerId, subscription: sub.toJSON() },
+      { onConflict: 'player_id' }
+    );
+    console.log('Push registrata ✅');
+  } catch(e) { console.warn('Push registration failed:', e.message); }
+}
+
+async function sendPush(playerId, title, body) {
+  try {
+    const { data: sub } = await sb.from('push_subscriptions')
+      .select('subscription').eq('player_id', playerId).single();
+    if (!sub?.subscription) return;
+    await fetch(PUSH_EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PUSH_ANON_KEY}` },
+      body: JSON.stringify({ subscription: sub.subscription, title, body }),
+    });
+  } catch(e) { console.warn('Push send failed:', e.message); }
+}
+
+async function sendPushToAll(playerIds, title, body) {
+  for (const pid of playerIds) { await sendPush(pid, title, body); }
+}
+
+
 // ─── LIVELLI ──────────────────────────────────────────────
 const LEVELS = [
   {id:1,name:"Seme",emoji:"🌱",xp:0},{id:2,name:"Germoglio",emoji:"🌿",xp:50},
@@ -1459,6 +1508,8 @@ function Login({ onLogin }) {
     // Salva sessione player in localStorage
     localStorage.setItem("pug_player", JSON.stringify({ ...data, _playerSession: true }));
     onLogin({ ...data, _playerSession: true });
+    // Registra push in background
+    registerPush(data.id).catch(console.warn);
     setLoadingPin(false);
   }
 
@@ -2712,6 +2763,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
     await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
     await sb.from("profiles").update({ xp: (player?.xp || 0) + Number(assignXp), coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
     await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: `Badge: ${badge?.name}`, body: `+${assignXp} XP, +${assignCoin} Coin` });
+    sendPush(assignTarget, `🎖️ Badge: ${badge?.name}`, `Hai guadagnato +${assignXp} XP e +${assignCoin} Coin!`).catch(()=>{});
     setShowAssign(null);
   }
 
@@ -3261,7 +3313,10 @@ function BookingsView() {
       const { data: p } = await sb.from("profiles").select("coin").eq("id", playerId).single();
       await sb.from("profiles").update({ coin: (p?.coin||0) + coinHeld }).eq("id", playerId);
     }
+    const pushTitle = status==="confirmed" ? "✅ Prenotazione confermata!" : "❌ Prenotazione rifiutata";
+    const pushBody  = status==="confirmed" ? "Sei dentro! Apri l'app per i dettagli." : "Le tue coin sono state restituite.";
     await sb.from("notifications").insert({ user_id: playerId, type: status==="confirmed"?"booking_confirmed":"booking_rejected", title: status==="confirmed"?"Prenotazione confermata!":"Prenotazione rifiutata", body: status==="confirmed"?"Sei dentro!":"Coin restituite." });
+    sendPush(playerId, pushTitle, pushBody).catch(()=>{});
     load();
   }
 
