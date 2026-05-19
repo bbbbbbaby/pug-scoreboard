@@ -1165,6 +1165,39 @@ const css = `
   .pres-close { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px 14px; color:rgba(255,255,255,.5); font-size:13px; cursor:pointer; font-weight:700; letter-spacing:.05em; z-index:10; }
   .pres-close:hover { background:rgba(255,255,255,.15); color:#fff; }
   @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* ─ Animated background particles ─ */
+  @keyframes float1 { 0%,100%{transform:translate(0,0) rotate(0deg)} 33%{transform:translate(15px,-20px) rotate(5deg)} 66%{transform:translate(-10px,10px) rotate(-3deg)} }
+  @keyframes float2 { 0%,100%{transform:translate(0,0) rotate(0deg)} 33%{transform:translate(-20px,15px) rotate(-6deg)} 66%{transform:translate(10px,-8px) rotate(4deg)} }
+  @keyframes float3 { 0%,100%{transform:translate(0,0) rotate(0deg)} 50%{transform:translate(12px,18px) rotate(8deg)} }
+  .bg-float-1 { animation:float1 8s ease-in-out infinite; }
+  .bg-float-2 { animation:float2 11s ease-in-out infinite; }
+  .bg-float-3 { animation:float3 14s ease-in-out infinite; }
+
+  /* Toast animation */
+  @keyframes toastIn { 0%{transform:translateX(120%) scale(.8);opacity:0} 100%{transform:translateX(0) scale(1);opacity:1} }
+
+  /* Particle burst */
+  @keyframes burst { 0%{transform:translate(0,0) scale(1);opacity:1} 100%{transform:translate(var(--tx),var(--ty)) scale(0);opacity:0} }
+
+  /* XP bar animated fill */
+  @keyframes xpFill { from{width:0} }
+
+  /* Avatar idle breathe */
+  @keyframes breathe { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.02)} }
+  .avatar-breathe { animation:breathe 3.5s ease-in-out infinite; }
+
+  /* Streak flame pulse */
+  @keyframes flamePulse { 0%,100%{transform:scale(1);filter:drop-shadow(0 0 4px #ff6b00)} 50%{transform:scale(1.15);filter:drop-shadow(0 0 12px #ff6b00)} }
+  .flame-pulse { animation:flamePulse 1.2s ease-in-out infinite; display:inline-block; }
+
+  /* Leaderboard row entrance */
+  @keyframes slideInRow { from{transform:translateX(-20px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+  /* XP number count */
+  @keyframes numPop { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
+  .num-pop { animation:numPop .4s cubic-bezier(.34,1.56,.64,1); }
+
   /* ═══ SMOOTH TRANSITIONS ═══ */
   .content { animation:fade-up .2s ease; }
   @keyframes fade-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -1539,6 +1572,118 @@ const CURATED_GIFS = {
     "YJ8VWc8uG05PB4ONQX","XreQmk7ETCak0","jnQXQ3GNdIqp3FgmIe",
   ],
 };
+
+
+// ─── TOAST NOTIFICATION SYSTEM ───────────────────────────
+let _addToast = null;
+function addToast(msg, type="xp") { if(_addToast) _addToast(msg,type); }
+
+function ToastContainer() {
+  const [toasts, setToasts] = useState([]);
+  useEffect(() => {
+    _addToast = (msg, type) => {
+      const id = Date.now() + Math.random();
+      setToasts(p => [...p, { id, msg, type }]);
+      setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 2800);
+    };
+    return () => { _addToast = null; };
+  }, []);
+  return (
+    <div style={{ position:"fixed", bottom:90, right:16, zIndex:8888, display:"flex", flexDirection:"column", gap:8, pointerEvents:"none" }}>
+      {toasts.map(t => <Toast key={t.id} {...t}/>)}
+    </div>
+  );
+}
+
+function Toast({ msg, type }) {
+  const colors = {
+    xp:    { bg:"rgba(0,212,255,.15)",  border:"rgba(0,212,255,.4)",  color:"#00d4ff" },
+    coin:  { bg:"rgba(255,204,0,.15)",  border:"rgba(255,204,0,.4)",  color:"#ffcc00" },
+    badge: { bg:"rgba(255,45,120,.15)", border:"rgba(255,45,120,.4)", color:"#ff2d78" },
+    ok:    { bg:"rgba(0,255,136,.15)",  border:"rgba(0,255,136,.4)",  color:"#00ff88" },
+  };
+  const c = colors[type] || colors.ok;
+  return (
+    <div style={{
+      background: c.bg, border: `1px solid ${c.border}`, color: c.color,
+      borderRadius: 12, padding: "10px 16px",
+      fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16, fontWeight: 900,
+      letterSpacing: ".04em", whiteSpace: "nowrap",
+      animation: "toastIn .35s cubic-bezier(.34,1.56,.64,1) forwards",
+      backdropFilter: "blur(10px)",
+      boxShadow: `0 4px 20px ${c.border}`,
+    }}>{msg}</div>
+  );
+}
+
+
+// ─── PARTICLE BURST ──────────────────────────────────────
+function ParticleBurst({ x, y, color="#ffcc00", onDone }) {
+  const particles = Array.from({length:12}, (_,i) => ({
+    id:i, angle:(360/12)*i,
+    dist: 30+Math.random()*30,
+    size: 4+Math.random()*5,
+  }));
+  useEffect(() => { const t=setTimeout(onDone,700); return ()=>clearTimeout(t); }, [onDone]);
+  return (
+    <div style={{position:"fixed",left:x,top:y,zIndex:9990,pointerEvents:"none"}}>
+      {particles.map(p => {
+        const rad = (p.angle*Math.PI)/180;
+        const tx = Math.cos(rad)*p.dist, ty = Math.sin(rad)*p.dist;
+        return (
+          <div key={p.id} style={{
+            position:"absolute", left:0, top:0,
+            width:p.size, height:p.size, borderRadius:"50%", background:color,
+            animation:`burst .6s ease-out forwards`,
+            "--tx":`${tx}px`, "--ty":`${ty}px`,
+          }}/>
+        );
+      })}
+    </div>
+  );
+}
+
+
+// ─── COUNTING NUMBER HOOK ────────────────────────────────
+function useCountUp(target, duration=800) {
+  const [val, setVal] = useState(target);
+  const prev = useRef(target);
+  useEffect(() => {
+    if (prev.current === target) return;
+    const start = prev.current, diff = target - start;
+    const startTime = performance.now();
+    function tick(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed/duration, 1);
+      const ease = 1 - Math.pow(1-progress, 3); // easeOutCubic
+      setVal(Math.round(start + diff*ease));
+      if (progress < 1) requestAnimationFrame(tick);
+      else { setVal(target); prev.current = target; }
+    }
+    requestAnimationFrame(tick);
+    prev.current = target;
+  }, [target, duration]);
+  return val;
+}
+
+
+// ─── COUNTDOWN TO MIDNIGHT ───────────────────────────────
+function useCountdown() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    function update() {
+      const now = new Date();
+      const midnight = new Date(now); midnight.setHours(24,0,0,0);
+      const diff = midnight - now;
+      const h = Math.floor(diff/3600000).toString().padStart(2,"0");
+      const m = Math.floor((diff%3600000)/60000).toString().padStart(2,"0");
+      const s = Math.floor((diff%60000)/1000).toString().padStart(2,"0");
+      setTime(`${h}:${m}:${s}`);
+    }
+    update(); const iv = setInterval(update,1000); return ()=>clearInterval(iv);
+  }, []);
+  return time;
+}
 
 // ─── LOGIN ────────────────────────────────────────────────
 // Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
@@ -4365,6 +4510,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         </svg>
       </div>
 
+      {/* Toast notifications */}
+      <ToastContainer/>
       {/* Top bar */}
       <div className="pd-topbar">
         <div>
