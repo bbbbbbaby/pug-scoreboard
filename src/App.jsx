@@ -1468,6 +1468,36 @@ function AvatarPicker({ selected, onSelect, squadFilter }) {
   );
 }
 
+// ─── STICKER & GIF ───────────────────────────────────────
+const ANIMATED_STICKERS = [
+  { id:"happy", label:"😊 Felice!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}.b{animation:bounce .7s ease-in-out infinite}@keyframes blink{0%,90%,100%{scaleY:1}95%{transform:scaleY(0.1)}}</style><g class="b"><ellipse cx="50" cy="70" rx="32" ry="36" fill="#4caf50"/><ellipse cx="28" cy="45" rx="14" ry="7" fill="#388e3c" transform="rotate(-40,28,45)"/><ellipse cx="72" cy="45" rx="14" ry="7" fill="#388e3c" transform="rotate(40,72,45)"/><circle cx="50" cy="32" r="8" fill="#388e3c"/><circle cx="39" cy="65" r="8" fill="white"/><circle cx="61" cy="65" r="8" fill="white"/><circle cx="41" cy="66" r="5" fill="#1a237e"/><circle cx="63" cy="66" r="5" fill="#1a237e"/><circle cx="43" cy="64" r="2" fill="white"/><circle cx="65" cy="64" r="2" fill="white"/><path d="M 36 78 Q 50 92 64 78" stroke="#1b5e20" stroke-width="3.5" fill="none" stroke-linecap="round"/></g></svg>` },
+  { id:"thumbsup", label:"👍 Grande!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes pop{0%{transform:scale(1)}30%{transform:scale(1.2)}100%{transform:scale(1)}}.p{animation:pop .6s ease-out infinite}</style><g class="p"><ellipse cx="50" cy="75" rx="28" ry="30" fill="#66bb6a"/><circle cx="50" cy="28" r="7" fill="#388e3c"/><rect x="30" y="35" width="10" height="25" rx="5" fill="#388e3c"/><rect x="60" y="35" width="10" height="25" rx="5" fill="#388e3c"/><rect x="38" y="55" width="24" height="18" rx="4" fill="#4caf50"/><rect x="35" y="45" width="30" height="14" rx="7" fill="#81c784"/><rect x="44" y="38" width="12" height="12" rx="6" fill="#66bb6a"/><circle cx="40" cy="72" r="7" fill="white"/><circle cx="60" cy="72" r="7" fill="white"/><circle cx="42" cy="73" r="4" fill="#1b5e20"/><circle cx="62" cy="73" r="4" fill="#1b5e20"/><path d="M 40 83 Q 50 90 60 83" stroke="#1b5e20" stroke-width="3" fill="none" stroke-linecap="round"/></g></svg>` },
+  { id:"thumbsdown", label:"👎 Boh...", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes wilt{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-5deg)}}.w{animation:wilt 1s ease-in-out infinite;transform-origin:50% 80%}</style><g class="w"><ellipse cx="50" cy="65" rx="28" ry="30" fill="#78909c"/><ellipse cx="30" cy="42" rx="12" ry="6" fill="#546e7a" transform="rotate(-20,30,42)"/><ellipse cx="70" cy="42" rx="12" ry="6" fill="#546e7a" transform="rotate(20,70,42)"/><circle cx="50" cy="30" r="7" fill="#546e7a"/><circle cx="40" cy="62" r="7" fill="white"/><circle cx="60" cy="62" r="7" fill="white"/><circle cx="42" cy="63" r="4" fill="#263238"/><circle cx="62" cy="63" r="4" fill="#263238"/><path d="M 38 76 Q 50 70 62 76" stroke="#263238" stroke-width="3" fill="none" stroke-linecap="round"/><rect x="35" y="75" width="30" height="14" rx="7" fill="#607d8b" transform="rotate(180,50,82)"/><rect x="44" y="82" width="12" height="12" rx="6" fill="#78909c" transform="rotate(180,50,88)"/></g></svg>` },
+  { id:"kiss", label:"💋 Bacio!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes kiss{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}.k{animation:kiss .8s ease-in-out infinite}@keyframes heart{0%,100%{transform:scale(1) translate(0,0);opacity:1}100%{transform:scale(0) translate(10px,-20px);opacity:0}}.h{animation:heart 1.2s ease-out infinite}</style><g class="k"><ellipse cx="50" cy="68" rx="30" ry="34" fill="#f48fb1"/><ellipse cx="28" cy="44" rx="13" ry="7" fill="#e91e63" transform="rotate(-35,28,44)"/><ellipse cx="72" cy="44" rx="13" ry="7" fill="#e91e63" transform="rotate(35,72,44)"/><circle cx="50" cy="30" r="7" fill="#e91e63"/><circle cx="39" cy="63" r="7" fill="white"/><circle cx="61" cy="63" r="7" fill="white"/><circle cx="41" cy="64" r="4" fill="#880e4f"/><circle cx="63" cy="64" r="4" fill="#880e4f"/><circle cx="50" cy="78" r="7" fill="#e91e63"/><text x="68" y="55" font-size="14" class="h">❤️</text><text x="72" y="45" font-size="10" class="h" style="animation-delay:.4s">💕</text></g></svg>` },
+  { id:"heart", label:"❤️ Cuore!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.p{animation:pulse .6s ease-in-out infinite}</style><g class="p"><ellipse cx="50" cy="68" rx="30" ry="34" fill="#ef5350"/><ellipse cx="28" cy="44" rx="13" ry="7" fill="#b71c1c" transform="rotate(-35,28,44)"/><ellipse cx="72" cy="44" rx="13" ry="7" fill="#b71c1c" transform="rotate(35,72,44)"/><circle cx="50" cy="30" r="7" fill="#b71c1c"/><circle cx="39" cy="63" r="8" fill="white"/><circle cx="61" cy="63" r="8" fill="white"/><circle cx="41" cy="64" r="5" fill="#b71c1c"/><circle cx="63" cy="64" r="5" fill="#b71c1c"/><path d="M 35 77 Q 50 95 65 77" stroke="#7f0000" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M50 40 C45 35 35 35 35 43 C35 50 50 60 50 60 C50 60 65 50 65 43 C65 35 55 35 50 40Z" fill="#ff1744" opacity=".9" transform="translate(0,-10) scale(0.5) translate(50,0)"/></g></svg>` },
+  { id:"laugh", label:"😂 Risata!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes shake{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}.s{animation:shake .3s ease-in-out infinite}</style><g class="s"><ellipse cx="50" cy="68" rx="32" ry="36" fill="#ffd54f"/><ellipse cx="28" cy="43" rx="14" ry="7" fill="#f9a825" transform="rotate(-35,28,43)"/><ellipse cx="72" cy="43" rx="14" ry="7" fill="#f9a825" transform="rotate(35,72,43)"/><circle cx="50" cy="30" r="7" fill="#f9a825"/><path d="M 32 60 Q 50 57 68 60" stroke="#e65100" stroke-width="3" fill="none"/><ellipse cx="50" cy="62" rx="18" ry="4" fill="#e65100"/><path d="M 32 62 Q 50 85 68 62" fill="#e65100"/><rect x="38" y="62" width="24" height="8" fill="white" rx="3"/><text x="26" y="58" font-size="14">😂</text><text x="62" y="58" font-size="14">😂</text></g></svg>` },
+  { id:"rofl", label:"🤣 XDDD", svg:`<svg viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes roll{0%{transform:rotate(0deg) translate(0,0)}25%{transform:rotate(-30deg) translate(-5px,5px)}75%{transform:rotate(30deg) translate(5px,5px)}100%{transform:rotate(0deg) translate(0,0)}}.r{animation:roll .5s ease-in-out infinite;transform-origin:55px 65px}</style><g class="r"><ellipse cx="55" cy="68" rx="32" ry="36" fill="#ffb300"/><ellipse cx="30" cy="43" rx="14" ry="7" fill="#ff8f00" transform="rotate(-35,30,43)"/><ellipse cx="80" cy="43" rx="14" ry="7" fill="#ff8f00" transform="rotate(35,80,43)"/><circle cx="55" cy="30" r="7" fill="#ff8f00"/><path d="M 35 60 Q 55 57 75 60" stroke="#e65100" stroke-width="3" fill="none"/><ellipse cx="55" cy="62" rx="20" ry="5" fill="#e65100"/><path d="M 35 62 Q 55 90 75 62" fill="#e65100"/><rect x="43" y="62" width="24" height="8" fill="white" rx="3"/><ellipse cx="30" cy="60" rx="10" ry="6" fill="#29b6f6" opacity=".7" transform="rotate(-20,30,60)"/><ellipse cx="80" cy="60" rx="10" ry="6" fill="#29b6f6" opacity=".7" transform="rotate(20,80,60)"/></g></svg>` }
+];
+
+
+
+const TENOR_API_KEY = ""; // Inserisci qui la tua chiave Tenor gratuita
+
+async function searchGifs(query) {
+  if (!TENOR_API_KEY) return [];
+  try {
+    const res = await fetch(
+      `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${TENOR_API_KEY}&limit=16&media_filter=gif`
+    );
+    const data = await res.json();
+    return (data.results || []).map(r => ({
+      id: r.id,
+      url: r.media_formats?.gif?.url || r.media_formats?.tinygif?.url,
+      preview: r.media_formats?.tinygif?.url || r.media_formats?.gif?.url,
+    })).filter(r => r.url);
+  } catch(_) { return []; }
+}
+
 // ─── LOGIN ────────────────────────────────────────────────
 // Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
 
@@ -1519,6 +1549,8 @@ function Login({ onLogin }) {
     if (error) { setEduErr(error.message); setLoadingEdu(false); return; }
     const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
+    // Registra push educator in background
+    if (profile?.id) registerPush(profile.id).catch(console.warn);
     setLoadingEdu(false);
   }
 
@@ -3047,6 +3079,54 @@ function DiaryView() {
   );
 }
 
+function AvatarStickerPicker({ onSelect }) {
+  return (
+    <div style={{marginTop:8,background:"var(--surface2)",borderRadius:12,border:"1px solid var(--border)",padding:10}}>
+      <div style={{fontSize:11,color:"var(--text3)",marginBottom:8,fontWeight:700}}>Tocca per inviare</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+        {ANIMATED_STICKERS.map(s=>(
+          <div key={s.id} onClick={()=>onSelect("sticker:" + s.id)}
+            style={{cursor:"pointer",borderRadius:12,padding:6,border:"2px solid transparent",
+              background:"rgba(255,255,255,.04)",transition:"all .15s",
+              display:"flex",flexDirection:"column",alignItems:"center",gap:3}}
+            onMouseOver={e=>{e.currentTarget.style.borderColor="var(--neon-blue)";e.currentTarget.style.background="rgba(0,212,255,.08)";}}
+            onMouseOut={e=>{e.currentTarget.style.borderColor="transparent";e.currentTarget.style.background="rgba(255,255,255,.04)";}}>
+            <div style={{width:60,height:60}} dangerouslySetInnerHTML={{__html:s.svg}}/>
+            <span style={{fontSize:9,color:"var(--text2)",fontWeight:700,textAlign:"center"}}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GifSearch({ onSelect }) {
+  const [query, setQuery] = useState("celebrate");
+  const [gifs, setGifs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    setLoading(true);
+    searchGifs(query).then(r => { setGifs(r); setLoading(false); });
+  }, [query]);
+  return (
+    <div>
+      <input className="search-inp" placeholder="🔍 Cerca GIF…" value={query}
+        onChange={e=>setQuery(e.target.value)} style={{marginBottom:8}}/>
+      {loading ? <div style={{textAlign:"center",padding:8,fontSize:12,color:"var(--text3)"}}>⏳</div> : (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,maxHeight:200,overflowY:"auto"}}>
+          {gifs.map(g=>(
+            <img key={g.id} src={g.preview} alt="" onClick={()=>onSelect(g.url)}
+              style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:6,cursor:"pointer",border:"2px solid transparent"}}
+              onMouseOver={e=>e.target.style.borderColor="var(--neon-blue)"}
+              onMouseOut={e=>e.target.style.borderColor="transparent"}/>
+          ))}
+          {gifs.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",fontSize:12,color:"var(--text3)",padding:8}}>Nessun risultato</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MessagesView({ profile }) {
   const [squads, setSquads]     = useState([]);
   const [players, setPlayers]   = useState([]);
@@ -3063,13 +3143,17 @@ function MessagesView({ profile }) {
   const [expiry, setExpiry] = useState(""); // optional expiry date
   const [sending, setSending] = useState(false);
   const [sent, setSent]   = useState("");
+  const [mediaData, setMediaData] = useState(null);
+  const [mediaType, setMediaType] = useState(null); // "image" | "gif" | "sticker" | null
+  const [mediaPanel, setMediaPanel] = useState(null); // "sticker" | "gif" | null
+  const mediaRef = useRef();
 
   async function loadAll() {
     const [{ data: sq }, { data: pl }, { data: act }, { data: m }] = await Promise.all([
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
       sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-      sb.from("messages").select("id,body,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).limit(100),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).limit(100),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
   }
@@ -3080,7 +3164,7 @@ function MessagesView({ profile }) {
     setSending(true);
     const senderName = profile?.display_name || "Giardiniere";
     const expiresAt = expiry ? new Date(expiry + "T23:59:59").toISOString() : null;
-    const base = { sender_id: profile.id, body: body.trim(), is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt };
+    const base = { sender_id: profile.id, body: body.trim(), media_data: mediaData || null, is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt };
 
     if (destType === "tutti") {
       const { data: allP } = await sb.from("profiles").select("id").eq("role","player");
@@ -3114,7 +3198,7 @@ function MessagesView({ profile }) {
       setSending(false); setTimeout(()=>setSent(""),3000); setBody(""); setExpiry(""); return;
     }
 
-    setBody(""); setExpiry(""); setSelectedPlayers([]);
+    setBody(""); setExpiry(""); setSelectedPlayers([]); setMediaData(null); setMediaType(null); setMediaPanel(null);
     setSent("Messaggio inviato ✅"); setTimeout(()=>setSent(""),3000);
     loadAll(); setSending(false);
   }
@@ -3216,6 +3300,61 @@ function MessagesView({ profile }) {
           <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Scrivi un messaggio…" />
         </div>
 
+        {/* Media: sticker / immagine / GIF */}
+        <div className="form-group">
+          <label className="form-label">Sticker / Immagine / GIF</label>
+          <input ref={mediaRef} type="file" accept="image/*" style={{display:"none"}} onChange={async e => {
+            const file = e.target.files[0]; if (!file) return;
+            const isGif = file.type === "image/gif";
+            if (isGif) {
+              const reader = new FileReader();
+              reader.onload = ev => { setMediaData(ev.target.result); setMediaType("gif"); setMediaPanel(null); };
+              reader.readAsDataURL(file);
+            } else {
+              const compressed = await compressToWebP(file, 600, 0.85);
+              const reader = new FileReader();
+              reader.onload = ev => { setMediaData(ev.target.result); setMediaType("image"); setMediaPanel(null); };
+              reader.readAsDataURL(compressed);
+            }
+          }}/>
+          {mediaData ? (
+            <div style={{position:"relative",display:"inline-block",marginBottom:8}}>
+              {mediaType==="sticker" && mediaData.startsWith("sticker:") ? (
+                <div style={{width:80,height:80}} dangerouslySetInnerHTML={{__html: ANIMATED_STICKERS.find(s=>s.id===mediaData.slice(8))?.svg||""}}/>
+              ) : (
+                <img src={mediaData} style={{maxWidth:"100%",maxHeight:200,borderRadius:12,border:"2px solid var(--border)",display:"block"}} alt="media"/>
+              )}
+              <button onClick={()=>{setMediaData(null);setMediaType(null);}} style={{position:"absolute",top:-8,right:-8,background:"rgba(0,0,0,.8)",border:"none",color:"#fff",borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:13,lineHeight:1}}>✕</button>
+            </div>
+          ) : (
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <button className={`chip ${mediaPanel==="sticker"?"active":""}`} onClick={()=>setMediaPanel(p=>p==="sticker"?null:"sticker")}>🎭 Sticker PUG</button>
+              <button className={`chip ${mediaPanel==="gif"?"active":""}`} onClick={()=>setMediaPanel(p=>p==="gif"?null:"gif")}>🎬 GIF</button>
+              <button className="chip" onClick={()=>mediaRef.current.click()}>📷 Foto</button>
+            </div>
+          )}
+
+          {/* Sticker picker - avatar PUG dalla CDN */}
+          {mediaPanel==="sticker" && !mediaData && (
+            <AvatarStickerPicker onSelect={(url)=>{setMediaData(url);setMediaType("sticker");setMediaPanel(null);}}/>
+          )}
+
+          {/* GIF search */}
+          {mediaPanel==="gif" && !mediaData && (
+            <div style={{marginTop:8,background:"var(--surface2)",borderRadius:12,border:"1px solid var(--border)",padding:10}}>
+              {TENOR_API_KEY ? (
+                <GifSearch onSelect={(url)=>{setMediaData(url);setMediaType("gif");setMediaPanel(null);}}/>
+              ) : (
+                <div style={{fontSize:12,color:"var(--text3)",padding:"8px 0",textAlign:"center"}}>
+                  Per attivare la ricerca GIF aggiungi la chiave Tenor nella variabile TENOR_API_KEY nel codice.
+                  <br/><a href="https://developers.google.com/tenor" target="_blank" rel="noreferrer" style={{color:"var(--neon-blue)",fontWeight:700}}>Ottieni chiave gratuita →</a>
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>Sticker: zero peso · GIF: da Tenor CDN · Foto: compressa in WebP</div>
+        </div>
+
         {/* Scadenza opzionale */}
         <div className="form-group">
           <label className="form-label">Scadenza (opzionale) — dopo questa data il messaggio sparisce</label>
@@ -3248,6 +3387,16 @@ function MessagesView({ profile }) {
                     <button className="btn btn-danger btn-xs" onClick={()=>cancelMsg(m.id)} title="Annulla messaggio">✕</button>
                   </div>
                 </div>
+                {m.media_data && (
+                  m.media_data.startsWith("sticker:") ? (
+                    <div style={{width:80,height:80,marginBottom:6}}
+                      dangerouslySetInnerHTML={{__html: ANIMATED_STICKERS.find(s=>s.id===m.media_data.slice(8))?.svg||""}}/>
+                  ) : (
+                    <img src={m.media_data}
+                      style={{maxWidth:"100%",maxHeight:200,borderRadius:10,marginBottom:6,display:"block"}}
+                      alt="media"/>
+                  )
+                )}
                 <div style={{fontSize:13,color:"var(--text)"}}>{m.body}</div>
               </div>
             );
@@ -3655,7 +3804,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
       sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").order("xp", { ascending: false }),
-      sb.from("messages").select("id,body,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
       sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
     ]);
@@ -3794,6 +3943,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         status: "pending",
       });
       if (error) { alert("❌ Errore prenotazione: " + error.message); return; }
+      // Notifica push a tutti gli educator
+      sb.from("profiles").select("id").in("role",["educator","admin"]).then(({ data: edus }) => {
+        (edus||[]).forEach(e => sendPush(e.id, "📋 Nuova prenotazione", `${fullProfile?.display_name||"Un giocatore"} ha prenotato un Lab`).catch(()=>{}));
+      });
       if (cost > 0) {
         await sb.from("profiles").update({ coin: (fullProfile?.coin || 0) - cost }).eq("id", profile.id);
         setFullProfile(prev => ({ ...prev, coin: (prev?.coin || 0) - cost }));
@@ -4238,6 +4391,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                           <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
                         </div>
                       </div>
+                      {m.media_data && (
+                        m.media_data.startsWith("sticker:") ? (
+                          <div style={{width:100,height:100,marginBottom:6}}
+                            dangerouslySetInnerHTML={{__html: ANIMATED_STICKERS.find(s=>s.id===m.media_data.slice(8))?.svg||""}}/>
+                        ) : (
+                          <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt=""/>
+                        )
+                      )}
                       <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
                     </div>
                   ))}
