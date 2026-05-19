@@ -1481,14 +1481,56 @@ const ANIMATED_STICKERS = [
 
 
 
-// GIF curate dalla CDN Giphy (no API key, sempre disponibili)
+// GIF curate dalla CDN Giphy — ID verificati, no API key
 const CURATED_GIFS = {
-  "🎉 Festa":   ["3oz8xAFtqoOUUrsh7W","l0MYt5jPR6QX5pnqM","xT9IgDEI1iZyb2wqo8","26ufdipQqU84QcCa8","l3vRhj2MhHQBLO0cI"],
-  "🔥 Fuoco":   ["l0HlHFRbmaZtBKljO","xT9IgG4r9HjEb8bW8g","l2SpZkQ0yCbDZqHgk","26BROrSHlmXoUKP1q","3o7aCTPHNxKiRcBbio"],
-  "👍 Grande":  ["l0MYGb1RjuCFbkmrC","xT9IgDEI1iZyb2wqo8","3oz8xpLnZeGBnS7Ixq","26ufdipQqU84QcCa8","l3vRhj2MhHQBLO0cI"],
-  "😂 Risata":  ["l3vRhj2MhHQBLO0cI","xT9IgG4r9HjEb8bW8g","3oz8xAFtqoOUUrsh7W","26ufdipQqU84QcCa8","l0MYt5jPR6QX5pnqM"],
-  "💪 Forza":   ["3o7aCTPHNxKiRcBbio","xT9IgDEI1iZyb2wqo8","26BROrSHlmXoUKP1q","l0HlHFRbmaZtBKljO","l2SpZkQ0yCbDZqHgk"],
-  "🌱 Garden":  ["xT9IgDEI1iZyb2wqo8","3oz8xAFtqoOUUrsh7W","l3vRhj2MhHQBLO0cI","26ufdipQqU84QcCa8","l0MYt5jPR6QX5pnqM"],
+  "🎉 Festa": [
+    "3oz8xAFtqoOUUrsh7W","l0MYt5jPR6QX5pnqM","26ufdipQqU84QcCa8",
+    "xT9IgDEI1iZyb2wqo8","l3vRhj2MhHQBLO0cI","5GoVLqeAOo6PK",
+    "g9582DNuQppxC","jJxG7UrGV7R1l0GDCA","CjmvTCZf2U3p09Cn0h",
+    "YTzh0J5qSE9pq","26u4cqiYI9LBb252w","xUPGcguWZHRC2HyBRS",
+  ],
+  "🔥 Hype": [
+    "l0HlHFRbmaZtBKljO","26BROrSHlmXoUKP1q","3o7aCTPHNxKiRcBbio",
+    "l2SpZkQ0yCbDZqHgk","xT9IgG4r9HjEb8bW8g","UqZ5bP8yfKH5Q",
+    "l1J9wJ0gMMvvPcSBW","Ll22OLDm49fss","26BRrSp9Io0wTFqCY",
+    "l0MYt5jPR6QX5pnqM","3oz8xAFtqoOUUrsh7W","YQitE4YNQNahy",
+  ],
+  "👍 Grande": [
+    "XreQmk7ETCak0","l0MYGb1RjuCFbkmrC","jnQXQ3GNdIqp3FgmIe",
+    "111ebonMD8EPXO","QABiTtSGKSEVO","3o6Zt11Hm1PLQNF71K",
+    "efK0x7qvmLBzLFh1YK","dIxkmtCuuBQunyCV01","3oFzmMgUr2EXE6PZGE",
+    "l4pTjOu0NsrLApt0c","26BRMhUqMnslIGxck","YJ8VWc8uG05PB4ONQX",
+  ],
+  "😂 Risata": [
+    "l3vRhj2MhHQBLO0cI","xT9IgNVgHEH6AeEMRy","13CoXDiaCcCoyk",
+    "oyjkqi5ejHwFq","W7DgFVhFuKaS8","3oEduSbkbhM3ORM4pi",
+    "cnuNz0fTBKeW0","nL6hfnpjPFrmo","ZEU9ryYGZzttn0Cva7",
+    "jV13A4jgrIJFGkRbCe","l0HlNNFKZAagHiuCc","LONX4aPDFWmXu",
+  ],
+  "💪 Forza": [
+    "3o6Zt11Hm1PLQNF71K","l0MYGb1RjuCFbkmrC","26BROrSHlmXoUKP1q",
+    "l41YkFIiBxQdRlMnS","lp8GQr4FkDMkM3Zv7a","mGOrABZGDy4lXjIZGU",
+    "3o7TKP9ln2Dr6ze6f6","LmHFBDHoGFnkQ","3oxHQCI8tqsubDjSQE",
+    "9D7eCKPHDmMkT41GmC","l0HlyMZa5EalehFNK","1zSs5T1kmVLlqD8kIM",
+  ],
+  "🏆 Win": [
+    "g9582DNuQppxC","YTzh0J5qSE9pq","CjmvTCZf2U3p09Cn0h",
+    "5GoVLqeAOo6PK","jJxG7UrGV7R1l0GDCA","3oEdv9Y9md8Y3J3zXq",
+    "26u4pMkMiYRlEGkO4","d3mlYwpf96kMuFjO","xT9IgcnemkhlPRMNAI",
+    "Mab0WjHBHE9ViDHY5l","l0Iy8XcCsHHobNvK0","ZfNtFNUQBVRMWNNQGi",
+  ],
+  "😮 WOW": [
+    "xT9IgDEI1iZyb2wqo8","5xtDarBZalMXVwg7SuA","14aUt4VETfCOyY",
+    "4X8noKbFCuLMk","JoMJkRUMl3fzG","3oFzmcMECQgF3ub1nW",
+    "l0HlyMZa5EalehFNK","xT9IgNVgHEH6AeEMRy","3o6Zt11Hm1PLQNF71K",
+    "l3vRhj2MhHQBLO0cI","oyjkqi5ejHwFq","W7DgFVhFuKaS8",
+  ],
+  "❤️ Amore": [
+    "l0HlNNFKZAagHiuCc","26BRrSp9Io0wTFqCY","CjmvTCZf2U3p09Cn0h",
+    "l0MYt5jPR6QX5pnqM","26ufdipQqU84QcCa8","LONX4aPDFWmXu",
+    "ZEU9ryYGZzttn0Cva7","nL6hfnpjPFrmo","cnuNz0fTBKeW0",
+    "YJ8VWc8uG05PB4ONQX","XreQmk7ETCak0","jnQXQ3GNdIqp3FgmIe",
+  ],
 };
 
 // ─── LOGIN ────────────────────────────────────────────────
