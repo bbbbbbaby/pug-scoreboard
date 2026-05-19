@@ -1254,7 +1254,7 @@ function XpBar({ xp, dark = false }) {
   const pct = nextLv ? Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100) : 100;
   return (
     <div>
-      <div className="xp-bar-wrap"><div className="xp-bar" style={{ width: pct + "%" }} /></div>
+      <div className="xp-bar-wrap"><div className="xp-bar" style={{ width: pct + "%", animation:"xpFill 1s ease-out" }} /></div>
       <div className="xp-label"><span>{xp} XP</span>{nextLv && <span>{nextLv.xp} XP</span>}</div>
     </div>
   );
@@ -1683,6 +1683,16 @@ function useCountdown() {
     update(); const iv = setInterval(update,1000); return ()=>clearInterval(iv);
   }, []);
   return time;
+}
+
+function SfidaCountdown() {
+  const time = useCountdown();
+  return <div style={{fontSize:10,color:"rgba(255,255,255,.4)",fontFamily:"monospace",fontWeight:700,marginBottom:4}}>⏱ Scade in {time}</div>;
+}
+
+function CountUpStat({ val }) {
+  const animated = useCountUp(typeof val==="number" ? val : 0);
+  return <span className="pd-sv">{typeof val==="number" ? animated : val}</span>;
 }
 
 // ─── LOGIN ────────────────────────────────────────────────
@@ -2395,7 +2405,7 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
               const xpShown = timeFilter === "oggi" ? xpToday[p.id] || 0 : timeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
               const xpLabel = timeFilter === "oggi" ? "XP oggi" : timeFilter === "mese" ? "XP mese" : "XP";
               return (
-                <div key={p.id} className="lb-row">
+                <div key={p.id} className="lb-row" style={{animation:`slideInRow .3s ${Math.min(realIdx*.06,.5)}s both`}}>
                   <span className="lb-rank">{(realIdx+1)+"°"}</span>
                   <div className="lb-av"><Avatar url={p.avatar_url} emoji={lv.emoji} size={38} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -4539,8 +4549,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             <div className="pd-av-zone">
               <div className="pd-av-glow"/>
               {fullProfile.avatar_url
-                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar"/>
-                : <span className="pd-av-emoji">{lv.emoji}</span>
+                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}}/>
+                : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
               }
               <div className="pd-name-pill">{fullProfile.display_name}</div>
               <div className="pd-lv-pill">{lv.emoji} LV.{lv.id} · {lv.name}</div>
@@ -4605,7 +4615,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               return stats.length > 0 ? (
                 <div className="pd-sg" style={{gridTemplateColumns:`repeat(${stats.length},1fr)`}}>
                   {stats.map(([ic,v,l])=>(
-                    <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
+                    <div key={l} className="pd-sc">
+                      <span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span>
+                      <CountUpStat val={typeof v==="number"?v:fullProfile.xp}/>
+                      <span className="pd-sl">{l}</span>
+                    </div>
                   ))}
                 </div>
               ) : null;
@@ -4663,6 +4677,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             {/* Sfida del giorno */}
             {visConfig.sfida !== false && activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
               <div key={s.id} className="pd-sfida">
+                        <SfidaCountdown/>
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'#ffcc00',marginBottom:4}}>⚡ Sfida del Giorno</div>
                 <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:7}}>{s.name}</div>
                 <div style={{fontSize:12,color:'rgba(255,255,255,.5)',marginBottom:10,lineHeight:1.5}}>{s.description?.replace('SFIDA · ','')}</div>
