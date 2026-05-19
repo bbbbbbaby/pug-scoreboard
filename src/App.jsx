@@ -1481,20 +1481,15 @@ const ANIMATED_STICKERS = [
 
 
 
-async function searchGifs(query) {
-  const KEY = "dc6zaTOxFJmzC"; // Giphy public dev key
-  try {
-    const res = await fetch(
-      `https://api.giphy.com/v1/gifs/search?api_key=${KEY}&q=${encodeURIComponent(query)}&limit=16&rating=g`
-    );
-    const data = await res.json();
-    return (data.data || []).map(r => ({
-      id: r.id,
-      url: r.images?.fixed_height?.url || r.images?.original?.url,
-      preview: r.images?.fixed_height_small?.url || r.images?.fixed_height?.url,
-    })).filter(r => r.url);
-  } catch(_) { return []; }
-}
+// GIF curate dalla CDN Giphy (no API key, sempre disponibili)
+const CURATED_GIFS = {
+  "🎉 Festa":   ["3oz8xAFtqoOUUrsh7W","l0MYt5jPR6QX5pnqM","xT9IgDEI1iZyb2wqo8","26ufdipQqU84QcCa8","l3vRhj2MhHQBLO0cI"],
+  "🔥 Fuoco":   ["l0HlHFRbmaZtBKljO","xT9IgG4r9HjEb8bW8g","l2SpZkQ0yCbDZqHgk","26BROrSHlmXoUKP1q","3o7aCTPHNxKiRcBbio"],
+  "👍 Grande":  ["l0MYGb1RjuCFbkmrC","xT9IgDEI1iZyb2wqo8","3oz8xpLnZeGBnS7Ixq","26ufdipQqU84QcCa8","l3vRhj2MhHQBLO0cI"],
+  "😂 Risata":  ["l3vRhj2MhHQBLO0cI","xT9IgG4r9HjEb8bW8g","3oz8xAFtqoOUUrsh7W","26ufdipQqU84QcCa8","l0MYt5jPR6QX5pnqM"],
+  "💪 Forza":   ["3o7aCTPHNxKiRcBbio","xT9IgDEI1iZyb2wqo8","26BROrSHlmXoUKP1q","l0HlHFRbmaZtBKljO","l2SpZkQ0yCbDZqHgk"],
+  "🌱 Garden":  ["xT9IgDEI1iZyb2wqo8","3oz8xAFtqoOUUrsh7W","l3vRhj2MhHQBLO0cI","26ufdipQqU84QcCa8","l0MYt5jPR6QX5pnqM"],
+};
 
 // ─── LOGIN ────────────────────────────────────────────────
 // Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
@@ -3099,66 +3094,49 @@ function AvatarStickerPicker({ onSelect }) {
 }
 
 function GifSearch({ onSelect }) {
-  const [query, setQuery] = useState("");
-  const [gifs, setGifs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
+  const [tab, setTab] = useState(Object.keys(CURATED_GIFS)[0]);
+  const [customUrl, setCustomUrl] = useState("");
 
-  // Load trending on mount
-  useEffect(() => {
-    setLoading(true); setErr("");
-    fetch("https://api.giphy.com/v1/gifs/trending?api_key=dc6zaTOxFJmzC&limit=12&rating=g")
-      .then(r => r.json())
-      .then(data => {
-        const results = (data.data||[]).map(r=>({
-          id:r.id,
-          url:r.images?.fixed_height?.url||r.images?.original?.url,
-          preview:r.images?.fixed_height_small?.url||r.images?.fixed_height?.url,
-        })).filter(r=>r.url);
-        setGifs(results); setLoading(false);
-      })
-      .catch(e=>{ setErr("Errore: "+e.message); setLoading(false); });
-  }, []);
-
-  function doSearch(q) {
-    if (!q.trim()) return;
-    setLoading(true); setErr("");
-    fetch(`https://api.giphy.com/v1/gifs/search?api_key=dc6zaTOxFJmzC&q=${encodeURIComponent(q)}&limit=12&rating=g&lang=it`)
-      .then(r=>r.json())
-      .then(data=>{
-        const results = (data.data||[]).map(r=>({
-          id:r.id,
-          url:r.images?.fixed_height?.url||r.images?.original?.url,
-          preview:r.images?.fixed_height_small?.url||r.images?.fixed_height?.url,
-        })).filter(r=>r.url);
-        setGifs(results); setLoading(false);
-        if(!results.length) setErr("Nessun risultato");
-      })
-      .catch(e=>{ setErr("Errore: "+e.message); setLoading(false); });
-  }
+  const tabs = Object.keys(CURATED_GIFS);
+  const gifs = CURATED_GIFS[tab] || [];
 
   return (
     <div>
-      <div style={{display:"flex",gap:6,marginBottom:8}}>
-        <input className="search-inp" placeholder="🔍 Cerca GIF…" value={query}
-          onChange={e=>setQuery(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&doSearch(query)}
-          style={{flex:1}}/>
-        <button className="btn btn-ghost btn-sm" onClick={()=>doSearch(query)}>Cerca</button>
+      {/* Category tabs */}
+      <div style={{display:"flex",gap:4,marginBottom:8,flexWrap:"wrap"}}>
+        {tabs.map(t=>(
+          <button key={t} onClick={()=>setTab(t)}
+            style={{padding:"3px 8px",borderRadius:99,border:"1px solid var(--border2)",
+              background:tab===t?"var(--neon-blue)":"transparent",
+              color:tab===t?"#fff":"var(--text2)",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            {t}
+          </button>
+        ))}
       </div>
-      {err && <div style={{fontSize:11,color:"var(--danger)",marginBottom:6}}>{err}</div>}
-      {loading
-        ? <div style={{textAlign:"center",padding:12,fontSize:12,color:"var(--text3)"}}>⏳ Caricamento…</div>
-        : <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,maxHeight:220,overflowY:"auto"}}>
-            {gifs.map(g=>(
-              <img key={g.id} src={g.preview} alt="" onClick={()=>onSelect(g.url)}
-                style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:6,cursor:"pointer",border:"2px solid transparent"}}
-                onMouseOver={e=>e.target.style.borderColor="var(--neon-blue)"}
-                onMouseOut={e=>e.target.style.borderColor="transparent"}/>
-            ))}
-          </div>
-      }
-      <div style={{fontSize:9,color:"var(--text3)",marginTop:4,textAlign:"right"}}>Powered by GIPHY</div>
+
+      {/* GIF grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,marginBottom:8}}>
+        {gifs.map(id=>{
+          const url = `https://media.giphy.com/media/${id}/giphy.gif`;
+          return (
+            <img key={id} src={url} alt="" onClick={()=>onSelect(url)}
+              style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:8,cursor:"pointer",border:"2px solid transparent",transition:"border .1s"}}
+              onMouseOver={e=>e.target.style.borderColor="var(--neon-blue)"}
+              onMouseOut={e=>e.target.style.borderColor="transparent"}/>
+          );
+        })}
+      </div>
+
+      {/* Paste URL custom */}
+      <div style={{borderTop:"1px solid var(--border)",paddingTop:8}}>
+        <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Oppure incolla URL di una GIF da Giphy/Tenor:</div>
+        <div style={{display:"flex",gap:6}}>
+          <input className="search-inp" placeholder="https://media.giphy.com/..." value={customUrl}
+            onChange={e=>setCustomUrl(e.target.value)} style={{flex:1,fontSize:12}}/>
+          <button className="btn btn-ghost btn-sm" onClick={()=>{if(customUrl.trim()){onSelect(customUrl.trim());setCustomUrl("");}}} disabled={!customUrl.trim()}>Usa</button>
+        </div>
+      </div>
+      <div style={{fontSize:9,color:"var(--text3)",marginTop:6,textAlign:"right"}}>Powered by GIPHY</div>
     </div>
   );
 }
