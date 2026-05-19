@@ -1254,7 +1254,7 @@ function XpBar({ xp, dark = false }) {
   const pct = nextLv ? Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100) : 100;
   return (
     <div>
-      <div className="xp-bar-wrap"><div className="xp-bar" style={{ width: pct + "%", animation:"xpFill 1s ease-out" }} /></div>
+      <div className="xp-bar-wrap"><div className="xp-bar" style={{ width: pct + "%", animation:"xpFill 1s ease-out forwards" }} /></div>
       <div className="xp-label"><span>{xp} XP</span>{nextLv && <span>{nextLv.xp} XP</span>}</div>
     </div>
   );
@@ -2405,7 +2405,7 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
               const xpShown = timeFilter === "oggi" ? xpToday[p.id] || 0 : timeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
               const xpLabel = timeFilter === "oggi" ? "XP oggi" : timeFilter === "mese" ? "XP mese" : "XP";
               return (
-                <div key={p.id} className="lb-row" style={{animation:`slideInRow .3s ${Math.min(realIdx*.06,.5)}s both`}}>
+                <div key={p.id} className="lb-row" style={{animation:`slideInRow .3s ${Math.min(i*.06,.5)}s both`}}>
                   <span className="lb-rank">{(realIdx+1)+"°"}</span>
                   <div className="lb-av"><Avatar url={p.avatar_url} emoji={lv.emoji} size={38} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -4511,7 +4511,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       )}
       {/* Floral background */}
       <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.07,overflow:'hidden'}}>
-        <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
+        <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{animation:"float2 15s ease-in-out infinite"}} style={{width:'100%',height:'100%'}}>
           <defs>
             <g id="fl"><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="4" fill="white"/></g>
             <g id="lf"><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(20)"/><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(-20)"/></g>
@@ -4637,7 +4637,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               <div className="streak-card">
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(255,140,0,.7)',marginBottom:8}}>🔥 Streak presenze</div>
                 <div className="streak-row">
-                  <div className="streak-item"><span className="streak-val">{fullProfile.current_streak||0}</span><span className="streak-lbl">Giorni attuali</span></div>
+                  <div className="streak-item"><span className="streak-val">{fullProfile.current_streak||0}</span><span className="streak-lbl"><span className="flame-pulse">🔥</span> Giorni attuali</span></div>
                   <div className="streak-item"><span className="streak-val">{fullProfile.longest_streak||0}</span><span className="streak-lbl">Record</span></div>
                   <div className="streak-item"><span className="streak-val">{(() => { const now=new Date(); return new Date(now.getFullYear(),now.getMonth()+1,0).getDate(); })()}</span><span className="streak-lbl">Giorni mese</span></div>
                 </div>
@@ -5792,8 +5792,8 @@ function EducatorShell({ profile, onLogout }) {
   return (
     <div className="edu-layout">
       {/* Floral background */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.04,overflow:'hidden',maxWidth:'100vw'}}>
-        <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.05,overflow:'hidden',maxWidth:'100vw'}}>
+        <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%',animation:'float1 18s ease-in-out infinite'}}>
           <defs><g id="ef"><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="5" fill="white"/></g></defs>
           <use href="#ef" transform="translate(80,80) scale(1.4)"/><use href="#ef" transform="translate(350,60) scale(1.1)"/><use href="#ef" transform="translate(700,90) scale(1.3)"/><use href="#ef" transform="translate(1050,70) scale(1)"/><use href="#ef" transform="translate(200,300) scale(.9)"/><use href="#ef" transform="translate(550,280) scale(1.2)"/><use href="#ef" transform="translate(900,310) scale(1)"/><use href="#ef" transform="translate(100,550) scale(1.1)"/><use href="#ef" transform="translate(450,520) scale(.8)"/><use href="#ef" transform="translate(800,560) scale(1.3)"/><use href="#ef" transform="translate(250,780) scale(1)"/><use href="#ef" transform="translate(650,760) scale(1.2)"/><use href="#ef" transform="translate(1000,790) scale(.9)"/>
         </svg>
