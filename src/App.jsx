@@ -3099,28 +3099,66 @@ function AvatarStickerPicker({ onSelect }) {
 }
 
 function GifSearch({ onSelect }) {
-  const [query, setQuery] = useState("celebrate");
+  const [query, setQuery] = useState("");
   const [gifs, setGifs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
+  // Load trending on mount
   useEffect(() => {
-    setLoading(true);
-    searchGifs(query).then(r => { setGifs(r); setLoading(false); });
-  }, [query]);
+    setLoading(true); setErr("");
+    fetch("https://api.giphy.com/v1/gifs/trending?api_key=dc6zaTOxFJmzC&limit=12&rating=g")
+      .then(r => r.json())
+      .then(data => {
+        const results = (data.data||[]).map(r=>({
+          id:r.id,
+          url:r.images?.fixed_height?.url||r.images?.original?.url,
+          preview:r.images?.fixed_height_small?.url||r.images?.fixed_height?.url,
+        })).filter(r=>r.url);
+        setGifs(results); setLoading(false);
+      })
+      .catch(e=>{ setErr("Errore: "+e.message); setLoading(false); });
+  }, []);
+
+  function doSearch(q) {
+    if (!q.trim()) return;
+    setLoading(true); setErr("");
+    fetch(`https://api.giphy.com/v1/gifs/search?api_key=dc6zaTOxFJmzC&q=${encodeURIComponent(q)}&limit=12&rating=g&lang=it`)
+      .then(r=>r.json())
+      .then(data=>{
+        const results = (data.data||[]).map(r=>({
+          id:r.id,
+          url:r.images?.fixed_height?.url||r.images?.original?.url,
+          preview:r.images?.fixed_height_small?.url||r.images?.fixed_height?.url,
+        })).filter(r=>r.url);
+        setGifs(results); setLoading(false);
+        if(!results.length) setErr("Nessun risultato");
+      })
+      .catch(e=>{ setErr("Errore: "+e.message); setLoading(false); });
+  }
+
   return (
     <div>
-      <input className="search-inp" placeholder="🔍 Cerca GIF…" value={query}
-        onChange={e=>setQuery(e.target.value)} style={{marginBottom:8}}/>
-      {loading ? <div style={{textAlign:"center",padding:8,fontSize:12,color:"var(--text3)"}}>⏳</div> : (
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,maxHeight:200,overflowY:"auto"}}>
-          {gifs.map(g=>(
-            <img key={g.id} src={g.preview} alt="" onClick={()=>onSelect(g.url)}
-              style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:6,cursor:"pointer",border:"2px solid transparent"}}
-              onMouseOver={e=>e.target.style.borderColor="var(--neon-blue)"}
-              onMouseOut={e=>e.target.style.borderColor="transparent"}/>
-          ))}
-          {gifs.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",fontSize:12,color:"var(--text3)",padding:8}}>Nessun risultato</div>}
-        </div>
-      )}
+      <div style={{display:"flex",gap:6,marginBottom:8}}>
+        <input className="search-inp" placeholder="🔍 Cerca GIF…" value={query}
+          onChange={e=>setQuery(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&doSearch(query)}
+          style={{flex:1}}/>
+        <button className="btn btn-ghost btn-sm" onClick={()=>doSearch(query)}>Cerca</button>
+      </div>
+      {err && <div style={{fontSize:11,color:"var(--danger)",marginBottom:6}}>{err}</div>}
+      {loading
+        ? <div style={{textAlign:"center",padding:12,fontSize:12,color:"var(--text3)"}}>⏳ Caricamento…</div>
+        : <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,maxHeight:220,overflowY:"auto"}}>
+            {gifs.map(g=>(
+              <img key={g.id} src={g.preview} alt="" onClick={()=>onSelect(g.url)}
+                style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:6,cursor:"pointer",border:"2px solid transparent"}}
+                onMouseOver={e=>e.target.style.borderColor="var(--neon-blue)"}
+                onMouseOut={e=>e.target.style.borderColor="transparent"}/>
+            ))}
+          </div>
+      }
+      <div style={{fontSize:9,color:"var(--text3)",marginTop:4,textAlign:"right"}}>Powered by GIPHY</div>
     </div>
   );
 }
