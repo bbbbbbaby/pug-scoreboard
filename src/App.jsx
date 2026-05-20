@@ -32,7 +32,7 @@ async function registerPush(playerId) {
       { onConflict: 'player_id' }
     );
     console.log('Push registrata ✅');
-  } catch(e) { console.warn('Push registration failed:', e.message); }
+  } catch(_) { /* push non supportato su questo dispositivo/browser */ }
 }
 
 async function sendPush(playerId, title, body) {
@@ -1895,8 +1895,8 @@ function Login({ onLogin }) {
     // Salva sessione player in localStorage
     localStorage.setItem("pug_player", JSON.stringify({ ...data, _playerSession: true }));
     onLogin({ ...data, _playerSession: true });
-    // Registra push in background
-    registerPush(data.id).catch(console.warn);
+    // Registra push in background (silenzioso)
+    setTimeout(() => registerPush(data.id), 2000);
     setLoadingPin(false);
   }
 
@@ -1906,8 +1906,8 @@ function Login({ onLogin }) {
     if (error) { setEduErr(error.message); setLoadingEdu(false); return; }
     const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
-    // Registra push educator in background
-    if (profile?.id) registerPush(profile.id).catch(console.warn);
+    // Registra push educator in background (silenzioso)
+    if (profile?.id) setTimeout(() => registerPush(profile.id), 2000);
     setLoadingEdu(false);
   }
 
@@ -3531,8 +3531,7 @@ function MessagesView({ profile }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent]   = useState("");
   const [mediaData, setMediaData] = useState(null);
-  const [mediaType, setMediaType] = useState(null); // "image" | "gif" | "sticker" | null
-  const [mediaPanel, setMediaPanel] = useState(null); // "sticker" | "gif" | null
+  const [mediaType, setMediaType] = useState(null);
   const mediaRef = useRef();
 
   async function loadAll() {
@@ -3585,7 +3584,7 @@ function MessagesView({ profile }) {
       setSending(false); setTimeout(()=>setSent(""),3000); setBody(""); setExpiry(""); return;
     }
 
-    setBody(""); setExpiry(""); setSelectedPlayers([]); setMediaData(null); setMediaType(null); setMediaPanel(null);
+    setBody(""); setExpiry(""); setSelectedPlayers([]); setMediaData(null); setMediaType(null);
     setSent("Messaggio inviato ✅"); setTimeout(()=>setSent(""),3000);
     loadAll(); setSending(false);
   }
@@ -3695,13 +3694,7 @@ function MessagesView({ profile }) {
             const isGif = file.type === "image/gif";
             if (isGif) {
               const reader = new FileReader();
-              reader.onload = ev => { setMediaData(ev.target.result); setMediaType("gif"); setMediaPanel(null); };
-              reader.readAsDataURL(file);
-            } else {
-              const compressed = await compressToWebP(file, 600, 0.85);
-              const reader = new FileReader();
-              reader.onload = ev => { setMediaData(ev.target.result); setMediaType("image"); setMediaPanel(null); };
-              reader.readAsDataURL(compressed);
+              reader.onload = ev => { setMediaData(ev.target.result); setMediaType("image"); };
             }
           }}/>
           {mediaData ? (
@@ -3715,21 +3708,21 @@ function MessagesView({ profile }) {
             </div>
           ) : (
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              <button className={`chip ${mediaPanel==="sticker"?"active":""}`} onClick={()=>setMediaPanel(p=>p==="sticker"?null:"sticker")}>🎭 Sticker PUG</button>
-              <button className={`chip ${mediaPanel==="gif"?"active":""}`} onClick={()=>setMediaPanel(p=>p==="gif"?null:"gif")}>🎬 GIF</button>
+              <button className={`chip ${mediaPanel==="sticker"?"active":""}`} onClick={()=>}>🎭 Sticker PUG</button>
+              <button className={`chip ${mediaPanel==="gif"?"active":""}`} onClick={()=>}>🎬 GIF</button>
               <button className="chip" onClick={()=>mediaRef.current.click()}>📷 Foto</button>
             </div>
           )}
 
           {/* Sticker picker - avatar PUG dalla CDN */}
           {mediaPanel==="sticker" && !mediaData && (
-            <AvatarStickerPicker onSelect={(url)=>{setMediaData(url);setMediaType("sticker");setMediaPanel(null);}}/>
+            <AvatarStickerPicker onSelect={(url)=>{setMediaData(url);setMediaType("sticker");}}/>
           )}
 
           {/* GIF search */}
           {mediaPanel==="gif" && !mediaData && (
             <div style={{marginTop:8,background:"var(--surface2)",borderRadius:12,border:"1px solid var(--border)",padding:10}}>
-              <GifSearch onSelect={(url)=>{setMediaData(url);setMediaType("gif");setMediaPanel(null);}}/>
+              <GifSearch onSelect={(url)=>{setMediaData(url);setMediaType("gif");}}/>
             </div>
           )}
           <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>Sticker: zero peso · GIF: da Tenor CDN · Foto: compressa in WebP</div>
@@ -4258,6 +4251,74 @@ function StreakConfigView() {
 
 
 
+
+// ─── PROFILE REACTIONS ───────────────────────────────────
+function ProfileReactions({ targetId, myId }) {
+  const REACTS = ["❤️","🔥","👏","🤩","💪"];
+  const [counts, setCounts] = useState({});
+  const [mine, setMine] = useState(null);
+
+  useEffect(() => {
+    sb.from("reactions").select("type").eq("target_player_id", targetId).is("badge_id", null)
+      .then(({ data }) => {
+        const c = {};
+        (data||[]).forEach(r => { c[r.type] = (c[r.type]||0)+1; });
+        setCounts(c);
+      });
+    sb.from("reactions").select("type").eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null).single()
+      .then(({ data }) => { if (data) setMine(data.type); })
+      .catch(()=>{});
+  }, [targetId, myId]);
+
+  async function react(type) {
+    if (mine === type) {
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null);
+      setCounts(p => ({...p, [type]: Math.max(0,(p[type]||1)-1)}));
+      setMine(null);
+    } else {
+      // Delete existing profile reaction first (NULL badge_id)
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null);
+      await sb.from("reactions").insert({ player_id:myId, target_player_id:targetId, badge_id:null, type });
+      if (mine) setCounts(p => ({...p, [mine]: Math.max(0,(p[mine]||1)-1)}));
+      setCounts(p => ({...p, [type]: (p[type]||0)+1}));
+      setMine(type);
+      playPixel("msg");
+      if(navigator.vibrate) navigator.vibrate(30);
+    }
+  }
+
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+
+  return (
+    <div style={{marginTop:12}}>
+      <div style={{fontSize:10,color:"var(--text3)",marginBottom:8,textTransform:"uppercase",letterSpacing:".1em",fontWeight:700}}>
+        {total > 0 ? `${total} reaction` : "Manda una reaction!"}
+      </div>
+      <div style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
+        {REACTS.map(r => {
+          const count = counts[r]||0;
+          const isMe = mine===r;
+          return (
+            <button key={r} onClick={()=>react(r)}
+              style={{
+                padding:"8px 14px",borderRadius:99,cursor:"pointer",
+                border:`2px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
+                background:isMe?"rgba(0,212,255,.15)":"rgba(255,255,255,.04)",
+                fontSize:20,display:"flex",alignItems:"center",gap:6,
+                transform:isMe?"scale(1.1)":"scale(1)",
+                transition:"all .15s",
+                boxShadow:isMe?"var(--glow-blue)":"none",
+              }}>
+              {r}
+              {count>0 && <span style={{fontSize:12,fontWeight:700,color:isMe?"var(--neon-blue)":"var(--text3)"}}>{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── COMMUNITY TAB + REACTIONS ───────────────────────────
 function CommunityTab({ players, myId, myProfile }) {
   const [selected, setSelected] = useState(null);
@@ -4320,7 +4381,9 @@ function CommunityTab({ players, myId, myProfile }) {
           </div>
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,fontWeight:900,color:"var(--text)",textTransform:"uppercase"}}>{selected.display_name}</div>
           <div style={{fontSize:13,color:"var(--text3)",marginBottom:10}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
-          {selected.squads?.name && <div style={{display:"inline-block",background:"rgba(255,255,255,.06)",borderRadius:99,padding:"3px 12px",fontSize:11,color:"var(--text2)",fontWeight:700}}>🛡️ {selected.squads.name}</div>}
+          {selected.squads?.name && <div style={{display:"inline-block",background:"rgba(255,255,255,.06)",borderRadius:99,padding:"3px 12px",fontSize:11,color:"var(--text2)",fontWeight:700,marginBottom:10}}>🛡️ {selected.squads.name}</div>}
+          {/* Profile reactions */}
+          <ProfileReactions targetId={selected.id} myId={myId}/>
         </div>
 
         {loadingProfile ? <div className="loading">⏳</div> : (
