@@ -3708,15 +3708,10 @@ function MessagesView({ profile }) {
             </div>
           ) : (
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              <button className={`chip ${mediaPanel==="sticker"?"active":""}`} onClick={()=>}>🎭 Sticker PUG</button>
-              <button className={`chip ${mediaPanel==="gif"?"active":""}`} onClick={()=>}>🎬 GIF</button>
-              <button className="chip" onClick={()=>mediaRef.current.click()}>📷 Foto</button>
+              
+              
+              <button className="btn btn-ghost btn-sm" onClick={()=>mediaRef.current.click()}>📷 Aggiungi foto</button>
             </div>
-          )}
-
-          {/* Sticker picker - avatar PUG dalla CDN */}
-          {mediaPanel==="sticker" && !mediaData && (
-            <AvatarStickerPicker onSelect={(url)=>{setMediaData(url);setMediaType("sticker");}}/>
           )}
 
           {/* GIF search */}
