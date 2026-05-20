@@ -1,6 +1,57 @@
 import { sb } from "./supabase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 
+// ─── PUSH NOTIFICATIONS ───────────────────────────────
+const VAPID_PUBLIC_KEY = "BB29nPfLuESEo3G7G7yKcIZ6pERzx13f9_kR8EIe-4BpE8tReQ-nHAjOniz0vCK95-TmbaRx5sVkZRx5lmsMTNg";
+const PUSH_EDGE_URL = "https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/send-push";
+const PUSH_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function registerPush(playerId) {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const swReady = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_,r) => setTimeout(() => r(new Error('SW timeout')), 5000))
+    ]);
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    await sb.from('push_subscriptions').upsert(
+      { player_id: playerId, subscription: sub.toJSON() },
+      { onConflict: 'player_id' }
+    );
+  } catch(_) { /* push non supportato su questo dispositivo/browser */ }
+}
+
+async function sendPush(playerId, title, body) {
+  try {
+    const { data: sub } = await sb.from('push_subscriptions')
+      .select('subscription').eq('player_id', playerId).single();
+    if (!sub?.subscription) return;
+    await fetch(PUSH_EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PUSH_ANON_KEY}` },
+      body: JSON.stringify({ subscription: sub.subscription, title, body }),
+    });
+  } catch(e) { }
+}
+
+async function sendPushToAll(playerIds, title, body) {
+  for (const pid of playerIds) { await sendPush(pid, title, body); }
+}
+
+
 // ─── LIVELLI ──────────────────────────────────────────────
 const LEVELS = [
   {id:1,name:"Seme",emoji:"🌱",xp:0},{id:2,name:"Germoglio",emoji:"🌿",xp:50},
@@ -53,7 +104,7 @@ const css = `
 
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
-  body { font-family:'Funnel Display',sans-serif; background:#04080f; color:#e8f4ff; min-height:100vh; -webkit-font-smoothing:antialiased; }
+  body { font-family:'Funnel Display',sans-serif; background:#04080f; color:#e8f4ff; min-height:100vh; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
 
   :root {
     --azzurro:#A3CFFE; --rosa:#FF6DEC; --giallo:#FDEF26; --verde:#339966; --rosso:#D41323;
@@ -111,7 +162,9 @@ const css = `
   .login-tabs { display:flex; background:rgba(0,212,255,0.05); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:24px; gap:4px; }
   .login-tab { flex:1; padding:10px; border-radius:9px; border:none; cursor:pointer; font-family:'Funnel Display'; font-size:13px; font-weight:700; background:transparent; color:var(--text2); transition:all .2s; }
   .login-tab.active { background:linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.08)); color:var(--neon-blue); border:1px solid rgba(0,212,255,0.3); box-shadow:var(--glow-blue); }
-  .form-group { margin-bottom:14px; }
+  .form-group { margin-bottom:16px; }
+  .form-input:focus + .form-hint, .form-input:focus ~ .form-hint { color: var(--neon-blue); }
+  .form-hint { font-size:11px; color:var(--text3); margin-top:4px; }
   .form-label { font-size:10px; font-weight:700; color:var(--text3); margin-bottom:5px; display:block; text-transform:uppercase; letter-spacing:.15em; }
   .form-input {
     width:100%; padding:13px 16px; background:rgba(0,212,255,0.04); border:1px solid var(--border2);
@@ -175,12 +228,12 @@ const css = `
   .content { flex:1; padding:20px 24px; }
 
   /* ═══ MOBILE EDUCATOR ═══ */
-  .mob-header { display:none; position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,20,.75); border-bottom:1px solid rgba(255,255,255,.08); z-index:20; align-items:center; padding:0 14px; gap:10px; backdrop-filter:blur(24px); }
+  .mob-header { display:none; position:fixed; top:0; left:0; right:0; min-height:56px; background:rgba(0,0,20,.75); border-bottom:1px solid rgba(255,255,255,.08); z-index:20; align-items:center; padding:env(safe-area-inset-top,0px) 14px; gap:10px; backdrop-filter:blur(24px);  height:calc(56px + env(safe-area-inset-top,0px)); }
   .mob-header-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:20px; text-transform:uppercase; color:#fff; flex:1; letter-spacing:.05em; }
   .mob-drawer-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:30; backdrop-filter:blur(6px); }
   .mob-drawer { position:fixed; top:0; left:0; bottom:0; width:270px; background:rgba(10,5,40,.97); border-right:1px solid rgba(255,255,255,.08); z-index:40; transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; backdrop-filter:blur(24px); }
   .mob-drawer.open { transform:translateX(0); }
-  .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(0,0,20,.88); border-top:1px solid rgba(255,255,255,.08); z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(24px); }
+  .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; padding-bottom:env(safe-area-inset-bottom,0px); background:rgba(0,0,20,.88); border-top:1px solid rgba(255,255,255,.08); z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(24px); }
   .mob-bottom-nav-inner { display:flex; height:60px; }
   .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:rgba(255,255,255,.28); font-family:'Funnel Display'; padding:0; transition:color .15s; }
   .mob-nav-btn.active { color:#ffcc00; }
@@ -234,12 +287,12 @@ const css = `
   /* ═══ LEADERBOARD ═══ */
   .lb-list { display:flex; flex-direction:column; gap:6px; }
   .lb-row {
-    display:flex; align-items:center; gap:12px;
+    display:flex; align-items:center; gap:8px;
     background:rgba(8,18,40,0.9); border:1px solid var(--border);
-    border-radius:12px; padding:12px 14px; transition:all .15s; position:relative; overflow:hidden;
+    border-radius:12px; padding:10px 12px; transition:all .15s; position:relative; overflow:hidden;
   }
   .lb-row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--border); }
-  .lb-rank { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:900; width:32px; text-align:center; color:var(--text3); flex-shrink:0; }
+  .lb-rank { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; width:26px; text-align:center; color:var(--text3); flex-shrink:0; }
   .lb-rank.gold { color:var(--neon-gold); text-shadow:0 0 16px rgba(255,204,0,0.7); }
   .lb-rank.silver { color:#aac8e0; }
   .lb-rank.bronze { color:#d4916a; }
@@ -249,11 +302,11 @@ const css = `
   .lb-row:nth-child(2)::before { background:linear-gradient(180deg,#aac8e0,transparent); }
   .lb-row:nth-child(3) { border-color:rgba(212,145,106,0.2); }
   .lb-row:nth-child(3)::before { background:linear-gradient(180deg,#d4916a,transparent); }
-  .lb-av { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; overflow:hidden; border:1.5px solid var(--border2); }
+  .lb-av { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; overflow:hidden; border:1.5px solid var(--border2); }
   .lb-av img { width:100%; height:100%; object-fit:cover; }
-  .lb-name { flex:1; font-size:14px; font-weight:700; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .lb-level { font-size:10px; color:var(--text3); margin-top:1px; }
-  .lb-xp { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:900; color:var(--neon-blue); flex-shrink:0; }
+  .lb-name { flex:1; font-size:13px; font-weight:700; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-level { font-size:9px; color:var(--text3); margin-top:1px; }
+  .lb-xp { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; color:var(--neon-blue); flex-shrink:0; }
 
   /* ═══ PLAYER DETAIL ═══ */
   .player-detail { background:rgba(5,15,35,0.95); border:1px solid rgba(0,212,255,0.25); border-radius:var(--radius-lg); padding:20px; margin-top:12px; box-shadow:var(--glow-blue); }
@@ -282,6 +335,27 @@ const css = `
   .pres-table th { padding:10px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--text3); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.1em; background:rgba(4,8,20,0.95); }
   .pres-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text); }
   .pres-dot { width:32px; height:32px; border-radius:8px; border:none; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; transition:all .12s; }
+  /* Toggle presenza: variabili per light/dark */
+  :root {
+    --pt-empty-bg:     rgba(255,255,255,.07);
+    --pt-empty-color:  rgba(255,255,255,.3);
+    --pt-empty-border: 1.5px solid rgba(255,255,255,.18);
+    --pt-done-bg:      rgba(0,255,136,.18);
+    --pt-done-color:   #00ff88;
+    --pt-done-border:  1.5px solid rgba(0,255,136,.4);
+  }
+  .light {
+    --pt-empty-bg:     #ffffff;
+    --pt-empty-color:  #9e9e9e;
+    --pt-empty-border: 2px solid #9e9e9e;
+    --pt-done-bg:      #e8f5e9;
+    --pt-done-color:   #2e7d32;
+    --pt-done-border:  2px solid #2e7d32;
+  }
+  .pres-toggle { width:40px; height:40px; border-radius:10px; cursor:pointer; font-size:18px; font-weight:900; transition:all .15s; display:inline-flex; align-items:center; justify-content:center; }
+  .pres-toggle.done  { background:var(--pt-done-bg);  color:var(--pt-done-color);  border:var(--pt-done-border);  box-shadow:0 0 10px rgba(0,255,136,.2); }
+  .pres-toggle.empty { background:var(--pt-empty-bg); color:var(--pt-empty-color); border:var(--pt-empty-border); box-shadow:none; }
+  .light .pres-toggle.done  { box-shadow:0 2px 8px rgba(46,125,50,.2); }
   .pd-yes { background:rgba(0,255,136,.15); color:var(--neon-green); border:1px solid rgba(0,255,136,.3); }
   .pd-partial { background:rgba(255,204,0,.12); color:var(--neon-gold); border:1px solid rgba(255,204,0,.25); }
   .pd-completed { background:rgba(0,255,136,.25); color:#00ff88; border:1px solid rgba(0,255,136,.4); }
@@ -460,7 +534,7 @@ const css = `
   .bubble.mine { background:rgba(0,212,255,.15); color:var(--neon-blue); border:1px solid rgba(0,212,255,.25); }
   .msg-inp-row { padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:8px; background:rgba(0,212,255,0.02); }
   .msg-inp { flex:1; padding:10px 12px; background:rgba(0,212,255,0.06); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; }
-  .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--neon-pink); display:inline-block; margin-left:4px; vertical-align:middle; box-shadow:0 0 8px rgba(255,0,204,0.6); animation:pulse 2s infinite; }
+  .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--neon-pink); animation:pulse2 2s infinite; display:inline-block; margin-left:4px; vertical-align:middle; box-shadow:0 0 8px rgba(255,0,204,0.6); animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
   .notif-item { display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); }
   .notif-icon { font-size:24px; flex-shrink:0; }
@@ -498,24 +572,32 @@ const css = `
     .act-grid { grid-template-columns:1fr 1fr; }
     .modal-bg { align-items:center; }
     .modal { border-radius:20px; }
+    .lb-av { width:40px; height:40px; font-size:20px; }
+    .lb-rank { font-size:22px; width:32px; }
+    .lb-name { font-size:14px; }
+    .lb-xp { font-size:22px; }
+    .lb-row { gap:12px; padding:12px 14px; }
   }
   @media (max-width:767px) {
     .sidebar { display:none; }
-    .edu-main { margin-left:0; }
+    .edu-main { margin-left:0; overflow-x:hidden; }
+    .edu-layout { overflow-x:hidden; }
     .topbar { display:none; }
-    .content { padding:14px; }
+    .content { padding:12px; overflow-x:hidden; }
     .mob-header { display:flex; }
     .mob-bottom-nav { display:block; }
-    .edu-content-wrap { padding-top:58px; padding-bottom:calc(62px + env(safe-area-inset-bottom,0px) + 8px); }
+    .edu-content-wrap { padding-top:calc(58px + env(safe-area-inset-top,0px)); padding-bottom:calc(62px + env(safe-area-inset-bottom,0px) + 8px); overflow-x:hidden; }
     .player-grid { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
     .msg-layout { flex-direction:column; height:auto; }
     .msg-list { width:100%; flex-direction:row; overflow-x:auto; flex-wrap:nowrap; padding-bottom:4px; height:auto; }
     .msg-thread { flex-shrink:0; width:130px; }
     .msg-main { height:340px; }
+    .stats-grid { grid-template-columns:repeat(2,1fr) !important; }
+    .lb-list { width:100%; }
   }
 
   /* ═══ PODIUM ═══ */
-  .podium-wrap { display:flex; align-items:flex-end; gap:6px; margin:0 0 14px; padding:0 2px; }
+  .podium-wrap { display:flex; align-items:flex-end; gap:4px; margin:0 0 14px; padding:0 2px; overflow-x:auto; }
   .pod-col { flex:1; text-align:center; }
   .pod-crown { font-size:18px; margin-bottom:3px; display:block; }
   .pod-av-wrap { border-radius:50%; margin:0 auto 6px; overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative; }
@@ -544,166 +626,500 @@ const css = `
   .month-prog-fill { height:100%; background:linear-gradient(90deg,#ff6600,#ffaa00); border-radius:99px; }
 
 
-  /* ═══ LIGHT MODE ═══ */
-  .light body { background:#f0f4ff; color:#1a1a3a; }
-  .light body::before { background: radial-gradient(ellipse 80% 50% at 20% -10%,rgba(100,140,255,.1) 0%,transparent 60%), #f0f4ff; }
-  .light body::after { background-image: linear-gradient(rgba(80,80,200,.04) 1px,transparent 1px), linear-gradient(90deg,rgba(80,80,200,.04) 1px,transparent 1px); }
+  /* ═══ LIGHT MODE — Redesign sistematico ═══ */
 
-  /* Educator light */
-  .light .edu-layout { background:#f0f4ff; }
-  .light .sidebar { background:#ffffff; border-right:2px solid #e0e6f8; box-shadow:4px 0 16px rgba(0,0,80,.08); }
-  .light .sidebar-logo-box { background:#cc1111; }
-  .light .sidebar-badge { background:rgba(255,180,0,.15); border-color:rgba(255,180,0,.4); color:#8a5e00; }
-  .light .nav-item { color:#5a5a8a; font-weight:600; }
-  .light .nav-item:hover { background:#f0f4ff; color:#1a1a3a; }
-  .light .nav-item.active { background:#fffbe0; color:#7a5800; border-left-color:#c09000; font-weight:700; }
-  .light .sidebar-user { border-top:2px solid #e0e6f8; }
-  .light .topbar { background:#ffffff; border-bottom:2px solid #e0e6f8; box-shadow:0 2px 12px rgba(0,0,80,.07); }
-  .light .topbar-title { color:#1a1a3a; }
-  .light .mob-header { background:#ffffff; border-bottom:2px solid #e0e6f8; }
-  .light .mob-header-title { color:#1a1a3a; }
-  .light .mob-bottom-nav { background:#ffffff; border-top:2px solid #e0e6f8; box-shadow:0 -2px 12px rgba(0,0,80,.06); }
-  .light .mob-nav-btn { color:#8a8ab0; }
-  .light .mob-nav-btn.active { color:#7a5800; }
-  .light .mob-drawer { background:#ffffff; }
-  .light .content { background:#f0f4ff; }
+  /* ─ Step 1: Override di tutte le variabili root ─ */
+  .light {
+    --neon-blue:  #1565c0;
+    --neon-pink:  #ad1457;
+    --neon-gold:  #f57f17;
+    --neon-green: #2e7d32;
+    --azzurro:    #1976d2;
+    --rosa:       #c2185b;
+    --giallo:     #f9a825;
+    --verde:      #388e3c;
+    --rosso:      #c62828;
+    --text:       #0d1117;
+    --text2:      #3a4a5c;
+    --text3:      #6b7e94;
+    --surface:    rgba(255,255,255,0.95);
+    --surface2:   rgba(240,244,255,0.9);
+    --surface3:   rgba(230,236,252,0.85);
+    --border:     rgba(0,0,0,0.10);
+    --border2:    rgba(0,0,0,0.18);
+    --accent:     #1565c0;
+    --accent2:    #2e7d32;
+    --danger:     #c62828;
+    --warning:    #e65100;
+    --glow-blue:  0 2px 12px rgba(21,101,192,.2);
+    --glow-gold:  0 2px 12px rgba(245,127,23,.25);
+    --glow-green: 0 2px 10px rgba(46,125,50,.2);
+    --glow-pink:  0 2px 12px rgba(173,20,87,.2);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --radius-lg: 20px;
+  }
 
-  /* Cards & elements */
-  .light .card { background:#ffffff; border:1px solid #e0e6f8; box-shadow:0 2px 8px rgba(0,0,80,.06); color:#1a1a3a; }
-  .light .card-sm { background:#ffffff; border:1px solid #e0e6f8; color:#1a1a3a; }
-  .light .stat-card { background:#ffffff; border:2px solid #e0e6f8; box-shadow:0 2px 8px rgba(0,0,80,.06); }
-  .light .stat-card::before { background:linear-gradient(90deg,transparent,rgba(180,130,0,.35),transparent); }
-  .light .stat-label { color:#6a6a9a; font-weight:700; }
-  .light .stat-value { color:#1a1a3a; }
-  .light .lb-row { background:#ffffff; border:1px solid #e0e6f8; }
-  .light .lb-row::before { background:rgba(100,100,200,.2); }
-  .light .lb-name { color:#1a1a3a; font-weight:700; }
-  .light .lb-level { color:#6a6a9a; }
-  .light .lb-xp { color:#1a5fc0; }
-  .light .lb-av { background:#f0f4ff; border-color:#dde4f8; }
-  .light .form-input { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; font-weight:500; }
-  .light .form-input:focus { border-color:#7070cc; box-shadow:0 0 0 3px rgba(112,112,204,.12); }
-  .light .form-label { color:#5a5a8a; font-weight:700; }
-  .light select { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; }
-  .light textarea { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; }
-  .light .search-inp { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; }
-  .light .act-card { background:#ffffff; border:2px solid #b0e0c0; }
-  .light .act-title { color:#1a1a3a; }
-  .light .act-meta { color:#5a5a8a; }
-  .light .badge-card { background:#ffffff; border:2px solid #e0b0e0; }
-  .light .badge-name { color:#1a1a3a; }
-  .light .modal { background:#ffffff; border:2px solid #c8d4f0; box-shadow:0 -20px 60px rgba(0,0,80,.15); }
-  .light .modal-title { color:#1a1a3a; }
-  .light .modal::before { background:linear-gradient(90deg,transparent,#7070cc,#cc4488,transparent); }
-  .light .player-card { background:#ffffff; border:2px solid #dde4f8; }
-  .light .player-card:hover { border-color:#7070cc; }
-  .light .p-name { color:#1a1a3a; }
-  .light .p-level { color:#6a6a9a; }
-  .light .p-xp { color:#1a5fc0; }
-  .light .p-coin { color:#8a6000; }
-  .light .chip { background:#ffffff; border:2px solid #c8d4f0; color:#5a5a8a; }
-  .light .chip.active { background:#fffbe0; color:#7a5800; border-color:#c09000; }
-  .light .sfida-card { background:#ffffff; border:2px solid #f0b0b0; }
-  .light .sfida-label { color:#cc2244; }
-  .light .sfida-title { color:#1a1a3a; }
-  .light .sfida-desc { color:#5a5a8a; }
-  .light .sfida-reward { background:rgba(255,204,0,.15); border-color:rgba(255,180,0,.4); color:#7a5800; }
-  .light .section-label { color:#6a6a9a; }
-  .light .batch-panel { background:rgba(100,100,200,.06); border:2px solid rgba(100,100,200,.2); }
-  .light .batch-info { color:#3a3a9a; }
-  .light .pres-wrap { border:2px solid #e0e6f8; }
-  .light .pres-table th { background:#f8f9ff; color:#5a5a8a; border-bottom:2px solid #e0e6f8; }
-  .light .pres-table td { color:#1a1a3a; border-bottom:1px solid #eef0f8; }
-  .light .squad-row { background:#ffffff; border:2px solid #e0e6f8; }
-  .light .squad-name { color:#1a1a3a; }
-  .light .diary-entry { background:#ffffff; border:1px solid #e0e6f8; }
-  .light .diary-date { color:#1a5fc0; }
-  .light .diary-text { color:#1a1a3a; }
-  .light .notif-item { border-bottom:1px solid #eef0f8; }
-  .light .notif-title { color:#1a1a3a; }
-  .light .notif-body { color:#5a5a8a; }
-  .light .msg-card { background:#ffffff; border:1px solid #e0e6f8; }
-  .light .msg-hdr { background:#f8f9ff; color:#3a3a9a; border-bottom:1px solid #e0e6f8; }
-  .light .bubble .them { background:#f0f4ff; color:#1a1a3a; border-color:#e0e6f8; }
-  .light .lb-list .lb-row:nth-child(1) { border-color:rgba(200,160,0,.4); }
-  .light .lb-list .lb-row:nth-child(2) { border-color:rgba(140,140,180,.35); }
-  .light .lb-list .lb-row:nth-child(3) { border-color:rgba(180,120,50,.3); }
-  .light .filter-bar .chip { background:#ffffff; }
-  .light .act-rewards .reward-tag { filter:saturate(1.2) brightness(.8); }
-  .light .player-detail { background:#ffffff; border:2px solid #c8d4f0; }
-  .light .player-detail-header { border-bottom:1px solid #e0e6f8; }
-  .light .detail-tab { background:#f0f4ff; border:1px solid #d0d8f0; color:#5a5a8a; }
-  .light .detail-tab.active { background:#fffbe0; color:#7a5800; border-color:#c09000; }
+  /* ─ Step 2: Base page ─ */
+  .light body {
+    background: #eef2fb;
+    color: #0d1117;
+  }
+  .light body::before {
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(21,101,192,.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(173,20,87,.06) 0%, transparent 55%),
+      #eef2fb;
+  }
+  .light body::after {
+    background-image:
+      linear-gradient(rgba(21,101,192,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(21,101,192,.04) 1px, transparent 1px);
+  }
 
-  /* Player light mode */
-  .light .player-wrap { background:linear-gradient(160deg,#e8f0ff 0%,#d8e8ff 50%,#e4dcff 100%) !important; }
-  .light .pd-topbar { background:#ffffff; border-bottom:2px solid #dde4f8; box-shadow:0 2px 10px rgba(0,0,80,.08); }
-  .light .pd-name-pill { background:#1a1a3a !important; color:#ffffff !important; }
-  .light .pd-lv-pill { background:rgba(70,70,200,.1); border-color:rgba(70,70,200,.25); color:#3a3aaa; }
-  .light .pd-card { background:#ffffff; border:1px solid #dde4f8; box-shadow:0 2px 8px rgba(0,0,80,.06); }
-  .light .pd-card * { color:#1a1a3a; }
-  .light .pd-sc { background:#ffffff; border:2px solid #dde4f8; }
-  .light .pd-sv { color:#7a5800 !important; font-weight:900; }
-  .light .pd-sl { color:#6a6a9a !important; }
-  .light .pd-squad { background:#ffffff; border:1px solid #dde4f8; }
-  .light .squad-nm { color:#1a1a3a !important; }
-  .light .squad-role { color:#6a6a9a !important; }
-  .light .pd-sfida { background:#1a1a3a !important; border:none; }
-  .light .sfl { color:#ffcc00 !important; }
-  .light .sft { color:#ffffff !important; }
-  .light .sfida-desc, .light .sfd { color:rgba(255,255,255,.7) !important; }
-  .light .sfr { background:rgba(255,204,0,.15); border-color:rgba(255,204,0,.35); color:#ffcc00; }
-  .light .pd-checkin { background:#ffffff; border:2px solid #a0ddb0; }
-  .light .cl { color:#1a8a3a !important; }
-  .light .ci-inp { background:#f0fff4; border-color:#a0ddb0; color:#1a1a3a; }
-  .light .ci-btn { background:linear-gradient(135deg,#1a7acc,#2a9aff); }
-  .light .pd-badge-item { background:#ffffff; border:2px solid #e0d0f0; }
-  .light .pd-badge-item div { color:#1a1a3a !important; }
-  .light .streak-card { background:#ffffff; border:2px solid #f0c090; }
-  .light .streak-val { color:#b86600 !important; }
-  .light .streak-lbl { color:#6a6a9a !important; }
-  .light .xp-bar-wrap { background:rgba(80,80,200,.12); }
-  .light .month-prog-bg { background:rgba(80,80,200,.12); }
-  .light .xp-bar { background:linear-gradient(90deg,#5050cc,#aa44ff); }
-  .light .month-prog-fill { background:linear-gradient(90deg,#c07000,#ffaa00); }
-  .light .player-bottom-nav { background:#ffffff !important; border-top:2px solid #dde4f8 !important; box-shadow:0 -2px 12px rgba(0,0,80,.07) !important; }
-  .light .player-nav-btn { color:#8a8ab0 !important; }
-  .light .player-nav-btn.active { color:#7a5800 !important; }
-  .light .player-nav-btn.active::after { background:#c09000 !important; }
-  .light .pd-tab-title { color:#1a1a3a !important; }
-  .light .lb-list .lb-row { background:#ffffff; border-color:#dde4f8; }
-  .light .lb-name { color:#1a1a3a !important; }
-  .light .lb-xp { color:#1a5fc0 !important; }
-  .light .lb-level { color:#6a6a9a !important; }
-  .light .sfida-card { background:#ffffff !important; border:2px solid #f0b0b0 !important; }
-  .light .sfida-title { color:#1a1a3a !important; }
-  .light .act-card { background:#ffffff; border-left:4px solid currentColor; }
-  .light .act-nm { color:#1a1a3a !important; }
-  .light .act-edu { filter:brightness(.7) saturate(1.3); }
-  .light .adsc { color:#5a5a8a !important; }
-  .light .msg-card { background:#ffffff; border-color:#dde4f8; }
-  .light .mhdr { background:#f8f9ff; color:#3a3a9a; }
-  .light .bb-t { background:#f0f4ff; color:#1a1a3a; border-color:#e0e6f8; }
-  .light .bb-m { background:#e0f0ff; color:#1a5fc0; border-color:#b0d4f8; }
-  .light .notif-item { border-color:#eef0f8; }
-  .light .ntit { color:#1a1a3a !important; }
-  .light .nbdy { color:#5a5a8a !important; }
-  .light .ntim { color:#8a8ab0 !important; }
-  .light .xp-lbl { color:#6a6a9a !important; }
-  .light .xp-sub { color:#6a6a9a !important; }
-  .light .xp-bg { background:rgba(80,80,200,.12); }
-  .light .form-input { background:#ffffff; border:2px solid #c8d4f0; color:#1a1a3a; }
-  .light .pin-input { color:#3a3aaa !important; }
-  .light .pst { background:rgba(100,100,200,.06); border-right:1px solid rgba(80,80,200,.12); }
-  .light .pstv { color:#7a5800 !important; }
-  .light .pstl { color:#6a6a9a !important; }
-  .light .av-glow { background:radial-gradient(circle,rgba(180,180,255,.5) 0%,transparent 70%); }
-  .light .xp-fill { background:linear-gradient(90deg,#5050cc,#aa44ff); }
-  .light .nb.on { color:#7a5800 !important; }
-  .light .nb.on::after { background:#c09000 !important; }
-  .light .nb { color:#8a8ab0; }
-  .light .bb { border-radius:12px; }
-  .light .bav { background:#f0f4ff; border-color:#dde4f8; }
+  /* ─ Step 3: Educator layout ─ */
+  .light .edu-layout { background: #eef2fb; }
+
+  .light .sidebar {
+    background: linear-gradient(180deg, #0d1428 0%, #1a2540 100%);
+    border-right: 1px solid rgba(255,255,255,.06);
+    box-shadow: 4px 0 24px rgba(0,0,0,.2);
+  }
+  .light .sidebar-logo-box { background: #cc1111; }
+  .light .sidebar-badge {
+    background: rgba(100,160,255,.15);
+    border-color: rgba(100,160,255,.3);
+    color: #90caff;
+  }
+  .light .nav-item { color: rgba(255,255,255,.38); }
+  .light .nav-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.75); }
+  .light .nav-item.active {
+    background: rgba(100,160,255,.12);
+    color: #90caff;
+    border-left-color: #90caff;
+  }
+  .light .nav-badge { background: #c62828; color: #fff; }
+  .light .sidebar-user { border-top: 1px solid rgba(255,255,255,.08); }
+
+  .light .topbar {
+    background: rgba(13,20,40,.9);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(20px);
+  }
+  .light .topbar-title { color: rgba(255,255,255,.9); }
+
+  .light .mob-header {
+    background: rgba(13,20,40,.92);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .light .mob-header-title { color: rgba(255,255,255,.9); }
+  .light .mob-drawer { background: linear-gradient(180deg, #0d1428, #1a2540); }
+  .light .mob-bottom-nav {
+    background: rgba(13,20,40,.95);
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .light .mob-nav-btn { color: rgba(255,255,255,.3); }
+  .light .mob-nav-btn.active { color: #90caff; }
+  .light .content { background: transparent; }
+  .light .edu-content-wrap { background: transparent; }
+
+  /* ─ Step 4: Cards ─ */
+  .light .card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 2px 16px rgba(0,0,0,.06);
+    color: #0d1117;
+  }
+  .light .card-sm {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.07);
+    color: #0d1117;
+  }
+  .light .stat-card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+  }
+  .light .stat-card::before {
+    background: linear-gradient(90deg, transparent, rgba(21,101,192,.2), transparent);
+  }
+  .light .stat-label { color: #6b7e94; }
+  .light .stat-value { color: #0d1117; }
+
+  /* ─ Step 5: Forms & Inputs ─ */
+  .light .form-input {
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.18);
+    color: #0d1117;
+    font-weight: 500;
+  }
+  .light .form-input:focus {
+    border-color: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21,101,192,.1);
+    background: #ffffff;
+  }
+  .light .form-label { color: #3a4a5c; font-weight: 700; }
+  .light select {
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.15);
+    color: #0d1117;
+  }
+  .light textarea {
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.15);
+    color: #0d1117;
+  }
+  .light .search-inp {
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.15);
+    color: #0d1117;
+  }
+  .light .search-inp:focus { border-color: #1565c0; box-shadow: 0 0 0 3px rgba(21,101,192,.1); }
+
+  /* ─ Step 6: Buttons ─ */
+  .light .btn-primary {
+    background: linear-gradient(135deg, #1565c0, #1976d2);
+    border-color: rgba(21,101,192,.6);
+    box-shadow: 0 2px 8px rgba(21,101,192,.3);
+  }
+  .light .btn-ghost {
+    background: rgba(0,0,0,.05);
+    color: #3a4a5c;
+    border: 1.5px solid rgba(0,0,0,.15);
+  }
+  .light .btn-ghost:hover { background: rgba(0,0,0,.09); }
+  .light .btn-yellow {
+    background: linear-gradient(135deg, #e65100, #f57f17);
+    border-color: rgba(230,81,0,.5);
+    box-shadow: 0 2px 8px rgba(230,81,0,.25);
+    color: #fff;
+  }
+  .light .btn-danger {
+    background: rgba(198,40,40,.08);
+    color: #c62828;
+    border: 1.5px solid rgba(198,40,40,.25);
+  }
+
+  /* ─ Step 7: Chips ─ */
+  .light .chip {
+    background: #ffffff;
+    border: 1.5px solid rgba(0,0,0,.15);
+    color: #3a4a5c;
+    font-weight: 700;
+  }
+  .light .chip.active {
+    background: #1565c0;
+    color: #ffffff;
+    border-color: #1565c0;
+    box-shadow: 0 2px 8px rgba(21,101,192,.3);
+  }
+  .light .chip:hover { background: rgba(21,101,192,.06); border-color: rgba(21,101,192,.3); }
+
+  /* ─ Step 8: Tags ─ */
+  .light .tag-green  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  .light .tag-blue   { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+  .light .tag-amber  { background: #fff8e1; color: #e65100; border: 1px solid #ffe082; }
+  .light .tag-red    { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+  .light .tag-gray   { background: #f5f5f5; color: #546e7a; border: 1px solid #b0bec5; }
+
+  /* ─ Step 9: Presenze (checkbox) ─ */
+  .light .pres-wrap {
+    border: 1.5px solid rgba(0,0,0,.1);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  }
+  .light .pres-table th {
+    background: #f5f7ff;
+    color: #3a4a5c;
+    border-bottom: 2px solid rgba(0,0,0,.08);
+    font-weight: 800;
+  }
+  .light .pres-table td {
+    color: #0d1117;
+    border-bottom: 1px solid rgba(0,0,0,.05);
+    background: #ffffff;
+  }
+  .light .pres-table tr:hover td { background: #f8f9ff; }
+  /* Checkbox presenze: visibile e solido */
+  .light .pd-yes {
+    background: #2e7d32 !important;
+    color: #ffffff !important;
+    border-color: #2e7d32 !important;
+    box-shadow: 0 2px 6px rgba(46,125,50,.3) !important;
+  }
+  .light .pd-none {
+    background: #ffffff !important;
+    color: #9e9e9e !important;
+    border: 2px solid #bdbdbd !important;
+  }
+
+  /* ─ Step 10: Leaderboard ─ */
+  .light .lb-row {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.07);
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  }
+  .light .lb-row:nth-child(1) { border-color: rgba(245,127,23,.4); box-shadow: 0 2px 12px rgba(245,127,23,.12); }
+  .light .lb-row:nth-child(2) { border-color: rgba(96,125,139,.3); }
+  .light .lb-row:nth-child(3) { border-color: rgba(121,85,72,.3); }
+  .light .lb-rank      { color: #6b7e94; }
+  .light .lb-rank.gold { color: #e65100; text-shadow: none; }
+  .light .lb-rank.silver { color: #546e7a; }
+  .light .lb-rank.bronze { color: #6d4c41; }
+  .light .lb-name  { color: #0d1117; font-weight: 700; }
+  .light .lb-level { color: #6b7e94; }
+  .light .lb-xp    { color: #1565c0; }
+  .light .lb-av    { background: #f5f7ff; border-color: rgba(0,0,0,.1); }
+
+  /* ─ Step 11: Player grid ─ */
+  .light .player-card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  }
+  .light .player-card:hover { border-color: rgba(21,101,192,.3); box-shadow: 0 4px 16px rgba(21,101,192,.1); }
+  .light .player-card.selected { border-color: #1565c0; background: rgba(21,101,192,.04); box-shadow: var(--glow-blue); }
+  .light .p-name  { color: #0d1117; }
+  .light .p-level { color: #6b7e94; }
+  .light .p-xp    { color: #1565c0; }
+  .light .p-coin  { color: #e65100; }
+  .light .avatar-wrap { border-color: rgba(21,101,192,.25); }
+
+  /* ─ Step 12: Activities ─ */
+  .light .act-card {
+    background: #f0fff4;
+    border: 1.5px solid rgba(46,125,50,.25);
+    box-shadow: 0 2px 8px rgba(46,125,50,.06);
+  }
+  .light .act-card:hover { border-color: rgba(46,125,50,.5); box-shadow: 0 4px 16px rgba(46,125,50,.1); }
+  .light .act-title { color: #0d1117; }
+  .light .act-meta  { color: #3a4a5c; }
+
+  /* ─ Step 13: Badges ─ */
+  .light .badge-card {
+    background: #fff0f7;
+    border: 1.5px solid rgba(173,20,87,.2);
+    box-shadow: 0 2px 8px rgba(173,20,87,.05);
+  }
+  .light .badge-card:hover { border-color: rgba(173,20,87,.45); }
+  .light .badge-name { color: #0d1117; }
+  .light .badge-pts  { color: #ad1457; }
+
+  /* ─ Step 14: Sfida ─ */
+  .light .sfida-card {
+    background: #fff8f8;
+    border: 1.5px solid rgba(198,40,40,.25);
+  }
+  .light .sfida-label  { color: #c62828; }
+  .light .sfida-title  { color: #0d1117; text-shadow: none; }
+  .light .sfida-desc   { color: #3a4a5c; }
+  .light .sfida-reward { background: rgba(230,81,0,.08); border-color: rgba(230,81,0,.25); color: #bf360c; }
+
+  /* ─ Step 15: Modal ─ */
+  .light .modal {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.12);
+    box-shadow: 0 -16px 48px rgba(0,0,0,.12);
+  }
+  .light .modal::before { background: linear-gradient(90deg, transparent, #1565c0, #ad1457, transparent); }
+  .light .modal-title  { color: #0d1117; }
+  .light .section-label { color: #3a4a5c; }
+  .light .modal-bg { background: rgba(0,0,0,.45); }
+
+  /* ─ Step 16: Section banner ─ */
+  .light .section-banner-title { color: #0d1117 !important; }
+  .light .section-banner-sub   { color: rgba(0,0,0,.5) !important; }
+
+  /* ─ Step 17: Misc ─ */
+  .light .empty   { color: #6b7e94; }
+  .light .loading { color: #6b7e94; }
+  .light .batch-panel { background: rgba(21,101,192,.06); border: 1.5px solid rgba(21,101,192,.2); }
+  .light .batch-info  { color: #1565c0; }
+  .light .filter-bar .chip { background: #ffffff; }
+  .light .squad-row  { background: #ffffff; border: 1.5px solid rgba(0,0,0,.08); }
+  .light .squad-name { color: #0d1117; }
+  .light .diary-entry { background: #ffffff; border: 1px solid rgba(0,0,0,.07); }
+  .light .diary-date  { color: #1565c0; }
+  .light .diary-text  { color: #0d1117; }
+  .light .notif-item  { border-bottom: 1px solid rgba(0,0,0,.06); }
+  .light .notif-title { color: #0d1117; }
+  .light .notif-body  { color: #3a4a5c; }
+  .light .notif-time  { color: #6b7e94; }
+  .light .notif-dot   { background: #c2185b; }
+  .light .player-detail { background: #ffffff; border: 1.5px solid rgba(21,101,192,.2); }
+  .light .detail-tab { background: #f5f7ff; border: 1px solid rgba(0,0,0,.1); color: #3a4a5c; }
+  .light .detail-tab.active { background: #1565c0; color: #ffffff; border-color: #1565c0; }
+  .light .color-swatch.active { border-color: #1565c0; box-shadow: var(--glow-blue); }
+  .light .section-banner { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .light .podium-wrap .pod-name { color: #0d1117; }
+  .light .lb-list .lb-row { background: #ffffff; }
+
+  /* ─ Step 18: StreakConfig month cards ─ */
+  .light .streak-month-card {
+    background: #ffffff !important;
+    border-color: rgba(0,0,0,.08) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .light .streak-month-card * { color: #0d1117 !important; }
+  .light .streak-month-card div[style*="color:"var(--text3)""] { color: #6b7e94 !important; }
+
+  /* ─ Step 19: Avatar picker ─ */
+  .light .av-picker-wrap { background: #f5f7ff; border-radius: 8px; padding: 4px; }
+  .light .av-picker-tab {
+    background: #ffffff !important;
+    color: #3a4a5c !important;
+    border: 1.5px solid rgba(0,0,0,.12) !important;
+  }
+  .light .av-picker-tab.on {
+    background: #1565c0 !important;
+    color: #ffffff !important;
+    border-color: #1565c0 !important;
+  }
+  .light .av-picker-item {
+    background: #ffffff !important;
+    border: 1.5px solid rgba(0,0,0,.08) !important;
+  }
+  .light .av-picker-item:hover { background: #f0f4ff !important; border-color: rgba(21,101,192,.3) !important; }
+  .light .av-picker-item.sel   { border-color: #1565c0 !important; background: rgba(21,101,192,.06) !important; }
+  .light .av-picker-item span  { color: #3a4a5c !important; }
+
+  /* ─ Step 20: Player dashboard light ─ */
+  .light .player-wrap {
+    background: linear-gradient(160deg, #dce8ff 0%, #eef2ff 45%, #d8e4ff 100%) !important;
+    transition: background .4s ease;
+  }
+  .light .pd-topbar {
+    background: rgba(13,20,40,.92) !important;
+    border-bottom: 1px solid rgba(255,255,255,.1) !important;
+  }
+  .light .pd-name-pill { background: #0d1428 !important; color: #e0eeff !important; }
+  .light .pd-lv-pill {
+    background: rgba(21,101,192,.1);
+    border-color: rgba(21,101,192,.3);
+    color: #1565c0;
+  }
+  .light .pd-card {
+    background: rgba(255,255,255,.85) !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+    color: #0d1117;
+  }
+  .light .pd-card * { color: #0d1117; }
+  .light .pd-sg .pd-sc {
+    background: rgba(255,255,255,.9) !important;
+    border: 1px solid rgba(0,0,0,.07) !important;
+  }
+  .light .pd-sv { color: #e65100 !important; }
+  .light .pd-sl { color: #6b7e94 !important; }
+  .light .pd-squad {
+    background: rgba(255,255,255,.85) !important;
+    border: 1px solid rgba(0,0,0,.08) !important;
+  }
+  .light .pd-sfida { background: #0d1428 !important; }
+  .light .pd-checkin {
+    background: rgba(255,255,255,.85) !important;
+    border: 1px solid rgba(46,125,50,.25) !important;
+  }
+  .light .pd-tab-title { color: #0d1117 !important; }
+  .light .pd-badge-item {
+    background: rgba(255,255,255,.9) !important;
+    border: 1px solid rgba(0,0,0,.07) !important;
+  }
+  .light .pd-badge-item div { color: #0d1117 !important; }
+  .light .streak-card {
+    background: rgba(255,255,255,.85) !important;
+    border: 1px solid rgba(230,81,0,.25) !important;
+  }
+  .light .streak-val { color: #bf360c !important; }
+  .light .streak-lbl { color: #6b7e94 !important; }
+  .light .month-prog-bg   { background: rgba(0,0,0,.08); }
+  .light .month-prog-fill { background: linear-gradient(90deg, #bf360c, #e65100); }
+  .light .xp-bar-wrap { background: rgba(21,101,192,.08); }
+  .light .xp-bar { background: linear-gradient(90deg, #1565c0, #1976d2); }
+  .light .player-bottom-nav {
+    background: rgba(13,20,40,.95) !important;
+    border-top: 1px solid rgba(255,255,255,.08) !important;
+  }
+  .light .player-nav-btn       { color: rgba(255,255,255,.28) !important; }
+  .light .player-nav-btn.active { color: #90caff !important; }
+  .light .player-nav-btn.active::after { background: #90caff !important; }
+
+  /* ─ Step 21: Login ─ */
+  .light .login-wrap { background: #eef2fb; }
+  .light .login-card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.1);
+    box-shadow: 0 8px 40px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,1);
+  }
+  .light .login-card::before {
+    background: linear-gradient(90deg, transparent, #1565c0, #ad1457, transparent);
+  }
+  .light .login-title {
+    background: linear-gradient(135deg, #1565c0 0%, #0d1117 40%, #e65100 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .light .login-sub { color: #6b7e94; }
+  .light .login-tabs { background: rgba(0,0,0,.04); border: 1px solid rgba(0,0,0,.08); }
+  .light .login-tab  { color: #6b7e94; }
+  .light .login-tab.active {
+    background: rgba(21,101,192,.08);
+    color: #1565c0;
+    border-color: rgba(21,101,192,.3);
+    box-shadow: none;
+  }
+  .light .nickname-list { background: #ffffff; border-color: rgba(0,0,0,.1); }
+  .light .nickname-item { color: #0d1117; border-bottom-color: rgba(0,0,0,.06); }
+  .light .nickname-item:hover { background: rgba(21,101,192,.04); }
+  .light .err-msg { color: #c62828; }
+  .light .pin-display { background: rgba(21,101,192,.06); border-color: rgba(21,101,192,.2); color: #1565c0; }
+
+  /* ─ Step 22: Edu notifications bell ─ */
+  .light .edu-notif-bell {
+    background: rgba(255,255,255,.1);
+    border-color: rgba(255,255,255,.15);
+  }
+  .light .edu-notif-panel {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,.12);
+  }
+  .light .edu-notif-header { color: #0d1117; border-bottom-color: rgba(0,0,0,.08); }
+  .light .edu-notif-item:hover { background: rgba(0,0,0,.03); }
+  .light .edu-notif-title { color: #0d1117; }
+  .light .edu-notif-sub   { color: #6b7e94; }
+  .light .edu-notif-count { color: #1565c0; }
+  .light .edu-notif-empty { color: #6b7e94; }
+
+  /* ─ Light mode global fixes ─ */
+  .light * { box-sizing: border-box; }
+  .light .pd-card { background: rgba(255,255,255,.88) !important; color: #0d1117 !important; }
+  .light .pd-card * { color: #0d1117 !important; }
+  .light .pd-tab-title { color: #0d1117 !important; }
+  .light .search-inp { background:#fff; border:1.5px solid rgba(0,0,0,.18); color:#0d1117; }
+  .light .search-inp::placeholder { color:#9e9e9e; }
+  .light .form-input::placeholder { color:#9e9e9e; }
+  .light textarea { background:#fff; color:#0d1117; border:1.5px solid rgba(0,0,0,.15); }
+  .light textarea::placeholder { color:#9e9e9e; }
+  .light select option { background:#ffffff; color:#0d1117; }
+  .light .empty { color: #6b7e94; }
+  .light .loading { color: #6b7e94; }
+  /* Sfide always dark bg */
+  .light .pd-sfida { background: #1a2035 !important; border-color: rgba(255,204,0,.3) !important; }
+  .light .pd-sfida * { color: rgba(255,255,255,.9) !important; }
+  /* Streak card */
+  .light .streak-card { background: #fff !important; border: 1px solid rgba(230,81,0,.2) !important; }
+  .light .streak-card .streak-val { color: #bf360c !important; }
+  .light .streak-card .streak-lbl { color: #6b7e94 !important; }
+  /* Community in light */
+  .light .community-card { background: #fff; border: 1px solid rgba(0,0,0,.08); }
+  /* Announcements in light */
+  .light .ann-card { background: #fff; }
+  /* XP chart in light */
+  .light .xp-chart-bar { background: linear-gradient(180deg,#1565c0,rgba(21,101,192,.4)); }
+  /* Buttons in light */
+  .light .btn-yellow { background: linear-gradient(135deg,#e65100,#f57f17) !important; color:#fff !important; }
 
   /* ═══ EDUCATOR NOTIFICATIONS ═══ */
   .edu-notif-bell { position:relative; cursor:pointer; width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font-size:18px; transition:all .15s; flex-shrink:0; }
@@ -781,7 +1197,47 @@ const css = `
   @keyframes fade-in { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
   .pres-close { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px 14px; color:rgba(255,255,255,.5); font-size:13px; cursor:pointer; font-weight:700; letter-spacing:.05em; z-index:10; }
   .pres-close:hover { background:rgba(255,255,255,.15); color:#fff; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* ─ Animated background particles ─ */
+  @keyframes float1 { 0%,100%{transform:translate(0,0) rotate(0deg)} 33%{transform:translate(15px,-20px) rotate(5deg)} 66%{transform:translate(-10px,10px) rotate(-3deg)} }
+  @keyframes float2 { 0%,100%{transform:translate(0,0) rotate(0deg)} 33%{transform:translate(-20px,15px) rotate(-6deg)} 66%{transform:translate(10px,-8px) rotate(4deg)} }
+  @keyframes float3 { 0%,100%{transform:translate(0,0) rotate(0deg)} 50%{transform:translate(12px,18px) rotate(8deg)} }
+  .bg-float-1 { animation:float1 8s ease-in-out infinite; }
+  .bg-float-2 { animation:float2 11s ease-in-out infinite; }
+  .bg-float-3 { animation:float3 14s ease-in-out infinite; }
+
+  /* Toast animation */
+  @keyframes toastIn { 0%{transform:translateX(120%) scale(.8);opacity:0} 100%{transform:translateX(0) scale(1);opacity:1} }
+
+  /* Particle burst */
+  @keyframes burst { 0%{transform:translate(0,0) scale(1);opacity:1} 100%{transform:translate(var(--tx),var(--ty)) scale(0);opacity:0} }
+
+  /* XP bar animated fill */
+  @keyframes xpFill { from{width:0} }
+
+  /* Avatar idle breathe */
+  @keyframes breathe { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.02)} }
+  .avatar-breathe { animation:breathe 3.5s ease-in-out infinite; }
+
+  /* Streak flame pulse */
+  @keyframes flamePulse { 0%,100%{transform:scale(1);filter:drop-shadow(0 0 4px #ff6b00)} 50%{transform:scale(1.15);filter:drop-shadow(0 0 12px #ff6b00)} }
+  .flame-pulse { animation:flamePulse 1.2s ease-in-out infinite; display:inline-block; }
+
+  /* Leaderboard row entrance */
+  @keyframes slideInRow { from{transform:translateX(-20px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+  /* XP number count */
+  @keyframes numPop { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
+  .num-pop { animation:numPop .4s cubic-bezier(.34,1.56,.64,1); }
+
   /* ═══ SMOOTH TRANSITIONS ═══ */
+  * { -webkit-tap-highlight-color: transparent; }
+  button, [role="button"] { touch-action: manipulation; }
+  .card, .card-sm, .player-card, .lb-row { transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .card:active, .player-card:active { transform: scale(.98); }
+  .btn:active { transform: scale(.96) !important; }
+  input, select, textarea { -webkit-appearance: none; appearance: none; }
   .content { animation:fade-up .2s ease; }
   @keyframes fade-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   .player-bottom-nav { transition:background .3s; }
@@ -827,7 +1283,7 @@ const css = `
 // ─── UTILS ────────────────────────────────────────────────
 
 function Avatar({ url, emoji, size = 40 }) {
-  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }} />;
+  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }}  loading="lazy"/>;
   return <span style={{ fontSize: size * 0.52 }}>{emoji || "🌱"}</span>;
 }
 
@@ -837,7 +1293,7 @@ function XpBar({ xp, dark = false }) {
   const pct = nextLv ? Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100) : 100;
   return (
     <div>
-      <div className="xp-bar-wrap"><div className="xp-bar" style={{ width: pct + "%" }} /></div>
+      <div className="xp-bar-wrap"><div className="xp-bar" style={{ width: pct + "%", animation:"xpFill 1s ease-out forwards" }} /></div>
       <div className="xp-label"><span>{xp} XP</span>{nextLv && <span>{nextLv.xp} XP</span>}</div>
     </div>
   );
@@ -896,7 +1352,7 @@ function BannerCustomizer({ sectionKey, sectionColors, setSectionColors, onClose
         <div className="section-label">Immagine di sfondo (opzionale)</div>
         <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
-          {image ? <img src={image} alt="banner" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 8, marginBottom: 6 }} /> : <div style={{ fontSize: 30, marginBottom: 6 }}>🖼️</div>}
+          {image ? <img src={image} alt="banner" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 8, marginBottom: 6 }}  loading="lazy"/> : <div style={{ fontSize: 30, marginBottom: 6 }}>🖼️</div>}
           <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploading ? "Caricamento…" : "Tocca per caricare un'immagine"}</div>
         </div>
         {image && <button className="btn btn-danger btn-sm" style={{ marginBottom: 8 }} onClick={() => setImage(null)}>Rimuovi immagine</button>}
@@ -936,34 +1392,38 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   const fileRef = useRef();
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(currentUrl);
-
   async function handleFile(e) {
     const file = e.target.files[0]; if (!file) return;
     setUploading(true);
     try {
-      // Comprimi a max 400px WebP prima dell'upload
-      const compressed = await compressToWebP(file, 400, 0.85);
-      const origKB = Math.round(file.size / 1024);
-      const compKB = Math.round(compressed.size / 1024);
-      console.log(`Compressione: ${origKB}KB → ${compKB}KB (${Math.round((1-compKB/origKB)*100)}% riduzione)`);
-      const path = `avatars/${playerId}.webp`;
-      const { error } = await sb.storage.from("avatars").upload(path, compressed, { upsert: true, contentType: "image/webp" });
-      if (error) { alert("Errore upload: " + error.message); setUploading(false); return; }
-      const { data } = sb.storage.from("avatars").getPublicUrl(path);
-      const url = data.publicUrl + "?t=" + Date.now();
-      await sb.from("profiles").update({ avatar_url: url }).eq("id", playerId);
-      setPreview(url); onUploaded && onUploaded(url);
-    } catch(err) { alert("Errore: " + err.message); }
-    setUploading(false);
+      const compressed = await compressToWebP(file, 400, 0.82);
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64url = ev.target.result;
+        const kb = Math.round(base64url.length * 0.75 / 1024);
+        if (kb > 200) { addToast(`⚠️ Foto troppo grande (${kb}KB)`, 'error'); setUploading(false); return; }
+        await sb.from("profiles").update({ avatar_url: base64url }).eq("id", playerId);
+        setPreview(base64url); onUploaded && onUploaded(base64url);
+        setUploading(false);
+      };
+      reader.onerror = () => { addToast('❌ Errore lettura file', 'error'); setUploading(false); };
+      reader.readAsDataURL(compressed);
+    } catch(err) { addToast("❌ " + err.message, "error"); setUploading(false); }
   }
-
   return (
     <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
-      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
-      {preview ? <img src={preview} className="avatar-preview" alt="avatar" /> : <div style={{ fontSize: 40, marginBottom: 8 }}>📷</div>}
-      <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploading ? "Caricamento…" : "Tocca per cambiare foto"}</div>
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{display:"none"}}/>
+      {preview ? <img src={preview} className="avatar-preview" alt="avatar" loading="lazy"/> : <div style={{fontSize:40,marginBottom:8}}>📷</div>}
+      <div style={{fontSize:13,color:"var(--text2)"}}>{uploading ? "⏳ Compressione…" : "Tocca per cambiare foto"}</div>
     </div>
   );
+}
+
+async function logXPGain(playerId, xpGained, xpTotal, reason) {
+  if (!xpGained || xpGained <= 0) return;
+  try {
+    await sb.from("xp_history").insert({ player_id:playerId, xp_gained:xpGained, xp_total:xpTotal, reason });
+  } catch(e) { }
 }
 
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
@@ -1076,12 +1536,338 @@ function AvatarPicker({ selected, onSelect, squadFilter }) {
             const isSel = selected === url;
             return (
               <div key={name} className={`av-picker-item ${isSel?"sel":""}`} onClick={()=>onSelect(isSel ? "" : url)}>
-                <img src={url} alt={name} loading="lazy" onError={e=>{e.target.style.opacity='.3';}}/>
+                <img src={url} alt={name} loading="lazy"
+                  style={{width:52,height:52,objectFit:"contain",display:"block"}}
+                  onError={e=>{e.target.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 52'%3E%3Crect width='52' height='52' fill='%23333'/%3E%3Ctext x='26' y='34' text-anchor='middle' font-size='24'%3E🌱%3C/text%3E%3C/svg%3E";}}/>
                 <span>{name.replace(/^[agvn]_/,"")}</span>
               </div>
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── STICKER & GIF ───────────────────────────────────────
+const ANIMATED_STICKERS = [
+  { id:"happy", label:"😊 Felice!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}.b{animation:bounce .7s ease-in-out infinite}@keyframes blink{0%,90%,100%{scaleY:1}95%{transform:scaleY(0.1)}}</style><g class="b"><ellipse cx="50" cy="70" rx="32" ry="36" fill="#4caf50"/><ellipse cx="28" cy="45" rx="14" ry="7" fill="#388e3c" transform="rotate(-40,28,45)"/><ellipse cx="72" cy="45" rx="14" ry="7" fill="#388e3c" transform="rotate(40,72,45)"/><circle cx="50" cy="32" r="8" fill="#388e3c"/><circle cx="39" cy="65" r="8" fill="white"/><circle cx="61" cy="65" r="8" fill="white"/><circle cx="41" cy="66" r="5" fill="#1a237e"/><circle cx="63" cy="66" r="5" fill="#1a237e"/><circle cx="43" cy="64" r="2" fill="white"/><circle cx="65" cy="64" r="2" fill="white"/><path d="M 36 78 Q 50 92 64 78" stroke="#1b5e20" stroke-width="3.5" fill="none" stroke-linecap="round"/></g></svg>` },
+  { id:"thumbsup", label:"👍 Grande!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes pop{0%{transform:scale(1)}30%{transform:scale(1.2)}100%{transform:scale(1)}}.p{animation:pop .6s ease-out infinite}</style><g class="p"><ellipse cx="50" cy="75" rx="28" ry="30" fill="#66bb6a"/><circle cx="50" cy="28" r="7" fill="#388e3c"/><rect x="30" y="35" width="10" height="25" rx="5" fill="#388e3c"/><rect x="60" y="35" width="10" height="25" rx="5" fill="#388e3c"/><rect x="38" y="55" width="24" height="18" rx="4" fill="#4caf50"/><rect x="35" y="45" width="30" height="14" rx="7" fill="#81c784"/><rect x="44" y="38" width="12" height="12" rx="6" fill="#66bb6a"/><circle cx="40" cy="72" r="7" fill="white"/><circle cx="60" cy="72" r="7" fill="white"/><circle cx="42" cy="73" r="4" fill="#1b5e20"/><circle cx="62" cy="73" r="4" fill="#1b5e20"/><path d="M 40 83 Q 50 90 60 83" stroke="#1b5e20" stroke-width="3" fill="none" stroke-linecap="round"/></g></svg>` },
+  { id:"thumbsdown", label:"👎 Boh...", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes wilt{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-5deg)}}.w{animation:wilt 1s ease-in-out infinite;transform-origin:50% 80%}</style><g class="w"><ellipse cx="50" cy="65" rx="28" ry="30" fill="#78909c"/><ellipse cx="30" cy="42" rx="12" ry="6" fill="#546e7a" transform="rotate(-20,30,42)"/><ellipse cx="70" cy="42" rx="12" ry="6" fill="#546e7a" transform="rotate(20,70,42)"/><circle cx="50" cy="30" r="7" fill="#546e7a"/><circle cx="40" cy="62" r="7" fill="white"/><circle cx="60" cy="62" r="7" fill="white"/><circle cx="42" cy="63" r="4" fill="#263238"/><circle cx="62" cy="63" r="4" fill="#263238"/><path d="M 38 76 Q 50 70 62 76" stroke="#263238" stroke-width="3" fill="none" stroke-linecap="round"/><rect x="35" y="75" width="30" height="14" rx="7" fill="#607d8b" transform="rotate(180,50,82)"/><rect x="44" y="82" width="12" height="12" rx="6" fill="#78909c" transform="rotate(180,50,88)"/></g></svg>` },
+  { id:"kiss", label:"💋 Bacio!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes kiss{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}.k{animation:kiss .8s ease-in-out infinite}@keyframes heart{0%,100%{transform:scale(1) translate(0,0);opacity:1}100%{transform:scale(0) translate(10px,-20px);opacity:0}}.h{animation:heart 1.2s ease-out infinite}</style><g class="k"><ellipse cx="50" cy="68" rx="30" ry="34" fill="#f48fb1"/><ellipse cx="28" cy="44" rx="13" ry="7" fill="#e91e63" transform="rotate(-35,28,44)"/><ellipse cx="72" cy="44" rx="13" ry="7" fill="#e91e63" transform="rotate(35,72,44)"/><circle cx="50" cy="30" r="7" fill="#e91e63"/><circle cx="39" cy="63" r="7" fill="white"/><circle cx="61" cy="63" r="7" fill="white"/><circle cx="41" cy="64" r="4" fill="#880e4f"/><circle cx="63" cy="64" r="4" fill="#880e4f"/><circle cx="50" cy="78" r="7" fill="#e91e63"/><text x="68" y="55" font-size="14" class="h">❤️</text><text x="72" y="45" font-size="10" class="h" style="animation-delay:.4s">💕</text></g></svg>` },
+  { id:"heart", label:"❤️ Cuore!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.p{animation:pulse .6s ease-in-out infinite}</style><g class="p"><ellipse cx="50" cy="68" rx="30" ry="34" fill="#ef5350"/><ellipse cx="28" cy="44" rx="13" ry="7" fill="#b71c1c" transform="rotate(-35,28,44)"/><ellipse cx="72" cy="44" rx="13" ry="7" fill="#b71c1c" transform="rotate(35,72,44)"/><circle cx="50" cy="30" r="7" fill="#b71c1c"/><circle cx="39" cy="63" r="8" fill="white"/><circle cx="61" cy="63" r="8" fill="white"/><circle cx="41" cy="64" r="5" fill="#b71c1c"/><circle cx="63" cy="64" r="5" fill="#b71c1c"/><path d="M 35 77 Q 50 95 65 77" stroke="#7f0000" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M50 40 C45 35 35 35 35 43 C35 50 50 60 50 60 C50 60 65 50 65 43 C65 35 55 35 50 40Z" fill="#ff1744" opacity=".9" transform="translate(0,-10) scale(0.5) translate(50,0)"/></g></svg>` },
+  { id:"laugh", label:"😂 Risata!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes shake{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}.s{animation:shake .3s ease-in-out infinite}</style><g class="s"><ellipse cx="50" cy="68" rx="32" ry="36" fill="#ffd54f"/><ellipse cx="28" cy="43" rx="14" ry="7" fill="#f9a825" transform="rotate(-35,28,43)"/><ellipse cx="72" cy="43" rx="14" ry="7" fill="#f9a825" transform="rotate(35,72,43)"/><circle cx="50" cy="30" r="7" fill="#f9a825"/><path d="M 32 60 Q 50 57 68 60" stroke="#e65100" stroke-width="3" fill="none"/><ellipse cx="50" cy="62" rx="18" ry="4" fill="#e65100"/><path d="M 32 62 Q 50 85 68 62" fill="#e65100"/><rect x="38" y="62" width="24" height="8" fill="white" rx="3"/><text x="26" y="58" font-size="14">😂</text><text x="62" y="58" font-size="14">😂</text></g></svg>` },
+  { id:"rofl", label:"🤣 XDDD", svg:`<svg viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes roll{0%{transform:rotate(0deg) translate(0,0)}25%{transform:rotate(-30deg) translate(-5px,5px)}75%{transform:rotate(30deg) translate(5px,5px)}100%{transform:rotate(0deg) translate(0,0)}}.r{animation:roll .5s ease-in-out infinite;transform-origin:55px 65px}</style><g class="r"><ellipse cx="55" cy="68" rx="32" ry="36" fill="#ffb300"/><ellipse cx="30" cy="43" rx="14" ry="7" fill="#ff8f00" transform="rotate(-35,30,43)"/><ellipse cx="80" cy="43" rx="14" ry="7" fill="#ff8f00" transform="rotate(35,80,43)"/><circle cx="55" cy="30" r="7" fill="#ff8f00"/><path d="M 35 60 Q 55 57 75 60" stroke="#e65100" stroke-width="3" fill="none"/><ellipse cx="55" cy="62" rx="20" ry="5" fill="#e65100"/><path d="M 35 62 Q 55 90 75 62" fill="#e65100"/><rect x="43" y="62" width="24" height="8" fill="white" rx="3"/><ellipse cx="30" cy="60" rx="10" ry="6" fill="#29b6f6" opacity=".7" transform="rotate(-20,30,60)"/><ellipse cx="80" cy="60" rx="10" ry="6" fill="#29b6f6" opacity=".7" transform="rotate(20,80,60)"/></g></svg>` }
+];
+
+
+
+// GIF curate dalla CDN Giphy — ID verificati, no API key
+const CURATED_GIFS = {
+  "🎉 Festa": [
+    "3oz8xAFtqoOUUrsh7W","l0MYt5jPR6QX5pnqM","26ufdipQqU84QcCa8",
+    "xT9IgDEI1iZyb2wqo8","l3vRhj2MhHQBLO0cI","5GoVLqeAOo6PK",
+    "g9582DNuQppxC","jJxG7UrGV7R1l0GDCA","CjmvTCZf2U3p09Cn0h",
+    "YTzh0J5qSE9pq","26u4cqiYI9LBb252w","xUPGcguWZHRC2HyBRS",
+  ],
+  "🔥 Hype": [
+    "l0HlHFRbmaZtBKljO","26BROrSHlmXoUKP1q","3o7aCTPHNxKiRcBbio",
+    "l2SpZkQ0yCbDZqHgk","xT9IgG4r9HjEb8bW8g","UqZ5bP8yfKH5Q",
+    "l1J9wJ0gMMvvPcSBW","Ll22OLDm49fss","26BRrSp9Io0wTFqCY",
+    "l0MYt5jPR6QX5pnqM","3oz8xAFtqoOUUrsh7W","YQitE4YNQNahy",
+  ],
+  "👍 Grande": [
+    "XreQmk7ETCak0","l0MYGb1RjuCFbkmrC","jnQXQ3GNdIqp3FgmIe",
+    "111ebonMD8EPXO","QABiTtSGKSEVO","3o6Zt11Hm1PLQNF71K",
+    "efK0x7qvmLBzLFh1YK","dIxkmtCuuBQunyCV01","3oFzmMgUr2EXE6PZGE",
+    "l4pTjOu0NsrLApt0c","26BRMhUqMnslIGxck","YJ8VWc8uG05PB4ONQX",
+  ],
+  "😂 Risata": [
+    "l3vRhj2MhHQBLO0cI","xT9IgNVgHEH6AeEMRy","13CoXDiaCcCoyk",
+    "oyjkqi5ejHwFq","W7DgFVhFuKaS8","3oEduSbkbhM3ORM4pi",
+    "cnuNz0fTBKeW0","nL6hfnpjPFrmo","ZEU9ryYGZzttn0Cva7",
+    "jV13A4jgrIJFGkRbCe","l0HlNNFKZAagHiuCc","LONX4aPDFWmXu",
+  ],
+  "💪 Forza": [
+    "3o6Zt11Hm1PLQNF71K","l0MYGb1RjuCFbkmrC","26BROrSHlmXoUKP1q",
+    "l41YkFIiBxQdRlMnS","lp8GQr4FkDMkM3Zv7a","mGOrABZGDy4lXjIZGU",
+    "3o7TKP9ln2Dr6ze6f6","LmHFBDHoGFnkQ","3oxHQCI8tqsubDjSQE",
+    "9D7eCKPHDmMkT41GmC","l0HlyMZa5EalehFNK","1zSs5T1kmVLlqD8kIM",
+  ],
+  "🏆 Win": [
+    "g9582DNuQppxC","YTzh0J5qSE9pq","CjmvTCZf2U3p09Cn0h",
+    "5GoVLqeAOo6PK","jJxG7UrGV7R1l0GDCA","3oEdv9Y9md8Y3J3zXq",
+    "26u4pMkMiYRlEGkO4","d3mlYwpf96kMuFjO","xT9IgcnemkhlPRMNAI",
+    "Mab0WjHBHE9ViDHY5l","l0Iy8XcCsHHobNvK0","ZfNtFNUQBVRMWNNQGi",
+  ],
+  "😮 WOW": [
+    "xT9IgDEI1iZyb2wqo8","5xtDarBZalMXVwg7SuA","14aUt4VETfCOyY",
+    "4X8noKbFCuLMk","JoMJkRUMl3fzG","3oFzmcMECQgF3ub1nW",
+    "l0HlyMZa5EalehFNK","xT9IgNVgHEH6AeEMRy","3o6Zt11Hm1PLQNF71K",
+    "l3vRhj2MhHQBLO0cI","oyjkqi5ejHwFq","W7DgFVhFuKaS8",
+  ],
+  "❤️ Amore": [
+    "l0HlNNFKZAagHiuCc","26BRrSp9Io0wTFqCY","CjmvTCZf2U3p09Cn0h",
+    "l0MYt5jPR6QX5pnqM","26ufdipQqU84QcCa8","LONX4aPDFWmXu",
+    "ZEU9ryYGZzttn0Cva7","nL6hfnpjPFrmo","cnuNz0fTBKeW0",
+    "YJ8VWc8uG05PB4ONQX","XreQmk7ETCak0","jnQXQ3GNdIqp3FgmIe",
+  ],
+};
+
+
+// ─── TOAST NOTIFICATION SYSTEM ───────────────────────────
+let _addToast = null;
+function addToast(msg, type="xp") { if(_addToast) _addToast(msg,type); }
+
+function ToastContainer() {
+  const [toasts, setToasts] = useState([]);
+  useEffect(() => {
+    _addToast = (msg, type) => {
+      const id = Date.now() + Math.random();
+      setToasts(p => [...p, { id, msg, type }]);
+      setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 2800);
+    };
+    return () => { _addToast = null; };
+  }, []);
+  return (
+    <div style={{ position:"fixed", bottom:90, right:16, zIndex:8888, display:"flex", flexDirection:"column", gap:8, pointerEvents:"none" }}>
+      {toasts.map(t => <Toast key={t.id} {...t}/>)}
+    </div>
+  );
+}
+
+function Toast({ msg, type }) {
+  const colors = {
+    xp:    { bg:"rgba(0,212,255,.15)",  border:"rgba(0,212,255,.4)",  color:"#00d4ff" },
+    coin:  { bg:"rgba(255,204,0,.15)",  border:"rgba(255,204,0,.4)",  color:"#ffcc00" },
+    badge: { bg:"rgba(255,45,120,.15)", border:"rgba(255,45,120,.4)", color:"#ff2d78" },
+    ok:    { bg:"rgba(0,255,136,.15)",  border:"rgba(0,255,136,.4)",  color:"#00ff88" },
+    error: { bg:"rgba(255,50,50,.15)",  border:"rgba(255,50,50,.4)",  color:"#ff4444" },
+  };
+  const c = colors[type] || colors.ok;
+  return (
+    <div style={{
+      background: c.bg, border: `1px solid ${c.border}`, color: c.color,
+      borderRadius: 12, padding: "10px 16px",
+      fontFamily: "'Barlow Condensed',sans-serif", fontSize: 16, fontWeight: 900,
+      letterSpacing: ".04em", whiteSpace: "nowrap",
+      animation: "toastIn .35s cubic-bezier(.34,1.56,.64,1) forwards",
+      backdropFilter: "blur(10px)",
+      boxShadow: `0 4px 20px ${c.border}`,
+    }}>{msg}</div>
+  );
+}
+
+
+// ─── PARTICLE BURST ──────────────────────────────────────
+function ParticleBurst({ x, y, color="#ffcc00", onDone }) {
+  const particles = Array.from({length:12}, (_,i) => ({
+    id:i, angle:(360/12)*i,
+    dist: 30+Math.random()*30,
+    size: 4+Math.random()*5,
+  }));
+  useEffect(() => { const t=setTimeout(onDone,700); return ()=>clearTimeout(t); }, [onDone]);
+  return (
+    <div style={{position:"fixed",left:x,top:y,zIndex:9990,pointerEvents:"none"}}>
+      {particles.map(p => {
+        const rad = (p.angle*Math.PI)/180;
+        const tx = Math.cos(rad)*p.dist, ty = Math.sin(rad)*p.dist;
+        return (
+          <div key={p.id} style={{
+            position:"absolute", left:0, top:0,
+            width:p.size, height:p.size, borderRadius:"50%", background:color,
+            animation:`burst .6s ease-out forwards`,
+            "--tx":`${tx}px`, "--ty":`${ty}px`,
+          }}/>
+        );
+      })}
+    </div>
+  );
+}
+
+
+// ─── COUNTING NUMBER HOOK ────────────────────────────────
+function useCountUp(target, duration=800) {
+  const [val, setVal] = useState(target);
+  const prev = useRef(target);
+  useEffect(() => {
+    if (prev.current === target) return;
+    const start = prev.current, diff = target - start;
+    const startTime = performance.now();
+    function tick(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed/duration, 1);
+      const ease = 1 - Math.pow(1-progress, 3); // easeOutCubic
+      setVal(Math.round(start + diff*ease));
+      if (progress < 1) requestAnimationFrame(tick);
+      else { setVal(target); prev.current = target; }
+    }
+    requestAnimationFrame(tick);
+    prev.current = target;
+  }, [target, duration]);
+  return val;
+}
+
+
+// ─── COUNTDOWN TO MIDNIGHT ───────────────────────────────
+function useCountdown() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    function update() {
+      const now = new Date();
+      const midnight = new Date(now); midnight.setHours(24,0,0,0);
+      const diff = midnight - now;
+      const h = Math.floor(diff/3600000).toString().padStart(2,"0");
+      const m = Math.floor((diff%3600000)/60000).toString().padStart(2,"0");
+      const s = Math.floor((diff%60000)/1000).toString().padStart(2,"0");
+      setTime(`${h}:${m}:${s}`);
+    }
+    update(); const iv = setInterval(update,1000); return ()=>clearInterval(iv);
+  }, []);
+  return time;
+}
+
+function SfidePanel({ activities }) {
+  const sfide = (activities||[]).filter(a=>a.description?.includes('SFIDA')||a.duration==="weekly"||a.duration==="monthly");
+  const daily = (activities||[]).filter(a=>a.description?.includes('SFIDA') && a.duration!=="weekly" && a.duration!=="monthly").slice(0,1);
+  const weekly = sfide.filter(a=>a.duration==="weekly").slice(0,1);
+  const monthly = sfide.filter(a=>a.duration==="monthly").slice(0,1);
+  const all = [...daily, ...weekly, ...monthly];
+  if (all.length === 0) return null;
+
+  const DurationBadge = ({dur}) => {
+    const labels = { daily:["⚡","OGGI"], weekly:["📅","SETTIMANA"], monthly:["🗓️","MESE"] };
+    const [icon, label] = labels[dur]||["⚡","SFIDA"];
+    return <span style={{fontSize:9,fontWeight:900,color:"var(--rosso)",letterSpacing:".1em",textTransform:"uppercase"}}>{icon} {label}</span>;
+  };
+
+  return (
+    <div style={{margin:"0 0 8px"}}>
+      {all.map(s=>(
+        <div key={s.id} className="pd-sfida" style={{marginBottom:6}}>
+          <SfidaCountdown duration={s.duration||"daily"}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+            <DurationBadge dur={s.duration||"daily"}/>
+            <div style={{display:"flex",gap:6}}>
+              <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>+{s.coin_full||s.coin_partial||10} 🪙</span>
+              <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>+{s.xp_full||20} ⭐</span>
+            </div>
+          </div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"#fff",lineHeight:1.1,marginBottom:4}}>{s.name}</div>
+          {s.description&&<div style={{fontSize:11,color:"rgba(255,255,255,.55)",lineHeight:1.4}}>{s.description.replace("SFIDA:","").trim()}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SfidaCountdown({ duration }) {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    function update() {
+      const now = new Date();
+      let target;
+      if (duration === "weekly") {
+        // Next Monday
+        const d = new Date(); d.setDate(d.getDate() + (7-d.getDay()+1)%7||7); d.setHours(0,0,0,0);
+        target = d;
+      } else if (duration === "monthly") {
+        // End of month
+        const d = new Date(now.getFullYear(), now.getMonth()+1, 1);
+        target = d;
+      } else {
+        // Midnight
+        const d = new Date(); d.setHours(24,0,0,0);
+        target = d;
+      }
+      const diff = target - now;
+      const h = Math.floor(diff/3600000);
+      const m = Math.floor((diff%3600000)/60000).toString().padStart(2,"0");
+      const s = Math.floor((diff%60000)/1000).toString().padStart(2,"0");
+      const dLabel = duration==="weekly"||duration==="monthly" ? `${Math.floor(h/24)}g ${(h%24).toString().padStart(2,"0")}:${m}:${s}` : `${h.toString().padStart(2,"0")}:${m}:${s}`;
+      setTime(dLabel);
+    }
+    update(); const iv = setInterval(update,1000); return ()=>clearInterval(iv);
+  }, [duration]);
+  return <div style={{fontSize:10,color:"rgba(255,255,255,.4)",fontFamily:"monospace",fontWeight:700,marginBottom:4}}>⏱ Scade in {time}</div>;
+}
+
+function CountUpStat({ val }) {
+  const animated = useCountUp(typeof val==="number" ? val : 0);
+  return <span className="pd-sv">{typeof val==="number" ? animated : val}</span>;
+}
+
+
+// ─── DEBOUNCE ────────────────────────────────────────────
+function useDebounce(value, delay=300) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+// ─── PIXEL SOUNDS ────────────────────────────────────────
+let soundEnabled = localStorage.getItem("pug_sounds") !== "false";
+
+function playPixel(type) {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    const play = (freq, start, dur, vol=0.08, wave="square") => {
+      const osc = ctx.createOscillator();
+      osc.type = wave;
+      osc.connect(gain);
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur);
+    };
+
+    if (type === "xp") {
+      play(440, 0, .1); play(660, .1, .15);
+    } else if (type === "coin") {
+      play(523, 0, .08); play(784, .08, .12);
+    } else if (type === "levelup") {
+      play(262,.0,.1); play(330,.1,.1); play(392,.2,.1); play(523,.3,.2,"sine");
+    } else if (type === "checkin") {
+      play(440,.0,.06); play(880,.07,.1,"sine");
+    } else if (type === "badge") {
+      play(523,.0,.08); play(659,.09,.08); play(784,.18,.08); play(1047,.27,.3,"sine");
+    } else if (type === "msg") {
+      play(660,.0,.06,.05,"sine"); play(880,.08,.1,.04,"sine");
+    } else if (type === "error") {
+      play(220,.0,.15,.06); play(180,.15,.2,.06);
+    }
+  } catch(_) {}
+}
+
+
+// ─── QR CHECK-IN CELEBRATION ─────────────────────────────
+function QRCelebration({ xpGained, playerName, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, [onDone]);
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onDone}>
+      <style>{`
+        @keyframes qrPop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+        @keyframes xpFloat{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-60px);opacity:0}}
+        @keyframes qrSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+      `}</style>
+      <div style={{textAlign:"center",animation:"qrPop .5s cubic-bezier(.34,1.56,.64,1) forwards"}}>
+        <div style={{fontSize:80,marginBottom:8,animation:"qrSpin .6s ease-out"}}>✅</div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,fontWeight:900,color:"#fff",marginBottom:4}}>
+          {playerName}
+        </div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:48,fontWeight:900,
+          color:"#ffcc00",animation:"xpFloat 2s 1s ease-out forwards"}}>
+          +{xpGained} ⭐ XP
+        </div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginTop:8}}>Presenza registrata!</div>
       </div>
     </div>
   );
@@ -1095,6 +1881,7 @@ function Login({ onLogin }) {
 
   // Player login
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 250);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [pin, setPin] = useState("");
@@ -1127,6 +1914,8 @@ function Login({ onLogin }) {
     // Salva sessione player in localStorage
     localStorage.setItem("pug_player", JSON.stringify({ ...data, _playerSession: true }));
     onLogin({ ...data, _playerSession: true });
+    // Registra push in background (silenzioso)
+    setTimeout(() => registerPush(data.id), 2000);
     setLoadingPin(false);
   }
 
@@ -1136,6 +1925,8 @@ function Login({ onLogin }) {
     if (error) { setEduErr(error.message); setLoadingEdu(false); return; }
     const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
+    // Registra push educator in background (silenzioso)
+    if (profile?.id) setTimeout(() => registerPush(profile.id), 2000);
     setLoadingEdu(false);
   }
 
@@ -1171,7 +1962,12 @@ function Login({ onLogin }) {
                           </div>
                           <div>
                             <div style={{ fontSize: 14, fontWeight: 700 }}>{p.display_name}</div>
-                            {p.squads?.name && <SquadPill name={p.squads.name} />}
+                            {p.squads?.name && (() => {
+                              try {
+                                const v = JSON.parse(localStorage.getItem("pug_visibility")||"{}");
+                                return v.squadre !== false ? <SquadPill name={p.squads.name}/> : null;
+                              } catch(_) { return null; }
+                            })()}
                           </div>
                         </div>
                       );
@@ -1226,6 +2022,7 @@ function Login({ onLogin }) {
 // ─── EDUCATOR VIEWS ───────────────────────────────────────
 
 function PlayersView({ sectionColors, setSectionColors }) {
+  const loadingRef = useRef(false);
   const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
@@ -1242,13 +2039,25 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [createPlayerErr, setCreatePlayerErr] = useState("");
 
   const load = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
+    // Timeout di sicurezza: se il caricamento va storto, sblocca dopo 8s
+    const safetyTimeout = setTimeout(() => {
+      loadingRef.current = false;
+      setLoading(false);
+    }, 8000);
     const { data } = await sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false });
     const { data: sq } = await sb.from("squads").select("*");
     setPlayers(data || []); setSquads(sq || []); setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Fallback: force-clear loading after 6s to avoid infinite spinner
+    const t = setTimeout(() => setLoading(false), 6000);
+    return () => clearTimeout(t);
+  }, [load]);
 
   const visible = players.filter(p => {
     const sq = squadFilter === "all" || p.squads?.name === squadFilter;
@@ -1397,7 +2206,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
             <div className="section-label">Avatar pianta</div>
             {newPlayer.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
-                <img src={newPlayer.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt="avatar"/>
+                <img src={newPlayer.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt="avatar" loading="lazy"/>
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:"#ffcc00"}}>{newPlayer.avatar_url.split('/').pop().replace('.webp','')}</div>
                   <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewPlayer(p=>({...p,avatar_url:""}))}>✕ Rimuovi</button>
@@ -1469,30 +2278,33 @@ function PlayersView({ sectionColors, setSectionColors }) {
 function InlineAvatarUpload({ playerId, onUploaded }) {
   const ref = useRef();
   const [uploading, setUploading] = useState(false);
-
   async function handleFile(e) {
     const file = e.target.files[0]; if (!file) return;
     setUploading(true);
     try {
-      const compressed = await compressToWebP(file, 400, 0.85);
-      const path = `avatars/${playerId}_custom.webp`;
-      const { error } = await sb.storage.from("avatars").upload(path, compressed, { upsert: true, contentType: "image/webp" });
-      if (error) { alert("Errore upload: " + error.message); setUploading(false); return; }
-      const { data } = sb.storage.from("avatars").getPublicUrl(path);
-      const url = data.publicUrl + "?t=" + Date.now();
-      await sb.from("profiles").update({ avatar_url: url }).eq("id", playerId);
-      onUploaded(url);
-    } catch(err) { alert("Errore: " + err.message); }
-    setUploading(false);
+      const compressed = await compressToWebP(file, 400, 0.82);
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64url = ev.target.result;
+        const kb = Math.round(base64url.length * 0.75 / 1024);
+        if (kb > 200) { addToast(`⚠️ Foto troppo grande (${kb}KB)`, 'error'); setUploading(false); return; }
+        if (playerId && !playerId.startsWith("new_edu_")) {
+          await sb.from("profiles").update({ avatar_url: base64url }).eq("id", playerId);
+        }
+        onUploaded(base64url);
+        setUploading(false);
+      };
+      reader.onerror = () => { addToast('❌ Errore lettura file', 'error'); setUploading(false); };
+      reader.readAsDataURL(compressed);
+    } catch(err) { addToast("❌ " + err.message, "error"); setUploading(false); }
   }
-
   return (
     <div>
-      <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{display:"none"}}/>
+      <input ref={ref} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{display:"none"}}/>
       <button className="btn btn-ghost btn-sm" style={{width:"100%"}} onClick={()=>ref.current.click()} disabled={uploading}>
-        {uploading ? "⏳ Caricamento e compressione…" : "📷 Carica foto da dispositivo"}
+        {uploading ? "⏳ Compressione…" : "📷 Carica foto da dispositivo"}
       </button>
-      {!uploading && <div style={{fontSize:10,color:"var(--text3)",marginTop:4,textAlign:"center"}}>Compressa automaticamente in WebP prima dell'upload</div>}
+      {!uploading && <div style={{fontSize:10,color:"var(--text3)",marginTop:4,textAlign:"center"}}>Compressa in WebP · salvata nel profilo senza Storage</div>}
     </div>
   );
 }
@@ -1525,7 +2337,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 
   async function saveEdits() {
     if (!editing) return;
-    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null, avatar_url: editing.avatar_url || null }).eq("id", playerId);
+    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId);
     setSaveMsg("Salvato ✅"); setTimeout(() => setSaveMsg(""), 2000);
     loadData();
   }
@@ -1591,7 +2403,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             {badges.length===0 && <div className="empty" style={{width:"100%"}}>Nessun badge.</div>}
             {badges.map(pb => (
               <div key={pb.id} style={{textAlign:"center",width:72}}>
-                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--rosa)",display:"block",margin:"0 auto 5px"}} alt=""/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
+                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--rosa)",display:"block",margin:"0 auto 5px"}} alt="" loading="lazy"/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
                 <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.3}}>{pb.badges?.name}</div>
               </div>
             ))}
@@ -1667,7 +2479,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar</div>
             {editing.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,255,255,.04)",borderRadius:10}}>
-                <img src={editing.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt=""/>
+                <img src={editing.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt="" loading="lazy"/>
                 <div style={{fontSize:12,color:"var(--text2)",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis"}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
               </div>
             )}
@@ -1785,7 +2597,7 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
               const xpShown = timeFilter === "oggi" ? xpToday[p.id] || 0 : timeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
               const xpLabel = timeFilter === "oggi" ? "XP oggi" : timeFilter === "mese" ? "XP mese" : "XP";
               return (
-                <div key={p.id} className="lb-row">
+                <div key={p.id} className="lb-row" style={{animation:`slideInRow .3s ${Math.min(i*.06,.5)}s both`}}>
                   <span className="lb-rank">{(realIdx+1)+"°"}</span>
                   <div className="lb-av"><Avatar url={p.avatar_url} emoji={lv.emoji} size={38} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -2084,14 +2896,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                         <td>{p.squads?.name && <SquadPill name={p.squads.name}/>}</td>
                         <td>
                           <button
-                            onClick={()=>setStatus(p.id, status!=="none"?"none":"full")}
-                            style={{
-                              width:40,height:40,borderRadius:10,border:"none",cursor:"pointer",
-                              fontSize:18,fontWeight:900,transition:"all .15s",
-                              background: status!=="none" ? "rgba(0,255,136,.2)" : "rgba(255,255,255,.06)",
-                              color: status!=="none" ? "var(--neon-green)" : "rgba(255,255,255,.25)",
-                              boxShadow: status!=="none" ? "0 0 12px rgba(0,255,136,.3)" : "none",
-                            }}>
+                            className={`pres-toggle ${status!=="none"?"done":"empty"}`}
+                            onClick={()=>setStatus(p.id, status!=="none"?"none":"full")}>
                             {status!=="none" ? "✓" : "○"}
                           </button>
                         </td>
@@ -2164,8 +2970,12 @@ function LabQRButton({ actId, actName }) {
       {show && code && (
         <div style={{marginTop:8,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(0,212,255,.2)"}}>
           <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".08em"}}>QR Lab · {actName} · {new Date().toLocaleDateString("it-IT")}</div>
-          <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${code}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={code} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8}}>{code}</div>
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${code}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={code} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}} loading="lazy"/>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8,cursor:"pointer"}}
+            onClick={()=>navigator.clipboard?.writeText(code).then(()=>addToast("📋 Codice copiato!","ok")).catch(()=>{})}
+            title="Tocca per copiare"
+          >{code}</div>
+          <div style={{fontSize:10,color:"var(--text3)",marginTop:-4}}>Tocca per copiare</div>
           <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo oggi — codice diverso dal check-in giornaliero</div>
         </div>
       )}
@@ -2378,6 +3188,8 @@ function BadgesView({ sectionColors, setSectionColors }) {
     await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
     await sb.from("profiles").update({ xp: (player?.xp || 0) + Number(assignXp), coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
     await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: `Badge: ${badge?.name}`, body: `+${assignXp} XP, +${assignCoin} Coin` });
+    sendPush(assignTarget, `🎖️ Badge: ${badge?.name}`, `Hai guadagnato +${assignXp} XP e +${assignCoin} Coin!`).catch(()=>{});
+    playPixel("badge");
     setShowAssign(null);
   }
 
@@ -2404,7 +3216,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
             <div key={b.id} className="badge-card">
               <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteBadge(b.id); }}>✕</button>
               <div onClick={() => { setShowAssign(b.id); setAssignXp(b.xp_default); setAssignCoin(b.coin_default); }}>
-                {b.image_url ? <img className="badge-img" src={b.image_url} alt={b.name} /> : <span className="badge-emoji">🎖️</span>}
+                {b.image_url ? <img className="badge-img" src={b.image_url} alt={b.name}  loading="lazy"/> : <span className="badge-emoji">🎖️</span>}
                 <div className="badge-name">{b.name}</div>
                 <div className="badge-pts">+{b.xp_default} XP</div>
               </div>
@@ -2447,7 +3259,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
             <div className="section-label">Immagine badge</div>
             {newBadge.image_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px",background:"rgba(255,0,204,.06)",border:"1px solid rgba(255,0,204,.2)",borderRadius:10}}>
-                <img src={newBadge.image_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt="badge"/>
+                <img src={newBadge.image_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt="badge" loading="lazy"/>
                 <div style={{flex:1}}>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--rosa)"}}>{newBadge.image_url.split("/").pop().replace(".webp","")}</div>
                   <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewBadge(f=>({...f,image_url:null}))}>✕ Rimuovi</button>
@@ -2524,7 +3336,7 @@ function SfidaView({ sectionColors, setSectionColors }) {
 
   return (
     <div>
-      <SectionBanner sectionKey="sfida" title="Sfida del Giorno" sub={`${sfide.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="sfida" title="⚡ Sfide" sub={`${sfide.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
         <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuova sfida</button>
       </div>
@@ -2661,6 +3473,75 @@ function DiaryView() {
   );
 }
 
+function AvatarStickerPicker({ onSelect }) {
+  return (
+    <div style={{marginTop:8,background:"var(--surface2)",borderRadius:12,border:"1px solid var(--border)",padding:10}}>
+      <div style={{fontSize:11,color:"var(--text3)",marginBottom:8,fontWeight:700}}>Tocca per inviare</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+        {ANIMATED_STICKERS.map(s=>(
+          <div key={s.id} onClick={()=>onSelect("sticker:" + s.id)}
+            style={{cursor:"pointer",borderRadius:12,padding:6,border:"2px solid transparent",
+              background:"rgba(255,255,255,.04)",transition:"all .15s",
+              display:"flex",flexDirection:"column",alignItems:"center",gap:3}}
+            onMouseOver={e=>{e.currentTarget.style.borderColor="var(--neon-blue)";e.currentTarget.style.background="rgba(0,212,255,.08)";}}
+            onMouseOut={e=>{e.currentTarget.style.borderColor="transparent";e.currentTarget.style.background="rgba(255,255,255,.04)";}}>
+            <div style={{width:60,height:60}} dangerouslySetInnerHTML={{__html:s.svg}}/>
+            <span style={{fontSize:9,color:"var(--text2)",fontWeight:700,textAlign:"center"}}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GifSearch({ onSelect }) {
+  const [tab, setTab] = useState(Object.keys(CURATED_GIFS)[0]);
+  const [customUrl, setCustomUrl] = useState("");
+
+  const tabs = Object.keys(CURATED_GIFS);
+  const gifs = CURATED_GIFS[tab] || [];
+
+  return (
+    <div>
+      {/* Category tabs */}
+      <div style={{display:"flex",gap:4,marginBottom:8,flexWrap:"wrap"}}>
+        {tabs.map(t=>(
+          <button key={t} onClick={()=>setTab(t)}
+            style={{padding:"3px 8px",borderRadius:99,border:"1px solid var(--border2)",
+              background:tab===t?"var(--neon-blue)":"transparent",
+              color:tab===t?"#fff":"var(--text2)",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* GIF grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,marginBottom:8}}>
+        {gifs.map(id=>{
+          const url = `https://media.giphy.com/media/${id}/giphy.gif`;
+          return (
+            <img key={id} src={url} alt="" onClick={()=>onSelect(url)}
+              style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:8,cursor:"pointer",border:"2px solid transparent",transition:"border .1s"}}
+              onMouseOver={e=>e.target.style.borderColor="var(--neon-blue)"}
+              onMouseOut={e=>e.target.style.borderColor="transparent"}/>
+          );
+        })}
+      </div>
+
+      {/* Paste URL custom */}
+      <div style={{borderTop:"1px solid var(--border)",paddingTop:8}}>
+        <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Oppure incolla URL di una GIF da Giphy/Tenor:</div>
+        <div style={{display:"flex",gap:6}}>
+          <input className="search-inp" placeholder="https://media.giphy.com/..." value={customUrl}
+            onChange={e=>setCustomUrl(e.target.value)} style={{flex:1,fontSize:12}}/>
+          <button className="btn btn-ghost btn-sm" onClick={()=>{if(customUrl.trim()){onSelect(customUrl.trim());setCustomUrl("");}}} disabled={!customUrl.trim()}>Usa</button>
+        </div>
+      </div>
+      <div style={{fontSize:9,color:"var(--text3)",marginTop:6,textAlign:"right"}}>Powered by GIPHY</div>
+    </div>
+  );
+}
+
 function MessagesView({ profile }) {
   const [squads, setSquads]     = useState([]);
   const [players, setPlayers]   = useState([]);
@@ -2677,13 +3558,16 @@ function MessagesView({ profile }) {
   const [expiry, setExpiry] = useState(""); // optional expiry date
   const [sending, setSending] = useState(false);
   const [sent, setSent]   = useState("");
+  const [mediaData, setMediaData] = useState(null);
+  const [mediaType, setMediaType] = useState(null);
+  const mediaRef = useRef();
 
   async function loadAll() {
     const [{ data: sq }, { data: pl }, { data: act }, { data: m }] = await Promise.all([
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
       sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-      sb.from("messages").select("id,body,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).limit(100),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).limit(100),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
   }
@@ -2694,7 +3578,7 @@ function MessagesView({ profile }) {
     setSending(true);
     const senderName = profile?.display_name || "Giardiniere";
     const expiresAt = expiry ? new Date(expiry + "T23:59:59").toISOString() : null;
-    const base = { sender_id: profile.id, body: body.trim(), is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt };
+    const base = { sender_id: profile.id, body: body.trim(), media_data: mediaData || null, is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt };
 
     if (destType === "tutti") {
       const { data: allP } = await sb.from("profiles").select("id").eq("role","player");
@@ -2728,7 +3612,7 @@ function MessagesView({ profile }) {
       setSending(false); setTimeout(()=>setSent(""),3000); setBody(""); setExpiry(""); return;
     }
 
-    setBody(""); setExpiry(""); setSelectedPlayers([]);
+    setBody(""); setExpiry(""); setSelectedPlayers([]); setMediaData(null); setMediaType(null);
     setSent("Messaggio inviato ✅"); setTimeout(()=>setSent(""),3000);
     loadAll(); setSending(false);
   }
@@ -2803,7 +3687,7 @@ function MessagesView({ profile }) {
                         {sel?"✓":""}
                       </div>
                       <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
-                        {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:lv.emoji}
+                        {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="" loading="lazy"/>:lv.emoji}
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:600,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
@@ -2828,6 +3712,26 @@ function MessagesView({ profile }) {
         <div className="form-group">
           <label className="form-label">Testo</label>
           <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Scrivi un messaggio…" />
+        </div>
+
+        {/* Immagine allegata */}
+        <div className="form-group">
+          <label className="form-label">📷 Immagine allegata (opzionale)</label>
+          <input ref={mediaRef} type="file" accept="image/*" style={{display:"none"}} onChange={async e => {
+            const file = e.target.files[0]; if (!file) return;
+            const compressed = await compressToWebP(file, 600, 0.85);
+            const reader = new FileReader();
+            reader.onload = ev => { setMediaData(ev.target.result); setMediaType("image"); };
+            reader.readAsDataURL(compressed);
+          }}/>
+          {mediaData ? (
+            <div style={{position:"relative",display:"inline-block",marginBottom:8}}>
+              <img src={mediaData} style={{maxWidth:"100%",maxHeight:180,borderRadius:12,border:"1px solid var(--border)",display:"block"}} alt="" loading="lazy"/>
+              <button onClick={()=>{setMediaData(null);setMediaType(null);}} style={{position:"absolute",top:-8,right:-8,background:"rgba(0,0,0,.8)",border:"none",color:"#fff",borderRadius:"50%",width:24,height:24,cursor:"pointer",fontSize:14,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+          ) : (
+            <button className="btn btn-ghost btn-sm" onClick={()=>mediaRef.current.click()}>📷 Aggiungi foto</button>
+          )}
         </div>
 
         {/* Scadenza opzionale */}
@@ -2862,6 +3766,11 @@ function MessagesView({ profile }) {
                     <button className="btn btn-danger btn-xs" onClick={()=>cancelMsg(m.id)} title="Annulla messaggio">✕</button>
                   </div>
                 </div>
+                {m.media_data && !m.media_data.startsWith("sticker:") && (
+                  <img src={m.media_data}
+                    style={{maxWidth:"100%",maxHeight:200,borderRadius:10,marginBottom:6,display:"block"}}
+                    alt="media" loading="lazy"/>
+                )}
                 <div style={{fontSize:13,color:"var(--text)"}}>{m.body}</div>
               </div>
             );
@@ -2915,7 +3824,7 @@ function BookingsView() {
       const pMap = Object.fromEntries((pData||[]).map(p=>[p.id,p]));
       const aMap = Object.fromEntries((aData||[]).map(a=>[a.id,a]));
       setBookings((bkData||[]).map(b=>({...b, profiles: pMap[b.player_id]||null, activities: aMap[b.activity_id]||null })));
-    } catch(e) { console.error(e); }
+    } catch(e) { }
     setLoading(false);
   }
 
@@ -2927,7 +3836,10 @@ function BookingsView() {
       const { data: p } = await sb.from("profiles").select("coin").eq("id", playerId).single();
       await sb.from("profiles").update({ coin: (p?.coin||0) + coinHeld }).eq("id", playerId);
     }
+    const pushTitle = status==="confirmed" ? "✅ Prenotazione confermata!" : "❌ Prenotazione rifiutata";
+    const pushBody  = status==="confirmed" ? "Sei dentro! Apri l'app per i dettagli." : "Le tue coin sono state restituite.";
     await sb.from("notifications").insert({ user_id: playerId, type: status==="confirmed"?"booking_confirmed":"booking_rejected", title: status==="confirmed"?"Prenotazione confermata!":"Prenotazione rifiutata", body: status==="confirmed"?"Sei dentro!":"Coin restituite." });
+    sendPush(playerId, pushTitle, pushBody).catch(()=>{});
     load();
   }
 
@@ -3001,7 +3913,7 @@ function QrView() {
         {loading ? <div className="loading">⏳</div> : qr ? (
           <>
             <div style={{ background: "var(--surface2)", borderRadius: 16, padding: "24px 32px", marginBottom: 16, display: "inline-block", border: "1.5px solid var(--border2)" }}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8 }}/>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8 }} loading="lazy"/>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:34, fontWeight:900, color:"var(--neon-blue)", letterSpacing:8, margin:"10px 0 6px", textShadow:"var(--glow-blue)" }}>{qr.code}</div>
             <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Valido {new Date(qr.valid_from).getHours()}:00 – {new Date(qr.valid_until).getHours()}:00</div>
@@ -3013,6 +3925,238 @@ function QrView() {
             <button className="btn btn-primary" onClick={generateQr}>Genera QR di oggi</button>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+// ─── BACHECA ANNUNCI ─────────────────────────────────────
+function AnnouncementsView({ profile }) {
+  const [announcements, setAnnouncements] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [pinned, setPinned] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const imgRef = useRef();
+  const [imgData, setImgData] = useState(null);
+
+  useEffect(() => { load(); }, []);
+  async function load() {
+    const { data } = await sb.from("announcements")
+      .select("*, profiles(display_name,avatar_url)")
+      .order("pinned",{ascending:false}).order("created_at",{ascending:false}).limit(50);
+    setAnnouncements(data||[]);
+  }
+
+  async function save() {
+    if (!title.trim()) return;
+    setSaving(true);
+    await sb.from("announcements").insert({ educator_id:profile.id, title:title.trim(), body:body.trim()||null, image_data:imgData||null, pinned });
+    setTitle(""); setBody(""); setImgData(null); setPinned(false); setShowForm(false); setSaving(false);
+    load();
+  }
+
+  async function del(id) {
+    if (!confirm("Eliminare annuncio?")) return;
+    await sb.from("announcements").delete().eq("id",id);
+    setAnnouncements(p=>p.filter(a=>a.id!==id));
+  }
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)"}}>📢 Bacheca Annunci</div>
+        <button className="btn btn-yellow btn-sm" onClick={()=>setShowForm(p=>!p)}>
+          {showForm?"✕ Annulla":"+ Nuovo"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card" style={{marginBottom:16}}>
+          <div className="form-group">
+            <label className="form-label">Titolo *</label>
+            <input className="form-input" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Titolo annuncio…"/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Testo</label>
+            <textarea className="form-input" rows={3} value={body} onChange={e=>setBody(e.target.value)} placeholder="Descrizione, info, orari…" style={{resize:"vertical"}}/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Immagine (opzionale)</label>
+            <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{
+              const f = e.target.files[0]; if(!f) return;
+              const compressed = await compressToWebP(f,800,.8);
+              const r = new FileReader(); r.onload=ev=>setImgData(ev.target.result); r.readAsDataURL(compressed);
+            }}/>
+            {imgData ? (
+              <div style={{position:"relative",display:"inline-block"}}>
+                <img src={imgData} style={{maxWidth:"100%",maxHeight:160,borderRadius:8}} alt="" loading="lazy"/>
+                <button onClick={()=>setImgData(null)} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.7)",border:"none",color:"#fff",borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:12}}>✕</button>
+              </div>
+            ) : (
+              <button className="btn btn-ghost btn-sm" onClick={()=>imgRef.current.click()}>📷 Aggiungi immagine</button>
+            )}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <input type="checkbox" id="pinned" checked={pinned} onChange={e=>setPinned(e.target.checked)} style={{width:16,height:16}}/>
+            <label htmlFor="pinned" style={{fontSize:13,color:"var(--text2)",cursor:"pointer"}}>📌 Fissa in cima</label>
+          </div>
+          <button className="btn btn-primary" onClick={save} disabled={saving||!title.trim()}>
+            {saving?"⏳ Salvataggio…":"📢 Pubblica"}
+          </button>
+        </div>
+      )}
+
+      {announcements.length===0 ? (
+        <div className="empty" style={{padding:24}}>Nessun annuncio ancora.</div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {announcements.map(a=>(
+            <div key={a.id} className="card" style={{position:"relative",border:a.pinned?"1.5px solid rgba(255,204,0,.4)":""}}>
+              {a.pinned&&<div style={{position:"absolute",top:10,right:12,fontSize:14}}>📌</div>}
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                {a.profiles?.avatar_url
+                  ? <img src={a.profiles.avatar_url} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}} alt="" loading="lazy"/>
+                  : <span style={{fontSize:22}}>🌱</span>
+                }
+                <div>
+                  <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{a.profiles?.display_name||"Giardiniere"}</div>
+                  <div style={{fontSize:10,color:"var(--text3)"}}>{new Date(a.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"long",year:"numeric"})}</div>
+                </div>
+              </div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
+              {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,marginBottom:8,whiteSpace:"pre-wrap"}}>{a.body}</div>}
+              {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginBottom:8,maxHeight:300,objectFit:"cover"}} alt="" loading="lazy"/>}
+              <button onClick={()=>del(a.id)} style={{background:"none",border:"none",color:"rgba(255,34,68,.5)",cursor:"pointer",fontSize:12,padding:"4px 0"}}>🗑️ Elimina</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlayerAnnouncementsTab() {
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    sb.from("announcements").select("*, profiles(display_name,avatar_url)")
+      .order("pinned",{ascending:false}).order("created_at",{ascending:false}).limit(30)
+      .then(({ data }) => { setAnnouncements(data||[]); setLoading(false); })
+      .catch(()=>setLoading(false));
+  }, []);
+  if (loading) return <div className="loading">⏳</div>;
+  if (announcements.length===0) return <div className="empty" style={{padding:24}}>Nessun annuncio.</div>;
+  return (
+    <div>
+      <div className="pd-tab-title">📢 Bacheca Annunci</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {announcements.map(a=>(
+          <div key={a.id} className="pd-card" style={{padding:14,border:a.pinned?"1.5px solid rgba(255,204,0,.4)":""}}>
+            {a.pinned&&<div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📌 In evidenza</div>}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              {a.profiles?.avatar_url
+                ? <img src={a.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt="" loading="lazy"/>
+                : <span style={{fontSize:18}}>🌱</span>}
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"var(--text)"}}>{a.profiles?.display_name||"Giardiniere"}</div>
+                <div style={{fontSize:9,color:"var(--text3)"}}>{new Date(a.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"long"})}</div>
+              </div>
+            </div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
+            {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{a.body}</div>}
+            {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt="" loading="lazy"/>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ANNOUNCEMENTS EDUCATOR ─────────────────────────────
+
+
+function VisibilityView() {
+  const [vis, setVis] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_){ return {}; }
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    // Carica da profiles — sempre accessibile
+    sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
+      .then(({ data }) => {
+        const cfg = data?.app_config;
+        if (cfg && typeof cfg === "object") {
+          setVis(cfg);
+          localStorage.setItem("pug_visibility", JSON.stringify(cfg));
+        }
+      }).catch(console.error);
+  }, []);
+
+  function toggle(key) {
+    const next = { ...vis, [key]: vis[key] === false ? true : false };
+    setVis(next);
+    localStorage.setItem("pug_visibility", JSON.stringify(next));
+  }
+
+  async function saveToSupabase() {
+    setSaving(true);
+    // Salva in profiles del primo admin/educator — profiles è sempre accessibile
+    const { error } = await sb.from("profiles")
+      .update({ app_config: vis })
+      .eq("id", "00000000-0000-0000-0000-000000000099");
+    if (error) { alert("Errore: " + error.message); setSaving(false); return; }
+    localStorage.setItem("pug_visibility", JSON.stringify(vis));
+    setSaving(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+  const sections = [
+    { key:"squadre",    label:"🛡️ Squadra",           desc:"Mostra la squadra del giocatore nel suo profilo" },
+    { key:"streak",     label:"🔥 Streak & presenze",  desc:"Mostra il contatore di presenze consecutive" },
+    { key:"sfida",      label:"⚡ Sfide",              desc:"Mostra il pannello sfide nel profilo player" },
+    { key:"badge",      label:"🎖️ Badge",             desc:"Mostra la collezione badge nel profilo" },
+    { key:"classifica", label:"🏆 Classifica",         desc:"Mostra la posizione in classifica" },
+    { key:"coin",       label:"🪙 Coin",               desc:"Mostra il saldo coin nel profilo" },
+    { key:"xp",         label:"⭐ XP",                 desc:"Mostra i punti XP nel profilo" },
+    { key:"lab",        label:"⚡ Tab Lab",            desc:"Mostra la tab Lab nel menu player" },
+    { key:"messaggi",   label:"💬 Messaggi",           desc:"Mostra la tab messaggi nel menu player" },
+  ];
+  const allVisible = sections.every(s => vis[s.key] !== false);
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:4}}>👁️ Visibilità player</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Controlla cosa vedono i giocatori nel loro profilo. Le modifiche sono immediate.</div>
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <button className="btn btn-ghost btn-sm" onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=true); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>✅ Mostra tutto</button>
+        <button className="btn btn-ghost btn-sm" onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=false); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>🙈 Nascondi tutto</button>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {sections.map(s => {
+          const on = vis[s.key] !== false;
+          return (
+            <div key={s.key} className="card-sm" style={{display:"flex",alignItems:"center",gap:14,cursor:"pointer",border:`1px solid ${on?"rgba(0,255,136,.2)":"rgba(255,34,68,.15)"}`,background:on?"rgba(0,255,136,.03)":"rgba(255,34,68,.03)"}}>
+              <div style={{flex:1}} onClick={()=>toggle(s.key)}>
+                <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{s.label}</div>
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{s.desc}</div>
+              </div>
+              <div onClick={()=>toggle(s.key)} style={{width:44,height:24,borderRadius:99,background:on?"var(--neon-green)":"rgba(255,255,255,.1)",border:`2px solid ${on?"var(--neon-green)":"rgba(255,255,255,.2)"}`,position:"relative",cursor:"pointer",flexShrink:0,transition:"all .2s"}}>
+                <div style={{position:"absolute",top:2,left:on?20:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.3)"}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:16}}>
+        <button className="btn btn-primary" style={{flex:1}} onClick={saveToSupabase} disabled={saving}>
+          {saving ? "⏳ Salvataggio…" : saved ? "✅ Salvato!" : "💾 Salva impostazioni"}
+        </button>
+      </div>
+      <div style={{background:"rgba(0,212,255,.05)",border:"1px solid rgba(0,212,255,.12)",borderRadius:10,padding:"10px 14px",marginTop:12,fontSize:11,color:"var(--text3)"}}>
+        💡 Le modifiche locali sono immediate. Clicca "Salva" per renderle permanenti e condividerle su tutti i dispositivi.
       </div>
     </div>
   );
@@ -3067,7 +4211,7 @@ function StreakConfigView() {
             const isPast = m.month < now.getMonth() + 1;
             const isCurrent = m.month === now.getMonth() + 1;
             return (
-              <div key={m.month} style={{background:"rgba(8,18,40,0.9)",border:`1px solid ${isCurrent?"rgba(255,140,0,.3)":isPast?"rgba(0,255,136,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
+              <div key={m.month} className="streak-month-card" style={{background:"rgba(8,18,40,0.9)",border:`1px solid ${isCurrent?"rgba(255,140,0,.3)":isPast?"rgba(0,255,136,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:editing?.month===m.month?12:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <span style={{fontSize:20}}>{isPast?"✅":isCurrent?"🔥":"📅"}</span>
@@ -3105,6 +4249,384 @@ function StreakConfigView() {
 
 // ─── PLAYER DASHBOARD ─────────────────────────────────────
 
+
+
+
+
+
+
+// ─── EDUCATOR SOCIAL VIEW ────────────────────────────────
+function EducatorSocialView({ profile }) {
+  const [view, setView] = useState("community");
+  const [players, setPlayers] = useState([]);
+  useEffect(() => {
+    sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)")
+      .eq("role","player").order("xp",{ascending:false})
+      .then(({data})=>setPlayers(data||[]));
+  }, []);
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:12}}>🌍 Social</div>
+      <div style={{display:"flex",background:"rgba(255,255,255,.06)",borderRadius:12,padding:4,marginBottom:16,gap:4}}>
+        {[["community","👥 Community"],["annunci","📢 Annunci"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setView(v)} style={{
+            flex:1,padding:"10px 0",borderRadius:9,border:"none",cursor:"pointer",
+            fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:15,
+            textTransform:"uppercase",letterSpacing:".05em",transition:"all .2s",
+            background:view===v?"rgba(255,255,255,.12)":"transparent",
+            color:view===v?"var(--text)":"var(--text3)",
+          }}>{l}</button>
+        ))}
+      </div>
+      {view==="community" && (
+        <CommunityTab
+          players={players.filter(p=>p.role==="player"||!p.role)}
+          myId={profile.id}
+          myProfile={profile}
+        />
+      )}
+      {view==="annunci" && <AnnouncementsView profile={profile}/>}
+    </div>
+  );
+}
+
+// ─── SOCIAL TAB ──────────────────────────────────────────
+function SocialTab({ players, myId, myProfile }) {
+  const [view, setView] = useState("annunci"); // "annunci" | "community"
+
+  return (
+    <div>
+      {/* Toggle */}
+      <div style={{display:"flex",background:"rgba(255,255,255,.06)",borderRadius:12,padding:4,marginBottom:14,gap:4}}>
+        {[["annunci","📢 Annunci"],["community","👥 Community"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setView(v)} style={{
+            flex:1,padding:"10px 0",borderRadius:9,border:"none",cursor:"pointer",
+            fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:15,
+            textTransform:"uppercase",letterSpacing:".05em",transition:"all .2s",
+            background:view===v?"rgba(255,255,255,.12)":"transparent",
+            color:view===v?"var(--text)":"var(--text3)",
+          }}>{l}</button>
+        ))}
+      </div>
+      {view==="annunci" && <PlayerAnnouncementsTab/>}
+      {view==="community" && <CommunityTab players={players} myId={myId} myProfile={myProfile}/>}
+    </div>
+  );
+}
+
+// ─── PROFILE REACTIONS ───────────────────────────────────
+function ProfileReactions({ targetId, myId }) {
+  const REACTS = ["❤️","🔥","👏","🤩","💪"];
+  const [counts, setCounts] = useState({});
+  const [mine, setMine] = useState(null);
+
+  useEffect(() => {
+    sb.from("reactions").select("type").eq("target_player_id", targetId).is("badge_id", null)
+      .then(({ data }) => {
+        const c = {};
+        (data||[]).forEach(r => { c[r.type] = (c[r.type]||0)+1; });
+        setCounts(c);
+      });
+    sb.from("reactions").select("type").eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null).single()
+      .then(({ data }) => { if (data) setMine(data.type); })
+      .catch(()=>{});
+  }, [targetId, myId]);
+
+  async function react(type) {
+    if (mine === type) {
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null);
+      setCounts(p => ({...p, [type]: Math.max(0,(p[type]||1)-1)}));
+      setMine(null);
+    } else {
+      // Delete existing profile reaction first (NULL badge_id)
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null);
+      await sb.from("reactions").insert({ player_id:myId, target_player_id:targetId, badge_id:null, type });
+      if (mine) setCounts(p => ({...p, [mine]: Math.max(0,(p[mine]||1)-1)}));
+      setCounts(p => ({...p, [type]: (p[type]||0)+1}));
+      setMine(type);
+      playPixel("msg");
+      if(navigator.vibrate) navigator.vibrate(30);
+    }
+  }
+
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+
+  return (
+    <div style={{marginTop:12}}>
+      <div style={{fontSize:10,color:"var(--text3)",marginBottom:8,textTransform:"uppercase",letterSpacing:".1em",fontWeight:700}}>
+        {total > 0 ? `${total} reaction` : "Manda una reaction!"}
+      </div>
+      <div style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
+        {REACTS.map(r => {
+          const count = counts[r]||0;
+          const isMe = mine===r;
+          return (
+            <button key={r} onClick={()=>react(r)}
+              style={{
+                padding:"8px 14px",borderRadius:99,cursor:"pointer",
+                border:`2px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
+                background:isMe?"rgba(0,212,255,.15)":"rgba(255,255,255,.04)",
+                fontSize:20,display:"flex",alignItems:"center",gap:6,
+                transform:isMe?"scale(1.1)":"scale(1)",
+                transition:"all .15s",
+                boxShadow:isMe?"var(--glow-blue)":"none",
+              }}>
+              {r}
+              {count>0 && <span style={{fontSize:12,fontWeight:700,color:isMe?"var(--neon-blue)":"var(--text3)"}}>{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── COMMUNITY TAB + REACTIONS ───────────────────────────
+function CommunityTab({ players, myId, myProfile }) {
+  const [selected, setSelected] = useState(null);
+  const [playerBadges, setPlayerBadges] = useState([]);
+  const [playerXP, setPlayerXP] = useState(0);
+  const [reactions, setReactions] = useState({});
+  const [myReactions, setMyReactions] = useState({});
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [search, setSearch] = useState("");
+  const REACT_TYPES = ["❤️","🔥","👏","😮","⭐"];
+
+  const others = players
+    .filter(p=>p.id!==myId && (p.xp||0)>=0)
+    .filter(p=>!search || p.display_name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b)=>(b.xp||0)-(a.xp||0));
+
+  async function openPlayer(p) {
+    setSelected(p); setLoadingProfile(true);
+    const [{ data: badges }, { data: rxns }, { data: mine }] = await Promise.all([
+      sb.from("player_badges").select("id,badge_id,badges(name,icon),created_at").eq("player_id", p.id).order("created_at",{ascending:false}),
+      sb.from("reactions").select("badge_id,type").eq("target_player_id", p.id),
+      sb.from("reactions").select("badge_id,type").eq("player_id", myId).eq("target_player_id", p.id),
+    ]);
+    const rxMap = {};
+    (rxns||[]).forEach(r => { if (!rxMap[r.badge_id]) rxMap[r.badge_id] = {}; rxMap[r.badge_id][r.type] = (rxMap[r.badge_id][r.type]||0)+1; });
+    const myMap = {};
+    (mine||[]).forEach(r => { myMap[r.badge_id] = r.type; });
+    setPlayerBadges(badges||[]); setReactions(rxMap); setMyReactions(myMap);
+    setLoadingProfile(false);
+  }
+
+  async function react(badgeId, type) {
+    const current = myReactions[badgeId];
+    if (current === type) {
+      await sb.from("reactions").delete().eq("player_id", myId).eq("badge_id", badgeId);
+      setMyReactions(p=>({...p,[badgeId]:null}));
+      setReactions(p=>({...p,[badgeId]:{...p[badgeId],[type]:Math.max(0,(p[badgeId]?.[type]||1)-1)}}));
+    } else {
+      await sb.from("reactions").upsert({player_id:myId,target_player_id:selected.id,badge_id:badgeId,type},{onConflict:"player_id,badge_id"});
+      const prev = myReactions[badgeId];
+      setMyReactions(p=>({...p,[badgeId]:type}));
+      setReactions(p=>({...p,[badgeId]:{...p[badgeId],[type]:(p[badgeId]?.[type]||0)+1,...(prev?{[prev]:Math.max(0,(p[badgeId]?.[prev]||1)-1)}:{})}}));
+      playPixel("msg");
+      if(navigator.vibrate) navigator.vibrate(30);
+    }
+  }
+
+  if (selected) {
+    const lv = getLevel(selected.xp||0);
+    return (
+      <div>
+        <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.06)",border:"1px solid var(--border)",borderRadius:99,padding:"6px 14px",cursor:"pointer",color:"var(--text2)",fontSize:13,marginBottom:14,fontWeight:700}}>
+          ← Torna alla community
+        </button>
+
+        {/* Player hero */}
+        <div style={{background:"linear-gradient(160deg,rgba(255,255,255,.04),rgba(255,255,255,.02))",border:"1px solid var(--border)",borderRadius:20,padding:20,marginBottom:14,textAlign:"center"}}>
+          <div style={{width:80,height:80,borderRadius:"50%",overflow:"hidden",border:"3px solid var(--neon-blue)",margin:"0 auto 10px",boxShadow:"var(--glow-blue)"}}>
+            <Avatar url={selected.avatar_url} emoji={lv.emoji} size={80}/>
+          </div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,fontWeight:900,color:"var(--text)",textTransform:"uppercase"}}>{selected.display_name}</div>
+          <div style={{fontSize:13,color:"var(--text3)",marginBottom:10}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
+          {selected.squads?.name && <div style={{display:"inline-block",background:"rgba(255,255,255,.06)",borderRadius:99,padding:"3px 12px",fontSize:11,color:"var(--text2)",fontWeight:700,marginBottom:10}}>🛡️ {selected.squads.name}</div>}
+          {/* Profile reactions */}
+          <ProfileReactions targetId={selected.id} myId={myId}/>
+        </div>
+
+        {loadingProfile ? <div className="loading">⏳</div> : (
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--text2)",marginBottom:8,textTransform:"uppercase",letterSpacing:".05em"}}>🎖️ Badge — reagisci!</div>
+            {playerBadges.length===0
+              ? <div className="empty">Nessun badge ancora.</div>
+              : <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {playerBadges.map(pb=>{
+                    const rxns = reactions[pb.id]||{};
+                    const myR = myReactions[pb.id];
+                    const total = Object.values(rxns).reduce((a,b)=>a+b,0);
+                    return (
+                      <div key={pb.id} style={{background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",borderRadius:14,padding:"12px 14px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                          <span style={{fontSize:32}}>{pb.badges?.icon||"🎖️"}</span>
+                          <div>
+                            <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{pb.badges?.name}</div>
+                            <div style={{fontSize:10,color:"var(--text3)"}}>{new Date(pb.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}</div>
+                          </div>
+                          {total > 0 && <div style={{marginLeft:"auto",fontSize:11,color:"var(--text3)"}}>{total} reaction</div>}
+                        </div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          {REACT_TYPES.map(r=>{
+                            const count = rxns[r]||0;
+                            const isMe = myR===r;
+                            return (
+                              <button key={r} onClick={()=>react(pb.id,r)}
+                                style={{padding:"5px 10px",borderRadius:99,
+                                  border:`1.5px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
+                                  background:isMe?"rgba(0,212,255,.15)":"rgba(255,255,255,.04)",
+                                  cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",gap:5,
+                                  transform:isMe?"scale(1.1)":"scale(1)",transition:"all .15s",
+                                }}>
+                                {r}
+                                {count>0&&<span style={{fontSize:11,fontWeight:700,color:isMe?"var(--neon-blue)":"var(--text3)"}}>{count}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+            }
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="pd-tab-title">👥 Community</div>
+      <input className="search-inp" placeholder="🔍 Cerca giocatore…" value={search}
+        onChange={e=>setSearch(e.target.value)} style={{marginBottom:12}}/>
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {others.length===0
+          ? <div className="empty" style={{padding:32,textAlign:"center"}}>
+                  <div style={{fontSize:36,marginBottom:8}}>🌱</div>
+                  <div style={{fontWeight:700,marginBottom:4}}>Nessun giocatore</div>
+                  <div style={{fontSize:12}}>Prova a cambiare la ricerca</div>
+                </div>
+          : others.map((p,i)=>{
+              const lv = getLevel(p.xp||0);
+              const rankColors = ["#ffcc00","#c0c0c0","#cd7f32"];
+              return (
+                <div key={p.id} onClick={()=>openPlayer(p)}
+                  style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+                    background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",borderRadius:14,
+                    cursor:"pointer",transition:"all .15s",position:"relative"}}
+                  onMouseOver={e=>{e.currentTarget.style.background="rgba(0,212,255,.06)";e.currentTarget.style.borderColor="rgba(0,212,255,.3)";}}
+                  onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="var(--border)";}}>
+                  {i<3 && <div style={{position:"absolute",top:8,right:10,fontSize:16}}>{["🥇","🥈","🥉"][i]}</div>}
+                  <div style={{width:46,height:46,borderRadius:"50%",overflow:"hidden",border:`2px solid ${i<3?rankColors[i]:"var(--border2)"}`,flexShrink:0,boxShadow:i===0?"0 0 12px rgba(255,204,0,.4)":"none"}}>
+                    <Avatar url={p.avatar_url} emoji={lv.emoji} size={46}/>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:14,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                    <div style={{fontSize:11,color:"var(--text3)"}}>{lv.emoji} {lv.name} · ⭐ {p.xp} XP</div>
+                  </div>
+                  <div style={{fontSize:12,color:"var(--text3)",flexShrink:0}}>→</div>
+                </div>
+              );
+          })
+        }
+      </div>
+    </div>
+  );
+}
+
+
+// ─── XP HISTORY CHART ────────────────────────────────────
+function XPHistoryChart({ playerId }) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const since = new Date(Date.now()-30*86400000).toISOString();
+    sb.from("xp_history").select("xp_gained,xp_total,reason,created_at")
+      .eq("player_id", playerId).gte("created_at", since)
+      .order("created_at", {ascending:true})
+      .then(({ data: rows }) => {
+        // Aggregate by day
+        const byDay = {};
+        (rows||[]).forEach(r => {
+          const day = r.created_at.slice(0,10);
+          byDay[day] = (byDay[day]||0) + r.xp_gained;
+        });
+        // Last 14 days
+        const days = [];
+        for (let i=13; i>=0; i--) {
+          const d = new Date(Date.now()-i*86400000);
+          const key = d.toISOString().slice(0,10);
+          days.push({ label: d.toLocaleDateString("it-IT",{day:"numeric",month:"short"}), xp: byDay[key]||0, key });
+        }
+        setData(days); setLoading(false);
+      }).catch(()=>setLoading(false));
+  }, [playerId]);
+
+  if (loading) return <div style={{padding:12,textAlign:"center",fontSize:12,color:"var(--text3)"}}>⏳</div>;
+  if (data.every(d=>d.xp===0)) return <div className="empty" style={{padding:12}}>Nessuna attività nelle ultime 2 settimane.</div>;
+
+  const max = Math.max(...data.map(d=>d.xp), 1);
+  return (
+    <div style={{marginTop:8}}>
+      <div style={{display:"flex",alignItems:"flex-end",gap:3,height:80}}>
+        {data.map(d=>(
+          <div key={d.key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <div style={{fontSize:8,color:"var(--text3)",fontWeight:700,opacity:d.xp>0?1:.3}}>{d.xp>0?`+${d.xp}`:""}</div>
+            <div style={{
+              width:"100%",borderRadius:"3px 3px 0 0",
+              height:`${Math.max((d.xp/max)*60,d.xp>0?4:0)}px`,
+              background:d.xp>0?"linear-gradient(180deg,var(--neon-blue),rgba(0,212,255,.4))":"rgba(255,255,255,.06)",
+              transition:"height .3s ease",
+            }}/>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+        <span style={{fontSize:8,color:"var(--text3)"}}>{data[0]?.label}</span>
+        <span style={{fontSize:8,color:"var(--text3)"}}>{data[data.length-1]?.label}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── LEVEL UP ANIMATION ──────────────────────────────────
+function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t); }, [onDone]);
+  const colors = ["#ffcc00","#00d4ff","#ff2d78","#00ff88","#ff8c00","#a78bfa"];
+  const particles = Array.from({length:28},(_,i)=>({ id:i, left:Math.random()*100, delay:Math.random()*1.2, dur:1.8+Math.random()*1.5, color:colors[i%6], size:6+Math.random()*10, shape:i%3===0?"50%":"3px" }));
+  return (
+    <div onClick={onDone} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,.88)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+      <style>{`
+        @keyframes cffall{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(540deg);opacity:0}}
+        @keyframes lvlpop{0%{transform:scale(0) rotate(-8deg);opacity:0}60%{transform:scale(1.15) rotate(2deg)}100%{transform:scale(1);opacity:1}}
+        @keyframes lvlshine{0%{transform:translateX(-100%) skew(-15deg)}100%{transform:translateX(300%) skew(-15deg)}}
+        @keyframes pulse2{0%,100%{opacity:1}50%{opacity:.6}}
+      `}</style>
+      {particles.map(p=>(
+        <div key={p.id} style={{position:"absolute",top:-10,left:`${p.left}%`,width:p.size,height:p.size,background:p.color,borderRadius:p.shape,animation:`cffall ${p.dur}s ${p.delay}s ease-in infinite`}}/>
+      ))}
+      <div style={{background:"linear-gradient(135deg,#0d1428,#1a2540)",border:"2px solid rgba(255,204,0,.5)",borderRadius:28,padding:"40px 48px",textAlign:"center",animation:"lvlpop .6s cubic-bezier(.34,1.56,.64,1) forwards",position:"relative",overflow:"hidden",maxWidth:340,width:"90%",boxShadow:"0 0 60px rgba(255,204,0,.25)"}}>
+        <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"linear-gradient(105deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%)",animation:"lvlshine 2.5s .6s ease-in-out infinite"}}/>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".2em",color:"rgba(255,255,255,.4)",marginBottom:8}}>🎉 LEVEL UP!</div>
+        <div style={{fontSize:76,lineHeight:1,marginBottom:10,filter:"drop-shadow(0 0 16px rgba(255,204,0,.5))"}}>{newLevel.emoji}</div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:34,fontWeight:900,textTransform:"uppercase",background:"linear-gradient(135deg,#ffcc00,#ff8c00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>{newLevel.name}</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:20}}>Hai sbloccato il livello <strong style={{color:"#ffcc00"}}>{newLevel.name}</strong>!</div>
+        <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:18}}>
+          <div style={{textAlign:"center",opacity:.6}}><div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>PRIMA</div><div style={{fontSize:20}}>{oldLevel.emoji}</div><div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{oldLevel.name}</div></div>
+          <div style={{display:"flex",alignItems:"center",fontSize:18,color:"#ffcc00"}}>→</div>
+          <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#ffcc00",marginBottom:4,fontWeight:700}}>ORA</div><div style={{fontSize:24}}>{newLevel.emoji}</div><div style={{fontSize:13,color:"#ffcc00",fontWeight:700}}>{newLevel.name}</div></div>
+        </div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.2)",animation:"pulse2 2s infinite"}}>Tocca per continuare</div>
+      </div>
+    </div>
+  );
+}
+
 function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [tab, setTab] = useState("profilo");
   const [fullProfile, setFullProfile] = useState(profile);
@@ -3118,12 +4640,47 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [xpMonth, setXpMonth] = useState({});
   const [qrInput, setQrInput] = useState("");
   const [qrMsg, setQrMsg] = useState("");
+  const [qrCelebration, setQrCelebration] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
   const [toast, setToast] = useState(null);
   const [monthPresences, setMonthPresences] = useState(null);
   const [monthTarget, setMonthTarget] = useState(null);
   const [actBookingCounts, setActBookingCounts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [visConfig, setVisConfig] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
+  });
+  const [visReady, setVisReady] = useState(false);
+  const [levelUpData, setLevelUpData] = useState(null);
+
+  // Reset loadingRef e ricarica quando app torna in primo piano
+  useEffect(() => {
+    let hidden = 0;
+    function onVis() {
+      if (document.visibilityState === 'hidden') { hidden = Date.now(); return; }
+      if (document.visibilityState === 'visible' && Date.now() - hidden > 15000) {
+        loadingRef.current = false;
+        load();
+      }
+    }
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [load]);
+
+  // Carica visibilità PRIMA di mostrare qualsiasi cosa
+  useEffect(() => {
+    sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
+      .then(({ data, error }) => {
+        if (error) { return; }
+        const cfg = data?.app_config;
+        if (cfg && typeof cfg === "object") {
+          localStorage.setItem("pug_visibility", JSON.stringify(cfg));
+          setVisConfig(cfg);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setVisReady(true));
+  }, []);
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
@@ -3141,6 +4698,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const load = useCallback(async () => {
   try {
+    // Carica visibilità PRIMA di tutto — evita flash con vecchi dati
+    const { data: visRow } = await sb.from("profiles")
+      .select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single();
+    const visCfg = visRow?.app_config;
+    if (visCfg && typeof visCfg === "object") {
+      localStorage.setItem("pug_visibility", JSON.stringify(visCfg));
+      setVisConfig(visCfg);
+    }
+  } catch(_) {}
+  try {
     const today = new Date().toISOString().split("T")[0];
     const monthStart = today.slice(0, 7) + "-01";
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }] = await Promise.all([
@@ -3150,11 +4717,18 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
       sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").order("xp", { ascending: false }),
-      sb.from("messages").select("id,body,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at,sender_id,profiles!sender_id(display_name,avatar_url)").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
       sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
     ]);
     if (p) setFullProfile(p);
+    const prevXP = parseInt(localStorage.getItem("pug_xp_"+p.id)||"0");
+    const curXP = p.xp||0;
+    if (prevXP > 0 && curXP > prevXP) {
+      const oldLv = getLevel(prevXP); const newLv = getLevel(curXP);
+      if (newLv.name !== oldLv.name) setLevelUpData({ oldLevel:oldLv, newLevel:newLv });
+    }
+    localStorage.setItem("pug_xp_"+p.id, String(curXP));
     const acts = a || [];
     setBadges(b || []); setActivities(acts); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
     if (acts.length > 0) {
@@ -3180,7 +4754,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     setMonthPresences(myPres?.length || 0);
     setMonthTarget(mConfig?.min_days || null);
   } catch(err) {
-    console.error("Errore caricamento dati:", err);
   } finally {
     setLoading(false);
   }
@@ -3257,6 +4830,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", profile.id);
       setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin }));
       setQrInput(""); setQrMsg(`✅ Check-in Lab "${act.name}"! +${act.xp_full||20} XP +${act.coin_full||10} 🪙`);
+      playPixel("checkin"); setQrCelebration({ xpGained: act.xp_full||20, playerName: fullProfile?.display_name||"" });
       return;
     }
 
@@ -3275,6 +4849,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const newCoin = (fullProfile?.coin || 0) + 5;
     await sb.from("profiles").update({ xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }).eq("id", profile.id);
     setQrMsg(`✅ Check-in! +10 XP +5 Coin · 🔥 ${newStreak} giorni`);
+    playPixel("checkin"); setQrCelebration({ xpGained: 10, playerName: fullProfile?.display_name||"" });
     setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }));
     await checkAndAssignMonthlyBadge(newXp, newCoin);
   }
@@ -3289,6 +4864,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         status: "pending",
       });
       if (error) { alert("❌ Errore prenotazione: " + error.message); return; }
+      // Notifica push a tutti gli educator
+      sb.from("profiles").select("id").in("role",["educator","admin"]).then(({ data: edus }) => {
+        (edus||[]).forEach(e => sendPush(e.id, "📋 Nuova prenotazione", `${fullProfile?.display_name||"Un giocatore"} ha prenotato un Lab`).catch(()=>{}));
+      });
       if (cost > 0) {
         await sb.from("profiles").update({ coin: (fullProfile?.coin || 0) - cost }).eq("id", profile.id);
         setFullProfile(prev => ({ ...prev, coin: (prev?.coin || 0) - cost }));
@@ -3327,6 +4906,23 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     setMustChangePin(false);
   }
 
+  // Aspetta caricamento visibilità (evita flash con dati sbagliati)
+  if (!visReady) return (
+    <>
+      <style>{css}</style>
+      <div className="player-wrap" style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,textTransform:"uppercase",color:"var(--azzurro)",letterSpacing:".1em",opacity:.6}}>🌿</div>
+      </div>
+    </>
+  );
+
+  if (levelUpData) return (
+    <>
+      <style>{css}</style>
+      <LevelUpOverlay oldLevel={levelUpData.oldLevel} newLevel={levelUpData.newLevel} onDone={()=>setLevelUpData(null)}/>
+    </>
+  );
+
   if (mustChangePin) return (
     <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
       <div style={{background:'rgba(0,0,20,.7)',border:'1px solid rgba(255,255,255,.15)',borderRadius:20,padding:'32px 24px',width:'100%',maxWidth:360,backdropFilter:'blur(20px)'}}>
@@ -3357,11 +4953,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const BOTTOM_TABS = [
     ["profilo","👤","Profilo"],
-    ["classifica","🏆","Classifica"],
-    ["attivita","⚡","Lab"],
-    ["messaggi","💬","Messaggi"],
+    ["social","🌍","Social"],
+    visConfig.classifica !== false ? ["classifica","🏆","Classifica"] : null,
+    visConfig.lab !== false ? ["attivita","⚡","Lab"] : null,
+    visConfig.messaggi !== false ? ["messaggi","💬","Messaggi"] : null,
     ["notifiche","🔔","Notifiche"],
-  ];
+  ].filter(Boolean);
 
   const TAB_BG = {
     profilo:    'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',
@@ -3383,7 +4980,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       )}
       {/* Floral background */}
       <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.07,overflow:'hidden'}}>
-        <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
+        <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{animation:"float2 15s ease-in-out infinite"}} style={{width:'100%',height:'100%'}}>
           <defs>
             <g id="fl"><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="4" fill="white"/></g>
             <g id="lf"><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(20)"/><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(-20)"/></g>
@@ -3392,14 +4989,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         </svg>
       </div>
 
+      {/* Toast notifications */}
+      <ToastContainer/>
+      {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
       {/* Top bar */}
-      <div className="pd-topbar">
+      <div className="pd-topbar" style={{paddingTop:"max(10px, calc(env(safe-area-inset-top, 0px) + 8px))"}}>
         <div>
           <div className="pd-logo-box"><div className="pd-logo-t">PeR·You<br/>GaRDeN</div></div>
           <div className="pd-logo-sub">gratuito &amp; popolare</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          {fullProfile?.squads?.name && (
+          {visConfig.squadre !== false && fullProfile?.squads?.name && (
             <div style={{background:'#111',color:'#ffcc00',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
           )}
           <button onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,padding:'5px 9px',cursor:'pointer',fontSize:14,lineHeight:1}} title="Cambia tema">
@@ -3410,7 +5010,23 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       </div>
 
       {/* Scrollable content */}
-      <div className="pd-scroll">
+      <div className="pd-scroll"
+        onTouchStart={e=>{window._swipeX0=e.touches[0].clientX; window._swipeY0=e.touches[0].clientY;}}
+        onScroll={e=>{
+          if(e.target.scrollTop === 0 && window._pulling) { window._pulling=false; load(); addToast("🔄 Aggiornamento…","ok"); }
+        }}
+        onTouchMove={e=>{
+          const dy=e.touches[0].clientY-(window._swipeY0||0);
+          if(dy>60 && e.currentTarget.scrollTop===0) window._pulling=true;
+        }}
+        onTouchEnd={e=>{
+          const dx=e.changedTouches[0].clientX-(window._swipeX0||0);
+          if(Math.abs(dx)<50)return;
+          const ts=BOTTOM_TABS.map(t=>t[0]);
+          const ci=ts.indexOf(tab);
+          if(dx<0&&ci<ts.length-1)setTab(ts[ci+1]);
+          else if(dx>0&&ci>0)setTab(ts[ci-1]);
+        }}>
 
         {/* ── PROFILO ── */}
         {tab === "profilo" && fullProfile && (
@@ -3419,8 +5035,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             <div className="pd-av-zone">
               <div className="pd-av-glow"/>
               {fullProfile.avatar_url
-                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar"/>
-                : <span className="pd-av-emoji">{lv.emoji}</span>
+                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}} loading="lazy"/>
+                : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
               }
               <div className="pd-name-pill">{fullProfile.display_name}</div>
               <div className="pd-lv-pill">{lv.emoji} LV.{lv.id} · {lv.name}</div>
@@ -3434,10 +5050,27 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 </div>
                 <div style={{flex:1}}>
                   <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:2}}>{fullProfile.display_name}</div>
-                  {fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
+                  {visConfig.squadre !== false && fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
                 </div>
               </div>
-              {editingFirstName ? (
+              {/* Goal XP personale */}
+            {(() => {
+              const goal = fullProfile.xp_goal || 0;
+              const pct = goal > 0 ? Math.min(100, Math.round((fullProfile.xp/goal)*100)) : 0;
+              return goal > 0 ? (
+                <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                    <span style={{fontSize:12,fontWeight:700,color:"var(--text2)"}}>🎯 Obiettivo XP</span>
+                    <span style={{fontSize:12,fontWeight:700,color:"var(--neon-blue)"}}>{fullProfile.xp} / {goal} XP ({pct}%)</span>
+                  </div>
+                  <div style={{height:8,borderRadius:99,background:"rgba(255,255,255,.08)",overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,borderRadius:99,background:pct>=100?"var(--neon-green)":"linear-gradient(90deg,var(--neon-blue),var(--azzurro))",transition:"width .5s ease"}}/>
+                  </div>
+                  {pct>=100 && <div style={{fontSize:11,color:"var(--neon-green)",marginTop:4,fontWeight:700}}>🏆 Obiettivo raggiunto!</div>}
+                </div>
+              ) : null;
+            })()}
+            {editingFirstName ? (
                 <div style={{display:'flex',gap:8,marginBottom:8}}>
                   <input className="form-input" value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} placeholder="Il tuo nome…" style={{flex:1}} maxLength={30} autoFocus/>
                   <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
@@ -3459,11 +5092,24 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             </div>
 
             {/* Stats grid 1: XP, Coin, Badge */}
-            <div className="pd-sg">
-              {[['⭐',fullProfile.xp,'XP'],['🪙',fullProfile.coin,'Coin'],['🎖️',badges.length,'Badge']].map(([ic,v,l])=>(
-                <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
-              ))}
-            </div>
+            {(() => {
+              const stats = [
+                visConfig.xp !== false ? ['⭐',fullProfile.xp,'XP'] : null,
+                visConfig.coin !== false ? ['🪙',fullProfile.coin,'Coin'] : null,
+                visConfig.badge !== false ? ['🎖️',badges.length,'Badge'] : null,
+              ].filter(Boolean);
+              return stats.length > 0 ? (
+                <div className="pd-sg" style={{gridTemplateColumns:`repeat(${stats.length},1fr)`}}>
+                  {stats.map(([ic,v,l])=>(
+                    <div key={l} className="pd-sc">
+                      <span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span>
+                      <CountUpStat val={typeof v==="number"?v:fullProfile.xp}/>
+                      <span className="pd-sl">{l}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            })()}
 
             {/* Stats grid 2: Lab, Conf., Rank */}
             <div className="pd-sg">
@@ -3473,11 +5119,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             </div>
 
             {/* Streak */}
-            {((fullProfile.current_streak||0) > 0 || (fullProfile.longest_streak||0) > 0) && (
+            {visConfig.streak !== false && ((fullProfile.current_streak||0) > 0 || (fullProfile.longest_streak||0) > 0) && (
               <div className="streak-card">
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(255,140,0,.7)',marginBottom:8}}>🔥 Streak presenze</div>
                 <div className="streak-row">
-                  <div className="streak-item"><span className="streak-val">{fullProfile.current_streak||0}</span><span className="streak-lbl">Giorni attuali</span></div>
+                  <div className="streak-item"><span className="streak-val">{fullProfile.current_streak||0}</span><span className="streak-lbl"><span className="flame-pulse">🔥</span> Giorni attuali</span></div>
                   <div className="streak-item"><span className="streak-val">{fullProfile.longest_streak||0}</span><span className="streak-lbl">Record</span></div>
                   <div className="streak-item"><span className="streak-val">{(() => { const now=new Date(); return new Date(now.getFullYear(),now.getMonth()+1,0).getDate(); })()}</span><span className="streak-lbl">Giorni mese</span></div>
                 </div>
@@ -3491,37 +5137,42 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             )}
 
             {/* Squadra */}
-            {fullProfile.squads?.name && (
-              <div className="pd-squad">
-                <div style={{width:36,height:36,borderRadius:8,background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>⚡</div>
-                <div>
-                  <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
-                  <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>
+            {(() => {
+              const showSquad = visConfig.squadre !== false;
+              if (!showSquad) return null;
+              if (!fullProfile.squads?.name) return (
+                <div className="pd-squad" style={{opacity:.5}}>
+                  <div style={{width:36,height:36,borderRadius:8,background:'rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔒</div>
+                  <div>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadre</div>
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>🚧 Coming soon</div>
+                  </div>
                 </div>
-              </div>
+              );
+              return (
+                <div className="pd-squad">
+                  <div style={{width:36,height:36,borderRadius:8,background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>⚡</div>
+                  <div>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Sfide */}
+            {visConfig.sfida !== false && (
+              <SfidePanel activities={activities}/>
             )}
-
-            {/* Sfida del giorno */}
-            {activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
-              <div key={s.id} className="pd-sfida">
-                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'#ffcc00',marginBottom:4}}>⚡ Sfida del Giorno</div>
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:7}}>{s.name}</div>
-                <div style={{fontSize:12,color:'rgba(255,255,255,.5)',marginBottom:10,lineHeight:1.5}}>{s.description?.replace('SFIDA · ','')}</div>
-                <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                  <div style={{display:'inline-flex',alignItems:'center',gap:5,background:'rgba(255,220,0,.14)',border:'1px solid rgba(255,220,0,.35)',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:900,color:'#ffcc00'}}>🌟 +{s.xp_completed} XP · +{s.coin_completed} Coin</div>
-                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:'#00d4ff',fontWeight:700,textDecoration:'none',background:'rgba(0,212,255,.1)',border:'1px solid rgba(0,212,255,.25)',borderRadius:8,padding:'4px 10px'}}>🔗 Apri</a>}
-                </div>
-              </div>
-            ))}
-
+            
             {/* Badge */}
-            {badges.length > 0 && (
+            {visConfig.badge !== false && badges.length > 0 && (
               <div className="pd-badges">
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',textAlign:'center',marginBottom:6}}>— Badge —</div>
                 <div className="pd-badge-row">
                   {badges.map(pb=>(
                     <div key={pb.id} className="pd-badge-item" onClick={()=>setSelectedBadge(pb)}>
-                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt=""/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
+                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt="" loading="lazy"/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
                       <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.65)',lineHeight:1.3}}>{pb.badges?.name}</div>
                     </div>
                   ))}
@@ -3616,7 +5267,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             </div>
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
               <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
-                <div className="sfida-label">⚡ Sfida del giorno</div>
+                <div className="sfida-label">⚡ Sfide</div>
                 <div className="sfida-title">{s.name}</div>
                 <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
@@ -3701,6 +5352,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                           <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
                         </div>
                       </div>
+                      {m.media_data && !m.media_data.startsWith("sticker:") && (
+                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt="" loading="lazy"/>
+                      )}
                       <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
                     </div>
                   ))}
@@ -3711,6 +5365,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
 
         {/* ── NOTIFICHE ── */}
+        {tab === "social" && (
+          <div className="tab-content" style={{ marginTop: 8 }}>
+            <SocialTab players={players} myId={profile.id} myProfile={fullProfile}/>
+          </div>
+        )}
         {tab === "notifiche" && (
           <div style={{ marginTop: 8 }}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
@@ -3746,7 +5405,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         <div className="modal-bg" onClick={() => setSelectedBadge(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
-              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)", margin: "0 auto 10px", display: "block" }} alt="" /> : <div style={{ fontSize: 56, marginBottom: 10 }}>🎖️</div>}
+              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)", margin: "0 auto 10px", display: "block" }} alt=""  loading="lazy"/> : <div style={{ fontSize: 56, marginBottom: 10 }}>🎖️</div>}
               <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{selectedBadge.badges?.name}</div>
               <div style={{ fontSize: 13, color: "var(--azzurro)", fontWeight: 700, marginTop: 4 }}>+{selectedBadge.xp_awarded} XP · 🪙 +{selectedBadge.coin_awarded}</div>
             </div>
@@ -3831,7 +5490,7 @@ function DashboardView() {
       const top5 = [...(players||[])].filter(p=>p.xp>1).sort((a,b)=>b.xp-a.xp).slice(0,5);
 
       setStats({ active, totalXP, totalCoin, todayAtt:todayAtt||[], days, xpByDay, pressByDay, squadMap, bookings:bookings||[], labs:labs||[], badges:badges||[], top5, allPlayers: players||[] });
-      } catch(e) { console.error("Dashboard error:", e); }
+      } catch(e) { }
       setLoading(false);
     }
     load();
@@ -3848,7 +5507,7 @@ function DashboardView() {
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16}}>📊 Dashboard</div>
 
       {/* Stat cards */}
-      <div className="stats-grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",marginBottom:20}}>
+      <div className="stats-grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",marginBottom:16}}>
         {[
           ["Giocatori attivi", stats.active.length, "🌿", "var(--neon-green)"],
           ["XP totali", stats.totalXP.toLocaleString(), "⭐", "var(--neon-blue)"],
@@ -3884,7 +5543,7 @@ function DashboardView() {
         </div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:14,marginBottom:16}}>
         {/* Top 5 players */}
         <div className="card">
           <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>🏆 Top 5 giocatori</div>
@@ -3969,12 +5628,27 @@ function PuliziaView() {
     setNotifs(n||[]); setBookings(b||[]); setLoading(false);
   }
 
+  async function loadAllPlayers() {
+    setLoading(true); setMsg("");
+    const { data: allNotifs } = await sb.from("notifications").select("*,profiles(display_name)").order("created_at",{ascending:false}).limit(500);
+    const { data: allBookings } = await sb.from("bookings").select("id,status,coin_held,created_at,player_id,activities(name),profiles(display_name)").order("created_at",{ascending:false}).limit(500);
+    setNotifs((allNotifs||[]).map(n=>({...n, _playerName: n.profiles?.display_name})));
+    setBookings((allBookings||[]).map(b=>({...b, _playerName: b.profiles?.display_name})));
+    setLoading(false);
+  }
+
   async function deleteNotif(id) {
     await sb.from("notifications").delete().eq("id",id);
     setNotifs(prev => prev.filter(n=>n.id!==id));
   }
 
   async function deleteAllNotifs() {
+    if (selected?.id === "__all__") {
+      if (!confirm("Cancellare TUTTE le notifiche di TUTTI i giocatori? Operazione irreversibile.")) return;
+      for (const p of players) { await sb.from("notifications").delete().eq("user_id",p.id); }
+      setNotifs([]); setMsg("✅ Notifiche di tutti i giocatori cancellate");
+      return;
+    }
     if (!confirm(`Cancellare tutte le notifiche di ${selected.display_name}?`)) return;
     await sb.from("notifications").delete().eq("user_id",selected.id);
     setNotifs([]); setMsg("✅ Notifiche cancellate");
@@ -4016,13 +5690,17 @@ function PuliziaView() {
       {/* Player selector */}
       <div style={{marginBottom:16}}>
         <label className="form-label">Giocatore</label>
-        <select onChange={e=>{
-          const p = players.find(p=>p.id===e.target.value);
-          if (p) loadPlayer(p);
-        }} style={{width:"100%",padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:15}}>
-          <option value="">Seleziona un giocatore…</option>
-          {players.map(p=><option key={p.id} value={p.id}>{p.display_name} · {p.xp} XP</option>)}
-        </select>
+        <div style={{display:"flex",gap:8}}>
+          <select onChange={e=>{
+            if (e.target.value === "__all__") { setSelected({id:"__all__",display_name:"Tutti i giocatori"}); loadAllPlayers(); return; }
+            const p = players.find(p=>p.id===e.target.value);
+            if (p) loadPlayer(p);
+          }} style={{flex:1,padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:15}}>
+            <option value="">Seleziona un giocatore…</option>
+            <option value="__all__">🌍 Tutti i giocatori</option>
+            {players.map(p=><option key={p.id} value={p.id}>{p.display_name} · {p.xp} XP</option>)}
+          </select>
+        </div>
       </div>
 
       {loading && <div className="loading">⏳ Caricamento…</div>}
@@ -4031,12 +5709,14 @@ function PuliziaView() {
         <div>
           {/* Player header */}
           <div style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
-            <div style={{width:44,height:44,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,140,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>
-              {selected.avatar_url?<img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:getLevel(selected.xp||0).emoji}
+            <div style={{width:44,height:44,borderRadius:"50%",border:"2px solid rgba(255,140,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+              {selected.id==="__all__" ? "🌍" : selected.avatar_url ? <img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="" loading="lazy"/> : getLevel(selected.xp||0).emoji}
             </div>
             <div style={{flex:1}}>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff"}}>{selected.display_name}</div>
-              <div style={{fontSize:12,color:"var(--text3)"}}>{selected.squads?.name||"Nessuna squadra"} · {selected.xp} XP</div>
+              <div style={{fontSize:12,color:"var(--text3)"}}>
+                {selected.id==="__all__" ? `${players.length} giocatori · ${notifs.length} notifiche · ${bookings.length} prenotazioni` : `${selected.squads?.name||"Nessuna squadra"} · ${selected.xp} XP`}
+              </div>
             </div>
           </div>
 
@@ -4052,6 +5732,7 @@ function PuliziaView() {
                   <div key={n.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
                     <span style={{fontSize:16,flexShrink:0}}>{typeIcon[n.type]||"🔔"}</span>
                     <div style={{flex:1,minWidth:0}}>
+                      {selected?.id==="__all__" && n._playerName && <div style={{fontSize:10,color:"#ffcc00",fontWeight:700,marginBottom:1}}>{n._playerName}</div>}
                       <div style={{fontSize:12,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.title}</div>
                       {n.body&&<div style={{fontSize:10,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.body}</div>}
                       <div style={{fontSize:9,color:"var(--text3)"}}>{new Date(n.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
@@ -4075,6 +5756,7 @@ function PuliziaView() {
                   <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
                     <span style={{fontSize:14,flexShrink:0}}>{statusTag[b.status]||"?"}</span>
                     <div style={{flex:1,minWidth:0}}>
+                      {selected?.id==="__all__" && b._playerName && <div style={{fontSize:10,color:"#ffcc00",fontWeight:700,marginBottom:1}}>{b._playerName}</div>}
                       <div style={{fontSize:12,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.activities?.name||"Lab eliminato"}</div>
                       <div style={{fontSize:10,color:"var(--text3)"}}>🪙 {b.coin_held||0} · {new Date(b.created_at).toLocaleDateString("it-IT")}</div>
                     </div>
@@ -4161,7 +5843,7 @@ function AdminView({ profile }) {
           {educators.map(e => (
             <div key={e.id} className="card-sm" style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.3)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
-                {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/> : "🌱"}
+                {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="" loading="lazy"/> : "🌱"}
               </div>
               <div style={{flex:1}}>
                 {editEdu?.id === e.id ? (
@@ -4226,7 +5908,7 @@ function AdminView({ profile }) {
             <label className="form-label">Avatar</label>
             {form.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
-                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt=""/>
+                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt="" loading="lazy"/>
                 <div style={{flex:1,fontSize:12,color:"#ffcc00"}}>{form.avatar_url.split("/").pop().replace(".webp","")}</div>
                 <button className="btn btn-ghost btn-xs" onClick={()=>setForm(f=>({...f,avatar_url:""}))}>✕</button>
               </div>
@@ -4251,7 +5933,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -4346,45 +6028,52 @@ function ExportView() {
 
 // ─── PRESENTATION MODE ────────────────────────────────────
 
-function PresentationMode({ onClose }) {
-  const [players, setPlayers] = useState([]);
+function PresentationMode({ onClose, settings }) {
+  const cfg = settings || { title:"🏆 Classifica PUG", squadFilter:"all", topN:0, podioDuration:10, scrollSpeed:"medium" };
+  const speedMap = { slow:0.3, medium:0.6, fast:1.2 };
+  const [allPlayers, setAllPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [phase, setPhase]     = useState("podio"); // "podio" | "lista"
+  const [phase, setPhase]     = useState("podio");
   const scrollRef = useRef(null);
   const animRef   = useRef(null);
 
   useEffect(() => {
     sb.from("profiles").select("id,display_name,avatar_url,xp,squads(name)")
       .eq("role","player").gt("xp",0).order("xp",{ascending:false})
-      .then(({data}) => { setPlayers(data||[]); setLoading(false); });
+      .then(({data}) => { setAllPlayers(data||[]); setLoading(false); });
     const handler = e => { if(e.key==="Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  // Switch to lista after 10s
+  // Filter and limit players
+  const players = allPlayers
+    .filter(p => cfg.squadFilter === "all" || p.squads?.name === cfg.squadFilter)
+    .slice(0, cfg.topN > 0 ? cfg.topN : allPlayers.length);
+
+  // Switch to lista after podioDuration seconds
   useEffect(() => {
     if (loading) return;
-    const t = setTimeout(() => setPhase("lista"), 10000);
+    const t = setTimeout(() => setPhase("lista"), (cfg.podioDuration || 10) * 1000);
     return () => clearTimeout(t);
-  }, [loading]);
+  }, [loading, cfg.podioDuration]);
 
-  // Auto-scroll ticker on lista phase
+  // Auto-scroll ticker
   useEffect(() => {
     if (phase !== "lista") return;
     const el = scrollRef.current;
     if (!el) return;
     let pos = 0;
-    const speed = 0.6; // px per frame
+    const speed = speedMap[cfg.scrollSpeed] || 0.6;
     function tick() {
       pos += speed;
-      if (pos >= el.scrollHeight / 2) pos = 0; // loop (list is doubled)
+      if (pos >= el.scrollHeight / 2) pos = 0;
       el.scrollTop = pos;
       animRef.current = requestAnimationFrame(tick);
     }
     animRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animRef.current);
-  }, [phase, players]);
+  }, [phase, players, cfg.scrollSpeed]);
 
   const stars = Array.from({length:60},(_,i)=>({
     left:Math.random()*100+"%", top:Math.random()*100+"%",
@@ -4419,7 +6108,7 @@ function PresentationMode({ onClose }) {
       {/* ── PODIO ── */}
       {phase==="podio" && (
         <>
-          <div className="pres-title">🏆 Classifica PUG</div>
+          <div className="pres-title">{cfg.title || "🏆 Classifica PUG"}</div>
           <div className="pres-podium-wrap">
             {order.map((pos,i) => {
               const p = players[pos];
@@ -4433,7 +6122,7 @@ function PresentationMode({ onClose }) {
                 <div key={p.id} className={colCls}>
                   {i===1 && <div className="pres-crown">👑</div>}
                   <div className={avCls} style={{fontSize:i===1?"52px":i===0?"40px":"34px"}}>
-                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : lv.emoji}
+                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy"/> : lv.emoji}
                   </div>
                   <div className="pres-pname" style={{color:medalColors[i]}}>{p.display_name}</div>
                   <div className="pres-pxp" style={{color:medalColors[i]}}>{(p.xp||0).toLocaleString()} XP</div>
@@ -4459,7 +6148,7 @@ function PresentationMode({ onClose }) {
       {phase==="lista" && (
         <>
           <div className="pres-title" style={{fontSize:"clamp(20px,4vw,44px)",marginBottom:"clamp(8px,2vh,16px)"}}>
-            🌿 Tutti i giocatori · {players.length}
+            {cfg.squadFilter !== "all" ? `🛡️ Squadra ${cfg.squadFilter}` : "🌿 Tutti i giocatori"} · {players.length}
           </div>
           <div ref={scrollRef} style={{width:"100%",maxWidth:560,overflow:"hidden",height:"65vh",padding:"0 16px"}}>
             {doubled.map((p,i) => {
@@ -4476,7 +6165,7 @@ function PresentationMode({ onClose }) {
                 }}>
                   <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,width:38,textAlign:"center",color:isTop?colors[rank-1]:"var(--text3)"}}>{rank}°</div>
                   <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",border:`2px solid ${isTop?colors[rank-1]:"rgba(255,255,255,.15)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
-                    {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:lv.emoji}
+                    {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy"/>:lv.emoji}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
@@ -4497,6 +6186,9 @@ const EduTabColors = {
   dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   pulizia:      { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
+  annunci:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
+  social_edu:   { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
+  visibilita:   { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   admin:        { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
   classifica:   { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
@@ -4520,6 +6212,22 @@ function EducatorShell({ profile, onLogout }) {
   const [theme, setTheme] = useState("dark");
   const [sectionColors, setSectionColors] = useState(DEFAULT_SECTION_COLORS);
   const [showPresentation, setShowPresentation] = useState(false);
+  const [showPresSettings, setShowPresSettings] = useState(false);
+  const [visibility, setVisibility] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pug_visibility") || "{}"); } catch(_) { return {}; }
+  });
+  function saveVisibility(key, val) {
+    const next = { ...visibility, [key]: val };
+    setVisibility(next);
+    localStorage.setItem("pug_visibility", JSON.stringify(next));
+  }
+  const [presSettings, setPresSettings] = useState({
+    title: "🏆 Classifica PUG",
+    squadFilter: "all",
+    topN: 0, // 0 = tutti
+    podioDuration: 10,
+    scrollSpeed: "medium", // slow/medium/fast
+  });
   const [notifCounts, setNotifCounts] = useState({ pendingBookings:0, missingAttendance:0, total:0 });
   const [showNotifPanel, setShowNotifPanel] = useState(false);
 
@@ -4558,8 +6266,8 @@ function EducatorShell({ profile, onLogout }) {
   return (
     <div className="edu-layout">
       {/* Floral background */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.04,overflow:'hidden'}}>
-        <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%'}}>
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.05,overflow:'hidden',maxWidth:'100vw'}}>
+        <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%',animation:'float1 18s ease-in-out infinite'}}>
           <defs><g id="ef"><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="5" fill="white"/></g></defs>
           <use href="#ef" transform="translate(80,80) scale(1.4)"/><use href="#ef" transform="translate(350,60) scale(1.1)"/><use href="#ef" transform="translate(700,90) scale(1.3)"/><use href="#ef" transform="translate(1050,70) scale(1)"/><use href="#ef" transform="translate(200,300) scale(.9)"/><use href="#ef" transform="translate(550,280) scale(1.2)"/><use href="#ef" transform="translate(900,310) scale(1)"/><use href="#ef" transform="translate(100,550) scale(1.1)"/><use href="#ef" transform="translate(450,520) scale(.8)"/><use href="#ef" transform="translate(800,560) scale(1.3)"/><use href="#ef" transform="translate(250,780) scale(1)"/><use href="#ef" transform="translate(650,760) scale(1.2)"/><use href="#ef" transform="translate(1000,790) scale(.9)"/>
         </svg>
@@ -4604,7 +6312,7 @@ function EducatorShell({ profile, onLogout }) {
       </div>
 
       {/* Header mobile */}
-      <div className="mob-header">
+      <div className="mob-header" style={{paddingTop:"env(safe-area-inset-top,0px)"}}>
         <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
         <div style={{transform:"rotate(-1deg)"}}>
           <div style={{background:"#cc1111",borderRadius:"7px 10px 7px 11px",padding:"3px 8px",display:"inline-block"}}>
@@ -4612,8 +6320,14 @@ function EducatorShell({ profile, onLogout }) {
           </div>
         </div>
         <span className="mob-header-title" style={{flex:1,marginLeft:8}}>{cur?.[2]}</span>
-        <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={() => setShowAvatarModal(true)}>
-          <Avatar url={avatarUrl} emoji={lv.emoji} size={32}/>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(255,204,0,.15)",border:"1px solid rgba(255,204,0,.3)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#ffcc00",lineHeight:1}} title="Presentazione">🎮</button>
+          <button onClick={()=>setTheme(t=>t==="dark"?"light":"dark")} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,lineHeight:1}} title="Tema">
+            {theme==="dark"?"☀️":"🌙"}
+          </button>
+          <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={() => setShowAvatarModal(true)}>
+            <Avatar url={avatarUrl} emoji={lv.emoji} size={30}/>
+          </div>
         </div>
       </div>
 
@@ -4652,7 +6366,7 @@ function EducatorShell({ profile, onLogout }) {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
-            <button onClick={()=>setShowPresentation(true)} style={{background:"rgba(255,204,0,.1)",border:"1px solid rgba(255,204,0,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#ffcc00",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
+            <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(255,204,0,.1)",border:"1px solid rgba(255,204,0,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#ffcc00",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
             <div className="edu-notif-bell" onClick={()=>setShowNotifPanel(p=>!p)}>
               🔔
               {notifCounts.total > 0 && <div className="edu-notif-badge">{notifCounts.total}</div>}
@@ -4695,6 +6409,9 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
+          {tab === "annunci"      && <AnnouncementsView profile={profile}/>}
+          {tab === "social_edu"   && <EducatorSocialView profile={profile}/>}
+          {tab === "visibilita"   && <VisibilityView />}
           {tab === "admin"        && <AdminView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
@@ -4727,7 +6444,49 @@ function EducatorShell({ profile, onLogout }) {
         </div>
       </div>
 
-      {showPresentation && <PresentationMode onClose={()=>setShowPresentation(false)}/>}
+      {showPresSettings && (
+        <div className="modal-bg" onClick={()=>setShowPresSettings(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">🎮 Impostazioni Presentazione</div>
+            <div className="form-group">
+              <label className="form-label">Titolo</label>
+              <input className="form-input" value={presSettings.title} onChange={e=>setPresSettings(p=>({...p,title:e.target.value}))} placeholder="🏆 Classifica PUG"/>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Mostra solo squadra</label>
+              <select value={presSettings.squadFilter} onChange={e=>setPresSettings(p=>({...p,squadFilter:e.target.value}))}>
+                <option value="all">Tutti i giocatori</option>
+                <option value="Verde">🟢 Squadra Verde</option>
+                <option value="Azzurra">🔵 Squadra Azzurra</option>
+                <option value="Gialla">🟡 Squadra Gialla</option>
+              </select>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div className="form-group">
+                <label className="form-label">Top N giocatori (0 = tutti)</label>
+                <input type="number" min="0" max="200" className="form-input" value={presSettings.topN} onChange={e=>setPresSettings(p=>({...p,topN:Number(e.target.value)}))}/>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Secondi fase podio</label>
+                <input type="number" min="3" max="60" className="form-input" value={presSettings.podioDuration} onChange={e=>setPresSettings(p=>({...p,podioDuration:Number(e.target.value)}))}/>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Velocità scorrimento lista</label>
+              <div style={{display:"flex",gap:8}}>
+                {[["slow","🐢 Lento"],["medium","🚶 Medio"],["fast","⚡ Veloce"]].map(([v,l])=>(
+                  <button key={v} className={`chip ${presSettings.scrollSpeed===v?"active":""}`} onClick={()=>setPresSettings(p=>({...p,scrollSpeed:v}))}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:8}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={()=>{setShowPresSettings(false);setShowPresentation(true);}}>▶ Avvia presentazione</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setShowPresSettings(false)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPresentation && <PresentationMode settings={presSettings} onClose={()=>setShowPresentation(false)}/>}
 
       {showAvatarModal && (
         <div className="modal-bg" onClick={() => setShowAvatarModal(false)}>
@@ -4747,64 +6506,103 @@ function EducatorShell({ profile, onLogout }) {
 export default function App() {
   const [profile, setProfile] = useState(null);
   const [checking, setChecking] = useState(true);
-  const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    // Deregistra service worker se presente (evita cache stale)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.unregister());
-      });
-    }
-    // Controlla prima sessione player (localStorage) — mostra subito dalla cache
-    const savedPlayer = localStorage.getItem("pug_player");
-    if (savedPlayer) {
-      try {
-        const p = JSON.parse(savedPlayer);
-        if (p?._playerSession && p?.id) {
-          // Mostra subito il profilo dalla cache locale
-          setProfile({ ...p, _playerSession: true });
-          setChecking(false);
-          // Aggiorna in background dal DB senza bloccare
-          sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+  const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
+
+  // Re-load when app comes back from background
+  useEffect(() => {
+    let lastHidden = 0;
+    function onVisible() {
+      if (document.visibilityState === 'hidden') {
+        lastHidden = Date.now();
+        return;
+      }
+      // Se era in background per più di 30 secondi, ricarica
+      if (document.visibilityState === 'visible' && Date.now() - lastHidden > 30000) {
+        setChecking(true);
+        // Re-verify session
+        if (profile?._playerSession) {
+          sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single()
             .then(({ data }) => {
               if (data) setProfile({ ...data, _playerSession: true });
-              else { localStorage.removeItem("pug_player"); setProfile(null); }
             })
+            .catch(() => {})
+            .finally(() => setChecking(false));
+        } else {
+          sb.auth.getSession().then(({ data: { session } }) => {
+            if (!session) { setProfile(null); localStorage.removeItem("pug_edu"); }
+            setChecking(false);
+          }).catch(() => setChecking(false));
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [profile]);
+
+  useEffect(() => {
+    sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(r => r.forEach(sw => sw.unregister()));
+    }
+    // ── PLAYER cache ──
+    try {
+      const sp = localStorage.getItem("pug_player");
+      if (sp) {
+        const p = JSON.parse(sp);
+        if (p?._playerSession && p?.id) {
+          setProfile({ ...p, _playerSession: true }); setChecking(false);
+          sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
+            .then(({ data }) => { if (data) setProfile({...data,_playerSession:true}); else { localStorage.removeItem("pug_player"); setProfile(null); } })
             .catch(console.error);
           return;
         }
-      } catch (_) { localStorage.removeItem("pug_player"); }
-    }
-
-    // Poi controlla sessione educator (Supabase Auth)
-    const _t = setTimeout(() => setChecking(false), 1500); // fallback timeout
-    // Mostra subito profilo educator dalla cache se disponibile
-    const cachedEdu = localStorage.getItem("pug_edu");
-    if (cachedEdu) {
-      try {
-        const cached = JSON.parse(cachedEdu);
-        if (cached?.id) { setProfile(cached); setChecking(false); clearTimeout(_t); }
-      } catch(_) {}
-    }
-    sb.auth.getSession()
-      .then(async ({ data: { session } }) => {
-        clearTimeout(_t);
-        if (session) {
-          const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-          if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
-          else setProfile({ id: session.user.id, role: "educator", display_name: session.user.email?.split("@")[0], xp: 0, coin: 100 });
-        } else if (!cachedEdu) {
-          setChecking(false);
-        } else {
-          setChecking(false);
+      }
+    } catch(_) { localStorage.removeItem("pug_player"); }
+    // ── EDUCATOR cache: mostra SUBITO, verifica in background ──
+    try {
+      const se = localStorage.getItem("pug_edu");
+      if (se) {
+        const cached = JSON.parse(se);
+        if (cached?.id) {
+          setProfile(cached); setChecking(false);
+          sb.auth.getSession().then(async ({ data: { session } }) => {
+            if (session) {
+              const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
+              if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+            } else { localStorage.removeItem("pug_edu"); setProfile(null); }
+          }).catch(console.error);
+          const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange(async (event, session) => {
+            if (event === "SIGNED_OUT") { setProfile(null); localStorage.removeItem("pug_edu"); }
+            if (event === "SIGNED_IN" && session) {
+              const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
+              if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+            }
+          });
+          return () => sub1.unsubscribe();
         }
-        setChecking(false);
-      })
-      .catch(() => { clearTimeout(_t); setChecking(false); });
-
+      }
+    } catch(_) { localStorage.removeItem("pug_edu"); }
+    // ── Nessuna cache: primo accesso ──
+    const _t = setTimeout(() => setChecking(false), 800);
+    sb.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(_t);
+      if (session) {
+        const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
+        if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+      }
+      setChecking(false);
+    }).catch(() => { clearTimeout(_t); setChecking(false); });
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") setProfile(null);
+      if (event === "SIGNED_OUT") { setProfile(null); localStorage.removeItem("pug_edu"); }
       if (event === "SIGNED_IN" && session) {
         const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
         if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
@@ -4812,7 +6610,6 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
-
   async function onLogout() {
     localStorage.removeItem("pug_player");
     localStorage.removeItem("pug_edu");
@@ -4821,11 +6618,15 @@ export default function App() {
     document.body.classList.remove("light");
   }
 
+  // Mentre verifica la sessione, mostra il login con indicatore sottile
+  // così l'utente vede subito qualcosa e può anche interagire
   if (checking) return (
     <>
       <style>{css}</style>
-      <div className="loading" style={{ minHeight: "100vh" }}>
-        <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 28, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)" }}>Per·You Garden</span>
+      {!isOnline && <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#c62828",color:"#fff",textAlign:"center",padding:"8px",fontSize:13,fontWeight:700}}>📵 Nessuna connessione</div>}
+      <div style={{position:"relative"}}>
+        <div style={{position:"fixed",top:0,left:0,right:0,height:3,zIndex:9999,background:"linear-gradient(90deg,var(--neon-blue),var(--neon-pink),var(--neon-blue))",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}}/>
+        <Login onLogin={setProfile} />
       </div>
     </>
   );
