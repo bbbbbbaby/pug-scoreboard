@@ -31,7 +31,6 @@ async function registerPush(playerId) {
       { player_id: playerId, subscription: sub.toJSON() },
       { onConflict: 'player_id' }
     );
-    console.log('Push registrata ✅');
   } catch(_) { /* push non supportato su questo dispositivo/browser */ }
 }
 
@@ -45,7 +44,7 @@ async function sendPush(playerId, title, body) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PUSH_ANON_KEY}` },
       body: JSON.stringify({ subscription: sub.subscription, title, body }),
     });
-  } catch(e) { console.warn('Push send failed:', e.message); }
+  } catch(e) { }
 }
 
 async function sendPushToAll(playerIds, title, body) {
@@ -163,7 +162,9 @@ const css = `
   .login-tabs { display:flex; background:rgba(0,212,255,0.05); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:24px; gap:4px; }
   .login-tab { flex:1; padding:10px; border-radius:9px; border:none; cursor:pointer; font-family:'Funnel Display'; font-size:13px; font-weight:700; background:transparent; color:var(--text2); transition:all .2s; }
   .login-tab.active { background:linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.08)); color:var(--neon-blue); border:1px solid rgba(0,212,255,0.3); box-shadow:var(--glow-blue); }
-  .form-group { margin-bottom:14px; }
+  .form-group { margin-bottom:16px; }
+  .form-input:focus + .form-hint, .form-input:focus ~ .form-hint { color: var(--neon-blue); }
+  .form-hint { font-size:11px; color:var(--text3); margin-top:4px; }
   .form-label { font-size:10px; font-weight:700; color:var(--text3); margin-bottom:5px; display:block; text-transform:uppercase; letter-spacing:.15em; }
   .form-input {
     width:100%; padding:13px 16px; background:rgba(0,212,255,0.04); border:1px solid var(--border2);
@@ -533,7 +534,7 @@ const css = `
   .bubble.mine { background:rgba(0,212,255,.15); color:var(--neon-blue); border:1px solid rgba(0,212,255,.25); }
   .msg-inp-row { padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:8px; background:rgba(0,212,255,0.02); }
   .msg-inp { flex:1; padding:10px 12px; background:rgba(0,212,255,0.06); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; }
-  .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--neon-pink); display:inline-block; margin-left:4px; vertical-align:middle; box-shadow:0 0 8px rgba(255,0,204,0.6); animation:pulse 2s infinite; }
+  .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--neon-pink); animation:pulse2 2s infinite; display:inline-block; margin-left:4px; vertical-align:middle; box-shadow:0 0 8px rgba(255,0,204,0.6); animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
   .notif-item { display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); }
   .notif-icon { font-size:24px; flex-shrink:0; }
@@ -1231,6 +1232,12 @@ const css = `
   .num-pop { animation:numPop .4s cubic-bezier(.34,1.56,.64,1); }
 
   /* ═══ SMOOTH TRANSITIONS ═══ */
+  * { -webkit-tap-highlight-color: transparent; }
+  button, [role="button"] { touch-action: manipulation; }
+  .card, .card-sm, .player-card, .lb-row { transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .card:active, .player-card:active { transform: scale(.98); }
+  .btn:active { transform: scale(.96) !important; }
+  input, select, textarea { -webkit-appearance: none; appearance: none; }
   .content { animation:fade-up .2s ease; }
   @keyframes fade-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   .player-bottom-nav { transition:background .3s; }
@@ -1416,7 +1423,7 @@ async function logXPGain(playerId, xpGained, xpTotal, reason) {
   if (!xpGained || xpGained <= 0) return;
   try {
     await sb.from("xp_history").insert({ player_id:playerId, xp_gained:xpGained, xp_total:xpTotal, reason });
-  } catch(e) { console.warn("xp_history log failed:", e.message); }
+  } catch(e) { }
 }
 
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
@@ -3818,7 +3825,7 @@ function BookingsView() {
       const pMap = Object.fromEntries((pData||[]).map(p=>[p.id,p]));
       const aMap = Object.fromEntries((aData||[]).map(a=>[a.id,a]));
       setBookings((bkData||[]).map(b=>({...b, profiles: pMap[b.player_id]||null, activities: aMap[b.activity_id]||null })));
-    } catch(e) { console.error(e); }
+    } catch(e) { }
     setLoading(false);
   }
 
@@ -4247,6 +4254,31 @@ function StreakConfigView() {
 
 
 
+
+// ─── SOCIAL TAB ──────────────────────────────────────────
+function SocialTab({ players, myId, myProfile }) {
+  const [view, setView] = useState("annunci"); // "annunci" | "community"
+
+  return (
+    <div>
+      {/* Toggle */}
+      <div style={{display:"flex",background:"rgba(255,255,255,.06)",borderRadius:12,padding:4,marginBottom:14,gap:4}}>
+        {[["annunci","📢 Annunci"],["community","👥 Community"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setView(v)} style={{
+            flex:1,padding:"10px 0",borderRadius:9,border:"none",cursor:"pointer",
+            fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:15,
+            textTransform:"uppercase",letterSpacing:".05em",transition:"all .2s",
+            background:view===v?"rgba(255,255,255,.12)":"transparent",
+            color:view===v?"var(--text)":"var(--text3)",
+          }}>{l}</button>
+        ))}
+      </div>
+      {view==="annunci" && <PlayerAnnouncementsTab/>}
+      {view==="community" && <CommunityTab players={players} myId={myId} myProfile={myProfile}/>}
+    </div>
+  );
+}
+
 // ─── PROFILE REACTIONS ───────────────────────────────────
 function ProfileReactions({ targetId, myId }) {
   const REACTS = ["❤️","🔥","👏","🤩","💪"];
@@ -4437,7 +4469,11 @@ function CommunityTab({ players, myId, myProfile }) {
         onChange={e=>setSearch(e.target.value)} style={{marginBottom:12}}/>
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
         {others.length===0
-          ? <div className="empty">Nessun giocatore trovato.</div>
+          ? <div className="empty" style={{padding:32,textAlign:"center"}}>
+                  <div style={{fontSize:36,marginBottom:8}}>🌱</div>
+                  <div style={{fontWeight:700,marginBottom:4}}>Nessun giocatore</div>
+                  <div style={{fontSize:12}}>Prova a cambiare la ricerca</div>
+                </div>
           : others.map((p,i)=>{
               const lv = getLevel(p.xp||0);
               const rankColors = ["#ffcc00","#c0c0c0","#cd7f32"];
@@ -4585,9 +4621,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   useEffect(() => {
     sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
       .then(({ data, error }) => {
-        if (error) { console.warn("Vis config not found:", error.message); return; }
+        if (error) { return; }
         const cfg = data?.app_config;
-        console.log("Vis config loaded:", cfg);
         if (cfg && typeof cfg === "object") {
           localStorage.setItem("pug_visibility", JSON.stringify(cfg));
           setVisConfig(cfg);
@@ -4669,7 +4704,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     setMonthPresences(myPres?.length || 0);
     setMonthTarget(mConfig?.min_days || null);
   } catch(err) {
-    console.error("Errore caricamento dati:", err);
   } finally {
     setLoading(false);
   }
@@ -4869,8 +4903,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const BOTTOM_TABS = [
     ["profilo","👤","Profilo"],
-    ["annunci","📢","Annunci"],
-    ["community","👥","Community"],
+    ["social","🌍","Social"],
     visConfig.classifica !== false ? ["classifica","🏆","Classifica"] : null,
     visConfig.lab !== false ? ["attivita","⚡","Lab"] : null,
     visConfig.messaggi !== false ? ["messaggi","💬","Messaggi"] : null,
@@ -4927,7 +4960,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       </div>
 
       {/* Scrollable content */}
-      <div className="pd-scroll">
+      <div className="pd-scroll"
+        onTouchStart={e=>{window._swipeX0=e.touches[0].clientX;}}
+        onTouchEnd={e=>{
+          const dx=e.changedTouches[0].clientX-(window._swipeX0||0);
+          if(Math.abs(dx)<50)return;
+          const ts=BOTTOM_TABS.map(t=>t[0]);
+          const ci=ts.indexOf(tab);
+          if(dx<0&&ci<ts.length-1)setTab(ts[ci+1]);
+          else if(dx>0&&ci>0)setTab(ts[ci-1]);
+        }}>
 
         {/* ── PROFILO ── */}
         {tab === "profilo" && fullProfile && (
@@ -5271,14 +5313,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
 
         {/* ── NOTIFICHE ── */}
-        {tab === "annunci" && (
+        {tab === "social" && (
           <div style={{ marginTop: 8 }}>
-            <PlayerAnnouncementsTab/>
-          </div>
-        )}
-        {tab === "community" && (
-          <div style={{ marginTop: 8 }}>
-            <CommunityTab players={players} myId={profile.id} myProfile={fullProfile}/>
+            <SocialTab players={players} myId={profile.id} myProfile={fullProfile}/>
           </div>
         )}
         {tab === "notifiche" && (
@@ -5401,7 +5438,7 @@ function DashboardView() {
       const top5 = [...(players||[])].filter(p=>p.xp>1).sort((a,b)=>b.xp-a.xp).slice(0,5);
 
       setStats({ active, totalXP, totalCoin, todayAtt:todayAtt||[], days, xpByDay, pressByDay, squadMap, bookings:bookings||[], labs:labs||[], badges:badges||[], top5, allPlayers: players||[] });
-      } catch(e) { console.error("Dashboard error:", e); }
+      } catch(e) { }
       setLoading(false);
     }
     load();
@@ -5844,7 +5881,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Visibilità"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
