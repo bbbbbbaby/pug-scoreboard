@@ -3693,41 +3693,24 @@ function MessagesView({ profile }) {
           <textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Scrivi un messaggio…" />
         </div>
 
-        {/* Media: sticker / immagine / GIF */}
+        {/* Immagine allegata */}
         <div className="form-group">
-          <label className="form-label">Sticker / Immagine / GIF</label>
+          <label className="form-label">📷 Immagine allegata (opzionale)</label>
           <input ref={mediaRef} type="file" accept="image/*" style={{display:"none"}} onChange={async e => {
             const file = e.target.files[0]; if (!file) return;
-            const isGif = file.type === "image/gif";
-            if (isGif) {
-              const reader = new FileReader();
-              reader.onload = ev => { setMediaData(ev.target.result); setMediaType("image"); };
-            }
+            const compressed = await compressToWebP(file, 600, 0.85);
+            const reader = new FileReader();
+            reader.onload = ev => { setMediaData(ev.target.result); setMediaType("image"); };
+            reader.readAsDataURL(compressed);
           }}/>
           {mediaData ? (
             <div style={{position:"relative",display:"inline-block",marginBottom:8}}>
-              {mediaType==="sticker" && mediaData.startsWith("sticker:") ? (
-                <div style={{width:80,height:80}} dangerouslySetInnerHTML={{__html: ANIMATED_STICKERS.find(s=>s.id===mediaData.slice(8))?.svg||""}}/>
-              ) : (
-                <img src={mediaData} style={{maxWidth:"100%",maxHeight:200,borderRadius:12,border:"2px solid var(--border)",display:"block"}} alt="media"/>
-              )}
-              <button onClick={()=>{setMediaData(null);setMediaType(null);}} style={{position:"absolute",top:-8,right:-8,background:"rgba(0,0,0,.8)",border:"none",color:"#fff",borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:13,lineHeight:1}}>✕</button>
+              <img src={mediaData} style={{maxWidth:"100%",maxHeight:180,borderRadius:12,border:"1px solid var(--border)",display:"block"}} alt=""/>
+              <button onClick={()=>{setMediaData(null);setMediaType(null);}} style={{position:"absolute",top:-8,right:-8,background:"rgba(0,0,0,.8)",border:"none",color:"#fff",borderRadius:"50%",width:24,height:24,cursor:"pointer",fontSize:14,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
           ) : (
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              
-              
-              <button className="btn btn-ghost btn-sm" onClick={()=>mediaRef.current.click()}>📷 Aggiungi foto</button>
-            </div>
+            <button className="btn btn-ghost btn-sm" onClick={()=>mediaRef.current.click()}>📷 Aggiungi foto</button>
           )}
-
-          {/* GIF search */}
-          {mediaPanel==="gif" && !mediaData && (
-            <div style={{marginTop:8,background:"var(--surface2)",borderRadius:12,border:"1px solid var(--border)",padding:10}}>
-              <GifSearch onSelect={(url)=>{setMediaData(url);setMediaType("gif");}}/>
-            </div>
-          )}
-          <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>Sticker: zero peso · GIF: da Tenor CDN · Foto: compressa in WebP</div>
         </div>
 
         {/* Scadenza opzionale */}
@@ -3762,15 +3745,10 @@ function MessagesView({ profile }) {
                     <button className="btn btn-danger btn-xs" onClick={()=>cancelMsg(m.id)} title="Annulla messaggio">✕</button>
                   </div>
                 </div>
-                {m.media_data && (
-                  m.media_data.startsWith("sticker:") ? (
-                    <div style={{width:80,height:80,marginBottom:6}}
-                      dangerouslySetInnerHTML={{__html: ANIMATED_STICKERS.find(s=>s.id===m.media_data.slice(8))?.svg||""}}/>
-                  ) : (
-                    <img src={m.media_data}
-                      style={{maxWidth:"100%",maxHeight:200,borderRadius:10,marginBottom:6,display:"block"}}
-                      alt="media"/>
-                  )
+                {m.media_data && !m.media_data.startsWith("sticker:") && (
+                  <img src={m.media_data}
+                    style={{maxWidth:"100%",maxHeight:200,borderRadius:10,marginBottom:6,display:"block"}}
+                    alt="media"/>
                 )}
                 <div style={{fontSize:13,color:"var(--text)"}}>{m.body}</div>
               </div>
@@ -4254,6 +4232,43 @@ function StreakConfigView() {
 
 
 
+
+
+// ─── EDUCATOR SOCIAL VIEW ────────────────────────────────
+function EducatorSocialView({ profile }) {
+  const [view, setView] = useState("community");
+  const [players, setPlayers] = useState([]);
+  useEffect(() => {
+    sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)")
+      .eq("role","player").order("xp",{ascending:false})
+      .then(({data})=>setPlayers(data||[]));
+  }, []);
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:12}}>🌍 Social</div>
+      <div style={{display:"flex",background:"rgba(255,255,255,.06)",borderRadius:12,padding:4,marginBottom:16,gap:4}}>
+        {[["community","👥 Community"],["annunci","📢 Annunci"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setView(v)} style={{
+            flex:1,padding:"10px 0",borderRadius:9,border:"none",cursor:"pointer",
+            fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:15,
+            textTransform:"uppercase",letterSpacing:".05em",transition:"all .2s",
+            background:view===v?"rgba(255,255,255,.12)":"transparent",
+            color:view===v?"var(--text)":"var(--text3)",
+          }}>{l}</button>
+        ))}
+      </div>
+      {view==="community" && (
+        <CommunityTab
+          players={players.filter(p=>p.role==="player"||!p.role)}
+          myId={profile.id}
+          myProfile={profile}
+        />
+      )}
+      {view==="annunci" && <AnnouncementsView profile={profile}/>}
+    </div>
+  );
+}
 
 // ─── SOCIAL TAB ──────────────────────────────────────────
 function SocialTab({ players, myId, myProfile }) {
@@ -5295,13 +5310,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                           <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
                         </div>
                       </div>
-                      {m.media_data && (
-                        m.media_data.startsWith("sticker:") ? (
-                          <div style={{width:100,height:100,marginBottom:6}}
-                            dangerouslySetInnerHTML={{__html: ANIMATED_STICKERS.find(s=>s.id===m.media_data.slice(8))?.svg||""}}/>
-                        ) : (
-                          <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt=""/>
-                        )
+                      {m.media_data && !m.media_data.startsWith("sticker:") && (
+                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt=""/>
                       )}
                       <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
                     </div>
@@ -5881,7 +5891,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -6135,6 +6145,7 @@ const EduTabColors = {
   export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   pulizia:      { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
   annunci:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
+  social_edu:   { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   visibilita:   { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   admin:        { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
@@ -6357,6 +6368,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
           {tab === "annunci"      && <AnnouncementsView profile={profile}/>}
+          {tab === "social_edu"   && <EducatorSocialView profile={profile}/>}
           {tab === "visibilita"   && <VisibilityView />}
           {tab === "admin"        && <AdminView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
