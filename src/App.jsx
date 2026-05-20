@@ -15,6 +15,9 @@ function urlBase64ToUint8Array(base64String) {
 
 async function registerPush(playerId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    console.log('Push: richiede HTTPS'); return;
+  }
   try {
     const reg = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
@@ -1088,20 +1091,34 @@ const css = `
   .light .edu-notif-count { color: #1565c0; }
   .light .edu-notif-empty { color: #6b7e94; }
 
-  /* ─ Announcements light ─ */
-  .light .pd-card * { color: #0d1117; }
-  .light .pd-tab-title { color: #0d1117 !important; font-size: 22px; }
-  .light .search-inp { background:#ffffff; border:1.5px solid rgba(0,0,0,.18); color:#0d1117; }
+  /* ─ Light mode global fixes ─ */
+  .light * { box-sizing: border-box; }
+  .light .pd-card { background: rgba(255,255,255,.88) !important; color: #0d1117 !important; }
+  .light .pd-card * { color: #0d1117 !important; }
+  .light .pd-tab-title { color: #0d1117 !important; }
+  .light .search-inp { background:#fff; border:1.5px solid rgba(0,0,0,.18); color:#0d1117; }
   .light .search-inp::placeholder { color:#9e9e9e; }
   .light .form-input::placeholder { color:#9e9e9e; }
+  .light textarea { background:#fff; color:#0d1117; border:1.5px solid rgba(0,0,0,.15); }
   .light textarea::placeholder { color:#9e9e9e; }
   .light select option { background:#ffffff; color:#0d1117; }
+  .light .empty { color: #6b7e94; }
+  .light .loading { color: #6b7e94; }
+  /* Sfide always dark bg */
+  .light .pd-sfida { background: #1a2035 !important; border-color: rgba(255,204,0,.3) !important; }
+  .light .pd-sfida * { color: rgba(255,255,255,.9) !important; }
+  /* Streak card */
+  .light .streak-card { background: #fff !important; border: 1px solid rgba(230,81,0,.2) !important; }
+  .light .streak-card .streak-val { color: #bf360c !important; }
+  .light .streak-card .streak-lbl { color: #6b7e94 !important; }
   /* Community in light */
-  .light .pd-sfida { background: #1a2035 !important; }
-  .light .pd-sfida * { color: #fff !important; }
-  /* Fix dark text on dark in sfide */
-  .light .streak-card { color: #0d1117; }
-  .light .month-prog-bg { background: rgba(0,0,0,.08); }
+  .light .community-card { background: #fff; border: 1px solid rgba(0,0,0,.08); }
+  /* Announcements in light */
+  .light .ann-card { background: #fff; }
+  /* XP chart in light */
+  .light .xp-chart-bar { background: linear-gradient(180deg,#1565c0,rgba(21,101,192,.4)); }
+  /* Buttons in light */
+  .light .btn-yellow { background: linear-gradient(135deg,#e65100,#f57f17) !important; color:#fff !important; }
 
   /* ═══ EDUCATOR NOTIFICATIONS ═══ */
   .edu-notif-bell { position:relative; cursor:pointer; width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font-size:18px; transition:all .15s; flex-shrink:0; }
@@ -3921,7 +3938,7 @@ function QrView() {
 
 
 // ─── BACHECA ANNUNCI ─────────────────────────────────────
-function AnnouncementsView({ profile, players }) {
+function AnnouncementsView({ profile }) {
   const [announcements, setAnnouncements] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -5196,6 +5213,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
 
         {/* ── NOTIFICHE ── */}
+        {tab === "annunci" && (
+          <div style={{ marginTop: 8 }}>
+            <PlayerAnnouncementsTab/>
+          </div>
+        )}
         {tab === "community" && (
           <div style={{ marginTop: 8 }}>
             <CommunityTab players={players} myId={profile.id} myProfile={fullProfile}/>
@@ -6239,7 +6261,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
-          {tab === "annunci"      && <AnnouncementsView profile={profile} players={players}/>}
+          {tab === "annunci"      && <AnnouncementsView profile={profile}/>}
           {tab === "visibilita"   && <VisibilityView />}
           {tab === "admin"        && <AdminView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
