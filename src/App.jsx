@@ -1088,6 +1088,21 @@ const css = `
   .light .edu-notif-count { color: #1565c0; }
   .light .edu-notif-empty { color: #6b7e94; }
 
+  /* ─ Announcements light ─ */
+  .light .pd-card * { color: #0d1117; }
+  .light .pd-tab-title { color: #0d1117 !important; font-size: 22px; }
+  .light .search-inp { background:#ffffff; border:1.5px solid rgba(0,0,0,.18); color:#0d1117; }
+  .light .search-inp::placeholder { color:#9e9e9e; }
+  .light .form-input::placeholder { color:#9e9e9e; }
+  .light textarea::placeholder { color:#9e9e9e; }
+  .light select option { background:#ffffff; color:#0d1117; }
+  /* Community in light */
+  .light .pd-sfida { background: #1a2035 !important; }
+  .light .pd-sfida * { color: #fff !important; }
+  /* Fix dark text on dark in sfide */
+  .light .streak-card { color: #0d1117; }
+  .light .month-prog-bg { background: rgba(0,0,0,.08); }
+
   /* ═══ EDUCATOR NOTIFICATIONS ═══ */
   .edu-notif-bell { position:relative; cursor:pointer; width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font-size:18px; transition:all .15s; flex-shrink:0; }
   .edu-notif-bell:hover { background:rgba(255,255,255,.12); }
@@ -4091,7 +4106,7 @@ function VisibilityView() {
   const sections = [
     { key:"squadre",    label:"🛡️ Squadra",           desc:"Mostra la squadra del giocatore nel suo profilo" },
     { key:"streak",     label:"🔥 Streak & presenze",  desc:"Mostra il contatore di presenze consecutive" },
-    { key:"sfida",      label:"⚡ Sfida del giorno",   desc:"Mostra la sfida attiva nel profilo player" },
+    { key:"sfida",      label:"⚡ Sfide",              desc:"Mostra il pannello sfide nel profilo player" },
     { key:"badge",      label:"🎖️ Badge",             desc:"Mostra la collezione badge nel profilo" },
     { key:"classifica", label:"🏆 Classifica",         desc:"Mostra la posizione in classifica" },
     { key:"coin",       label:"🪙 Coin",               desc:"Mostra il saldo coin nel profilo" },
@@ -4230,25 +4245,27 @@ function StreakConfigView() {
 function CommunityTab({ players, myId, myProfile }) {
   const [selected, setSelected] = useState(null);
   const [playerBadges, setPlayerBadges] = useState([]);
-  const [reactions, setReactions] = useState({}); // badge_id -> { type: count }
-  const [myReactions, setMyReactions] = useState({}); // badge_id -> type
+  const [playerXP, setPlayerXP] = useState(0);
+  const [reactions, setReactions] = useState({});
+  const [myReactions, setMyReactions] = useState({});
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [search, setSearch] = useState("");
   const REACT_TYPES = ["❤️","🔥","👏","😮","⭐"];
 
+  const others = players
+    .filter(p=>p.id!==myId && (p.xp||0)>=0)
+    .filter(p=>!search || p.display_name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b)=>(b.xp||0)-(a.xp||0));
+
   async function openPlayer(p) {
-    if (p.id === myId) return;
     setSelected(p); setLoadingProfile(true);
     const [{ data: badges }, { data: rxns }, { data: mine }] = await Promise.all([
       sb.from("player_badges").select("id,badge_id,badges(name,icon),created_at").eq("player_id", p.id).order("created_at",{ascending:false}),
       sb.from("reactions").select("badge_id,type").eq("target_player_id", p.id),
       sb.from("reactions").select("badge_id,type").eq("player_id", myId).eq("target_player_id", p.id),
     ]);
-    // Aggregate reactions
     const rxMap = {};
-    (rxns||[]).forEach(r => {
-      if (!rxMap[r.badge_id]) rxMap[r.badge_id] = {};
-      rxMap[r.badge_id][r.type] = (rxMap[r.badge_id][r.type]||0)+1;
-    });
+    (rxns||[]).forEach(r => { if (!rxMap[r.badge_id]) rxMap[r.badge_id] = {}; rxMap[r.badge_id][r.type] = (rxMap[r.badge_id][r.type]||0)+1; });
     const myMap = {};
     (mine||[]).forEach(r => { myMap[r.badge_id] = r.type; });
     setPlayerBadges(badges||[]); setReactions(rxMap); setMyReactions(myMap);
@@ -4258,82 +4275,80 @@ function CommunityTab({ players, myId, myProfile }) {
   async function react(badgeId, type) {
     const current = myReactions[badgeId];
     if (current === type) {
-      // Remove reaction
       await sb.from("reactions").delete().eq("player_id", myId).eq("badge_id", badgeId);
-      setMyReactions(p=>({...p, [badgeId]:null}));
-      setReactions(p=>({ ...p, [badgeId]:{ ...p[badgeId], [type]: Math.max(0,(p[badgeId]?.[type]||1)-1) } }));
+      setMyReactions(p=>({...p,[badgeId]:null}));
+      setReactions(p=>({...p,[badgeId]:{...p[badgeId],[type]:Math.max(0,(p[badgeId]?.[type]||1)-1)}}));
     } else {
-      // Upsert reaction
-      await sb.from("reactions").upsert({ player_id:myId, target_player_id:selected.id, badge_id:badgeId, type }, { onConflict:"player_id,badge_id" });
+      await sb.from("reactions").upsert({player_id:myId,target_player_id:selected.id,badge_id:badgeId,type},{onConflict:"player_id,badge_id"});
       const prev = myReactions[badgeId];
       setMyReactions(p=>({...p,[badgeId]:type}));
-      setReactions(p=>({
-        ...p,
-        [badgeId]:{
-          ...p[badgeId],
-          [type]:(p[badgeId]?.[type]||0)+1,
-          ...(prev?{[prev]:Math.max(0,(p[badgeId]?.[prev]||1)-1)}:{})
-        }
-      }));
+      setReactions(p=>({...p,[badgeId]:{...p[badgeId],[type]:(p[badgeId]?.[type]||0)+1,...(prev?{[prev]:Math.max(0,(p[badgeId]?.[prev]||1)-1)}:{})}}));
+      playPixel("msg");
+      if(navigator.vibrate) navigator.vibrate(30);
     }
   }
-
-  const others = players.filter(p=>p.id!==myId && (p.xp||0)>0);
 
   if (selected) {
     const lv = getLevel(selected.xp||0);
     return (
       <div>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setSelected(null)} style={{marginBottom:12}}>← Indietro</button>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
-          <div style={{width:56,height:56,borderRadius:"50%",overflow:"hidden",border:"2px solid var(--border2)",flexShrink:0}}>
-            <Avatar url={selected.avatar_url} emoji={lv.emoji} size={56}/>
+        <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.06)",border:"1px solid var(--border)",borderRadius:99,padding:"6px 14px",cursor:"pointer",color:"var(--text2)",fontSize:13,marginBottom:14,fontWeight:700}}>
+          ← Torna alla community
+        </button>
+
+        {/* Player hero */}
+        <div style={{background:"linear-gradient(160deg,rgba(255,255,255,.04),rgba(255,255,255,.02))",border:"1px solid var(--border)",borderRadius:20,padding:20,marginBottom:14,textAlign:"center"}}>
+          <div style={{width:80,height:80,borderRadius:"50%",overflow:"hidden",border:"3px solid var(--neon-blue)",margin:"0 auto 10px",boxShadow:"var(--glow-blue)"}}>
+            <Avatar url={selected.avatar_url} emoji={lv.emoji} size={80}/>
           </div>
-          <div>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:"var(--text)"}}>{selected.display_name}</div>
-            <div style={{fontSize:12,color:"var(--text3)"}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
-          </div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,fontWeight:900,color:"var(--text)",textTransform:"uppercase"}}>{selected.display_name}</div>
+          <div style={{fontSize:13,color:"var(--text3)",marginBottom:10}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
+          {selected.squads?.name && <div style={{display:"inline-block",background:"rgba(255,255,255,.06)",borderRadius:99,padding:"3px 12px",fontSize:11,color:"var(--text2)",fontWeight:700}}>🛡️ {selected.squads.name}</div>}
         </div>
+
         {loadingProfile ? <div className="loading">⏳</div> : (
           <div>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:900,color:"var(--text2)",marginBottom:8,textTransform:"uppercase"}}>🎖️ Badge ({playerBadges.length})</div>
-            {playerBadges.length===0 ? <div className="empty">Nessun badge ancora.</div> : (
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {playerBadges.map(pb=>{
-                  const rxns = reactions[pb.id]||{};
-                  const myR = myReactions[pb.id];
-                  return (
-                    <div key={pb.id} className="card-sm" style={{padding:"10px 12px"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                        <span style={{fontSize:28}}>{pb.badges?.icon||"🎖️"}</span>
-                        <div>
-                          <div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>{pb.badges?.name}</div>
-                          <div style={{fontSize:10,color:"var(--text3)"}}>{new Date(pb.created_at).toLocaleDateString("it-IT")}</div>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--text2)",marginBottom:8,textTransform:"uppercase",letterSpacing:".05em"}}>🎖️ Badge — reagisci!</div>
+            {playerBadges.length===0
+              ? <div className="empty">Nessun badge ancora.</div>
+              : <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {playerBadges.map(pb=>{
+                    const rxns = reactions[pb.id]||{};
+                    const myR = myReactions[pb.id];
+                    const total = Object.values(rxns).reduce((a,b)=>a+b,0);
+                    return (
+                      <div key={pb.id} style={{background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",borderRadius:14,padding:"12px 14px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                          <span style={{fontSize:32}}>{pb.badges?.icon||"🎖️"}</span>
+                          <div>
+                            <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{pb.badges?.name}</div>
+                            <div style={{fontSize:10,color:"var(--text3)"}}>{new Date(pb.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}</div>
+                          </div>
+                          {total > 0 && <div style={{marginLeft:"auto",fontSize:11,color:"var(--text3)"}}>{total} reaction</div>}
+                        </div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          {REACT_TYPES.map(r=>{
+                            const count = rxns[r]||0;
+                            const isMe = myR===r;
+                            return (
+                              <button key={r} onClick={()=>react(pb.id,r)}
+                                style={{padding:"5px 10px",borderRadius:99,
+                                  border:`1.5px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
+                                  background:isMe?"rgba(0,212,255,.15)":"rgba(255,255,255,.04)",
+                                  cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",gap:5,
+                                  transform:isMe?"scale(1.1)":"scale(1)",transition:"all .15s",
+                                }}>
+                                {r}
+                                {count>0&&<span style={{fontSize:11,fontWeight:700,color:isMe?"var(--neon-blue)":"var(--text3)"}}>{count}</span>}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
-                      {/* Reactions */}
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                        {REACT_TYPES.map(r=>{
-                          const count = rxns[r]||0;
-                          const isMe = myR===r;
-                          return (
-                            <button key={r} onClick={()=>react(pb.id,r)}
-                              style={{padding:"3px 8px",borderRadius:99,border:`1.5px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
-                                background:isMe?"rgba(0,212,255,.12)":"rgba(255,255,255,.04)",
-                                cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",gap:4,
-                                transform:isMe?"scale(1.1)":"scale(1)",transition:"all .15s",
-                              }}>
-                              <span>{r}</span>
-                              {count>0&&<span style={{fontSize:10,fontWeight:700,color:isMe?"var(--neon-blue)":"var(--text3)"}}>{count}</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+            }
           </div>
         )}
       </div>
@@ -4343,30 +4358,39 @@ function CommunityTab({ players, myId, myProfile }) {
   return (
     <div>
       <div className="pd-tab-title">👥 Community</div>
-      <div style={{fontSize:12,color:"var(--text3)",marginBottom:12}}>Esplora i profili degli altri giocatori e metti reaction ai loro badge.</div>
+      <input className="search-inp" placeholder="🔍 Cerca giocatore…" value={search}
+        onChange={e=>setSearch(e.target.value)} style={{marginBottom:12}}/>
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
-        {others.length===0 ? <div className="empty">Nessun altro giocatore.</div> : others.map(p=>{
-          const lv = getLevel(p.xp||0);
-          return (
-            <div key={p.id} className="card-sm" onClick={()=>openPlayer(p)}
-              style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 12px",transition:"all .15s"}}
-              onMouseOver={e=>e.currentTarget.style.borderColor="var(--neon-blue)"}
-              onMouseOut={e=>e.currentTarget.style.borderColor=""}>
-              <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",border:"2px solid var(--border2)",flexShrink:0}}>
-                <Avatar url={p.avatar_url} emoji={lv.emoji} size={40}/>
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                <div style={{fontSize:11,color:"var(--text3)"}}>{lv.emoji} {lv.name} · ⭐ {p.xp}</div>
-              </div>
-              <div style={{fontSize:12,color:"var(--text3)"}}>→</div>
-            </div>
-          );
-        })}
+        {others.length===0
+          ? <div className="empty">Nessun giocatore trovato.</div>
+          : others.map((p,i)=>{
+              const lv = getLevel(p.xp||0);
+              const rankColors = ["#ffcc00","#c0c0c0","#cd7f32"];
+              return (
+                <div key={p.id} onClick={()=>openPlayer(p)}
+                  style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+                    background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",borderRadius:14,
+                    cursor:"pointer",transition:"all .15s",position:"relative"}}
+                  onMouseOver={e=>{e.currentTarget.style.background="rgba(0,212,255,.06)";e.currentTarget.style.borderColor="rgba(0,212,255,.3)";}}
+                  onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="var(--border)";}}>
+                  {i<3 && <div style={{position:"absolute",top:8,right:10,fontSize:16}}>{["🥇","🥈","🥉"][i]}</div>}
+                  <div style={{width:46,height:46,borderRadius:"50%",overflow:"hidden",border:`2px solid ${i<3?rankColors[i]:"var(--border2)"}`,flexShrink:0,boxShadow:i===0?"0 0 12px rgba(255,204,0,.4)":"none"}}>
+                    <Avatar url={p.avatar_url} emoji={lv.emoji} size={46}/>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:14,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                    <div style={{fontSize:11,color:"var(--text3)"}}>{lv.emoji} {lv.name} · ⭐ {p.xp} XP</div>
+                  </div>
+                  <div style={{fontSize:12,color:"var(--text3)",flexShrink:0}}>→</div>
+                </div>
+              );
+          })
+        }
       </div>
     </div>
   );
 }
+
 
 // ─── XP HISTORY CHART ────────────────────────────────────
 function XPHistoryChart({ playerId }) {
@@ -4966,19 +4990,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             {visConfig.sfida !== false && (
               <SfidePanel activities={activities}/>
             )}
-            {false && activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
-              <div key={s.id} className="pd-sfida">
-                        <SfidaCountdown/>
-                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'#ffcc00',marginBottom:4}}>⚡ Sfida del Giorno</div>
-                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:7}}>{s.name}</div>
-                <div style={{fontSize:12,color:'rgba(255,255,255,.5)',marginBottom:10,lineHeight:1.5}}>{s.description?.replace('SFIDA · ','')}</div>
-                <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                  <div style={{display:'inline-flex',alignItems:'center',gap:5,background:'rgba(255,220,0,.14)',border:'1px solid rgba(255,220,0,.35)',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:900,color:'#ffcc00'}}>🌟 +{s.xp_completed} XP · +{s.coin_completed} Coin</div>
-                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:'#00d4ff',fontWeight:700,textDecoration:'none',background:'rgba(0,212,255,.1)',border:'1px solid rgba(0,212,255,.25)',borderRadius:8,padding:'4px 10px'}}>🔗 Apri</a>}
-                </div>
-              </div>
-            ))}
-
+            
             {/* Badge */}
             {visConfig.badge !== false && badges.length > 0 && (
               <div className="pd-badges">
