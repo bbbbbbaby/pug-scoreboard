@@ -1497,7 +1497,9 @@ function AvatarPicker({ selected, onSelect, squadFilter }) {
             const isSel = selected === url;
             return (
               <div key={name} className={`av-picker-item ${isSel?"sel":""}`} onClick={()=>onSelect(isSel ? "" : url)}>
-                <img src={url} alt={name} loading="lazy" onError={e=>{e.target.style.opacity='.3';}}/>
+                <img src={url} alt={name} loading="lazy"
+                  style={{width:52,height:52,objectFit:"contain",display:"block"}}
+                  onError={e=>{e.target.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 52'%3E%3Crect width='52' height='52' fill='%23333'/%3E%3Ctext x='26' y='34' text-anchor='middle' font-size='24'%3E🌱%3C/text%3E%3C/svg%3E";}}/>
                 <span>{name.replace(/^[agvn]_/,"")}</span>
               </div>
             );
@@ -1685,14 +1687,140 @@ function useCountdown() {
   return time;
 }
 
-function SfidaCountdown() {
-  const time = useCountdown();
+function SfidePanel({ activities }) {
+  const sfide = (activities||[]).filter(a=>a.description?.includes('SFIDA')||a.duration==="weekly"||a.duration==="monthly");
+  const daily = (activities||[]).filter(a=>a.description?.includes('SFIDA') && a.duration!=="weekly" && a.duration!=="monthly").slice(0,1);
+  const weekly = sfide.filter(a=>a.duration==="weekly").slice(0,1);
+  const monthly = sfide.filter(a=>a.duration==="monthly").slice(0,1);
+  const all = [...daily, ...weekly, ...monthly];
+  if (all.length === 0) return null;
+
+  const DurationBadge = ({dur}) => {
+    const labels = { daily:["⚡","OGGI"], weekly:["📅","SETTIMANA"], monthly:["🗓️","MESE"] };
+    const [icon, label] = labels[dur]||["⚡","SFIDA"];
+    return <span style={{fontSize:9,fontWeight:900,color:"var(--rosso)",letterSpacing:".1em",textTransform:"uppercase"}}>{icon} {label}</span>;
+  };
+
+  return (
+    <div style={{margin:"0 0 8px"}}>
+      {all.map(s=>(
+        <div key={s.id} className="pd-sfida" style={{marginBottom:6}}>
+          <SfidaCountdown duration={s.duration||"daily"}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+            <DurationBadge dur={s.duration||"daily"}/>
+            <div style={{display:"flex",gap:6}}>
+              <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>+{s.coin_full||s.coin_partial||10} 🪙</span>
+              <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>+{s.xp_full||20} ⭐</span>
+            </div>
+          </div>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"#fff",lineHeight:1.1,marginBottom:4}}>{s.name}</div>
+          {s.description&&<div style={{fontSize:11,color:"rgba(255,255,255,.55)",lineHeight:1.4}}>{s.description.replace("SFIDA:","").trim()}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SfidaCountdown({ duration }) {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    function update() {
+      const now = new Date();
+      let target;
+      if (duration === "weekly") {
+        // Next Monday
+        const d = new Date(); d.setDate(d.getDate() + (7-d.getDay()+1)%7||7); d.setHours(0,0,0,0);
+        target = d;
+      } else if (duration === "monthly") {
+        // End of month
+        const d = new Date(now.getFullYear(), now.getMonth()+1, 1);
+        target = d;
+      } else {
+        // Midnight
+        const d = new Date(); d.setHours(24,0,0,0);
+        target = d;
+      }
+      const diff = target - now;
+      const h = Math.floor(diff/3600000);
+      const m = Math.floor((diff%3600000)/60000).toString().padStart(2,"0");
+      const s = Math.floor((diff%60000)/1000).toString().padStart(2,"0");
+      const dLabel = duration==="weekly"||duration==="monthly" ? `${Math.floor(h/24)}g ${(h%24).toString().padStart(2,"0")}:${m}:${s}` : `${h.toString().padStart(2,"0")}:${m}:${s}`;
+      setTime(dLabel);
+    }
+    update(); const iv = setInterval(update,1000); return ()=>clearInterval(iv);
+  }, [duration]);
   return <div style={{fontSize:10,color:"rgba(255,255,255,.4)",fontFamily:"monospace",fontWeight:700,marginBottom:4}}>⏱ Scade in {time}</div>;
 }
 
 function CountUpStat({ val }) {
   const animated = useCountUp(typeof val==="number" ? val : 0);
   return <span className="pd-sv">{typeof val==="number" ? animated : val}</span>;
+}
+
+
+// ─── PIXEL SOUNDS ────────────────────────────────────────
+let soundEnabled = localStorage.getItem("pug_sounds") !== "false";
+
+function playPixel(type) {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    const play = (freq, start, dur, vol=0.08, wave="square") => {
+      const osc = ctx.createOscillator();
+      osc.type = wave;
+      osc.connect(gain);
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur);
+    };
+
+    if (type === "xp") {
+      play(440, 0, .1); play(660, .1, .15);
+    } else if (type === "coin") {
+      play(523, 0, .08); play(784, .08, .12);
+    } else if (type === "levelup") {
+      play(262,.0,.1); play(330,.1,.1); play(392,.2,.1); play(523,.3,.2,"sine");
+    } else if (type === "checkin") {
+      play(440,.0,.06); play(880,.07,.1,"sine");
+    } else if (type === "badge") {
+      play(523,.0,.08); play(659,.09,.08); play(784,.18,.08); play(1047,.27,.3,"sine");
+    } else if (type === "msg") {
+      play(660,.0,.06,.05,"sine"); play(880,.08,.1,.04,"sine");
+    } else if (type === "error") {
+      play(220,.0,.15,.06); play(180,.15,.2,.06);
+    }
+  } catch(_) {}
+}
+
+
+// ─── QR CHECK-IN CELEBRATION ─────────────────────────────
+function QRCelebration({ xpGained, playerName, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, [onDone]);
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onDone}>
+      <style>{`
+        @keyframes qrPop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+        @keyframes xpFloat{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-60px);opacity:0}}
+        @keyframes qrSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+      `}</style>
+      <div style={{textAlign:"center",animation:"qrPop .5s cubic-bezier(.34,1.56,.64,1) forwards"}}>
+        <div style={{fontSize:80,marginBottom:8,animation:"qrSpin .6s ease-out"}}>✅</div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:32,fontWeight:900,color:"#fff",marginBottom:4}}>
+          {playerName}
+        </div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:48,fontWeight:900,
+          color:"#ffcc00",animation:"xpFloat 2s 1s ease-out forwards"}}>
+          +{xpGained} ⭐ XP
+        </div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginTop:8}}>Presenza registrata!</div>
+      </div>
+    </div>
+  );
 }
 
 // ─── LOGIN ────────────────────────────────────────────────
@@ -1859,13 +1987,20 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [createPlayerErr, setCreatePlayerErr] = useState("");
 
   const load = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     const { data } = await sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false });
     const { data: sq } = await sb.from("squads").select("*");
     setPlayers(data || []); setSquads(sq || []); setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Fallback: force-clear loading after 6s to avoid infinite spinner
+    const t = setTimeout(() => setLoading(false), 6000);
+    return () => clearTimeout(t);
+  }, [load]);
 
   const visible = players.filter(p => {
     const sq = squadFilter === "all" || p.squads?.name === squadFilter;
@@ -2993,6 +3128,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
     await sb.from("profiles").update({ xp: (player?.xp || 0) + Number(assignXp), coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
     await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: `Badge: ${badge?.name}`, body: `+${assignXp} XP, +${assignCoin} Coin` });
     sendPush(assignTarget, `🎖️ Badge: ${badge?.name}`, `Hai guadagnato +${assignXp} XP e +${assignCoin} Coin!`).catch(()=>{});
+    playPixel("badge");
     setShowAssign(null);
   }
 
@@ -3365,6 +3501,7 @@ function MessagesView({ profile }) {
   const [mediaType, setMediaType] = useState(null); // "image" | "gif" | "sticker" | null
   const [mediaPanel, setMediaPanel] = useState(null); // "sticker" | "gif" | null
   const mediaRef = useRef();
+  const loadingRef = useRef(false);
 
   async function loadAll() {
     const [{ data: sq }, { data: pl }, { data: act }, { data: m }] = await Promise.all([
@@ -3767,7 +3904,153 @@ function QrView() {
   );
 }
 
-// ─── VISIBILITY VIEW ─────────────────────────────────────
+
+// ─── BACHECA ANNUNCI ─────────────────────────────────────
+function AnnouncementsView({ profile, players }) {
+  const [announcements, setAnnouncements] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [pinned, setPinned] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const imgRef = useRef();
+  const [imgData, setImgData] = useState(null);
+
+  useEffect(() => { load(); }, []);
+  async function load() {
+    const { data } = await sb.from("announcements")
+      .select("*, profiles(display_name,avatar_url)")
+      .order("pinned",{ascending:false}).order("created_at",{ascending:false}).limit(50);
+    setAnnouncements(data||[]);
+  }
+
+  async function save() {
+    if (!title.trim()) return;
+    setSaving(true);
+    await sb.from("announcements").insert({ educator_id:profile.id, title:title.trim(), body:body.trim()||null, image_data:imgData||null, pinned });
+    setTitle(""); setBody(""); setImgData(null); setPinned(false); setShowForm(false); setSaving(false);
+    load();
+  }
+
+  async function del(id) {
+    if (!confirm("Eliminare annuncio?")) return;
+    await sb.from("announcements").delete().eq("id",id);
+    setAnnouncements(p=>p.filter(a=>a.id!==id));
+  }
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)"}}>📢 Bacheca Annunci</div>
+        <button className="btn btn-yellow btn-sm" onClick={()=>setShowForm(p=>!p)}>
+          {showForm?"✕ Annulla":"+ Nuovo"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card" style={{marginBottom:16}}>
+          <div className="form-group">
+            <label className="form-label">Titolo *</label>
+            <input className="form-input" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Titolo annuncio…"/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Testo</label>
+            <textarea className="form-input" rows={3} value={body} onChange={e=>setBody(e.target.value)} placeholder="Descrizione, info, orari…" style={{resize:"vertical"}}/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Immagine (opzionale)</label>
+            <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{
+              const f = e.target.files[0]; if(!f) return;
+              const compressed = await compressToWebP(f,800,.8);
+              const r = new FileReader(); r.onload=ev=>setImgData(ev.target.result); r.readAsDataURL(compressed);
+            }}/>
+            {imgData ? (
+              <div style={{position:"relative",display:"inline-block"}}>
+                <img src={imgData} style={{maxWidth:"100%",maxHeight:160,borderRadius:8}} alt=""/>
+                <button onClick={()=>setImgData(null)} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.7)",border:"none",color:"#fff",borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:12}}>✕</button>
+              </div>
+            ) : (
+              <button className="btn btn-ghost btn-sm" onClick={()=>imgRef.current.click()}>📷 Aggiungi immagine</button>
+            )}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <input type="checkbox" id="pinned" checked={pinned} onChange={e=>setPinned(e.target.checked)} style={{width:16,height:16}}/>
+            <label htmlFor="pinned" style={{fontSize:13,color:"var(--text2)",cursor:"pointer"}}>📌 Fissa in cima</label>
+          </div>
+          <button className="btn btn-primary" onClick={save} disabled={saving||!title.trim()}>
+            {saving?"⏳ Salvataggio…":"📢 Pubblica"}
+          </button>
+        </div>
+      )}
+
+      {announcements.length===0 ? (
+        <div className="empty" style={{padding:24}}>Nessun annuncio ancora.</div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {announcements.map(a=>(
+            <div key={a.id} className="card" style={{position:"relative",border:a.pinned?"1.5px solid rgba(255,204,0,.4)":""}}>
+              {a.pinned&&<div style={{position:"absolute",top:10,right:12,fontSize:14}}>📌</div>}
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                {a.profiles?.avatar_url
+                  ? <img src={a.profiles.avatar_url} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                  : <span style={{fontSize:22}}>🌱</span>
+                }
+                <div>
+                  <div style={{fontWeight:700,fontSize:13,color:"var(--text)"}}>{a.profiles?.display_name||"Giardiniere"}</div>
+                  <div style={{fontSize:10,color:"var(--text3)"}}>{new Date(a.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"long",year:"numeric"})}</div>
+                </div>
+              </div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
+              {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,marginBottom:8,whiteSpace:"pre-wrap"}}>{a.body}</div>}
+              {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginBottom:8,maxHeight:300,objectFit:"cover"}} alt=""/>}
+              <button onClick={()=>del(a.id)} style={{background:"none",border:"none",color:"rgba(255,34,68,.5)",cursor:"pointer",fontSize:12,padding:"4px 0"}}>🗑️ Elimina</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlayerAnnouncementsTab() {
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    sb.from("announcements").select("*, profiles(display_name,avatar_url)")
+      .order("pinned",{ascending:false}).order("created_at",{ascending:false}).limit(30)
+      .then(({ data }) => { setAnnouncements(data||[]); setLoading(false); })
+      .catch(()=>setLoading(false));
+  }, []);
+  if (loading) return <div className="loading">⏳</div>;
+  if (announcements.length===0) return <div className="empty" style={{padding:24}}>Nessun annuncio.</div>;
+  return (
+    <div>
+      <div className="pd-tab-title">📢 Bacheca Annunci</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {announcements.map(a=>(
+          <div key={a.id} className="pd-card" style={{padding:14,border:a.pinned?"1.5px solid rgba(255,204,0,.4)":""}}>
+            {a.pinned&&<div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📌 In evidenza</div>}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              {a.profiles?.avatar_url
+                ? <img src={a.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                : <span style={{fontSize:18}}>🌱</span>}
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"var(--text)"}}>{a.profiles?.display_name||"Giardiniere"}</div>
+                <div style={{fontSize:9,color:"var(--text3)"}}>{new Date(a.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"long"})}</div>
+              </div>
+            </div>
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
+            {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{a.body}</div>}
+            {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt=""/>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ANNOUNCEMENTS EDUCATOR ─────────────────────────────
+
 
 function VisibilityView() {
   const [vis, setVis] = useState(() => {
@@ -4186,6 +4469,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [xpMonth, setXpMonth] = useState({});
   const [qrInput, setQrInput] = useState("");
   const [qrMsg, setQrMsg] = useState("");
+  const [qrCelebration, setQrCelebration] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
   const [toast, setToast] = useState(null);
   const [monthPresences, setMonthPresences] = useState(null);
@@ -4249,7 +4533,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
       sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").order("xp", { ascending: false }),
-      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at,sender_id,profiles!sender_id(display_name,avatar_url)").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
       sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
     ]);
@@ -4363,6 +4647,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", profile.id);
       setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin }));
       setQrInput(""); setQrMsg(`✅ Check-in Lab "${act.name}"! +${act.xp_full||20} XP +${act.coin_full||10} 🪙`);
+      playPixel("checkin"); setQrCelebration({ xpGained: act.xp_full||20, playerName: fullProfile?.display_name||"" });
       return;
     }
 
@@ -4381,6 +4666,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const newCoin = (fullProfile?.coin || 0) + 5;
     await sb.from("profiles").update({ xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }).eq("id", profile.id);
     setQrMsg(`✅ Check-in! +10 XP +5 Coin · 🔥 ${newStreak} giorni`);
+    playPixel("checkin"); setQrCelebration({ xpGained: 10, playerName: fullProfile?.display_name||"" });
     setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }));
     await checkAndAssignMonthlyBadge(newXp, newCoin);
   }
@@ -4484,6 +4770,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const BOTTOM_TABS = [
     ["profilo","👤","Profilo"],
+    ["annunci","📢","Annunci"],
     ["community","👥","Community"],
     visConfig.classifica !== false ? ["classifica","🏆","Classifica"] : null,
     visConfig.lab !== false ? ["attivita","⚡","Lab"] : null,
@@ -4522,6 +4809,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
       {/* Toast notifications */}
       <ToastContainer/>
+      {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
       {/* Top bar */}
       <div className="pd-topbar">
         <div>
@@ -4675,7 +4963,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             })()}
 
             {/* Sfida del giorno */}
-            {visConfig.sfida !== false && activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
+            {visConfig.sfida !== false && (
+              <SfidePanel activities={activities}/>
+            )}
+            {false && activities.filter(a=>a.description?.includes('SFIDA')).slice(0,1).map(s=>(
               <div key={s.id} className="pd-sfida">
                         <SfidaCountdown/>
                 <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'#ffcc00',marginBottom:4}}>⚡ Sfida del Giorno</div>
@@ -5461,7 +5752,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Visibilità"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Visibilità"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -5714,6 +6005,7 @@ const EduTabColors = {
   dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   pulizia:      { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
+  annunci:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   visibilita:   { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   admin:        { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
@@ -5935,6 +6227,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
+          {tab === "annunci"      && <AnnouncementsView profile={profile} players={players}/>}
           {tab === "visibilita"   && <VisibilityView />}
           {tab === "admin"        && <AdminView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
@@ -6031,6 +6324,17 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [checking, setChecking] = useState(true);
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
+
+  // Re-ping Supabase when app becomes visible (mobile background fix)
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') {
+        sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   useEffect(() => {
     sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
