@@ -14,13 +14,13 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function registerPush(playerId) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-    console.log('Push: richiede HTTPS'); return;
-  }
   try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     const reg = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
+    const swReady = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_,r) => setTimeout(() => r(new Error('SW timeout')), 5000))
+    ]);
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') return;
     const sub = await reg.pushManager.subscribe({
@@ -2003,6 +2003,7 @@ function Login({ onLogin }) {
 // ─── EDUCATOR VIEWS ───────────────────────────────────────
 
 function PlayersView({ sectionColors, setSectionColors }) {
+  const loadingRef = useRef(false);
   const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
@@ -3533,7 +3534,6 @@ function MessagesView({ profile }) {
   const [mediaType, setMediaType] = useState(null); // "image" | "gif" | "sticker" | null
   const [mediaPanel, setMediaPanel] = useState(null); // "sticker" | "gif" | null
   const mediaRef = useRef();
-  const loadingRef = useRef(false);
 
   async function loadAll() {
     const [{ data: sq }, { data: pl }, { data: act }, { data: m }] = await Promise.all([
