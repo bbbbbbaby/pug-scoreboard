@@ -15,12 +15,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://pkbahkxivoygnzwdnfci.supabase.co" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Funnel+Display:wght@300;400;500;600;700;800&display=swap" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js" defer></script>
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js" defer></script>
     <title>PUG Scoreboard</title>
     <script>
-      // Deregistra service worker (evita cache stale) — solo SW, non asset cache
+      // Non deregistrare il SW — serve per push notifications
+      // Solo aggiorna se disponibile
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(r => r.forEach(sw => sw.unregister()));
+        navigator.serviceWorker.register('/sw.js').catch(()=>{});
       }
     </script>
   </head>
