@@ -1283,7 +1283,7 @@ const css = `
 // ─── UTILS ────────────────────────────────────────────────
 
 function Avatar({ url, emoji, size = 40 }) {
-  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }} />;
+  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }}  loading="lazy"/>;
   return <span style={{ fontSize: size * 0.52 }}>{emoji || "🌱"}</span>;
 }
 
@@ -1352,7 +1352,7 @@ function BannerCustomizer({ sectionKey, sectionColors, setSectionColors, onClose
         <div className="section-label">Immagine di sfondo (opzionale)</div>
         <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
-          {image ? <img src={image} alt="banner" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 8, marginBottom: 6 }} /> : <div style={{ fontSize: 30, marginBottom: 6 }}>🖼️</div>}
+          {image ? <img src={image} alt="banner" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 8, marginBottom: 6 }}  loading="lazy"/> : <div style={{ fontSize: 30, marginBottom: 6 }}>🖼️</div>}
           <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploading ? "Caricamento…" : "Tocca per caricare un'immagine"}</div>
         </div>
         {image && <button className="btn btn-danger btn-sm" style={{ marginBottom: 8 }} onClick={() => setImage(null)}>Rimuovi immagine</button>}
@@ -1401,19 +1401,19 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
       reader.onload = async (ev) => {
         const base64url = ev.target.result;
         const kb = Math.round(base64url.length * 0.75 / 1024);
-        if (kb > 200) { alert(`Immagine troppo grande (${kb}KB). Usa una foto più piccola.`); setUploading(false); return; }
+        if (kb > 200) { addToast(`⚠️ Foto troppo grande (${kb}KB)`, 'error'); setUploading(false); return; }
         await sb.from("profiles").update({ avatar_url: base64url }).eq("id", playerId);
         setPreview(base64url); onUploaded && onUploaded(base64url);
         setUploading(false);
       };
-      reader.onerror = () => { alert("Errore lettura file"); setUploading(false); };
+      reader.onerror = () => { addToast('❌ Errore lettura file', 'error'); setUploading(false); };
       reader.readAsDataURL(compressed);
-    } catch(err) { alert("Errore: " + err.message); setUploading(false); }
+    } catch(err) { addToast("❌ " + err.message, "error"); setUploading(false); }
   }
   return (
     <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
       <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{display:"none"}}/>
-      {preview ? <img src={preview} className="avatar-preview" alt="avatar"/> : <div style={{fontSize:40,marginBottom:8}}>📷</div>}
+      {preview ? <img src={preview} className="avatar-preview" alt="avatar" loading="lazy"/> : <div style={{fontSize:40,marginBottom:8}}>📷</div>}
       <div style={{fontSize:13,color:"var(--text2)"}}>{uploading ? "⏳ Compressione…" : "Tocca per cambiare foto"}</div>
     </div>
   );
@@ -1642,6 +1642,7 @@ function Toast({ msg, type }) {
     coin:  { bg:"rgba(255,204,0,.15)",  border:"rgba(255,204,0,.4)",  color:"#ffcc00" },
     badge: { bg:"rgba(255,45,120,.15)", border:"rgba(255,45,120,.4)", color:"#ff2d78" },
     ok:    { bg:"rgba(0,255,136,.15)",  border:"rgba(0,255,136,.4)",  color:"#00ff88" },
+    error: { bg:"rgba(255,50,50,.15)",  border:"rgba(255,50,50,.4)",  color:"#ff4444" },
   };
   const c = colors[type] || colors.ok;
   return (
@@ -1797,6 +1798,16 @@ function CountUpStat({ val }) {
 }
 
 
+// ─── DEBOUNCE ────────────────────────────────────────────
+function useDebounce(value, delay=300) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 // ─── PIXEL SOUNDS ────────────────────────────────────────
 let soundEnabled = localStorage.getItem("pug_sounds") !== "false";
 
@@ -1870,6 +1881,7 @@ function Login({ onLogin }) {
 
   // Player login
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 250);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [pin, setPin] = useState("");
@@ -2030,6 +2042,11 @@ function PlayersView({ sectionColors, setSectionColors }) {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
+    // Timeout di sicurezza: se il caricamento va storto, sblocca dopo 8s
+    const safetyTimeout = setTimeout(() => {
+      loadingRef.current = false;
+      setLoading(false);
+    }, 8000);
     const { data } = await sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false });
     const { data: sq } = await sb.from("squads").select("*");
     setPlayers(data || []); setSquads(sq || []); setLoading(false);
@@ -2189,7 +2206,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
             <div className="section-label">Avatar pianta</div>
             {newPlayer.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
-                <img src={newPlayer.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt="avatar"/>
+                <img src={newPlayer.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt="avatar" loading="lazy"/>
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:"#ffcc00"}}>{newPlayer.avatar_url.split('/').pop().replace('.webp','')}</div>
                   <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewPlayer(p=>({...p,avatar_url:""}))}>✕ Rimuovi</button>
@@ -2270,16 +2287,16 @@ function InlineAvatarUpload({ playerId, onUploaded }) {
       reader.onload = async (ev) => {
         const base64url = ev.target.result;
         const kb = Math.round(base64url.length * 0.75 / 1024);
-        if (kb > 200) { alert(`Foto troppo grande (${kb}KB). Usa un'immagine più piccola o ridotta.`); setUploading(false); return; }
+        if (kb > 200) { addToast(`⚠️ Foto troppo grande (${kb}KB)`, 'error'); setUploading(false); return; }
         if (playerId && !playerId.startsWith("new_edu_")) {
           await sb.from("profiles").update({ avatar_url: base64url }).eq("id", playerId);
         }
         onUploaded(base64url);
         setUploading(false);
       };
-      reader.onerror = () => { alert("Errore lettura file"); setUploading(false); };
+      reader.onerror = () => { addToast('❌ Errore lettura file', 'error'); setUploading(false); };
       reader.readAsDataURL(compressed);
-    } catch(err) { alert("Errore: " + err.message); setUploading(false); }
+    } catch(err) { addToast("❌ " + err.message, "error"); setUploading(false); }
   }
   return (
     <div>
@@ -2386,7 +2403,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             {badges.length===0 && <div className="empty" style={{width:"100%"}}>Nessun badge.</div>}
             {badges.map(pb => (
               <div key={pb.id} style={{textAlign:"center",width:72}}>
-                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--rosa)",display:"block",margin:"0 auto 5px"}} alt=""/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
+                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--rosa)",display:"block",margin:"0 auto 5px"}} alt="" loading="lazy"/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
                 <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.3}}>{pb.badges?.name}</div>
               </div>
             ))}
@@ -2462,7 +2479,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar</div>
             {editing.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,255,255,.04)",borderRadius:10}}>
-                <img src={editing.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt=""/>
+                <img src={editing.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt="" loading="lazy"/>
                 <div style={{fontSize:12,color:"var(--text2)",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis"}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
               </div>
             )}
@@ -2953,8 +2970,12 @@ function LabQRButton({ actId, actName }) {
       {show && code && (
         <div style={{marginTop:8,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(0,212,255,.2)"}}>
           <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".08em"}}>QR Lab · {actName} · {new Date().toLocaleDateString("it-IT")}</div>
-          <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${code}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={code} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8}}>{code}</div>
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${code}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={code} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}} loading="lazy"/>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8,cursor:"pointer"}}
+            onClick={()=>navigator.clipboard?.writeText(code).then(()=>addToast("📋 Codice copiato!","ok")).catch(()=>{})}
+            title="Tocca per copiare"
+          >{code}</div>
+          <div style={{fontSize:10,color:"var(--text3)",marginTop:-4}}>Tocca per copiare</div>
           <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo oggi — codice diverso dal check-in giornaliero</div>
         </div>
       )}
@@ -3195,7 +3216,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
             <div key={b.id} className="badge-card">
               <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteBadge(b.id); }}>✕</button>
               <div onClick={() => { setShowAssign(b.id); setAssignXp(b.xp_default); setAssignCoin(b.coin_default); }}>
-                {b.image_url ? <img className="badge-img" src={b.image_url} alt={b.name} /> : <span className="badge-emoji">🎖️</span>}
+                {b.image_url ? <img className="badge-img" src={b.image_url} alt={b.name}  loading="lazy"/> : <span className="badge-emoji">🎖️</span>}
                 <div className="badge-name">{b.name}</div>
                 <div className="badge-pts">+{b.xp_default} XP</div>
               </div>
@@ -3238,7 +3259,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
             <div className="section-label">Immagine badge</div>
             {newBadge.image_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px",background:"rgba(255,0,204,.06)",border:"1px solid rgba(255,0,204,.2)",borderRadius:10}}>
-                <img src={newBadge.image_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt="badge"/>
+                <img src={newBadge.image_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt="badge" loading="lazy"/>
                 <div style={{flex:1}}>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--rosa)"}}>{newBadge.image_url.split("/").pop().replace(".webp","")}</div>
                   <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewBadge(f=>({...f,image_url:null}))}>✕ Rimuovi</button>
@@ -3315,7 +3336,7 @@ function SfidaView({ sectionColors, setSectionColors }) {
 
   return (
     <div>
-      <SectionBanner sectionKey="sfida" title="Sfida del Giorno" sub={`${sfide.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <SectionBanner sectionKey="sfida" title="⚡ Sfide" sub={`${sfide.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
         <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuova sfida</button>
       </div>
@@ -3666,7 +3687,7 @@ function MessagesView({ profile }) {
                         {sel?"✓":""}
                       </div>
                       <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
-                        {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:lv.emoji}
+                        {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="" loading="lazy"/>:lv.emoji}
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:600,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
@@ -3705,7 +3726,7 @@ function MessagesView({ profile }) {
           }}/>
           {mediaData ? (
             <div style={{position:"relative",display:"inline-block",marginBottom:8}}>
-              <img src={mediaData} style={{maxWidth:"100%",maxHeight:180,borderRadius:12,border:"1px solid var(--border)",display:"block"}} alt=""/>
+              <img src={mediaData} style={{maxWidth:"100%",maxHeight:180,borderRadius:12,border:"1px solid var(--border)",display:"block"}} alt="" loading="lazy"/>
               <button onClick={()=>{setMediaData(null);setMediaType(null);}} style={{position:"absolute",top:-8,right:-8,background:"rgba(0,0,0,.8)",border:"none",color:"#fff",borderRadius:"50%",width:24,height:24,cursor:"pointer",fontSize:14,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
           ) : (
@@ -3748,7 +3769,7 @@ function MessagesView({ profile }) {
                 {m.media_data && !m.media_data.startsWith("sticker:") && (
                   <img src={m.media_data}
                     style={{maxWidth:"100%",maxHeight:200,borderRadius:10,marginBottom:6,display:"block"}}
-                    alt="media"/>
+                    alt="media" loading="lazy"/>
                 )}
                 <div style={{fontSize:13,color:"var(--text)"}}>{m.body}</div>
               </div>
@@ -3892,7 +3913,7 @@ function QrView() {
         {loading ? <div className="loading">⏳</div> : qr ? (
           <>
             <div style={{ background: "var(--surface2)", borderRadius: 16, padding: "24px 32px", marginBottom: 16, display: "inline-block", border: "1.5px solid var(--border2)" }}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8 }}/>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8 }} loading="lazy"/>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:34, fontWeight:900, color:"var(--neon-blue)", letterSpacing:8, margin:"10px 0 6px", textShadow:"var(--glow-blue)" }}>{qr.code}</div>
             <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Valido {new Date(qr.valid_from).getHours()}:00 – {new Date(qr.valid_until).getHours()}:00</div>
@@ -3971,7 +3992,7 @@ function AnnouncementsView({ profile }) {
             }}/>
             {imgData ? (
               <div style={{position:"relative",display:"inline-block"}}>
-                <img src={imgData} style={{maxWidth:"100%",maxHeight:160,borderRadius:8}} alt=""/>
+                <img src={imgData} style={{maxWidth:"100%",maxHeight:160,borderRadius:8}} alt="" loading="lazy"/>
                 <button onClick={()=>setImgData(null)} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,.7)",border:"none",color:"#fff",borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:12}}>✕</button>
               </div>
             ) : (
@@ -3997,7 +4018,7 @@ function AnnouncementsView({ profile }) {
               {a.pinned&&<div style={{position:"absolute",top:10,right:12,fontSize:14}}>📌</div>}
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                 {a.profiles?.avatar_url
-                  ? <img src={a.profiles.avatar_url} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                  ? <img src={a.profiles.avatar_url} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}} alt="" loading="lazy"/>
                   : <span style={{fontSize:22}}>🌱</span>
                 }
                 <div>
@@ -4007,7 +4028,7 @@ function AnnouncementsView({ profile }) {
               </div>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
               {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,marginBottom:8,whiteSpace:"pre-wrap"}}>{a.body}</div>}
-              {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginBottom:8,maxHeight:300,objectFit:"cover"}} alt=""/>}
+              {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginBottom:8,maxHeight:300,objectFit:"cover"}} alt="" loading="lazy"/>}
               <button onClick={()=>del(a.id)} style={{background:"none",border:"none",color:"rgba(255,34,68,.5)",cursor:"pointer",fontSize:12,padding:"4px 0"}}>🗑️ Elimina</button>
             </div>
           ))}
@@ -4037,7 +4058,7 @@ function PlayerAnnouncementsTab() {
             {a.pinned&&<div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📌 In evidenza</div>}
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               {a.profiles?.avatar_url
-                ? <img src={a.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                ? <img src={a.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt="" loading="lazy"/>
                 : <span style={{fontSize:18}}>🌱</span>}
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:"var(--text)"}}>{a.profiles?.display_name||"Giardiniere"}</div>
@@ -4046,7 +4067,7 @@ function PlayerAnnouncementsTab() {
             </div>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
             {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{a.body}</div>}
-            {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt=""/>}
+            {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt="" loading="lazy"/>}
           </div>
         ))}
       </div>
@@ -4632,6 +4653,20 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [visReady, setVisReady] = useState(false);
   const [levelUpData, setLevelUpData] = useState(null);
 
+  // Reset loadingRef e ricarica quando app torna in primo piano
+  useEffect(() => {
+    let hidden = 0;
+    function onVis() {
+      if (document.visibilityState === 'hidden') { hidden = Date.now(); return; }
+      if (document.visibilityState === 'visible' && Date.now() - hidden > 15000) {
+        loadingRef.current = false;
+        load();
+      }
+    }
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [load]);
+
   // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
     sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
@@ -4976,7 +5011,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
       {/* Scrollable content */}
       <div className="pd-scroll"
-        onTouchStart={e=>{window._swipeX0=e.touches[0].clientX;}}
+        onTouchStart={e=>{window._swipeX0=e.touches[0].clientX; window._swipeY0=e.touches[0].clientY;}}
+        onScroll={e=>{
+          if(e.target.scrollTop === 0 && window._pulling) { window._pulling=false; load(); addToast("🔄 Aggiornamento…","ok"); }
+        }}
+        onTouchMove={e=>{
+          const dy=e.touches[0].clientY-(window._swipeY0||0);
+          if(dy>60 && e.currentTarget.scrollTop===0) window._pulling=true;
+        }}
         onTouchEnd={e=>{
           const dx=e.changedTouches[0].clientX-(window._swipeX0||0);
           if(Math.abs(dx)<50)return;
@@ -4993,7 +5035,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             <div className="pd-av-zone">
               <div className="pd-av-glow"/>
               {fullProfile.avatar_url
-                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}}/>
+                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}} loading="lazy"/>
                 : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
               }
               <div className="pd-name-pill">{fullProfile.display_name}</div>
@@ -5118,7 +5160,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               );
             })()}
 
-            {/* Sfida del giorno */}
+            {/* Sfide */}
             {visConfig.sfida !== false && (
               <SfidePanel activities={activities}/>
             )}
@@ -5130,7 +5172,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="pd-badge-row">
                   {badges.map(pb=>(
                     <div key={pb.id} className="pd-badge-item" onClick={()=>setSelectedBadge(pb)}>
-                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt=""/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
+                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt="" loading="lazy"/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
                       <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.65)',lineHeight:1.3}}>{pb.badges?.name}</div>
                     </div>
                   ))}
@@ -5225,7 +5267,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             </div>
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
               <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
-                <div className="sfida-label">⚡ Sfida del giorno</div>
+                <div className="sfida-label">⚡ Sfide</div>
                 <div className="sfida-title">{s.name}</div>
                 <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
@@ -5311,7 +5353,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                         </div>
                       </div>
                       {m.media_data && !m.media_data.startsWith("sticker:") && (
-                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt=""/>
+                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt="" loading="lazy"/>
                       )}
                       <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
                     </div>
@@ -5324,7 +5366,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
         {/* ── NOTIFICHE ── */}
         {tab === "social" && (
-          <div style={{ marginTop: 8 }}>
+          <div className="tab-content" style={{ marginTop: 8 }}>
             <SocialTab players={players} myId={profile.id} myProfile={fullProfile}/>
           </div>
         )}
@@ -5363,7 +5405,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         <div className="modal-bg" onClick={() => setSelectedBadge(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
-              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)", margin: "0 auto 10px", display: "block" }} alt="" /> : <div style={{ fontSize: 56, marginBottom: 10 }}>🎖️</div>}
+              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)", margin: "0 auto 10px", display: "block" }} alt=""  loading="lazy"/> : <div style={{ fontSize: 56, marginBottom: 10 }}>🎖️</div>}
               <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{selectedBadge.badges?.name}</div>
               <div style={{ fontSize: 13, color: "var(--azzurro)", fontWeight: 700, marginTop: 4 }}>+{selectedBadge.xp_awarded} XP · 🪙 +{selectedBadge.coin_awarded}</div>
             </div>
@@ -5668,7 +5710,7 @@ function PuliziaView() {
           {/* Player header */}
           <div style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
             <div style={{width:44,height:44,borderRadius:"50%",border:"2px solid rgba(255,140,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
-              {selected.id==="__all__" ? "🌍" : selected.avatar_url ? <img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt=""/> : getLevel(selected.xp||0).emoji}
+              {selected.id==="__all__" ? "🌍" : selected.avatar_url ? <img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="" loading="lazy"/> : getLevel(selected.xp||0).emoji}
             </div>
             <div style={{flex:1}}>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff"}}>{selected.display_name}</div>
@@ -5801,7 +5843,7 @@ function AdminView({ profile }) {
           {educators.map(e => (
             <div key={e.id} className="card-sm" style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.3)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
-                {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/> : "🌱"}
+                {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="" loading="lazy"/> : "🌱"}
               </div>
               <div style={{flex:1}}>
                 {editEdu?.id === e.id ? (
@@ -5866,7 +5908,7 @@ function AdminView({ profile }) {
             <label className="form-label">Avatar</label>
             {form.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
-                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt=""/>
+                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt="" loading="lazy"/>
                 <div style={{flex:1,fontSize:12,color:"#ffcc00"}}>{form.avatar_url.split("/").pop().replace(".webp","")}</div>
                 <button className="btn btn-ghost btn-xs" onClick={()=>setForm(f=>({...f,avatar_url:""}))}>✕</button>
               </div>
@@ -6080,7 +6122,7 @@ function PresentationMode({ onClose, settings }) {
                 <div key={p.id} className={colCls}>
                   {i===1 && <div className="pres-crown">👑</div>}
                   <div className={avCls} style={{fontSize:i===1?"52px":i===0?"40px":"34px"}}>
-                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : lv.emoji}
+                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy"/> : lv.emoji}
                   </div>
                   <div className="pres-pname" style={{color:medalColors[i]}}>{p.display_name}</div>
                   <div className="pres-pxp" style={{color:medalColors[i]}}>{(p.xp||0).toLocaleString()} XP</div>
@@ -6123,7 +6165,7 @@ function PresentationMode({ onClose, settings }) {
                 }}>
                   <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,width:38,textAlign:"center",color:isTop?colors[rank-1]:"var(--text3)"}}>{rank}°</div>
                   <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",border:`2px solid ${isTop?colors[rank-1]:"rgba(255,255,255,.15)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
-                    {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:lv.emoji}
+                    {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy"/>:lv.emoji}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
@@ -6464,18 +6506,47 @@ function EducatorShell({ profile, onLogout }) {
 export default function App() {
   const [profile, setProfile] = useState(null);
   const [checking, setChecking] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
-  // Re-ping Supabase when app becomes visible (mobile background fix)
+  // Re-load when app comes back from background
   useEffect(() => {
+    let lastHidden = 0;
     function onVisible() {
-      if (document.visibilityState === 'visible') {
-        sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
+      if (document.visibilityState === 'hidden') {
+        lastHidden = Date.now();
+        return;
+      }
+      // Se era in background per più di 30 secondi, ricarica
+      if (document.visibilityState === 'visible' && Date.now() - lastHidden > 30000) {
+        setChecking(true);
+        // Re-verify session
+        if (profile?._playerSession) {
+          sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single()
+            .then(({ data }) => {
+              if (data) setProfile({ ...data, _playerSession: true });
+            })
+            .catch(() => {})
+            .finally(() => setChecking(false));
+        } else {
+          sb.auth.getSession().then(({ data: { session } }) => {
+            if (!session) { setProfile(null); localStorage.removeItem("pug_edu"); }
+            setChecking(false);
+          }).catch(() => setChecking(false));
+        }
       }
     }
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
@@ -6552,6 +6623,7 @@ export default function App() {
   if (checking) return (
     <>
       <style>{css}</style>
+      {!isOnline && <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#c62828",color:"#fff",textAlign:"center",padding:"8px",fontSize:13,fontWeight:700}}>📵 Nessuna connessione</div>}
       <div style={{position:"relative"}}>
         <div style={{position:"fixed",top:0,left:0,right:0,height:3,zIndex:9999,background:"linear-gradient(90deg,var(--neon-blue),var(--neon-pink),var(--neon-blue))",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}}/>
         <Login onLogin={setProfile} />
