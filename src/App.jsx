@@ -228,12 +228,12 @@ const css = `
   .content { flex:1; padding:20px 24px; }
 
   /* ═══ MOBILE EDUCATOR ═══ */
-  .mob-header { display:none; position:fixed; top:0; left:0; right:0; height:56px; background:rgba(0,0,20,.75); border-bottom:1px solid rgba(255,255,255,.08); z-index:20; align-items:center; padding:0 14px; gap:10px; backdrop-filter:blur(24px); }
+  .mob-header { display:none; position:fixed; top:0; left:0; right:0; min-height:56px; background:rgba(0,0,20,.75); border-bottom:1px solid rgba(255,255,255,.08); z-index:20; align-items:center; padding:env(safe-area-inset-top,0px) 14px; gap:10px; backdrop-filter:blur(24px);  height:calc(56px + env(safe-area-inset-top,0px)); }
   .mob-header-title { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:20px; text-transform:uppercase; color:#fff; flex:1; letter-spacing:.05em; }
   .mob-drawer-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:30; backdrop-filter:blur(6px); }
   .mob-drawer { position:fixed; top:0; left:0; bottom:0; width:270px; background:rgba(10,5,40,.97); border-right:1px solid rgba(255,255,255,.08); z-index:40; transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; backdrop-filter:blur(24px); }
   .mob-drawer.open { transform:translateX(0); }
-  .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(0,0,20,.88); border-top:1px solid rgba(255,255,255,.08); z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(24px); }
+  .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; padding-bottom:env(safe-area-inset-bottom,0px); background:rgba(0,0,20,.88); border-top:1px solid rgba(255,255,255,.08); z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(24px); }
   .mob-bottom-nav-inner { display:flex; height:60px; }
   .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:rgba(255,255,255,.28); font-family:'Funnel Display'; padding:0; transition:color .15s; }
   .mob-nav-btn.active { color:#ffcc00; }
@@ -586,7 +586,7 @@ const css = `
     .content { padding:12px; overflow-x:hidden; }
     .mob-header { display:flex; }
     .mob-bottom-nav { display:block; }
-    .edu-content-wrap { padding-top:58px; padding-bottom:calc(62px + env(safe-area-inset-bottom,0px) + 8px); overflow-x:hidden; }
+    .edu-content-wrap { padding-top:calc(58px + env(safe-area-inset-top,0px)); padding-bottom:calc(62px + env(safe-area-inset-bottom,0px) + 8px); overflow-x:hidden; }
     .player-grid { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
     .msg-layout { flex-direction:column; height:auto; }
     .msg-list { width:100%; flex-direction:row; overflow-x:auto; flex-wrap:nowrap; padding-bottom:4px; height:auto; }
@@ -4958,7 +4958,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       <ToastContainer/>
       {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
       {/* Top bar */}
-      <div className="pd-topbar">
+      <div className="pd-topbar" style={{paddingTop:"max(10px, calc(env(safe-area-inset-top, 0px) + 8px))"}}>
         <div>
           <div className="pd-logo-box"><div className="pd-logo-t">PeR·You<br/>GaRDeN</div></div>
           <div className="pd-logo-sub">gratuito &amp; popolare</div>
@@ -6270,7 +6270,7 @@ function EducatorShell({ profile, onLogout }) {
       </div>
 
       {/* Header mobile */}
-      <div className="mob-header">
+      <div className="mob-header" style={{paddingTop:"env(safe-area-inset-top,0px)"}}>
         <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
         <div style={{transform:"rotate(-1deg)"}}>
           <div style={{background:"#cc1111",borderRadius:"7px 10px 7px 11px",padding:"3px 8px",display:"inline-block"}}>
