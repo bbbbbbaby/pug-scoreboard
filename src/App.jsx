@@ -3558,6 +3558,7 @@ function MessagesView({ profile }) {
   const [expiry, setExpiry] = useState(""); // optional expiry date
   const [sending, setSending] = useState(false);
   const [sent, setSent]   = useState("");
+  const [educators, setEducators] = useState([]);
   const [mediaData, setMediaData] = useState(null);
   const [mediaType, setMediaType] = useState(null);
   const mediaRef = useRef();
@@ -3567,18 +3568,23 @@ function MessagesView({ profile }) {
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
       sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).limit(100),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).gt("expires_at", new Date().toISOString()).limit(100),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
   }
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+    sb.from("profiles").select("id,display_name").in("role",["educator","admin"])
+      .then(({data})=>setEducators(data||[]));
+  }, []);
 
   async function sendMessage() {
     if (!body.trim()) return;
     setSending(true);
     const senderName = profile?.display_name || "Giardiniere";
     const expiresAt = expiry ? new Date(expiry + "T23:59:59").toISOString() : null;
-    const base = { sender_id: profile.id, body: body.trim(), media_data: mediaData || null, is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt };
+    const defaultExpiry = new Date(Date.now() + 30*24*60*60*1000).toISOString();
+    const base = { sender_id: profile.id, body: body.trim(), media_data: mediaData || null, is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt || defaultExpiry };
 
     if (destType === "tutti") {
       const { data: allP } = await sb.from("profiles").select("id").eq("role","player");
@@ -3595,6 +3601,10 @@ function MessagesView({ profile }) {
       for (const p of (sqP||[])) {
         await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`, message_id:sqMsgId});
       }
+    } else if (destType === "educator" && selectedPlayers[0]) {
+      const { data: pm } = await sb.from("messages").insert({...base, recipient_id:selectedPlayers[0]}).select("id").single();
+      await sb.from("notifications").insert({user_id:selectedPlayers[0], type:"new_message", title:"💬 Messaggio dal team", body:`${senderName} ti ha scritto`, message_id:pm?.id||null});
+      sendPush(selectedPlayers[0], "💬 Messaggio dal team", `${senderName} ti ha scritto`).catch(()=>{});
     } else if (destType === "player" && selectedPlayers.length > 0) {
       for (const pid of selectedPlayers) {
         const { data: pm } = await sb.from("messages").insert({...base, recipient_id:pid}).select("id").single();
@@ -3665,6 +3675,15 @@ function MessagesView({ profile }) {
               <option value="">Seleziona squadra…</option>
               {squads.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
+          )}
+          {destType==="educator" && (
+            <div className="form-group">
+              <label className="form-label">Seleziona giardiniere</label>
+              <select value={selectedPlayers[0]||""} onChange={e=>setSelectedPlayers([e.target.value])}>
+                <option value="">Scegli un giardiniere…</option>
+                {educators.map(e=><option key={e.id} value={e.id}>{e.display_name}</option>)}
+              </select>
+            </div>
           )}
           {destType==="player" && (
             <div>
@@ -4071,6 +4090,99 @@ function PlayerAnnouncementsTab() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+
+// ─── BACHECA POST-IT EDUCATORI ───────────────────────────
+function BachecaView({ profile }) {
+  const [notes, setNotes] = useState([]);
+  const [body, setBody] = useState("");
+  const [color, setColor] = useState("#ffcc00");
+  const [saving, setSaving] = useState(false);
+  const COLORS = ["#ffcc00","#ff6b6b","#69db7c","#74c0fc","#f783ac","#a9e34b","#ffa94d","#e5dbff"];
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    const { data } = await sb.from("educator_notes")
+      .select("*, profiles(display_name,avatar_url)")
+      .order("created_at",{ascending:false}).limit(50);
+    setNotes(data||[]);
+  }
+
+  async function addNote() {
+    if (!body.trim()) return;
+    setSaving(true);
+    await sb.from("educator_notes").insert({ educator_id:profile.id, body:body.trim(), color });
+    setBody(""); setSaving(false);
+    load();
+  }
+
+  async function del(id) {
+    await sb.from("educator_notes").delete().eq("id",id);
+    setNotes(p=>p.filter(n=>n.id!==id));
+  }
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:4}}>📌 Bacheca Team</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Post-it visibili solo ai giardinieri.</div>
+
+      {/* Compose */}
+      <div className="card" style={{marginBottom:16}}>
+        <textarea className="form-input" rows={3} value={body} onChange={e=>setBody(e.target.value)}
+          placeholder="Scrivi un post-it per il team…"
+          style={{resize:"none",marginBottom:10}}
+          onKeyDown={e=>{if(e.key==="Enter"&&e.metaKey){addNote();}}}
+        />
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          {COLORS.map(c=>(
+            <div key={c} onClick={()=>setColor(c)}
+              style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",
+                border:color===c?"3px solid #fff":"2px solid transparent",
+                boxShadow:color===c?"0 0 0 2px "+c:"none",
+                transition:"all .15s",flexShrink:0}}/>
+          ))}
+          <button className="btn btn-primary btn-sm" style={{marginLeft:"auto"}}
+            onClick={addNote} disabled={saving||!body.trim()}>
+            {saving?"…":"📌 Aggiungi"}
+          </button>
+        </div>
+        <div style={{fontSize:10,color:"var(--text3)",marginTop:6}}>Cmd+Enter per inviare</div>
+      </div>
+
+      {/* Notes grid */}
+      {notes.length===0
+        ? <div className="empty" style={{padding:32,textAlign:"center"}}>
+            <div style={{fontSize:32,marginBottom:8}}>📌</div>
+            <div>Nessun post-it ancora. Aggiungine uno!</div>
+          </div>
+        : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+            {notes.map(n=>(
+              <div key={n.id} style={{
+                background:n.color,borderRadius:12,padding:"14px 16px",
+                position:"relative",minHeight:100,
+                boxShadow:"0 3px 12px rgba(0,0,0,.2), 0 1px 3px rgba(0,0,0,.15)",
+                transform:`rotate(${((n.id.charCodeAt(0)%5)-2)*0.6}deg)`,
+              }}>
+                <button onClick={()=>del(n.id)}
+                  style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.15)",border:"none",
+                    borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:12,
+                    display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(0,0,0,.6)"}}>✕</button>
+                <div style={{fontSize:14,color:"rgba(0,0,0,.8)",lineHeight:1.5,fontWeight:500,marginBottom:10,whiteSpace:"pre-wrap"}}>{n.body}</div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  {n.profiles?.avatar_url
+                    ? <img src={n.profiles.avatar_url} style={{width:20,height:20,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                    : <span style={{fontSize:14}}>🌱</span>}
+                  <span style={{fontSize:11,color:"rgba(0,0,0,.55)",fontWeight:700}}>{n.profiles?.display_name}</span>
+                  <span style={{fontSize:10,color:"rgba(0,0,0,.4)",marginLeft:"auto"}}>{new Date(n.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+      }
     </div>
   );
 }
@@ -4653,14 +4765,15 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [visReady, setVisReady] = useState(false);
   const [levelUpData, setLevelUpData] = useState(null);
 
-  // Reset loadingRef e ricarica quando app torna in primo piano
+  // Player: forza reload dati dopo background
   useEffect(() => {
-    let hidden = 0;
+    let hiddenAt = 0;
     function onVis() {
-      if (document.visibilityState === 'hidden') { hidden = Date.now(); return; }
-      if (document.visibilityState === 'visible' && Date.now() - hidden > 15000) {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (document.visibilityState === 'visible' && hiddenAt > 0 && Date.now() - hiddenAt > 20000) {
         loadingRef.current = false;
         load();
+        hiddenAt = 0;
       }
     }
     document.addEventListener('visibilitychange', onVis);
@@ -5933,7 +6046,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -6186,6 +6299,7 @@ const EduTabColors = {
   dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   pulizia:      { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
+  bacheca:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   annunci:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   social_edu:   { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   visibilita:   { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
@@ -6409,6 +6523,8 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
+          {tab === "bacheca"      && <BachecaView profile={profile}/>}
+          {tab === "bacheca"      && <BachecaView profile={profile}/>}
           {tab === "annunci"      && <AnnouncementsView profile={profile}/>}
           {tab === "social_edu"   && <EducatorSocialView profile={profile}/>}
           {tab === "visibilita"   && <VisibilityView />}
@@ -6517,36 +6633,27 @@ export default function App() {
   }, []);
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
-  // Re-load when app comes back from background
+  // Background reload: se in background >2min, ricarica la pagina
   useEffect(() => {
-    let lastHidden = 0;
-    function onVisible() {
+    let hiddenAt = 0;
+    function onVis() {
       if (document.visibilityState === 'hidden') {
-        lastHidden = Date.now();
-        return;
-      }
-      // Se era in background per più di 30 secondi, ricarica
-      if (document.visibilityState === 'visible' && Date.now() - lastHidden > 30000) {
-        setChecking(true);
-        // Re-verify session
-        if (profile?._playerSession) {
-          sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single()
-            .then(({ data }) => {
-              if (data) setProfile({ ...data, _playerSession: true });
-            })
-            .catch(() => {})
-            .finally(() => setChecking(false));
-        } else {
-          sb.auth.getSession().then(({ data: { session } }) => {
-            if (!session) { setProfile(null); localStorage.removeItem("pug_edu"); }
-            setChecking(false);
-          }).catch(() => setChecking(false));
+        hiddenAt = Date.now();
+      } else if (document.visibilityState === 'visible' && hiddenAt > 0) {
+        const away = Date.now() - hiddenAt;
+        if (away > 120000) {
+          // >2 minuti in background → reload completo (soluzione più affidabile)
+          window.location.reload();
+        } else if (away > 20000) {
+          // 20s-2min → soft reload senza perdere sessione
+          sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
         }
+        hiddenAt = 0;
       }
     }
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [profile]);
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   useEffect(() => {
     sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
