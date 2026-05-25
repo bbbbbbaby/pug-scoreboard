@@ -2014,9 +2014,7 @@ function Login({ onLogin }) {
                 <Avatar url={selected.avatar_url} emoji="🌱" size={72}/>
               </div>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,color:"var(--text)",marginBottom:4}}>{selected.display_name}</div>
-              {(() => {
-                try { const v = JSON.parse(localStorage.getItem("pug_visibility")||"{}"); return v.squadre !== false && selected.squads?.name ? <SquadPill name={selected.squads.name}/> : null; } catch(_) { return null; }
-              })()}
+              {selected.squads?.name && <SquadPill name={selected.squads.name}/>}
               <div style={{marginTop:20,marginBottom:6}}>
                 <label className="form-label" style={{textAlign:"left",display:"block"}}>PIN (4 cifre)</label>
                 <input className="form-input pin-input" type="password" inputMode="numeric" maxLength={4}
@@ -2054,7 +2052,7 @@ function Login({ onLogin }) {
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:14,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                        {(() => { try { const v=JSON.parse(localStorage.getItem("pug_visibility")||"{}"); return v.squadre!==false&&p.squads?.name?<SquadPill name={p.squads.name}/>:null; } catch(_){return null;} })()}
+                        {p.squads?.name && <SquadPill name={p.squads.name}/>}
                       </div>
                       <span style={{color:"var(--text3)",fontSize:16}}>→</span>
                     </div>
