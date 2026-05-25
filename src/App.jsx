@@ -3653,7 +3653,7 @@ function MessagesView({ profile }) {
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
       sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).gt("expires_at", new Date().toISOString()).limit(100),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at,profiles!sender_id(display_name,avatar_url)").order("created_at",{ascending:false}).gt("expires_at", new Date().toISOString()).limit(100),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
   }
@@ -3877,11 +3877,21 @@ function MessagesView({ profile }) {
       {loading ? <div className="loading">⏳</div> : (
         <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
           {activeMsgs.map(m=>{
-            const dest = m.is_broadcast?"📢 Tutti":m.squad_id?"🛡️ Squadra":m.recipient_id?"👤 Diretto":"—";
+            const recipientPlayer = players.find(p=>p.id===m.recipient_id);
+            const recipientEdu = educators.find(e=>e.id===m.recipient_id);
+            const dest = m.is_broadcast?"📢 Tutti":m.squad_id?`🛡️ ${squads.find(s=>s.id===m.squad_id)?.name||"Squadra"}`:m.recipient_id?`👤 ${recipientPlayer?.display_name||recipientEdu?.display_name||"Destinatario"}`:"—";
             return (
               <div key={m.id} className="card-sm">
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                  <span style={{fontSize:11,fontWeight:700,color:"var(--azzurro)"}}>{dest}</span>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7}}>
+                    {m.profiles?.avatar_url
+                      ? <img src={m.profiles.avatar_url} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
+                      : <span style={{fontSize:16,flexShrink:0}}>🌱</span>}
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--text)",lineHeight:1}}>{m.profiles?.display_name||"Giardiniere"}</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>→ {dest}</div>
+                    </div>
+                  </div>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     {m.expires_at && <span style={{fontSize:9,color:"var(--text3)",fontWeight:700}}>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
                     <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
@@ -4870,7 +4880,7 @@ function NotificationToggle({ playerId }) {
       const perm = await Notification.requestPermission();
       setStatus(perm);
       if (perm === "granted") {
-        await registerPush(playerId);
+        try { await registerPush(playerId); } catch(_) {}
         addToast("🔔 Notifiche attivate!", "ok");
       }
     } catch(e) {
