@@ -14,36 +14,68 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function registerPush(playerId) {
+  const steps = [];
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    const swReady = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise((_,r) => setTimeout(() => r(new Error('SW timeout')), 5000))
-    ]);
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') return;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
-    await sb.from('push_subscriptions').upsert(
-      { player_id: playerId, subscription: sub.toJSON() },
+    steps.push('start');
+    if (!('serviceWorker' in navigator)) { addToast('⚠️ SW non supportato','error'); return; }
+    if (!('PushManager' in window)) { addToast('⚠️ Push non supportato','error'); return; }
+    steps.push('apis ok');
+
+    let reg;
+    try { reg = await navigator.serviceWorker.register('/sw.js'); steps.push('sw registered'); }
+    catch(e) { addToast('⚠️ SW reg: '+e.message,'error'); return; }
+
+    let swReady;
+    try {
+      swReady = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_,r) => setTimeout(() => r(new Error('SW timeout 8s')), 8000))
+      ]);
+      steps.push('sw ready');
+    } catch(e) { addToast('⚠️ SW ready: '+e.message,'error'); return; }
+
+    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (perm !== 'granted') { addToast('⚠️ Permesso negato','error'); return; }
+    steps.push('perm ok');
+
+    const pushManager = swReady.pushManager || reg.pushManager;
+    if (!pushManager) { addToast('⚠️ PushManager null','error'); return; }
+    steps.push('pushManager ok');
+
+    let sub = await pushManager.getSubscription();
+    if (!sub) {
+      sub = await pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    steps.push('subscribed');
+
+    const { error } = await sb.from('push_subscriptions').upsert(
+      { player_id: playerId, subscription: JSON.parse(JSON.stringify(sub)) },
       { onConflict: 'player_id' }
     );
-  } catch(_) { /* push non supportato su questo dispositivo/browser */ }
+    if (error) { addToast('⚠️ DB: '+error.message,'error'); return; }
+    steps.push('saved to DB ✅');
+    addToast('✅ Push registrate!','ok');
+  } catch(e) {
+    addToast('⚠️ Push err: '+e.message,'error');
+  }
 }
 
 async function sendPush(playerId, title, body) {
   try {
-    const { data: sub } = await sb.from('push_subscriptions')
-      .select('subscription').eq('player_id', playerId).single();
-    if (!sub?.subscription) return;
-    await fetch(PUSH_EDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PUSH_ANON_KEY}` },
-      body: JSON.stringify({ subscription: sub.subscription, title, body }),
-    });
+    // Cerca subscription su player_id (compatibile con educatori e giocatori)
+    const { data: subs } = await sb.from('push_subscriptions')
+      .select('subscription').eq('player_id', playerId).limit(5);
+    if (!subs?.length) return;
+    await Promise.all(subs.map(sub =>
+      fetch(PUSH_EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PUSH_ANON_KEY}` },
+        body: JSON.stringify({ subscription: sub.subscription, title, body }),
+      }).catch(()=>{})
+    ));
   } catch(e) { }
 }
 
@@ -1283,7 +1315,7 @@ const css = `
 // ─── UTILS ────────────────────────────────────────────────
 
 function Avatar({ url, emoji, size = 40 }) {
-  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }}  loading="lazy"/>;
+  if (url) return <img src={url} alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }}/>;
   return <span style={{ fontSize: size * 0.52 }}>{emoji || "🌱"}</span>;
 }
 
@@ -1352,7 +1384,7 @@ function BannerCustomizer({ sectionKey, sectionColors, setSectionColors, onClose
         <div className="section-label">Immagine di sfondo (opzionale)</div>
         <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
-          {image ? <img src={image} alt="banner" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 8, marginBottom: 6 }}  loading="lazy"/> : <div style={{ fontSize: 30, marginBottom: 6 }}>🖼️</div>}
+          {image ? <img src={image} alt="banner" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 8, marginBottom: 6 }} /> : <div style={{ fontSize: 30, marginBottom: 6 }}>🖼️</div>}
           <div style={{ fontSize: 13, color: "var(--text2)" }}>{uploading ? "Caricamento…" : "Tocca per caricare un'immagine"}</div>
         </div>
         {image && <button className="btn btn-danger btn-sm" style={{ marginBottom: 8 }} onClick={() => setImage(null)}>Rimuovi immagine</button>}
@@ -1413,7 +1445,7 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   return (
     <div className="avatar-upload-area" onClick={() => fileRef.current.click()}>
       <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{display:"none"}}/>
-      {preview ? <img src={preview} className="avatar-preview" alt="avatar" loading="lazy"/> : <div style={{fontSize:40,marginBottom:8}}>📷</div>}
+      {preview ? <img src={preview} className="avatar-preview" alt="avatar"/> : <div style={{fontSize:40,marginBottom:8}}>📷</div>}
       <div style={{fontSize:13,color:"var(--text2)"}}>{uploading ? "⏳ Compressione…" : "Tocca per cambiare foto"}</div>
     </div>
   );
@@ -1536,7 +1568,7 @@ function AvatarPicker({ selected, onSelect, squadFilter }) {
             const isSel = selected === url;
             return (
               <div key={name} className={`av-picker-item ${isSel?"sel":""}`} onClick={()=>onSelect(isSel ? "" : url)}>
-                <img src={url} alt={name} loading="lazy"
+                <img src={url} alt={name}
                   style={{width:52,height:52,objectFit:"contain",display:"block"}}
                   onError={e=>{e.target.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 52'%3E%3Crect width='52' height='52' fill='%23333'/%3E%3Ctext x='26' y='34' text-anchor='middle' font-size='24'%3E🌱%3C/text%3E%3C/svg%3E";}}/>
                 <span>{name.replace(/^[agvn]_/,"")}</span>
@@ -1873,162 +1905,247 @@ function QRCelebration({ xpGained, playerName, onDone }) {
   );
 }
 
+// ─── CHANGE PASSWORD MODAL ───────────────────────────────
+function ChangePwdModal({ onClose }) {
+  const [newPwd, setNewPwd]   = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]         = useState("");
+  const [ok, setOk]           = useState(false);
+
+  async function save() {
+    setErr("");
+    if (newPwd.length < 8) { setErr("La password deve avere almeno 8 caratteri."); return; }
+    if (newPwd !== confirm)  { setErr("Le password non coincidono."); return; }
+    setLoading(true);
+    const { error } = await sb.auth.updateUser({ password: newPwd });
+    setLoading(false);
+    if (error) { setErr(error.message); return; }
+    setOk(true);
+    setTimeout(onClose, 2000);
+  }
+
+  return (
+    <div>
+      <div className="modal-title">🔑 Cambia Password</div>
+      {ok ? (
+        <div style={{textAlign:"center",padding:"20px 0"}}>
+          <div style={{fontSize:40,marginBottom:8}}>✅</div>
+          <div style={{fontWeight:700,color:"var(--neon-green)"}}>Password aggiornata!</div>
+        </div>
+      ) : (
+        <>
+          <div className="form-group">
+            <label className="form-label">Nuova password</label>
+            <input type="password" className="form-input" value={newPwd}
+              onChange={e=>setNewPwd(e.target.value)} placeholder="Minimo 8 caratteri" autoFocus/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Conferma password</label>
+            <input type="password" className="form-input" value={confirm}
+              onChange={e=>setConfirm(e.target.value)} placeholder="Ripeti la nuova password"/>
+          </div>
+          {err && <div style={{color:"var(--danger)",fontSize:13,marginBottom:12}}>{err}</div>}
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-primary" style={{flex:1}} onClick={save} disabled={loading||!newPwd||!confirm}>
+              {loading?"⏳ Salvataggio…":"Salva password"}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
 // ─── LOGIN ────────────────────────────────────────────────
 // Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
 
 function Login({ onLogin }) {
-  const [mode, setMode] = useState("player"); // "player" | "educator"
-
-  // Player login
+  const [mode, setMode] = useState("player");
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 250);
-  const [suggestions, setSuggestions] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [players, setPlayers] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [pin, setPin] = useState("");
-  const [pinErr, setPinErr] = useState("");
   const [loadingPin, setLoadingPin] = useState(false);
-
-  // Educator login
+  const [err, setErr] = useState("");
   const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [eduErr, setEduErr] = useState("");
+  const [password, setPassword] = useState("");
   const [loadingEdu, setLoadingEdu] = useState(false);
+  const [showEduLogin, setShowEduLogin] = useState(false);
+  const [leafTaps, setLeafTaps] = useState(0);
+  const debouncedSearch = useDebounce(search, 200);
 
-  // Cerca nickname mentre digiti
   useEffect(() => {
-    if (search.length < 2) { setSuggestions([]); return; }
-    const t = setTimeout(async () => {
-      const { data } = await sb.from("profiles").select("id, display_name, avatar_url, xp, squads(name)").eq("role", "player").ilike("display_name", `%${search}%`).limit(8);
-      setSuggestions(data || []);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search]);
+    sb.from("profiles")
+      .select("id,display_name,avatar_url,pin,squad_id,squads(name)")
+      .eq("role","player").neq("display_name","AppConfig")
+      .order("display_name").limit(300)
+      .then(({ data }) => setPlayers(data || []));
+  }, []);
+
+  // Hidden educator access: tap 🌿 3 times
+  function handleLeafTap() {
+    const next = leafTaps + 1;
+    setLeafTaps(next);
+    if (next >= 3) { setShowEduLogin(true); setLeafTaps(0); }
+    else setTimeout(() => setLeafTaps(0), 2000);
+  }
+
+  const filtered = players.filter(p =>
+    !debouncedSearch || p.display_name.toLowerCase().includes(debouncedSearch.toLowerCase())
+  );
 
   async function loginPlayer() {
-    if (!selectedPlayer || pin.length < 4) return;
-    setLoadingPin(true); setPinErr("");
-    const { data } = await sb.from("profiles").select("*, squads(name)").eq("id", selectedPlayer.id).single();
-    if (!data) { setPinErr("Giocatore non trovato."); setLoadingPin(false); return; }
-    const correctPin = data.pin || "1234";
-    if (pin !== correctPin) { setPinErr("PIN non corretto!"); setLoadingPin(false); return; }
-    // Salva sessione player in localStorage
+    if (!selected || pin.length !== 4) return;
+    setLoadingPin(true); setErr("");
+    const { data, error } = await sb.from("profiles")
+      .select("*, squads(name)").eq("id", selected.id).single();
+    if (error || !data) { setErr("Giocatore non trovato."); setLoadingPin(false); return; }
+    if (data.pin !== pin) { setErr("PIN errato. Riprova."); setPin(""); setLoadingPin(false); return; }
     localStorage.setItem("pug_player", JSON.stringify({ ...data, _playerSession: true }));
     onLogin({ ...data, _playerSession: true });
-    // Registra push in background (silenzioso)
     setTimeout(() => registerPush(data.id), 2000);
     setLoadingPin(false);
   }
 
   async function loginEducator() {
-    setLoadingEdu(true); setEduErr("");
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) { setEduErr(error.message); setLoadingEdu(false); return; }
+    if (!email || !password) return;
+    setLoadingEdu(true); setErr("");
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { setErr(error.message); setLoadingEdu(false); return; }
     const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
-    // Registra push educator in background (silenzioso)
     if (profile?.id) setTimeout(() => registerPush(profile.id), 2000);
     setLoadingEdu(false);
   }
 
-  const lv = selectedPlayer ? getLevel(selectedPlayer.xp || 0) : null;
-
   return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <div className="login-title">Per·You<br/>Garden</div>
-        <p className="login-sub">Accedi al tuo account</p>
+    <div className="login-wrap" style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px 16px",position:"relative"}}>
 
-        <div className="login-tabs">
-          <button className={`login-tab ${mode === "player" ? "active" : ""}`} onClick={() => setMode("player")}>🌿 Sono un giocatore</button>
-          <button className={`login-tab ${mode === "educator" ? "active" : ""}`} onClick={() => setMode("educator")}>🌱 Giardiniere</button>
+      {/* Logo */}
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:"clamp(48px,12vw,80px)",lineHeight:.9,textTransform:"uppercase",letterSpacing:"-.02em",background:"linear-gradient(135deg,#00d4ff 0%,#fff 40%,#ff2d78 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
+          PER·YOU<br/>GARDEN
         </div>
-
-        {mode === "player" && (
-          <>
-            {!selectedPlayer ? (
-              <>
-                <div className="form-group">
-                  <label className="form-label">Cerca il tuo nickname</label>
-                  <input className="form-input" value={search} onChange={e => { setSearch(e.target.value); setSelectedPlayer(null); }} placeholder="Scrivi il tuo nome…" autoComplete="off" />
-                </div>
-                {suggestions.length > 0 && (
-                  <div className="nickname-list">
-                    {suggestions.map(p => {
-                      const lv = getLevel(p.xp || 0);
-                      return (
-                        <div key={p.id} className="nickname-item" onClick={() => { setSelectedPlayer(p); setSearch(""); setSuggestions([]); }}>
-                          <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--border2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <Avatar url={p.avatar_url} emoji={lv.emoji} size={32} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 14, fontWeight: 700 }}>{p.display_name}</div>
-                            {p.squads?.name && (() => {
-                              try {
-                                const v = JSON.parse(localStorage.getItem("pug_visibility")||"{}");
-                                return v.squadre !== false ? <SquadPill name={p.squads.name}/> : null;
-                              } catch(_) { return null; }
-                            })()}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {search.length >= 2 && suggestions.length === 0 && (
-                  <div style={{ fontSize: 13, color: "var(--text3)", textAlign: "center", padding: "12px 0" }}>Nessun giocatore trovato</div>
-                )}
-              </>
-            ) : (
-              <>
-                {/* Giocatore selezionato — inserisci PIN */}
-                <div style={{ textAlign: "center", marginBottom: 20 }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", border: "3px solid var(--azzurro)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
-                    <Avatar url={selectedPlayer.avatar_url} emoji={lv?.emoji} size={64} />
-                  </div>
-                  <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{selectedPlayer.display_name}</div>
-                  {selectedPlayer.squads?.name && <SquadPill name={selectedPlayer.squads.name} />}
-                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 8 }} onClick={() => { setSelectedPlayer(null); setPin(""); setPinErr(""); }}>← Cambia</button>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">PIN (4 cifre)</label>
-                  <input className="form-input pin-input" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setPinErr(""); }} onKeyDown={e => e.key === "Enter" && loginPlayer()} placeholder="••••" autoFocus />
-                </div>
-                {pinErr && <p className="err-msg">{pinErr}</p>}
-                <button className="btn btn-primary" onClick={loginPlayer} disabled={loadingPin || pin.length < 4}>{loadingPin ? "Accesso…" : "Entra"}</button>
-              </>
-            )}
-          </>
-        )}
-
-        {mode === "educator" && (
-          <>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && loginEducator()} placeholder="nome@email.com" autoComplete="email" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input className="form-input" type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && loginEducator()} placeholder="••••••••" autoComplete="current-password" />
-            </div>
-            {eduErr && <p className="err-msg">{eduErr}</p>}
-            <button className="btn btn-primary" onClick={loginEducator} disabled={loadingEdu}>{loadingEdu ? "Accesso…" : "Accedi"}</button>
-          </>
-        )}
+        <div className="login-sub" style={{marginTop:8,fontSize:12,letterSpacing:".2em",textTransform:"uppercase"}}>
+          Grande Gioco del Garden
+        </div>
       </div>
+
+      {/* Player login card */}
+      {!showEduLogin ? (
+        <div className="login-card" style={{width:"100%",maxWidth:420,borderRadius:20,padding:"24px 20px",position:"relative"}}>
+          {selected ? (
+            /* PIN entry */
+            <div style={{textAlign:"center"}}>
+              <button onClick={()=>{setSelected(null);setPin("");setErr("");}} style={{position:"absolute",top:16,left:16,background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:20}}>←</button>
+              <div style={{width:72,height:72,borderRadius:"50%",overflow:"hidden",border:"3px solid var(--neon-blue)",margin:"0 auto 12px",boxShadow:"var(--glow-blue)"}}>
+                <Avatar url={selected.avatar_url} emoji="🌱" size={72}/>
+              </div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,color:"var(--text)",marginBottom:4}}>{selected.display_name}</div>
+              {selected.squads?.name && <SquadPill name={selected.squads.name}/>}
+              <div style={{marginTop:20,marginBottom:6}}>
+                <label className="form-label" style={{textAlign:"left",display:"block"}}>PIN (4 cifre)</label>
+                <input className="form-input pin-input" type="password" inputMode="numeric" maxLength={4}
+                  value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,"").slice(0,4))}
+                  onKeyDown={e=>e.key==="Enter"&&loginPlayer()}
+                  placeholder="• • • •" autoFocus
+                  style={{textAlign:"center",fontSize:28,letterSpacing:8}}/>
+              </div>
+              {err && <div className="err-msg" style={{marginBottom:8}}>{err}</div>}
+              <button className="btn btn-primary" style={{width:"100%",padding:"14px",fontSize:16,marginTop:4}}
+                onClick={loginPlayer} disabled={loadingPin||pin.length!==4}>
+                {loadingPin?"⏳ Accesso…":"ENTRA"}
+              </button>
+            </div>
+          ) : (
+            /* Player selector */
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:12,letterSpacing:".05em"}}>
+                Chi sei?
+              </div>
+              <input className="search-inp" placeholder="🔍 Cerca il tuo nome…" value={search}
+                onChange={e=>setSearch(e.target.value)} style={{marginBottom:10}}/>
+              <div style={{maxHeight:300,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
+                {filtered.length===0
+                  ? <div className="empty" style={{padding:16,textAlign:"center"}}>Nessun giocatore trovato</div>
+                  : filtered.map(p => (
+                    <div key={p.id} onClick={()=>{setSelected(p);setPin("");setErr("");}}
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
+                        background:"rgba(255,255,255,.04)",border:"1px solid var(--border)",
+                        borderRadius:12,cursor:"pointer",transition:"all .15s"}}
+                      onMouseOver={e=>{e.currentTarget.style.background="rgba(0,212,255,.08)";e.currentTarget.style.borderColor="rgba(0,212,255,.3)";}}
+                      onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.04)";e.currentTarget.style.borderColor="var(--border)";}}>
+                      <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",border:"1.5px solid var(--border2)",flexShrink:0}}>
+                        <Avatar url={p.avatar_url} emoji="🌱" size={36}/>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:14,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                        {p.squads?.name && <SquadPill name={p.squads.name}/>}
+                      </div>
+                      <span style={{color:"var(--text3)",fontSize:16}}>→</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Educator login */
+        <div className="login-card" style={{width:"100%",maxWidth:420,borderRadius:20,padding:"24px 20px"}}>
+          <button onClick={()=>setShowEduLogin(false)} style={{position:"absolute",top:16,left:16,background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:20}}>←</button>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16,textAlign:"center"}}>
+            🌱 Accesso Giardiniere
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@esempio.it" autoFocus/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" value={password} onChange={e=>setPassword(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&loginEducator()} placeholder="••••••••"/>
+          </div>
+          {err && <div className="err-msg" style={{marginBottom:8}}>{err}</div>}
+          <button className="btn btn-primary" style={{width:"100%",padding:"14px",fontSize:16}}
+            onClick={loginEducator} disabled={loadingEdu||!email||!password}>
+            {loadingEdu?"⏳ Accesso…":"ENTRA"}
+          </button>
+        </div>
+      )}
+
+      {/* Hidden educator trigger — piccola foglia in basso a destra */}
+      {!showEduLogin && (
+        <button onClick={handleLeafTap} style={{
+          position:"fixed",bottom:24,right:20,
+          background:"none",border:"none",cursor:"pointer",
+          fontSize:18,opacity:0.18,
+          transition:"opacity .2s",
+          WebkitTapHighlightColor:"transparent",
+          userSelect:"none",
+        }}
+        onMouseOver={e=>e.currentTarget.style.opacity="0.4"}
+        onMouseOut={e=>e.currentTarget.style.opacity="0.18"}
+        title="">🌿</button>
+      )}
     </div>
   );
 }
 
+
 // ─── EDUCATOR VIEWS ───────────────────────────────────────
 
 function PlayersView({ sectionColors, setSectionColors }) {
-  const loadingRef = useRef(false);
-  const [players, setPlayers] = useState([]);
+    const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
   const [squadFilter, setSquadFilter] = useState("all");
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
   const [batchXp, setBatchXp] = useState(10);
   const [batchCoin, setBatchCoin] = useState(5);
   const [msg, setMsg] = useState("");
@@ -2206,7 +2323,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
             <div className="section-label">Avatar pianta</div>
             {newPlayer.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
-                <img src={newPlayer.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt="avatar" loading="lazy"/>
+                <img src={newPlayer.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt="avatar"/>
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:"#ffcc00"}}>{newPlayer.avatar_url.split('/').pop().replace('.webp','')}</div>
                   <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewPlayer(p=>({...p,avatar_url:""}))}>✕ Rimuovi</button>
@@ -2403,7 +2520,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             {badges.length===0 && <div className="empty" style={{width:"100%"}}>Nessun badge.</div>}
             {badges.map(pb => (
               <div key={pb.id} style={{textAlign:"center",width:72}}>
-                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--rosa)",display:"block",margin:"0 auto 5px"}} alt="" loading="lazy"/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
+                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--rosa)",display:"block",margin:"0 auto 5px"}} alt=""/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
                 <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.3}}>{pb.badges?.name}</div>
               </div>
             ))}
@@ -2479,7 +2596,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Avatar</div>
             {editing.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,255,255,.04)",borderRadius:10}}>
-                <img src={editing.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt="" loading="lazy"/>
+                <img src={editing.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt=""/>
                 <div style={{fontSize:12,color:"var(--text2)",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis"}}>{editing.avatar_url.split("/").pop().replace(".webp","")}</div>
               </div>
             )}
@@ -2970,7 +3087,7 @@ function LabQRButton({ actId, actName }) {
       {show && code && (
         <div style={{marginTop:8,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(0,212,255,.2)"}}>
           <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".08em"}}>QR Lab · {actName} · {new Date().toLocaleDateString("it-IT")}</div>
-          <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${code}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={code} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}} loading="lazy"/>
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${code}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={code} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8,cursor:"pointer"}}
             onClick={()=>navigator.clipboard?.writeText(code).then(()=>addToast("📋 Codice copiato!","ok")).catch(()=>{})}
             title="Tocca per copiare"
@@ -3216,7 +3333,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
             <div key={b.id} className="badge-card">
               <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteBadge(b.id); }}>✕</button>
               <div onClick={() => { setShowAssign(b.id); setAssignXp(b.xp_default); setAssignCoin(b.coin_default); }}>
-                {b.image_url ? <img className="badge-img" src={b.image_url} alt={b.name}  loading="lazy"/> : <span className="badge-emoji">🎖️</span>}
+                {b.image_url ? <img className="badge-img" src={b.image_url} alt={b.name} /> : <span className="badge-emoji">🎖️</span>}
                 <div className="badge-name">{b.name}</div>
                 <div className="badge-pts">+{b.xp_default} XP</div>
               </div>
@@ -3259,7 +3376,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
             <div className="section-label">Immagine badge</div>
             {newBadge.image_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,padding:"8px",background:"rgba(255,0,204,.06)",border:"1px solid rgba(255,0,204,.2)",borderRadius:10}}>
-                <img src={newBadge.image_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt="badge" loading="lazy"/>
+                <img src={newBadge.image_url} style={{width:48,height:48,objectFit:"contain",borderRadius:8}} alt="badge"/>
                 <div style={{flex:1}}>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--rosa)"}}>{newBadge.image_url.split("/").pop().replace(".webp","")}</div>
                   <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewBadge(f=>({...f,image_url:null}))}>✕ Rimuovi</button>
@@ -3558,6 +3675,7 @@ function MessagesView({ profile }) {
   const [expiry, setExpiry] = useState(""); // optional expiry date
   const [sending, setSending] = useState(false);
   const [sent, setSent]   = useState("");
+  const [educators, setEducators] = useState([]);
   const [mediaData, setMediaData] = useState(null);
   const [mediaType, setMediaType] = useState(null);
   const mediaRef = useRef();
@@ -3567,18 +3685,26 @@ function MessagesView({ profile }) {
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
       sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at").order("created_at",{ascending:false}).limit(100),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at,profiles!sender_id(display_name,avatar_url)").or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id},is_broadcast.eq.true,squad_id.not.is.null`).order("created_at",{ascending:false}).gt("expires_at", new Date().toISOString()).limit(100),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
   }
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+    sb.from("profiles").select("id,display_name,avatar_url").in("role",["educator","admin"])
+      .then(({data})=>{
+        // Escludi se stesso dalla lista
+        setEducators((data||[]).filter(e=>e.id!==profile.id));
+      });
+  }, []);
 
   async function sendMessage() {
     if (!body.trim()) return;
     setSending(true);
     const senderName = profile?.display_name || "Giardiniere";
     const expiresAt = expiry ? new Date(expiry + "T23:59:59").toISOString() : null;
-    const base = { sender_id: profile.id, body: body.trim(), media_data: mediaData || null, is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt };
+    const defaultExpiry = new Date(Date.now() + 30*24*60*60*1000).toISOString();
+    const base = { sender_id: profile.id, body: body.trim(), media_data: mediaData || null, is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt || defaultExpiry };
 
     if (destType === "tutti") {
       const { data: allP } = await sb.from("profiles").select("id").eq("role","player");
@@ -3595,6 +3721,10 @@ function MessagesView({ profile }) {
       for (const p of (sqP||[])) {
         await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`, message_id:sqMsgId});
       }
+    } else if (destType === "educator" && selectedPlayers[0]) {
+      const { data: pm } = await sb.from("messages").insert({...base, recipient_id:selectedPlayers[0]}).select("id").single();
+      await sb.from("notifications").insert({user_id:selectedPlayers[0], type:"new_message", title:"💬 Messaggio dal team", body:`${senderName} ti ha scritto`, message_id:pm?.id||null});
+      sendPush(selectedPlayers[0], "💬 Messaggio dal team", `${senderName} ti ha scritto`).catch(()=>{});
     } else if (destType === "player" && selectedPlayers.length > 0) {
       for (const pid of selectedPlayers) {
         const { data: pm } = await sb.from("messages").insert({...base, recipient_id:pid}).select("id").single();
@@ -3656,7 +3786,7 @@ function MessagesView({ profile }) {
         <div className="form-group">
           <label className="form-label">Destinatario</label>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatori"],["activity","⚡ Lab"]].map(([k,l])=>(
+            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatori"],["activity","⚡ Lab"],["educator","🌱 Giardinieri"]].map(([k,l])=>(
               <button key={k} className={`chip ${destType===k?"active":""}`} onClick={()=>setDestType(k)}>{l}</button>
             ))}
           </div>
@@ -3665,6 +3795,30 @@ function MessagesView({ profile }) {
               <option value="">Seleziona squadra…</option>
               {squads.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
+          )}
+          {destType==="educator" && (
+            <div className="form-group">
+              <label className="form-label">Seleziona giardiniere</label>
+              {educators.length === 0 ? (
+                <div style={{fontSize:13,color:"var(--text3)",padding:"10px 0"}}>⏳ Caricamento giardinieri…</div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:240,overflowY:"auto"}}>
+                  {educators.map(e=>(
+                    <div key={e.id} onClick={()=>setSelectedPlayers([e.id])}
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
+                        borderRadius:10,cursor:"pointer",border:`1.5px solid ${selectedPlayers[0]===e.id?"var(--neon-blue)":"var(--border)"}`,
+                        background:selectedPlayers[0]===e.id?"rgba(0,212,255,.08)":"rgba(255,255,255,.03)",
+                        transition:"all .15s"}}>
+                      <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:"1.5px solid var(--border2)",flexShrink:0}}>
+                        {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/> : <span style={{fontSize:18,lineHeight:"32px",display:"block",textAlign:"center"}}>🌱</span>}
+                      </div>
+                      <span style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{e.display_name}</span>
+                      {selectedPlayers[0]===e.id && <span style={{marginLeft:"auto",color:"var(--neon-blue)",fontSize:16}}>✓</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           {destType==="player" && (
             <div>
@@ -3687,7 +3841,7 @@ function MessagesView({ profile }) {
                         {sel?"✓":""}
                       </div>
                       <div style={{width:28,height:28,borderRadius:"50%",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
-                        {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="" loading="lazy"/>:lv.emoji}
+                        {p.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:lv.emoji}
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:600,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
@@ -3755,11 +3909,21 @@ function MessagesView({ profile }) {
       {loading ? <div className="loading">⏳</div> : (
         <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
           {activeMsgs.map(m=>{
-            const dest = m.is_broadcast?"📢 Tutti":m.squad_id?"🛡️ Squadra":m.recipient_id?"👤 Diretto":"—";
+            const recipientPlayer = players.find(p=>p.id===m.recipient_id);
+            const recipientEdu = educators.find(e=>e.id===m.recipient_id);
+            const dest = m.is_broadcast?"📢 Tutti":m.squad_id?`🛡️ ${squads.find(s=>s.id===m.squad_id)?.name||"Squadra"}`:m.recipient_id?`👤 ${recipientPlayer?.display_name||recipientEdu?.display_name||"Destinatario"}`:"—";
             return (
               <div key={m.id} className="card-sm">
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                  <span style={{fontSize:11,fontWeight:700,color:"var(--azzurro)"}}>{dest}</span>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7}}>
+                    {m.profiles?.avatar_url
+                      ? <img src={m.profiles.avatar_url} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
+                      : <span style={{fontSize:16,flexShrink:0}}>🌱</span>}
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--text)",lineHeight:1}}>{m.profiles?.display_name||"Giardiniere"}</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>→ {dest}</div>
+                    </div>
+                  </div>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     {m.expires_at && <span style={{fontSize:9,color:"var(--text3)",fontWeight:700}}>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
                     <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
@@ -3772,6 +3936,8 @@ function MessagesView({ profile }) {
                     alt="media" loading="lazy"/>
                 )}
                 <div style={{fontSize:13,color:"var(--text)"}}>{m.body}</div>
+              {m.media_data&&<img src={m.media_data} style={{maxWidth:"100%",maxHeight:180,borderRadius:10,marginTop:4}} alt=""/>}
+              <MsgReactions msgId={m.id} myId={profile.id}/>
               </div>
             );
           })}
@@ -3913,7 +4079,7 @@ function QrView() {
         {loading ? <div className="loading">⏳</div> : qr ? (
           <>
             <div style={{ background: "var(--surface2)", borderRadius: 16, padding: "24px 32px", marginBottom: 16, display: "inline-block", border: "1.5px solid var(--border2)" }}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8 }} loading="lazy"/>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8 }}/>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:34, fontWeight:900, color:"var(--neon-blue)", letterSpacing:8, margin:"10px 0 6px", textShadow:"var(--glow-blue)" }}>{qr.code}</div>
             <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Valido {new Date(qr.valid_from).getHours()}:00 – {new Date(qr.valid_until).getHours()}:00</div>
@@ -4018,7 +4184,7 @@ function AnnouncementsView({ profile }) {
               {a.pinned&&<div style={{position:"absolute",top:10,right:12,fontSize:14}}>📌</div>}
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                 {a.profiles?.avatar_url
-                  ? <img src={a.profiles.avatar_url} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}} alt="" loading="lazy"/>
+                  ? <img src={a.profiles.avatar_url} style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}} alt=""/>
                   : <span style={{fontSize:22}}>🌱</span>
                 }
                 <div>
@@ -4028,7 +4194,7 @@ function AnnouncementsView({ profile }) {
               </div>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
               {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,marginBottom:8,whiteSpace:"pre-wrap"}}>{a.body}</div>}
-              {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginBottom:8,maxHeight:300,objectFit:"cover"}} alt="" loading="lazy"/>}
+              {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginBottom:8,maxHeight:300,objectFit:"cover"}} alt=""/>}
               <button onClick={()=>del(a.id)} style={{background:"none",border:"none",color:"rgba(255,34,68,.5)",cursor:"pointer",fontSize:12,padding:"4px 0"}}>🗑️ Elimina</button>
             </div>
           ))}
@@ -4058,7 +4224,7 @@ function PlayerAnnouncementsTab() {
             {a.pinned&&<div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📌 In evidenza</div>}
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               {a.profiles?.avatar_url
-                ? <img src={a.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt="" loading="lazy"/>
+                ? <img src={a.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt=""/>
                 : <span style={{fontSize:18}}>🌱</span>}
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:"var(--text)"}}>{a.profiles?.display_name||"Giardiniere"}</div>
@@ -4067,13 +4233,145 @@ function PlayerAnnouncementsTab() {
             </div>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
             {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{a.body}</div>}
-            {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt="" loading="lazy"/>}
+            {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt=""/>}
           </div>
         ))}
       </div>
     </div>
   );
 }
+
+
+// ─── BACHECA POST-IT EDUCATORI ───────────────────────────
+function BachecaView({ profile }) {
+  const [notes, setNotes] = useState([]);
+  const [body, setBody] = useState("");
+  const [color, setColor] = useState("#ffcc00");
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const COLORS = ["#ffcc00","#ff8787","#8ce99a","#74c0fc","#f783ac","#ffe066","#ffa94d","#e5dbff"];
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    const { data, error } = await sb.from("educator_notes")
+      .select("id,body,color,created_at,educator_id,educator_id,profiles(display_name,avatar_url)")
+      .order("created_at",{ascending:false}).limit(50);
+    if (error) {
+      addToast("❌ Errore caricamento bacheca", "error");
+    }
+    setNotes(data||[]);
+    setLoading(false);
+  }
+
+  async function addNote() {
+    if (!body.trim()) return;
+    setSaving(true);
+    const { error } = await sb.from("educator_notes").insert({ educator_id:profile.id, body:body.trim(), color });
+    if (error) {
+      addToast("❌ Errore: " + error.message, "error");
+      setSaving(false);
+      return;
+    }
+    setBody("");
+    setSaving(false);
+    addToast("📌 Post-it pubblicato!", "ok");
+    load();
+  }
+
+  const rotation = (id) => ((id.charCodeAt(0)%5)-2)*0.8;
+
+  return (
+    <div>
+      <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:4}}>📌 Bacheca Team</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:14}}>Post-it visibili solo ai giardinieri.</div>
+
+      {/* Form aggiunta */}
+      <div className="card" style={{marginBottom:16}}>
+        <textarea
+          className="form-input"
+          rows={3}
+          value={body}
+          onChange={e=>setBody(e.target.value)}
+          placeholder="Scrivi un messaggio per il team…"
+          style={{resize:"none",marginBottom:10,width:"100%"}}
+        />
+        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:5}}>
+            {COLORS.map(c=>(
+              <div key={c} onClick={()=>setColor(c)} style={{
+                width:22,height:22,borderRadius:"50%",background:c,cursor:"pointer",
+                outline:color===c?`3px solid ${c}`:""  ,outlineOffset:2,
+                boxShadow:color===c?"0 0 0 1px white inset":"none",
+                transition:"all .15s",flexShrink:0
+              }}/>
+            ))}
+          </div>
+          <button
+            onClick={addNote}
+            disabled={saving||!body.trim()}
+            className="btn btn-primary btn-sm"
+            style={{marginLeft:"auto"}}>
+            {saving?"⏳":"📌 Pubblica"}
+          </button>
+        </div>
+      </div>
+
+      {/* Grid post-it */}
+      {loading ? (
+        <div className="loading">⏳ Caricamento…</div>
+      ) : notes.length===0 ? (
+        <div className="empty" style={{padding:32,textAlign:"center"}}>
+          <div style={{fontSize:32,marginBottom:8}}>📌</div>
+          <div style={{fontWeight:700}}>Nessun post-it ancora</div>
+          <div style={{fontSize:12,marginTop:4}}>Aggiungi il primo messaggio al team</div>
+        </div>
+      ) : (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
+          {notes.map(n=>(
+            <div key={n.id} style={{
+              background:n.color||"#ffcc00",
+              borderRadius:4,
+              padding:"14px 14px 12px",
+              position:"relative",
+              boxShadow:"3px 3px 10px rgba(0,0,0,.25), 0 1px 2px rgba(0,0,0,.15)",
+              transform:`rotate(${rotation(n.id)}deg)`,
+              transition:"transform .2s",
+              cursor:"default",
+            }}
+            onMouseOver={e=>e.currentTarget.style.transform="rotate(0deg) scale(1.02)"}
+            onMouseOut={e=>e.currentTarget.style.transform=`rotate(${rotation(n.id)}deg)`}>
+              {/* Puntina effetto */}
+              <div style={{position:"absolute",top:-6,left:"50%",transform:"translateX(-50%)",width:12,height:12,borderRadius:"50%",background:"rgba(0,0,0,.3)",boxShadow:"0 2px 4px rgba(0,0,0,.3)"}}/>
+              <div style={{fontSize:13,color:"rgba(0,0,0,.85)",lineHeight:1.55,fontWeight:500,marginBottom:10,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{n.body}</div>
+              <div style={{display:"flex",alignItems:"center",gap:5,borderTop:"1px solid rgba(0,0,0,.1)",paddingTop:8}}>
+                {n.profiles?.avatar_url
+                  ? <img src={n.profiles.avatar_url} style={{width:18,height:18,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                  : <span style={{fontSize:12}}>🌱</span>}
+                <span style={{fontSize:10,color:"rgba(0,0,0,.6)",fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.profiles?.display_name}</span>
+                {n.educator_id===profile.id && (
+                  <button
+                    onClick={async()=>{
+                      await sb.from("educator_notes").delete().eq("id",n.id);
+                      setNotes(p=>p.filter(x=>x.id!==n.id));
+                      addToast("🗑️ Post-it rimosso","ok");
+                    }}
+                    style={{background:"rgba(0,0,0,.12)",border:"none",cursor:"pointer",
+                      fontSize:11,color:"rgba(0,0,0,.6)",padding:"2px 6px",
+                      borderRadius:99,lineHeight:1,fontWeight:700}}>
+                    ✕ Rimuovi
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 // ─── ANNOUNCEMENTS EDUCATOR ─────────────────────────────
 
@@ -4311,6 +4609,80 @@ function SocialTab({ players, myId, myProfile }) {
       </div>
       {view==="annunci" && <PlayerAnnouncementsTab/>}
       {view==="community" && <CommunityTab players={players} myId={myId} myProfile={myProfile}/>}
+    </div>
+  );
+}
+
+
+// ─── MSG REACTIONS ───────────────────────────────────────
+function MsgReactions({ msgId, myId }) {
+  const EMOJIS = ["❤️","😂","😮","👏","🔥"];
+  const [counts, setCounts] = useState({});
+  const [mine, setMine] = useState(null);
+
+  useEffect(() => {
+    sb.from("reactions")
+      .select("type").eq("badge_id", null).eq("target_player_id", msgId)
+      .then(({data}) => {
+        const c = {};
+        (data||[]).forEach(r => { c[r.type]=(c[r.type]||0)+1; });
+        setCounts(c);
+      }).catch(()=>{});
+    sb.from("reactions").select("type")
+      .eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null)
+      .single().then(({data})=>{ if(data) setMine(data.type); }).catch(()=>{});
+  }, [msgId, myId]);
+
+  async function react(emoji) {
+    if (mine === emoji) {
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null);
+      setCounts(p=>({...p,[emoji]:Math.max(0,(p[emoji]||1)-1)}));
+      setMine(null);
+    } else {
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null);
+      await sb.from("reactions").insert({player_id:myId,target_player_id:msgId,badge_id:null,type:emoji});
+      if(mine) setCounts(p=>({...p,[mine]:Math.max(0,(p[mine]||1)-1)}));
+      setCounts(p=>({...p,[emoji]:(p[emoji]||0)+1}));
+      setMine(emoji);
+      if(navigator.vibrate) navigator.vibrate(20);
+    }
+  }
+
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  if (total === 0 && !mine) {
+    return (
+      <div style={{display:"flex",gap:4,marginTop:6,opacity:0.4}}>
+        {EMOJIS.map(e=>(
+          <button key={e} onClick={()=>react(e)}
+            style={{background:"none",border:"none",fontSize:14,cursor:"pointer",padding:"2px 4px",borderRadius:6}}>
+            {e}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
+      {EMOJIS.filter(e=>counts[e]||mine===e).map(e=>(
+        <button key={e} onClick={()=>react(e)}
+          style={{
+            background:mine===e?"rgba(0,212,255,.15)":"rgba(255,255,255,.06)",
+            border:`1px solid ${mine===e?"var(--neon-blue)":"rgba(255,255,255,.1)"}`,
+            borderRadius:99,fontSize:12,cursor:"pointer",
+            padding:"3px 8px",display:"flex",alignItems:"center",gap:3,
+            color:"var(--text2)",fontWeight:mine===e?700:400,
+          }}>
+          {e}{counts[e]>0&&<span style={{fontSize:10}}>{counts[e]}</span>}
+        </button>
+      ))}
+      {EMOJIS.filter(e=>!counts[e]&&mine!==e).map(e=>(
+        <button key={e} onClick={()=>react(e)}
+          style={{background:"none",border:"none",fontSize:14,cursor:"pointer",
+            padding:"2px 4px",borderRadius:6,opacity:0.4}}>
+          {e}
+        </button>
+      ))}
     </div>
   );
 }
@@ -4594,6 +4966,125 @@ function XPHistoryChart({ playerId }) {
   );
 }
 
+
+// ─── NOTIFICATION TOGGLE ────────────────────────────────
+function NotificationToggle({ playerId }) {
+  const [status, setStatus] = useState("unknown");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (!("Notification" in window)) { setStatus("unsupported"); return; }
+      setStatus(Notification.permission);
+    } catch(_) { setStatus("unsupported"); }
+  }, []);
+
+  async function requestPermission() {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      setStatus("unsupported"); return;
+    }
+    setLoading(true);
+    try {
+      const perm = await Notification.requestPermission();
+      setStatus(perm);
+      if (perm === "granted") {
+        await registerPush(playerId);
+        addToast("🔔 Notifiche attivate!", "ok");
+        setStatus("granted");
+      } else {
+        addToast("⚠️ Permesso notifiche non concesso", "error");
+      }
+    } catch(e) {
+      setStatus("denied");
+    }
+    setLoading(false);
+  }
+
+  if (status === "unsupported") return null;
+
+  const isGranted = status === "granted";
+  const isDenied  = status === "denied";
+
+  return (
+    <div style={{
+      background:"rgba(255,255,255,.04)",border:"1px solid var(--border)",
+      borderRadius:14,padding:"12px 14px",marginBottom:10,
+      display:"flex",alignItems:"center",gap:12,
+    }}>
+      <span style={{fontSize:22,flexShrink:0}}>{isGranted?"🔔":"🔕"}</span>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>Notifiche push</div>
+        <div style={{fontSize:11,color:"var(--text3)",marginTop:1}}>
+          {isGranted ? "Attive — ricevi avvisi in tempo reale" :
+           isDenied  ? "Bloccate — attivale nelle impostazioni del telefono" :
+           "Ricevi notifiche per badge, messaggi e prenotazioni"}
+        </div>
+      </div>
+      {!isGranted && !isDenied && (
+        <button onClick={requestPermission} disabled={loading}
+          style={{
+            background:"linear-gradient(135deg,var(--neon-blue),var(--azzurro))",
+            border:"none",borderRadius:99,padding:"8px 14px",
+            color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",
+            whiteSpace:"nowrap",flexShrink:0,
+          }}>
+          {loading?"⏳":"Attiva"}
+        </button>
+      )}
+      {isGranted && (
+        <div style={{width:10,height:10,borderRadius:"50%",background:"var(--neon-green)",flexShrink:0,boxShadow:"0 0 8px var(--neon-green)"}}/>
+      )}
+      {isDenied && (
+        <div style={{fontSize:11,color:"var(--danger)",flexShrink:0,fontWeight:700}}>Bloccate</div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── IN-APP NOTIFICATION ─────────────────────────────────
+let _showInApp = null;
+function showInAppNotif(title, body) { if (_showInApp) _showInApp(title, body); }
+
+function InAppNotifBanner() {
+  const [notif, setNotif] = useState(null);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    _showInApp = (title, body) => {
+      setNotif({ title, body });
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setNotif(null), 4000);
+    };
+    return () => { _showInApp = null; clearTimeout(timerRef.current); };
+  }, []);
+
+  if (!notif) return null;
+
+  return (
+    <div onClick={()=>setNotif(null)} style={{
+      position:"fixed",top:0,left:0,right:0,zIndex:9999,
+      padding:"max(env(safe-area-inset-top,12px),12px) 16px 14px",
+      background:"rgba(10,20,40,.97)",
+      borderBottom:"2px solid var(--neon-blue)",
+      boxShadow:"0 4px 24px rgba(0,0,0,.5)",
+      display:"flex",alignItems:"center",gap:12,
+      animation:"slideDown .3s cubic-bezier(.34,1.56,.64,1)",
+      cursor:"pointer",
+    }}>
+      <style>{`@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}`}</style>
+      <div style={{width:40,height:40,borderRadius:12,background:"rgba(0,212,255,.15)",border:"1px solid rgba(0,212,255,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
+        {notif.title.startsWith("💬") ? "💬" : notif.title.startsWith("📢") ? "📢" : "🔔"}
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:2}}>{notif.title}</div>
+        <div style={{fontSize:12,color:"rgba(255,255,255,.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{notif.body}</div>
+      </div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.3)",flexShrink:0}}>tocca per chiudere</div>
+    </div>
+  );
+}
+
 // ─── LEVEL UP ANIMATION ──────────────────────────────────
 function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t); }, [onDone]);
@@ -4647,25 +5138,13 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [monthTarget, setMonthTarget] = useState(null);
   const [actBookingCounts, setActBookingCounts] = useState({});
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
   const [visConfig, setVisConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
   });
   const [visReady, setVisReady] = useState(false);
   const [levelUpData, setLevelUpData] = useState(null);
 
-  // Reset loadingRef e ricarica quando app torna in primo piano
-  useEffect(() => {
-    let hidden = 0;
-    function onVis() {
-      if (document.visibilityState === 'hidden') { hidden = Date.now(); return; }
-      if (document.visibilityState === 'visible' && Date.now() - hidden > 15000) {
-        loadingRef.current = false;
-        load();
-      }
-    }
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, [load]);
 
   // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
@@ -4759,6 +5238,21 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   }
   }, [profile.id]);
 
+
+  // Ricarica quando l'app torna in primo piano
+  useEffect(() => {
+    let hiddenAt = 0;
+    function onVis() {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (document.visibilityState === 'visible' && hiddenAt > 0 && Date.now() - hiddenAt > 20000) {
+        loadingRef.current = false;
+        load();
+        hiddenAt = 0;
+      }
+    }
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [load]);
   useEffect(() => {
     load();
     const channel = sb.channel("player_notifs_" + profile.id)
@@ -4773,6 +5267,19 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         setTimeout(() => setToast(null), 4000);
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `player_id=eq.${profile.id}` }, load)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
+          filter: `recipient_id=eq.${profile.id}` }, (payload) => {
+        load();
+        const m = payload.new;
+        showInAppNotif("💬 Nuovo messaggio", m?.body?.slice(0,60)||"Hai un nuovo messaggio");
+        playPixel("msg");
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
+          filter: `is_broadcast=eq.true` }, (payload) => {
+        load();
+        const m = payload.new;
+        showInAppNotif("📢 Annuncio", m?.body?.slice(0,60)||"Nuovo messaggio per tutti");
+      })
       .subscribe();
     return () => sb.removeChannel(channel);
   }, [profile.id, load]);
@@ -4888,7 +5395,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const lv = getLevel(fullProfile?.xp || 0);
   const unread = notifications.filter(n => !n.read_at).length;
-  const unreadMsgs = messages.filter(m => !m.read_at).length;
+  const unreadMsgs = messages.filter(m => !m.read_at && !m.cancelled_at && (!m.expires_at || new Date(m.expires_at) > new Date())).length;
 
   // Leaderboard ranked
   let lbRanked = [...players];
@@ -4991,6 +5498,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
       {/* Toast notifications */}
       <ToastContainer/>
+      <InAppNotifBanner/>
       {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
       {/* Top bar */}
       <div className="pd-topbar" style={{paddingTop:"max(10px, calc(env(safe-area-inset-top, 0px) + 8px))"}}>
@@ -5035,7 +5543,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             <div className="pd-av-zone">
               <div className="pd-av-glow"/>
               {fullProfile.avatar_url
-                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}} loading="lazy"/>
+                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}}/>
                 : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
               }
               <div className="pd-name-pill">{fullProfile.display_name}</div>
@@ -5172,13 +5680,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="pd-badge-row">
                   {badges.map(pb=>(
                     <div key={pb.id} className="pd-badge-item" onClick={()=>setSelectedBadge(pb)}>
-                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt="" loading="lazy"/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
+                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt=""/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
                       <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.65)',lineHeight:1.3}}>{pb.badges?.name}</div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Notifiche */}
+            <NotificationToggle playerId={profile.id}/>
 
             {/* Check-in */}
             <div className="pd-checkin">
@@ -5355,6 +5866,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                       {m.media_data && !m.media_data.startsWith("sticker:") && (
                         <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt="" loading="lazy"/>
                       )}
+                      <MsgReactions msgId={m.id} myId={profile.id}/>
                       <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
                     </div>
                   ))}
@@ -5405,7 +5917,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         <div className="modal-bg" onClick={() => setSelectedBadge(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
-              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)", margin: "0 auto 10px", display: "block" }} alt=""  loading="lazy"/> : <div style={{ fontSize: 56, marginBottom: 10 }}>🎖️</div>}
+              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)", margin: "0 auto 10px", display: "block" }} alt="" /> : <div style={{ fontSize: 56, marginBottom: 10 }}>🎖️</div>}
               <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{selectedBadge.badges?.name}</div>
               <div style={{ fontSize: 13, color: "var(--azzurro)", fontWeight: 700, marginTop: 4 }}>+{selectedBadge.xp_awarded} XP · 🪙 +{selectedBadge.coin_awarded}</div>
             </div>
@@ -5710,7 +6222,7 @@ function PuliziaView() {
           {/* Player header */}
           <div style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
             <div style={{width:44,height:44,borderRadius:"50%",border:"2px solid rgba(255,140,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
-              {selected.id==="__all__" ? "🌍" : selected.avatar_url ? <img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="" loading="lazy"/> : getLevel(selected.xp||0).emoji}
+              {selected.id==="__all__" ? "🌍" : selected.avatar_url ? <img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt=""/> : getLevel(selected.xp||0).emoji}
             </div>
             <div style={{flex:1}}>
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff"}}>{selected.display_name}</div>
@@ -5772,12 +6284,67 @@ function PuliziaView() {
   );
 }
 
+// ─── ADMIN RESET PASSWORD ───────────────────────────────
+function AdminResetPwdForm({ educator, onClose }) {
+  const [newPwd, setNewPwd] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [ok, setOk] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function reset() {
+    if (newPwd.length < 8) { setErr("Minimo 8 caratteri"); return; }
+    setLoading(true); setErr("");
+    try {
+      const res = await fetch("https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/delete-educator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI` },
+        body: JSON.stringify({ action: "reset_password", educator_id: educator.id, new_password: newPwd }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (data.error) { setErr(data.error); return; }
+      setOk(true);
+      setTimeout(onClose, 2000);
+    } catch(e) { setErr(e.message); setLoading(false); }
+  }
+
+  return (
+    <div>
+      <div className="modal-title">🔑 Reset password</div>
+      <div style={{fontSize:13,color:"var(--text3)",marginBottom:14}}>Giardiniere: <strong style={{color:"var(--text)"}}>{educator.display_name}</strong></div>
+      {ok ? (
+        <div style={{textAlign:"center",padding:"20px 0"}}>
+          <div style={{fontSize:40,marginBottom:8}}>✅</div>
+          <div style={{fontWeight:700,color:"var(--neon-green)"}}>Password aggiornata!</div>
+        </div>
+      ) : (
+        <>
+          <div className="form-group">
+            <label className="form-label">Nuova password</label>
+            <input type="password" className="form-input" value={newPwd}
+              onChange={e=>setNewPwd(e.target.value)} placeholder="Minimo 8 caratteri" autoFocus/>
+          </div>
+          {err && <div style={{color:"var(--danger)",fontSize:13,marginBottom:12}}>{err}</div>}
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-primary" style={{flex:1}} onClick={reset} disabled={loading||newPwd.length<8}>
+              {loading?"⏳ Aggiornamento…":"Salva nuova password"}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
 // ─── ADMIN VIEW ──────────────────────────────────────────
 
 function AdminView({ profile }) {
   const [educators, setEducators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [resetTarget, setResetTarget] = useState(null);
   const [form, setForm] = useState({ display_name:"", email:"", password:"", avatar_url:"" });
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -5828,6 +6395,13 @@ function AdminView({ profile }) {
 
   return (
     <div>
+      {resetTarget && (
+        <div className="modal-bg" onClick={()=>setResetTarget(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <AdminResetPwdForm educator={resetTarget} onClose={()=>setResetTarget(null)}/>
+          </div>
+        </div>
+      )}
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#ffcc00",marginBottom:16}}>⚙️ Gestione Giardinieri</div>
       {msg && <div style={{background:"rgba(0,255,136,.1)",border:"1px solid rgba(0,255,136,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
       {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
@@ -5843,7 +6417,7 @@ function AdminView({ profile }) {
           {educators.map(e => (
             <div key={e.id} className="card-sm" style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.3)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
-                {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="" loading="lazy"/> : "🌱"}
+                {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/> : "🌱"}
               </div>
               <div style={{flex:1}}>
                 {editEdu?.id === e.id ? (
@@ -5863,7 +6437,7 @@ function AdminView({ profile }) {
               {editEdu?.id !== e.id && (
                 <div style={{display:"flex",gap:6}}>
                   <button className="btn btn-ghost btn-xs" onClick={()=>setEditEdu({...e})}>✏️</button>
-                  <button className="btn btn-ghost btn-xs" onClick={()=>setEditAvatar({id:e.id,avatar_url:e.avatar_url||""})} title="Cambia avatar">🖼️</button>
+                  <button className="btn btn-ghost btn-xs" onClick={()=>setEditAvatar({id:e.id,display_name:e.display_name,avatar_url:e.avatar_url||""})} title="Cambia avatar">🖼️</button>
                   <button className="btn btn-danger btn-xs" onClick={()=>deleteEdu(e.id,e.display_name)}>🗑️</button>
                 </div>
               )}
@@ -5891,6 +6465,7 @@ function AdminView({ profile }) {
             <InlineAvatarUpload playerId={editAvatar.id} onUploaded={url=>{setEditAvatar(p=>({...p,avatar_url:url}));saveAvatar(editAvatar.id,url);}}/>
             <div style={{display:"flex",gap:8,marginTop:12}}>
               <button className="btn btn-primary" style={{flex:1}} onClick={()=>saveAvatar(editAvatar.id,editAvatar.avatar_url)}>Salva avatar</button>
+              <button className="btn btn-ghost btn-sm" style={{color:"rgba(255,204,0,.8)",borderColor:"rgba(255,204,0,.3)"}} onClick={()=>{setEditAvatar(null);setResetTarget(editAvatar);}}>🔑 Password</button>
               <button className="btn btn-ghost btn-sm" onClick={()=>setEditAvatar(null)}>Annulla</button>
             </div>
           </div>
@@ -5908,7 +6483,7 @@ function AdminView({ profile }) {
             <label className="form-label">Avatar</label>
             {form.avatar_url && (
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
-                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt="" loading="lazy"/>
+                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt=""/>
                 <div style={{flex:1,fontSize:12,color:"#ffcc00"}}>{form.avatar_url.split("/").pop().replace(".webp","")}</div>
                 <button className="btn btn-ghost btn-xs" onClick={()=>setForm(f=>({...f,avatar_url:""}))}>✕</button>
               </div>
@@ -5933,7 +6508,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -6122,7 +6697,7 @@ function PresentationMode({ onClose, settings }) {
                 <div key={p.id} className={colCls}>
                   {i===1 && <div className="pres-crown">👑</div>}
                   <div className={avCls} style={{fontSize:i===1?"52px":i===0?"40px":"34px"}}>
-                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy"/> : lv.emoji}
+                    {p.avatar_url ? <img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : lv.emoji}
                   </div>
                   <div className="pres-pname" style={{color:medalColors[i]}}>{p.display_name}</div>
                   <div className="pres-pxp" style={{color:medalColors[i]}}>{(p.xp||0).toLocaleString()} XP</div>
@@ -6165,7 +6740,7 @@ function PresentationMode({ onClose, settings }) {
                 }}>
                   <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,width:38,textAlign:"center",color:isTop?colors[rank-1]:"var(--text3)"}}>{rank}°</div>
                   <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",border:`2px solid ${isTop?colors[rank-1]:"rgba(255,255,255,.15)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
-                    {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} loading="lazy"/>:lv.emoji}
+                    {p.avatar_url?<img src={p.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:lv.emoji}
                   </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
@@ -6186,6 +6761,7 @@ const EduTabColors = {
   dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
   export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   pulizia:      { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
+  bacheca:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   annunci:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
   social_edu:   { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
   visibilita:   { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
@@ -6213,6 +6789,7 @@ function EducatorShell({ profile, onLogout }) {
   const [sectionColors, setSectionColors] = useState(DEFAULT_SECTION_COLORS);
   const [showPresentation, setShowPresentation] = useState(false);
   const [showPresSettings, setShowPresSettings] = useState(false);
+  const [showChangePwd, setShowChangePwd] = useState(false);
   const [visibility, setVisibility] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility") || "{}"); } catch(_) { return {}; }
   });
@@ -6251,6 +6828,13 @@ function EducatorShell({ profile, onLogout }) {
     const channel = sb.channel("edu_realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, loadNotifCounts)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings" }, loadNotifCounts)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
+          filter: `recipient_id=eq.${profile.id}` }, (payload) => {
+        loadNotifCounts();
+        const m = payload.new;
+        showInAppNotif("💬 Nuovo messaggio", m?.body?.slice(0,60)||"Hai un nuovo messaggio");
+        playPixel("msg");
+      })
       .subscribe();
     return () => { clearInterval(interval); sb.removeChannel(channel); };
   }, [loadNotifCounts]);
@@ -6307,7 +6891,11 @@ function EducatorShell({ profile, onLogout }) {
               <div className="theme-toggle-knob" style={{background:theme==="light"?"#c08800":"rgba(255,255,255,.6)",transform:theme==="light"?"translateX(20px)":"translateX(0)"}}/>
             </button>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{width:"100%",color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
+          <NotificationToggle playerId={profile.id}/>
+          <div style={{display:"flex",gap:6,marginTop:6}}>
+            <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
+            <button className="btn btn-ghost btn-sm" style={{color:"rgba(255,204,0,.7)",border:"1px solid rgba(255,204,0,.2)",padding:"6px 10px"}} onClick={()=>setShowChangePwd(true)} title="Cambia password">🔑</button>
+          </div>
         </div>
       </div>
 
@@ -6409,6 +6997,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
+          {tab === "bacheca"      && <BachecaView profile={profile}/>}
           {tab === "annunci"      && <AnnouncementsView profile={profile}/>}
           {tab === "social_edu"   && <EducatorSocialView profile={profile}/>}
           {tab === "visibilita"   && <VisibilityView />}
@@ -6444,6 +7033,14 @@ function EducatorShell({ profile, onLogout }) {
         </div>
       </div>
 
+      <InAppNotifBanner/>
+      {showChangePwd && (
+        <div className="modal-bg" onClick={()=>setShowChangePwd(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <ChangePwdModal onClose={()=>setShowChangePwd(false)}/>
+          </div>
+        </div>
+      )}
       {showPresSettings && (
         <div className="modal-bg" onClick={()=>setShowPresSettings(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
@@ -6493,7 +7090,11 @@ function EducatorShell({ profile, onLogout }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Il tuo avatar</div>
             <AvatarUpload playerId={profile.id} currentUrl={avatarUrl} onUploaded={url => setAvatarUrl(url)} />
-            <button className="btn btn-ghost" style={{ width: "100%", marginTop: 8 }} onClick={() => setShowAvatarModal(false)}>Chiudi</button>
+            <button className="btn btn-ghost btn-sm" style={{width:"100%",marginTop:10,color:"rgba(255,204,0,.8)",borderColor:"rgba(255,204,0,.3)"}}
+              onClick={()=>{setShowAvatarModal(false);setShowChangePwd(true);}}>
+              🔑 Cambia password
+            </button>
+            <button className="btn btn-ghost" style={{width:"100%",marginTop:6}} onClick={() => setShowAvatarModal(false)}>Chiudi</button>
           </div>
         </div>
       )}
@@ -6517,41 +7118,24 @@ export default function App() {
   }, []);
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
-  // Re-load when app comes back from background
+  // Background: soft ping quando torna in primo piano (no reload)
   useEffect(() => {
-    let lastHidden = 0;
-    function onVisible() {
-      if (document.visibilityState === 'hidden') {
-        lastHidden = Date.now();
-        return;
+    let hiddenAt = 0;
+    function onVis() {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (hiddenAt > 0 && Date.now() - hiddenAt > 30000) {
+        sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
       }
-      // Se era in background per più di 30 secondi, ricarica
-      if (document.visibilityState === 'visible' && Date.now() - lastHidden > 30000) {
-        setChecking(true);
-        // Re-verify session
-        if (profile?._playerSession) {
-          sb.from("profiles").select("*, squads(name)").eq("id", profile.id).single()
-            .then(({ data }) => {
-              if (data) setProfile({ ...data, _playerSession: true });
-            })
-            .catch(() => {})
-            .finally(() => setChecking(false));
-        } else {
-          sb.auth.getSession().then(({ data: { session } }) => {
-            if (!session) { setProfile(null); localStorage.removeItem("pug_edu"); }
-            setChecking(false);
-          }).catch(() => setChecking(false));
-        }
-      }
+      hiddenAt = 0;
     }
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [profile]);
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   useEffect(() => {
     sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(r => r.forEach(sw => sw.unregister()));
+      navigator.serviceWorker.register('/sw.js').catch(()=>{});
     }
     // ── PLAYER cache ──
     try {
@@ -6561,8 +7145,12 @@ export default function App() {
         if (p?._playerSession && p?.id) {
           setProfile({ ...p, _playerSession: true }); setChecking(false);
           sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
-            .then(({ data }) => { if (data) setProfile({...data,_playerSession:true}); else { localStorage.removeItem("pug_player"); setProfile(null); } })
-            .catch(console.error);
+            .then(({ data, error }) => {
+              if (data) { setProfile({...data,_playerSession:true}); localStorage.setItem("pug_player", JSON.stringify({...data,_playerSession:true})); }
+              else if (error?.code === 'PGRST116') { localStorage.removeItem("pug_player"); setProfile(null); }
+              // Se errore di rete: mantieni sessione dal cache
+            })
+            .catch(()=>{}); // errore rete: rimani loggato
           return;
         }
       }
@@ -6578,8 +7166,16 @@ export default function App() {
             if (session) {
               const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
               if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
-            } else { localStorage.removeItem("pug_edu"); setProfile(null); }
-          }).catch(console.error);
+            } else {
+              // Prova a refreshare il token prima di fare logout
+              const { data: refreshed } = await sb.auth.refreshSession().catch(()=>({data:null}));
+              if (!refreshed?.session) { localStorage.removeItem("pug_edu"); setProfile(null); }
+              else {
+                const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", refreshed.session.user.id).single();
+                if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+              }
+            }
+          }).catch(()=>{}); // errore rete: rimani loggato
           const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange(async (event, session) => {
             if (event === "SIGNED_OUT") { setProfile(null); localStorage.removeItem("pug_edu"); }
             if (event === "SIGNED_IN" && session) {
