@@ -4980,20 +4980,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [visReady, setVisReady] = useState(false);
   const [levelUpData, setLevelUpData] = useState(null);
 
-  // Player: forza reload dati dopo background
-  useEffect(() => {
-    let hiddenAt = 0;
-    function onVis() {
-      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
-      if (document.visibilityState === 'visible' && hiddenAt > 0 && Date.now() - hiddenAt > 20000) {
-        loadingRef.current = false;
-        load();
-        hiddenAt = 0;
-      }
-    }
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, [load]);
 
   // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
@@ -5087,6 +5073,21 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   }
   }, [profile.id]);
 
+
+  // Ricarica quando l'app torna in primo piano
+  useEffect(() => {
+    let hiddenAt = 0;
+    function onVis() {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (document.visibilityState === 'visible' && hiddenAt > 0 && Date.now() - hiddenAt > 20000) {
+        loadingRef.current = false;
+        load();
+        hiddenAt = 0;
+      }
+    }
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [load]);
   useEffect(() => {
     load();
     const channel = sb.channel("player_notifs_" + profile.id)
@@ -7028,7 +7029,8 @@ export default function App() {
       <style>{css}</style>
       {!isOnline && <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#c62828",color:"#fff",textAlign:"center",padding:"8px",fontSize:13,fontWeight:700}}>📵 Nessuna connessione</div>}
       <div style={{position:"relative"}}>
-        <div style={{position:"fixed",top:0,left:0,right:0,height:3,zIndex:9999,background:"linear-gradient(90deg,var(--neon-blue),var(--neon-pink),var(--neon-blue))",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}}/>
+        <div style={{position:"fixed",top:0,left:0,right:0,height:3,zIndex:9999,background:"linear-gradient(90deg,va
+r(--neon-blue),var(--neon-pink),var(--neon-blue))",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}}/>
         <Login onLogin={setProfile} />
       </div>
     </>
