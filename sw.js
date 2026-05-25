@@ -1,69 +1,53 @@
-const CACHE_NAME = 'pug-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/icon-192x192.png',
-  '/icon-512x512.png',
-  '/icon-180x180.png',
-  '/manifest.json',
-];
+// Cache version — incrementa ad ogni deploy per forzare refresh
+const CACHE_VERSION = 'pug-v' + Date.now();
+const CACHE_NAME = CACHE_VERSION;
 
-// Install: pre-cache static assets
+// Install: skip waiting subito per aggiornamenti immediati
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  e.waitUntil(self.skipWaiting());
 });
 
-// Activate: clean old caches
+// Activate: elimina TUTTE le vecchie cache
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      ))
+      .then(keys => Promise.all(keys.map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch: network-first per API, cache-first per assets
+// Fetch: network-first per tutto (garantisce sempre contenuto fresco)
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-
-  // Skip non-GET and Supabase API calls (always fresh)
   if (e.request.method !== 'GET') return;
   if (url.hostname.includes('supabase.co')) return;
-  if (url.hostname.includes('giphy.com')) return;
-  if (url.hostname.includes('fonts.googleapis.com')) return;
+  if (url.hostname.includes('googleapis.com')) return;
 
-  // Avatars: cache-first (they don't change)
+  // Avatars: cache-first (immagini statiche)
   if (url.pathname.startsWith('/avatars/')) {
     e.respondWith(
-      caches.match(e.request)
-        .then(cached => cached || fetch(e.request).then(resp => {
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
+        if (resp.ok) {
           const clone = resp.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          return resp;
-        }))
+          caches.open('pug-avatars').then(c => c.put(e.request, clone));
+        }
+        return resp;
+      }))
     );
     return;
   }
 
-  // App shell: network-first with cache fallback
+  // App shell: network-first, cache come fallback offline
   e.respondWith(
     fetch(e.request)
       .then(resp => {
-        if (resp.ok) {
+        if (resp.ok && url.hostname === self.location.hostname) {
           const clone = resp.clone();
           caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return resp;
       })
-      .catch(() => caches.match(e.request)
-        .then(cached => cached || caches.match('/index.html'))
-      )
+      .catch(() => caches.match(e.request).then(c => c || caches.match('/index.html')))
   );
 });
 
@@ -91,14 +75,13 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(
     clients.matchAll({ type:'window', includeUncontrolled:true })
       .then(cls => {
-        const existing = cls.find(c => c.url.startsWith(self.location.origin));
-        if (existing) return existing.focus();
-        return clients.openWindow(e.notification.data?.url || '/');
+        const w = cls.find(c => c.url.startsWith(self.location.origin));
+        return w ? w.focus() : clients.openWindow('/');
       })
   );
 });
 
-// Skip waiting message
+// Skip waiting on message
 self.addEventListener('message', e => {
   if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
