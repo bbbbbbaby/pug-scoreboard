@@ -4126,9 +4126,12 @@ function BachecaView({ profile }) {
 
   async function load() {
     setLoading(true);
-    const { data } = await sb.from("educator_notes")
-      .select("id,body,color,created_at,profiles(display_name,avatar_url)")
+    const { data, error } = await sb.from("educator_notes")
+      .select("id,body,color,created_at,educator_id,educator_id,profiles(display_name,avatar_url)")
       .order("created_at",{ascending:false}).limit(50);
+    if (error) {
+      addToast("❌ Errore caricamento bacheca", "error");
+    }
     setNotes(data||[]);
     setLoading(false);
   }
@@ -4136,9 +4139,15 @@ function BachecaView({ profile }) {
   async function addNote() {
     if (!body.trim()) return;
     setSaving(true);
-    await sb.from("educator_notes").insert({ educator_id:profile.id, body:body.trim(), color });
+    const { error } = await sb.from("educator_notes").insert({ educator_id:profile.id, body:body.trim(), color });
+    if (error) {
+      addToast("❌ Errore: " + error.message, "error");
+      setSaving(false);
+      return;
+    }
     setBody("");
     setSaving(false);
+    addToast("📌 Post-it pubblicato!", "ok");
     load();
   }
 
@@ -4213,8 +4222,17 @@ function BachecaView({ profile }) {
                   : <span style={{fontSize:12}}>🌱</span>}
                 <span style={{fontSize:10,color:"rgba(0,0,0,.6)",fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.profiles?.display_name}</span>
                 {n.educator_id===profile.id && (
-                  <button onClick={()=>{sb.from("educator_notes").delete().eq("id",n.id).then(()=>setNotes(p=>p.filter(x=>x.id!==n.id)));}}
-                    style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"rgba(0,0,0,.4)",padding:0,lineHeight:1}}>✕</button>
+                  <button
+                    onClick={async()=>{
+                      await sb.from("educator_notes").delete().eq("id",n.id);
+                      setNotes(p=>p.filter(x=>x.id!==n.id));
+                      addToast("🗑️ Post-it rimosso","ok");
+                    }}
+                    style={{background:"rgba(0,0,0,.12)",border:"none",cursor:"pointer",
+                      fontSize:11,color:"rgba(0,0,0,.6)",padding:"2px 6px",
+                      borderRadius:99,lineHeight:1,fontWeight:700}}>
+                    ✕ Rimuovi
+                  </button>
                 )}
               </div>
             </div>
