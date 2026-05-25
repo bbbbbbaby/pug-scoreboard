@@ -1873,6 +1873,54 @@ function QRCelebration({ xpGained, playerName, onDone }) {
   );
 }
 
+// ─── CHANGE PASSWORD MODAL ───────────────────────────────
+function ChangePwdModal({ onClose }) {
+  const [newPwd, setNewPwd] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState(false);
+  async function save() {
+    setErr("");
+    if (newPwd.length < 8) { setErr("Minimo 8 caratteri."); return; }
+    if (newPwd !== confirm) { setErr("Le password non coincidono."); return; }
+    setLoading(true);
+    const { error } = await sb.auth.updateUser({ password: newPwd });
+    setLoading(false);
+    if (error) { setErr(error.message); return; }
+    setOk(true); setTimeout(onClose, 2000);
+  }
+  return (
+    <div>
+      <div className="modal-title">🔑 Cambia Password</div>
+      {ok ? (
+        <div style={{textAlign:"center",padding:"20px 0"}}>
+          <div style={{fontSize:40,marginBottom:8}}>✅</div>
+          <div style={{fontWeight:700,color:"var(--neon-green)"}}>Password aggiornata!</div>
+        </div>
+      ) : (
+        <>
+          <div className="form-group">
+            <label className="form-label">Nuova password</label>
+            <input type="password" className="form-input" value={newPwd} onChange={e=>setNewPwd(e.target.value)} placeholder="Minimo 8 caratteri" autoFocus/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Conferma password</label>
+            <input type="password" className="form-input" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Ripeti la password"/>
+          </div>
+          {err && <div style={{color:"var(--danger)",fontSize:13,marginBottom:12}}>{err}</div>}
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-primary" style={{flex:1}} onClick={save} disabled={loading||!newPwd||!confirm}>
+              {loading ? "⏳ Salvataggio…" : "Salva password"}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── LOGIN ────────────────────────────────────────────────
 // Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
 
@@ -3669,7 +3717,7 @@ function MessagesView({ profile }) {
         <div className="form-group">
           <label className="form-label">Destinatario</label>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatori"],["activity","⚡ Lab"],["educator","🌱 Team"]].map(([k,l])=>(
+            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatori"],["activity","⚡ Lab"],["educator","🌱 Giardinieri"]].map(([k,l])=>(
               <button key={k} className={`chip ${destType===k?"active":""}`} onClick={()=>setDestType(k)}>{l}</button>
             ))}
           </div>
@@ -3685,7 +3733,7 @@ function MessagesView({ profile }) {
               {educators.length === 0 ? (
                 <div style={{fontSize:13,color:"var(--text3)",padding:"10px 0"}}>⏳ Caricamento giardinieri…</div>
               ) : (
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:240,overflowY:"auto"}}>
                   {educators.map(e=>(
                     <div key={e.id} onClick={()=>setSelectedPlayers([e.id])}
                       style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
@@ -5942,12 +5990,59 @@ function PuliziaView() {
   );
 }
 
+// ─── ADMIN RESET PASSWORD ───────────────────────────────
+function AdminResetPwdForm({ educator, onClose }) {
+  const [newPwd, setNewPwd] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [ok, setOk] = useState(false);
+  const [err, setErr] = useState("");
+  async function reset() {
+    if (newPwd.length < 8) { setErr("Minimo 8 caratteri"); return; }
+    setLoading(true); setErr("");
+    const res = await fetch("https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/reset-password", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI"},
+      body:JSON.stringify({educator_id:educator.id,new_password:newPwd}),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.error) { setErr(data.error); return; }
+    setOk(true); setTimeout(onClose, 2000);
+  }
+  return (
+    <div>
+      <div className="modal-title">🔑 Reset password — {educator.display_name}</div>
+      {ok ? (
+        <div style={{textAlign:"center",padding:"20px 0"}}>
+          <div style={{fontSize:40,marginBottom:8}}>✅</div>
+          <div style={{fontWeight:700,color:"var(--neon-green)"}}>Password resettata!</div>
+        </div>
+      ) : (
+        <>
+          <div className="form-group">
+            <label className="form-label">Nuova password per {educator.display_name}</label>
+            <input type="password" className="form-input" value={newPwd} onChange={e=>setNewPwd(e.target.value)} placeholder="Minimo 8 caratteri" autoFocus/>
+          </div>
+          {err && <div style={{color:"var(--danger)",fontSize:13,marginBottom:12}}>{err}</div>}
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-primary" style={{flex:1}} onClick={reset} disabled={loading||newPwd.length<8}>
+              {loading?"⏳ Reset…":"Cambia password"}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── ADMIN VIEW ──────────────────────────────────────────
 
 function AdminView({ profile }) {
   const [educators, setEducators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [resetTarget, setResetTarget] = useState(null);
   const [form, setForm] = useState({ display_name:"", email:"", password:"", avatar_url:"" });
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -5998,6 +6093,13 @@ function AdminView({ profile }) {
 
   return (
     <div>
+      {resetTarget && (
+        <div className="modal-bg" onClick={()=>setResetTarget(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <AdminResetPwdForm educator={resetTarget} onClose={()=>setResetTarget(null)}/>
+          </div>
+        </div>
+      )}
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#ffcc00",marginBottom:16}}>⚙️ Gestione Giardinieri</div>
       {msg && <div style={{background:"rgba(0,255,136,.1)",border:"1px solid rgba(0,255,136,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
       {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
@@ -6384,6 +6486,7 @@ function EducatorShell({ profile, onLogout }) {
   const [sectionColors, setSectionColors] = useState(DEFAULT_SECTION_COLORS);
   const [showPresentation, setShowPresentation] = useState(false);
   const [showPresSettings, setShowPresSettings] = useState(false);
+  const [showChangePwd, setShowChangePwd] = useState(false);
   const [visibility, setVisibility] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility") || "{}"); } catch(_) { return {}; }
   });
@@ -6616,6 +6719,13 @@ function EducatorShell({ profile, onLogout }) {
         </div>
       </div>
 
+      {showChangePwd && (
+        <div className="modal-bg" onClick={()=>setShowChangePwd(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <ChangePwdModal onClose={()=>setShowChangePwd(false)}/>
+          </div>
+        </div>
+      )}
       {showPresSettings && (
         <div className="modal-bg" onClick={()=>setShowPresSettings(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
