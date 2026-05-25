@@ -6135,7 +6135,7 @@ function AdminView({ profile }) {
               {editEdu?.id !== e.id && (
                 <div style={{display:"flex",gap:6}}>
                   <button className="btn btn-ghost btn-xs" onClick={()=>setEditEdu({...e})}>✏️</button>
-                  <button className="btn btn-ghost btn-xs" onClick={()=>setEditAvatar({id:e.id,avatar_url:e.avatar_url||""})} title="Cambia avatar">🖼️</button>
+                  <button className="btn btn-ghost btn-xs" onClick={()=>setEditAvatar({id:e.id,display_name:e.display_name,avatar_url:e.avatar_url||""})} title="Cambia avatar">🖼️</button>
                   <button className="btn btn-danger btn-xs" onClick={()=>deleteEdu(e.id,e.display_name)}>🗑️</button>
                 </div>
               )}
@@ -6163,6 +6163,7 @@ function AdminView({ profile }) {
             <InlineAvatarUpload playerId={editAvatar.id} onUploaded={url=>{setEditAvatar(p=>({...p,avatar_url:url}));saveAvatar(editAvatar.id,url);}}/>
             <div style={{display:"flex",gap:8,marginTop:12}}>
               <button className="btn btn-primary" style={{flex:1}} onClick={()=>saveAvatar(editAvatar.id,editAvatar.avatar_url)}>Salva avatar</button>
+              <button className="btn btn-ghost btn-sm" style={{color:"rgba(255,204,0,.8)",borderColor:"rgba(255,204,0,.3)"}} onClick={()=>{setEditAvatar(null);setResetTarget(editAvatar);}}>🔑 Password</button>
               <button className="btn btn-ghost btn-sm" onClick={()=>setEditAvatar(null)}>Annulla</button>
             </div>
           </div>
@@ -6778,11 +6779,11 @@ function EducatorShell({ profile, onLogout }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Il tuo avatar</div>
             <AvatarUpload playerId={profile.id} currentUrl={avatarUrl} onUploaded={url => setAvatarUrl(url)} />
-            <button onClick={()=>setResetTarget(e)}
-                style={{padding:"5px 10px",background:"rgba(255,204,0,.12)",border:"1px solid rgba(255,204,0,.3)",borderRadius:8,color:"#ffcc00",cursor:"pointer",fontSize:12,fontWeight:700,marginRight:4}}>
-                🔑 PWD
-              </button>
-              <button className="btn btn-ghost" style={{ width: "100%", marginTop: 8 }} onClick={() => setShowAvatarModal(false)}>Chiudi</button>
+            <button className="btn btn-ghost btn-sm" style={{width:"100%",marginTop:10,color:"rgba(255,204,0,.8)",borderColor:"rgba(255,204,0,.3)"}}
+              onClick={()=>{setShowAvatarModal(false);setShowChangePwd(true);}}>
+              🔑 Cambia password
+            </button>
+            <button className="btn btn-ghost" style={{width:"100%",marginTop:6}} onClick={() => setShowAvatarModal(false)}>Chiudi</button>
           </div>
         </div>
       )}
