@@ -1991,7 +1991,6 @@ function Login({ onLogin }) {
 
   return (
     <div className="login-wrap" style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px 16px",position:"relative"}}>
-      <style>{css}</style>
 
       {/* Logo */}
       <div style={{textAlign:"center",marginBottom:32}}>
@@ -4852,12 +4851,14 @@ function XPHistoryChart({ playerId }) {
 
 // ─── NOTIFICATION TOGGLE ────────────────────────────────
 function NotificationToggle({ playerId }) {
-  const [status, setStatus] = useState("unknown"); // unknown | granted | denied | unsupported
+  const [status, setStatus] = useState("unknown");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!("Notification" in window)) { setStatus("unsupported"); return; }
-    setStatus(Notification.permission);
+    try {
+      if (!("Notification" in window)) { setStatus("unsupported"); return; }
+      setStatus(Notification.permission);
+    } catch(_) { setStatus("unsupported"); }
   }, []);
 
   async function requestPermission() {
@@ -6952,7 +6953,7 @@ export default function App() {
   useEffect(() => {
     sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(r => r.forEach(sw => sw.unregister()));
+      navigator.serviceWorker.register('/sw.js').catch(()=>{});
     }
     // ── PLAYER cache ──
     try {
