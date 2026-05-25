@@ -2170,6 +2170,16 @@ function PlayersView({ sectionColors, setSectionColors }) {
     const newVal = Math.max(0, p[field] + delta);
     await sb.from("profiles").update({ [field]: newVal }).eq("id", playerId);
     await logAction({ playerId, action: field === "xp" ? "XP manuale" : "Coin manuale", xpDelta: field === "xp" ? delta : 0, coinDelta: field === "coin" ? delta : 0 });
+    if (field === "xp" && delta > 0) {
+      const oldLv = getLevel(p.xp); const newLv = getLevel(newVal);
+      if (newLv.name !== oldLv.name) {
+        sendPush(playerId, "🆙 Sei salito di livello!", `Sei diventato ${newLv.emoji} ${newLv.name}!`).catch(()=>{});
+        await sb.from("notifications").insert({user_id:playerId, type:"level_up", title:"🆙 Nuovo livello!", body:`${newLv.emoji} ${newLv.name}`});
+      } else {
+        sendPush(playerId, "⭐ Hai ricevuto XP!", `+${delta} XP — continua così!`).catch(()=>{});
+      }
+    }
+    if (field === "coin" && delta > 0) sendPush(playerId, "🪙 Hai ricevuto Coin!", `+${delta} Coin!`).catch(()=>{});
     setPlayers(prev => prev.map(x => x.id === playerId ? { ...x, [field]: newVal } : x));
   }
 
@@ -2178,8 +2188,17 @@ function PlayersView({ sectionColors, setSectionColors }) {
     for (const id of [...selected]) {
       const p = players.find(x => x.id === id);
       if (!p) continue;
-      await sb.from("profiles").update({ xp: p.xp + Number(batchXp), coin: p.coin + Number(batchCoin) }).eq("id", id);
+      const newXp = p.xp + Number(batchXp);
+      const newCoin = p.coin + Number(batchCoin);
+      await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", id);
       await logAction({ playerId: id, action: "Assegnazione batch", xpDelta: Number(batchXp), coinDelta: Number(batchCoin) });
+      const oldLv = getLevel(p.xp); const newLv = getLevel(newXp);
+      if (newLv.name !== oldLv.name) {
+        sendPush(id, "🆙 Sei salito di livello!", `${newLv.emoji} ${newLv.name}!`).catch(()=>{});
+        await sb.from("notifications").insert({user_id:id, type:"level_up", title:"🆙 Nuovo livello!", body:`${newLv.emoji} ${newLv.name}`});
+      } else if (Number(batchXp) > 0) {
+        sendPush(id, "⭐ Hai ricevuto XP!", `+${batchXp} XP e +${batchCoin} Coin!`).catch(()=>{});
+      }
     }
     setMsg(`+${batchXp} XP e +${batchCoin} coin assegnati a ${selected.size} giocatori`);
     setSelected(new Set()); load();
@@ -3147,6 +3166,10 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       setForm({ name:"", description:"", link:"", educator_id:"",
         duration_days:4, xp_partial:10, xp_full:20, xp_completed:35,
         coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
+      // Notifica tutti i giocatori del nuovo lab
+      sb.from("profiles").select("id").eq("role","player").then(({data})=>{
+        (data||[]).forEach(p => sendPush(p.id, "⚡ Nuovo Lab disponibile!", `"${name}" è ora disponibile — prenota ora!`).catch(()=>{}));
+      });
       load();
     } catch(e) {
       setCreateErr("❌ Eccezione: " + (e?.message || String(e)));
@@ -3694,6 +3717,7 @@ function MessagesView({ profile }) {
       const msgId = newMsg?.id || null;
       for (const p of (allP||[])) {
         await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto a tutti`, message_id:msgId});
+        sendPush(p.id, "💬 Messaggio", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
       }
     } else if (destType === "squad" && destSquad) {
       const sq = squads.find(s=>s.id===destSquad);
@@ -3702,6 +3726,7 @@ function MessagesView({ profile }) {
       const { data: sqP } = await sb.from("profiles").select("id").eq("squad_id",destSquad);
       for (const p of (sqP||[])) {
         await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`, message_id:sqMsgId});
+        sendPush(p.id, "💬 Messaggio squadra", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
       }
     } else if (destType === "educator" && selectedPlayers[0]) {
       const { data: pm } = await sb.from("messages").insert({...base, recipient_id:selectedPlayers[0]}).select("id").single();
@@ -3711,6 +3736,8 @@ function MessagesView({ profile }) {
       for (const pid of selectedPlayers) {
         const { data: pm } = await sb.from("messages").insert({...base, recipient_id:pid}).select("id").single();
         await sb.from("notifications").insert({user_id:pid, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ti ha scritto`, message_id:pm?.id||null});
+        sendPush(pid, `💬 ${senderName}`, body.trim().slice(0,80)).catch(()=>{});
+        sendPush(pid, `💬 ${senderName}`, body.trim().slice(0,80)).catch(()=>{});
       }
     } else if (destType === "activity" && destActivity) {
       const { data: bk } = await sb.from("bookings").select("player_id").eq("activity_id",destActivity).eq("status","confirmed");
@@ -3718,6 +3745,7 @@ function MessagesView({ profile }) {
         for (const b of bk) {
           await sb.from("messages").insert({...base, recipient_id:b.player_id});
           await sb.from("notifications").insert({user_id:b.player_id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto ai partecipanti del Lab`});
+          sendPush(b.player_id, "💬 Messaggio lab", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
         }
         setSent(`Inviato a ${bk.length} partecipanti ✅`);
       } else { setSent("Nessun partecipante confermato"); }
@@ -4780,6 +4808,11 @@ function CommunityTab({ players, myId, myProfile }) {
       setReactions(p=>({...p,[badgeId]:{...p[badgeId],[type]:(p[badgeId]?.[type]||0)+1,...(prev?{[prev]:Math.max(0,(p[badgeId]?.[prev]||1)-1)}:{})}}));
       playPixel("msg");
       if(navigator.vibrate) navigator.vibrate(30);
+      // Push al proprietario del badge
+      if (selected.id !== myId) {
+        const badge = playerBadges.find(pb=>pb.id===badgeId);
+        sendPush(selected.id, `${type} Reaction sul tuo badge!`, `Hai ricevuto una reaction su "${badge?.badges?.name||"Badge"}"`).catch(()=>{});
+      }
     }
   }
 
