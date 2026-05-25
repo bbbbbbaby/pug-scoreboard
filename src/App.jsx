@@ -14,25 +14,34 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function registerPush(playerId) {
+  const steps = [];
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    steps.push('start');
+    if (!('serviceWorker' in navigator)) { addToast('⚠️ SW non supportato','error'); return; }
+    if (!('PushManager' in window)) { addToast('⚠️ Push non supportato','error'); return; }
+    steps.push('apis ok');
+
     let reg;
-    try { reg = await navigator.serviceWorker.register('/sw.js'); }
-    catch(_) { return; }
+    try { reg = await navigator.serviceWorker.register('/sw.js'); steps.push('sw registered'); }
+    catch(e) { addToast('⚠️ SW reg: '+e.message,'error'); return; }
+
     let swReady;
     try {
       swReady = await Promise.race([
         navigator.serviceWorker.ready,
-        new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 8000))
+        new Promise((_,r) => setTimeout(() => r(new Error('SW timeout 8s')), 8000))
       ]);
-    } catch(_) { return; }
-    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
-    if (perm !== 'granted') return;
-    // Usa swReady.pushManager (più affidabile di reg.pushManager)
-    const pushManager = swReady.pushManager || reg.pushManager;
-    if (!pushManager) return;
+      steps.push('sw ready');
+    } catch(e) { addToast('⚠️ SW ready: '+e.message,'error'); return; }
 
-    // Controlla se esiste già una subscription valida
+    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (perm !== 'granted') { addToast('⚠️ Permesso negato','error'); return; }
+    steps.push('perm ok');
+
+    const pushManager = swReady.pushManager || reg.pushManager;
+    if (!pushManager) { addToast('⚠️ PushManager null','error'); return; }
+    steps.push('pushManager ok');
+
     let sub = await pushManager.getSubscription();
     if (!sub) {
       sub = await pushManager.subscribe({
@@ -40,15 +49,17 @@ async function registerPush(playerId) {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
     }
+    steps.push('subscribed');
 
     const { error } = await sb.from('push_subscriptions').upsert(
       { player_id: playerId, subscription: JSON.parse(JSON.stringify(sub)) },
       { onConflict: 'player_id' }
     );
-    if (error) throw error;
+    if (error) { addToast('⚠️ DB: '+error.message,'error'); return; }
+    steps.push('saved to DB ✅');
+    addToast('✅ Push registrate!','ok');
   } catch(e) {
-    // Log visibile solo in development
-    if (location.hostname === 'localhost') console.warn('Push error:', e.message);
+    addToast('⚠️ Push err: '+e.message,'error');
   }
 }
 
