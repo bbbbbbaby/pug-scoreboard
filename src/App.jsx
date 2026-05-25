@@ -28,15 +28,28 @@ async function registerPush(playerId) {
     } catch(_) { return; }
     const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if (perm !== 'granted') return;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
-    await sb.from('push_subscriptions').upsert(
-      { player_id: playerId, subscription: sub.toJSON() },
+    // Usa swReady.pushManager (più affidabile di reg.pushManager)
+    const pushManager = swReady.pushManager || reg.pushManager;
+    if (!pushManager) return;
+
+    // Controlla se esiste già una subscription valida
+    let sub = await pushManager.getSubscription();
+    if (!sub) {
+      sub = await pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+
+    const { error } = await sb.from('push_subscriptions').upsert(
+      { player_id: playerId, subscription: JSON.parse(JSON.stringify(sub)) },
       { onConflict: 'player_id' }
     );
-  } catch(_) { /* push non supportato su questo dispositivo/browser */ }
+    if (error) throw error;
+  } catch(e) {
+    // Log visibile solo in development
+    if (location.hostname === 'localhost') console.warn('Push error:', e.message);
+  }
 }
 
 async function sendPush(playerId, title, body) {
@@ -4964,8 +4977,11 @@ function NotificationToggle({ playerId }) {
       const perm = await Notification.requestPermission();
       setStatus(perm);
       if (perm === "granted") {
-        try { await registerPush(playerId); } catch(_) {}
+        await registerPush(playerId);
         addToast("🔔 Notifiche attivate!", "ok");
+        setStatus("granted");
+      } else {
+        addToast("⚠️ Permesso notifiche non concesso", "error");
       }
     } catch(e) {
       setStatus("denied");
