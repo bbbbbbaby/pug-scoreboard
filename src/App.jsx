@@ -3666,7 +3666,7 @@ function MessagesView({ profile }) {
         <div className="form-group">
           <label className="form-label">Destinatario</label>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatori"],["activity","⚡ Lab"]].map(([k,l])=>(
+            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatori"],["activity","⚡ Lab"],["educator","🌱 Team"]].map(([k,l])=>(
               <button key={k} className={`chip ${destType===k?"active":""}`} onClick={()=>setDestType(k)}>{l}</button>
             ))}
           </div>
@@ -4101,91 +4101,112 @@ function BachecaView({ profile }) {
   const [body, setBody] = useState("");
   const [color, setColor] = useState("#ffcc00");
   const [saving, setSaving] = useState(false);
-  const COLORS = ["#ffcc00","#ff6b6b","#69db7c","#74c0fc","#f783ac","#a9e34b","#ffa94d","#e5dbff"];
+  const [loading, setLoading] = useState(true);
+  const COLORS = ["#ffcc00","#ff8787","#8ce99a","#74c0fc","#f783ac","#ffe066","#ffa94d","#e5dbff"];
 
   useEffect(() => { load(); }, []);
 
   async function load() {
+    setLoading(true);
     const { data } = await sb.from("educator_notes")
-      .select("*, profiles(display_name,avatar_url)")
+      .select("id,body,color,created_at,profiles(display_name,avatar_url)")
       .order("created_at",{ascending:false}).limit(50);
     setNotes(data||[]);
+    setLoading(false);
   }
 
   async function addNote() {
     if (!body.trim()) return;
     setSaving(true);
     await sb.from("educator_notes").insert({ educator_id:profile.id, body:body.trim(), color });
-    setBody(""); setSaving(false);
+    setBody("");
+    setSaving(false);
     load();
   }
 
-  async function del(id) {
-    await sb.from("educator_notes").delete().eq("id",id);
-    setNotes(p=>p.filter(n=>n.id!==id));
-  }
+  const rotation = (id) => ((id.charCodeAt(0)%5)-2)*0.8;
 
   return (
     <div>
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:4}}>📌 Bacheca Team</div>
-      <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Post-it visibili solo ai giardinieri.</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:14}}>Post-it visibili solo ai giardinieri.</div>
 
-      {/* Compose */}
+      {/* Form aggiunta */}
       <div className="card" style={{marginBottom:16}}>
-        <textarea className="form-input" rows={3} value={body} onChange={e=>setBody(e.target.value)}
-          placeholder="Scrivi un post-it per il team…"
-          style={{resize:"none",marginBottom:10}}
-          onKeyDown={e=>{if(e.key==="Enter"&&e.metaKey){addNote();}}}
+        <textarea
+          className="form-input"
+          rows={3}
+          value={body}
+          onChange={e=>setBody(e.target.value)}
+          placeholder="Scrivi un messaggio per il team…"
+          style={{resize:"none",marginBottom:10,width:"100%"}}
         />
-        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          {COLORS.map(c=>(
-            <div key={c} onClick={()=>setColor(c)}
-              style={{width:24,height:24,borderRadius:"50%",background:c,cursor:"pointer",
-                border:color===c?"3px solid #fff":"2px solid transparent",
-                boxShadow:color===c?"0 0 0 2px "+c:"none",
-                transition:"all .15s",flexShrink:0}}/>
-          ))}
-          <button className="btn btn-primary btn-sm" style={{marginLeft:"auto"}}
-            onClick={addNote} disabled={saving||!body.trim()}>
-            {saving?"…":"📌 Aggiungi"}
-          </button>
-        </div>
-        <div style={{fontSize:10,color:"var(--text3)",marginTop:6}}>Cmd+Enter per inviare</div>
-      </div>
-
-      {/* Notes grid */}
-      {notes.length===0
-        ? <div className="empty" style={{padding:32,textAlign:"center"}}>
-            <div style={{fontSize:32,marginBottom:8}}>📌</div>
-            <div>Nessun post-it ancora. Aggiungine uno!</div>
-          </div>
-        : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
-            {notes.map(n=>(
-              <div key={n.id} style={{
-                background:n.color,borderRadius:12,padding:"14px 16px",
-                position:"relative",minHeight:100,
-                boxShadow:"0 3px 12px rgba(0,0,0,.2), 0 1px 3px rgba(0,0,0,.15)",
-                transform:`rotate(${((n.id.charCodeAt(0)%5)-2)*0.6}deg)`,
-              }}>
-                <button onClick={()=>del(n.id)}
-                  style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.15)",border:"none",
-                    borderRadius:"50%",width:22,height:22,cursor:"pointer",fontSize:12,
-                    display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(0,0,0,.6)"}}>✕</button>
-                <div style={{fontSize:14,color:"rgba(0,0,0,.8)",lineHeight:1.5,fontWeight:500,marginBottom:10,whiteSpace:"pre-wrap"}}>{n.body}</div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  {n.profiles?.avatar_url
-                    ? <img src={n.profiles.avatar_url} style={{width:20,height:20,borderRadius:"50%",objectFit:"cover"}} alt=""/>
-                    : <span style={{fontSize:14}}>🌱</span>}
-                  <span style={{fontSize:11,color:"rgba(0,0,0,.55)",fontWeight:700}}>{n.profiles?.display_name}</span>
-                  <span style={{fontSize:10,color:"rgba(0,0,0,.4)",marginLeft:"auto"}}>{new Date(n.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
-                </div>
-              </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:5}}>
+            {COLORS.map(c=>(
+              <div key={c} onClick={()=>setColor(c)} style={{
+                width:22,height:22,borderRadius:"50%",background:c,cursor:"pointer",
+                outline:color===c?`3px solid ${c}`:""  ,outlineOffset:2,
+                boxShadow:color===c?"0 0 0 1px white inset":"none",
+                transition:"all .15s",flexShrink:0
+              }}/>
             ))}
           </div>
-      }
+          <button
+            onClick={addNote}
+            disabled={saving||!body.trim()}
+            className="btn btn-primary btn-sm"
+            style={{marginLeft:"auto"}}>
+            {saving?"⏳":"📌 Pubblica"}
+          </button>
+        </div>
+      </div>
+
+      {/* Grid post-it */}
+      {loading ? (
+        <div className="loading">⏳ Caricamento…</div>
+      ) : notes.length===0 ? (
+        <div className="empty" style={{padding:32,textAlign:"center"}}>
+          <div style={{fontSize:32,marginBottom:8}}>📌</div>
+          <div style={{fontWeight:700}}>Nessun post-it ancora</div>
+          <div style={{fontSize:12,marginTop:4}}>Aggiungi il primo messaggio al team</div>
+        </div>
+      ) : (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
+          {notes.map(n=>(
+            <div key={n.id} style={{
+              background:n.color||"#ffcc00",
+              borderRadius:4,
+              padding:"14px 14px 12px",
+              position:"relative",
+              boxShadow:"3px 3px 10px rgba(0,0,0,.25), 0 1px 2px rgba(0,0,0,.15)",
+              transform:`rotate(${rotation(n.id)}deg)`,
+              transition:"transform .2s",
+              cursor:"default",
+            }}
+            onMouseOver={e=>e.currentTarget.style.transform="rotate(0deg) scale(1.02)"}
+            onMouseOut={e=>e.currentTarget.style.transform=`rotate(${rotation(n.id)}deg)`}>
+              {/* Puntina effetto */}
+              <div style={{position:"absolute",top:-6,left:"50%",transform:"translateX(-50%)",width:12,height:12,borderRadius:"50%",background:"rgba(0,0,0,.3)",boxShadow:"0 2px 4px rgba(0,0,0,.3)"}}/>
+              <div style={{fontSize:13,color:"rgba(0,0,0,.85)",lineHeight:1.55,fontWeight:500,marginBottom:10,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{n.body}</div>
+              <div style={{display:"flex",alignItems:"center",gap:5,borderTop:"1px solid rgba(0,0,0,.1)",paddingTop:8}}>
+                {n.profiles?.avatar_url
+                  ? <img src={n.profiles.avatar_url} style={{width:18,height:18,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                  : <span style={{fontSize:12}}>🌱</span>}
+                <span style={{fontSize:10,color:"rgba(0,0,0,.6)",fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.profiles?.display_name}</span>
+                {n.educator_id===profile.id && (
+                  <button onClick={()=>{sb.from("educator_notes").delete().eq("id",n.id).then(()=>setNotes(p=>p.filter(x=>x.id!==n.id)));}}
+                    style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:"rgba(0,0,0,.4)",padding:0,lineHeight:1}}>✕</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
 
 // ─── ANNOUNCEMENTS EDUCATOR ─────────────────────────────
 
