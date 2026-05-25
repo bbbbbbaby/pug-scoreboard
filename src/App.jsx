@@ -2107,8 +2107,7 @@ function Login({ onLogin }) {
 // ─── EDUCATOR VIEWS ───────────────────────────────────────
 
 function PlayersView({ sectionColors, setSectionColors }) {
-  const loadingRef = useRef(false);
-  const [players, setPlayers] = useState([]);
+    const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
   const [squadFilter, setSquadFilter] = useState("all");
