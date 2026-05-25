@@ -61,28 +61,9 @@
     <title>PUG Scoreboard</title>
 
     <script>
-      // Register service worker per PWA + push notifications
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => {
-              // Check for updates
-              reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New version available — skip waiting
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  }
-                });
-              });
-            })
-            .catch(() => {});
-        });
-        // Reload when new SW takes control
-        let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!refreshing) { refreshing = true; window.location.reload(); }
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
         });
       }
     </script>
