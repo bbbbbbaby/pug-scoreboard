@@ -4851,6 +4851,76 @@ function XPHistoryChart({ playerId }) {
   );
 }
 
+
+// ─── NOTIFICATION TOGGLE ────────────────────────────────
+function NotificationToggle({ playerId }) {
+  const [status, setStatus] = useState("unknown"); // unknown | granted | denied | unsupported
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!("Notification" in window)) { setStatus("unsupported"); return; }
+    setStatus(Notification.permission);
+  }, []);
+
+  async function requestPermission() {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      setStatus("unsupported"); return;
+    }
+    setLoading(true);
+    try {
+      const perm = await Notification.requestPermission();
+      setStatus(perm);
+      if (perm === "granted") {
+        await registerPush(playerId);
+        addToast("🔔 Notifiche attivate!", "ok");
+      }
+    } catch(e) {
+      setStatus("denied");
+    }
+    setLoading(false);
+  }
+
+  if (status === "unsupported") return null;
+
+  const isGranted = status === "granted";
+  const isDenied  = status === "denied";
+
+  return (
+    <div style={{
+      background:"rgba(255,255,255,.04)",border:"1px solid var(--border)",
+      borderRadius:14,padding:"12px 14px",marginBottom:10,
+      display:"flex",alignItems:"center",gap:12,
+    }}>
+      <span style={{fontSize:22,flexShrink:0}}>{isGranted?"🔔":"🔕"}</span>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>Notifiche push</div>
+        <div style={{fontSize:11,color:"var(--text3)",marginTop:1}}>
+          {isGranted ? "Attive — ricevi avvisi in tempo reale" :
+           isDenied  ? "Bloccate — attivale nelle impostazioni del telefono" :
+           "Ricevi notifiche per badge, messaggi e prenotazioni"}
+        </div>
+      </div>
+      {!isGranted && !isDenied && (
+        <button onClick={requestPermission} disabled={loading}
+          style={{
+            background:"linear-gradient(135deg,var(--neon-blue),var(--azzurro))",
+            border:"none",borderRadius:99,padding:"8px 14px",
+            color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",
+            whiteSpace:"nowrap",flexShrink:0,
+          }}>
+          {loading?"⏳":"Attiva"}
+        </button>
+      )}
+      {isGranted && (
+        <div style={{width:10,height:10,borderRadius:"50%",background:"var(--neon-green)",flexShrink:0,boxShadow:"0 0 8px var(--neon-green)"}}/>
+      )}
+      {isDenied && (
+        <div style={{fontSize:11,color:"var(--danger)",flexShrink:0,fontWeight:700}}>Bloccate</div>
+      )}
+    </div>
+  );
+}
+
 // ─── LEVEL UP ANIMATION ──────────────────────────────────
 function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t); }, [onDone]);
@@ -5437,6 +5507,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 </div>
               </div>
             )}
+
+            {/* Notifiche */}
+            <NotificationToggle playerId={profile.id}/>
 
             {/* Check-in */}
             <div className="pd-checkin">
@@ -6630,7 +6703,8 @@ function EducatorShell({ profile, onLogout }) {
               <div className="theme-toggle-knob" style={{background:theme==="light"?"#c08800":"rgba(255,255,255,.6)",transform:theme==="light"?"translateX(20px)":"translateX(0)"}}/>
             </button>
           </div>
-          <div style={{display:"flex",gap:6}}>
+          <NotificationToggle playerId={profile.id}/>
+          <div style={{display:"flex",gap:6,marginTop:6}}>
             <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
             <button className="btn btn-ghost btn-sm" style={{color:"rgba(255,204,0,.7)",border:"1px solid rgba(255,204,0,.2)",padding:"6px 10px"}} onClick={()=>setShowChangePwd(true)} title="Cambia password">🔑</button>
           </div>
