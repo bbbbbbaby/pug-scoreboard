@@ -5014,6 +5014,50 @@ function NotificationToggle({ playerId }) {
   );
 }
 
+
+// ─── IN-APP NOTIFICATION ─────────────────────────────────
+let _showInApp = null;
+function showInAppNotif(title, body) { if (_showInApp) _showInApp(title, body); }
+
+function InAppNotifBanner() {
+  const [notif, setNotif] = useState(null);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    _showInApp = (title, body) => {
+      setNotif({ title, body });
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setNotif(null), 4000);
+    };
+    return () => { _showInApp = null; clearTimeout(timerRef.current); };
+  }, []);
+
+  if (!notif) return null;
+
+  return (
+    <div onClick={()=>setNotif(null)} style={{
+      position:"fixed",top:0,left:0,right:0,zIndex:9999,
+      padding:"max(env(safe-area-inset-top,12px),12px) 16px 14px",
+      background:"rgba(10,20,40,.97)",
+      borderBottom:"2px solid var(--neon-blue)",
+      boxShadow:"0 4px 24px rgba(0,0,0,.5)",
+      display:"flex",alignItems:"center",gap:12,
+      animation:"slideDown .3s cubic-bezier(.34,1.56,.64,1)",
+      cursor:"pointer",
+    }}>
+      <style>{`@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}`}</style>
+      <div style={{width:40,height:40,borderRadius:12,background:"rgba(0,212,255,.15)",border:"1px solid rgba(0,212,255,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
+        {notif.title.startsWith("💬") ? "💬" : notif.title.startsWith("📢") ? "📢" : "🔔"}
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:2}}>{notif.title}</div>
+        <div style={{fontSize:12,color:"rgba(255,255,255,.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{notif.body}</div>
+      </div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.3)",flexShrink:0}}>tocca per chiudere</div>
+    </div>
+  );
+}
+
 // ─── LEVEL UP ANIMATION ──────────────────────────────────
 function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t); }, [onDone]);
@@ -5196,6 +5240,19 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         setTimeout(() => setToast(null), 4000);
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `player_id=eq.${profile.id}` }, load)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
+          filter: `recipient_id=eq.${profile.id}` }, (payload) => {
+        load();
+        const m = payload.new;
+        showInAppNotif("💬 Nuovo messaggio", m?.body?.slice(0,60)||"Hai un nuovo messaggio");
+        playPixel("msg");
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
+          filter: `is_broadcast=eq.true` }, (payload) => {
+        load();
+        const m = payload.new;
+        showInAppNotif("📢 Annuncio", m?.body?.slice(0,60)||"Nuovo messaggio per tutti");
+      })
       .subscribe();
     return () => sb.removeChannel(channel);
   }, [profile.id, load]);
@@ -5414,6 +5471,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
       {/* Toast notifications */}
       <ToastContainer/>
+      <InAppNotifBanner/>
       {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
       {/* Top bar */}
       <div className="pd-topbar" style={{paddingTop:"max(10px, calc(env(safe-area-inset-top, 0px) + 8px))"}}>
@@ -6743,6 +6801,13 @@ function EducatorShell({ profile, onLogout }) {
     const channel = sb.channel("edu_realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, loadNotifCounts)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings" }, loadNotifCounts)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
+          filter: `recipient_id=eq.${profile.id}` }, (payload) => {
+        loadNotifCounts();
+        const m = payload.new;
+        showInAppNotif("💬 Nuovo messaggio", m?.body?.slice(0,60)||"Hai un nuovo messaggio");
+        playPixel("msg");
+      })
       .subscribe();
     return () => { clearInterval(interval); sb.removeChannel(channel); };
   }, [loadNotifCounts]);
@@ -6941,6 +7006,7 @@ function EducatorShell({ profile, onLogout }) {
         </div>
       </div>
 
+      <InAppNotifBanner/>
       {showChangePwd && (
         <div className="modal-bg" onClick={()=>setShowChangePwd(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
