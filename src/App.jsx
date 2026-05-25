@@ -16,12 +16,17 @@ function urlBase64ToUint8Array(base64String) {
 async function registerPush(playerId) {
   try {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    const swReady = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise((_,r) => setTimeout(() => r(new Error('SW timeout')), 5000))
-    ]);
-    const perm = await Notification.requestPermission();
+    let reg;
+    try { reg = await navigator.serviceWorker.register('/sw.js'); }
+    catch(_) { return; }
+    let swReady;
+    try {
+      swReady = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 8000))
+      ]);
+    } catch(_) { return; }
+    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if (perm !== 'granted') return;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -3907,6 +3912,8 @@ function MessagesView({ profile }) {
                     alt="media" loading="lazy"/>
                 )}
                 <div style={{fontSize:13,color:"var(--text)"}}>{m.body}</div>
+              {m.media_data&&<img src={m.media_data} style={{maxWidth:"100%",maxHeight:180,borderRadius:10,marginTop:4}} alt=""/>}
+              <MsgReactions msgId={m.id} myId={profile.id}/>
               </div>
             );
           })}
@@ -7045,8 +7052,12 @@ export default function App() {
         if (p?._playerSession && p?.id) {
           setProfile({ ...p, _playerSession: true }); setChecking(false);
           sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
-            .then(({ data }) => { if (data) setProfile({...data,_playerSession:true}); else { localStorage.removeItem("pug_player"); setProfile(null); } })
-            .catch(console.error);
+            .then(({ data, error }) => {
+              if (data) { setProfile({...data,_playerSession:true}); localStorage.setItem("pug_player", JSON.stringify({...data,_playerSession:true})); }
+              else if (error?.code === 'PGRST116') { localStorage.removeItem("pug_player"); setProfile(null); }
+              // Se errore di rete: mantieni sessione dal cache
+            })
+            .catch(()=>{}); // errore rete: rimani loggato
           return;
         }
       }
@@ -7062,8 +7073,16 @@ export default function App() {
             if (session) {
               const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
               if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
-            } else { localStorage.removeItem("pug_edu"); setProfile(null); }
-          }).catch(console.error);
+            } else {
+              // Prova a refreshare il token prima di fare logout
+              const { data: refreshed } = await sb.auth.refreshSession().catch(()=>({data:null}));
+              if (!refreshed?.session) { localStorage.removeItem("pug_edu"); setProfile(null); }
+              else {
+                const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", refreshed.session.user.id).single();
+                if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+              }
+            }
+          }).catch(()=>{}); // errore rete: rimani loggato
           const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange(async (event, session) => {
             if (event === "SIGNED_OUT") { setProfile(null); localStorage.removeItem("pug_edu"); }
             if (event === "SIGNED_IN" && session) {
