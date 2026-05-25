@@ -3574,8 +3574,11 @@ function MessagesView({ profile }) {
   }
   useEffect(() => {
     loadAll();
-    sb.from("profiles").select("id,display_name").in("role",["educator","admin"])
-      .then(({data})=>setEducators(data||[]));
+    sb.from("profiles").select("id,display_name,avatar_url").in("role",["educator","admin"])
+      .then(({data})=>{
+        // Escludi se stesso dalla lista
+        setEducators((data||[]).filter(e=>e.id!==profile.id));
+      });
   }, []);
 
   async function sendMessage() {
@@ -3679,10 +3682,25 @@ function MessagesView({ profile }) {
           {destType==="educator" && (
             <div className="form-group">
               <label className="form-label">Seleziona giardiniere</label>
-              <select value={selectedPlayers[0]||""} onChange={e=>setSelectedPlayers([e.target.value])}>
-                <option value="">Scegli un giardiniere…</option>
-                {educators.map(e=><option key={e.id} value={e.id}>{e.display_name}</option>)}
-              </select>
+              {educators.length === 0 ? (
+                <div style={{fontSize:13,color:"var(--text3)",padding:"10px 0"}}>⏳ Caricamento giardinieri…</div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {educators.map(e=>(
+                    <div key={e.id} onClick={()=>setSelectedPlayers([e.id])}
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
+                        borderRadius:10,cursor:"pointer",border:`1.5px solid ${selectedPlayers[0]===e.id?"var(--neon-blue)":"var(--border)"}`,
+                        background:selectedPlayers[0]===e.id?"rgba(0,212,255,.08)":"rgba(255,255,255,.03)",
+                        transition:"all .15s"}}>
+                      <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:"1.5px solid var(--border2)",flexShrink:0}}>
+                        {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/> : <span style={{fontSize:18,lineHeight:"32px",display:"block",textAlign:"center"}}>🌱</span>}
+                      </div>
+                      <span style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{e.display_name}</span>
+                      {selectedPlayers[0]===e.id && <span style={{marginLeft:"auto",color:"var(--neon-blue)",fontSize:16}}>✓</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {destType==="player" && (
@@ -6544,7 +6562,6 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
-          {tab === "bacheca"      && <BachecaView profile={profile}/>}
           {tab === "bacheca"      && <BachecaView profile={profile}/>}
           {tab === "annunci"      && <AnnouncementsView profile={profile}/>}
           {tab === "social_edu"   && <EducatorSocialView profile={profile}/>}
