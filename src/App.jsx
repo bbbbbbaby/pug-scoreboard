@@ -36,14 +36,17 @@ async function registerPush(playerId) {
 
 async function sendPush(playerId, title, body) {
   try {
-    const { data: sub } = await sb.from('push_subscriptions')
-      .select('subscription').eq('player_id', playerId).single();
-    if (!sub?.subscription) return;
-    await fetch(PUSH_EDGE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PUSH_ANON_KEY}` },
-      body: JSON.stringify({ subscription: sub.subscription, title, body }),
-    });
+    // Cerca subscription su player_id (compatibile con educatori e giocatori)
+    const { data: subs } = await sb.from('push_subscriptions')
+      .select('subscription').eq('player_id', playerId).limit(5);
+    if (!subs?.length) return;
+    await Promise.all(subs.map(sub =>
+      fetch(PUSH_EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PUSH_ANON_KEY}` },
+        body: JSON.stringify({ subscription: sub.subscription, title, body }),
+      }).catch(()=>{})
+    ));
   } catch(e) { }
 }
 
@@ -4579,6 +4582,80 @@ function SocialTab({ players, myId, myProfile }) {
   );
 }
 
+
+// ─── MSG REACTIONS ───────────────────────────────────────
+function MsgReactions({ msgId, myId }) {
+  const EMOJIS = ["❤️","😂","😮","👏","🔥"];
+  const [counts, setCounts] = useState({});
+  const [mine, setMine] = useState(null);
+
+  useEffect(() => {
+    sb.from("reactions")
+      .select("type").eq("badge_id", null).eq("target_player_id", msgId)
+      .then(({data}) => {
+        const c = {};
+        (data||[]).forEach(r => { c[r.type]=(c[r.type]||0)+1; });
+        setCounts(c);
+      }).catch(()=>{});
+    sb.from("reactions").select("type")
+      .eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null)
+      .single().then(({data})=>{ if(data) setMine(data.type); }).catch(()=>{});
+  }, [msgId, myId]);
+
+  async function react(emoji) {
+    if (mine === emoji) {
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null);
+      setCounts(p=>({...p,[emoji]:Math.max(0,(p[emoji]||1)-1)}));
+      setMine(null);
+    } else {
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null);
+      await sb.from("reactions").insert({player_id:myId,target_player_id:msgId,badge_id:null,type:emoji});
+      if(mine) setCounts(p=>({...p,[mine]:Math.max(0,(p[mine]||1)-1)}));
+      setCounts(p=>({...p,[emoji]:(p[emoji]||0)+1}));
+      setMine(emoji);
+      if(navigator.vibrate) navigator.vibrate(20);
+    }
+  }
+
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  if (total === 0 && !mine) {
+    return (
+      <div style={{display:"flex",gap:4,marginTop:6,opacity:0.4}}>
+        {EMOJIS.map(e=>(
+          <button key={e} onClick={()=>react(e)}
+            style={{background:"none",border:"none",fontSize:14,cursor:"pointer",padding:"2px 4px",borderRadius:6}}>
+            {e}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
+      {EMOJIS.filter(e=>counts[e]||mine===e).map(e=>(
+        <button key={e} onClick={()=>react(e)}
+          style={{
+            background:mine===e?"rgba(0,212,255,.15)":"rgba(255,255,255,.06)",
+            border:`1px solid ${mine===e?"var(--neon-blue)":"rgba(255,255,255,.1)"}`,
+            borderRadius:99,fontSize:12,cursor:"pointer",
+            padding:"3px 8px",display:"flex",alignItems:"center",gap:3,
+            color:"var(--text2)",fontWeight:mine===e?700:400,
+          }}>
+          {e}{counts[e]>0&&<span style={{fontSize:10}}>{counts[e]}</span>}
+        </button>
+      ))}
+      {EMOJIS.filter(e=>!counts[e]&&mine!==e).map(e=>(
+        <button key={e} onClick={()=>react(e)}
+          style={{background:"none",border:"none",fontSize:14,cursor:"pointer",
+            padding:"2px 4px",borderRadius:6,opacity:0.4}}>
+          {e}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── PROFILE REACTIONS ───────────────────────────────────
 function ProfileReactions({ targetId, myId }) {
   const REACTS = ["❤️","🔥","👏","🤩","💪"];
@@ -5227,7 +5304,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const lv = getLevel(fullProfile?.xp || 0);
   const unread = notifications.filter(n => !n.read_at).length;
-  const unreadMsgs = messages.filter(m => !m.read_at).length;
+  const unreadMsgs = messages.filter(m => !m.read_at && !m.cancelled_at && (!m.expires_at || new Date(m.expires_at) > new Date())).length;
 
   // Leaderboard ranked
   let lbRanked = [...players];
@@ -5697,6 +5774,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                       {m.media_data && !m.media_data.startsWith("sticker:") && (
                         <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt="" loading="lazy"/>
                       )}
+                      <MsgReactions msgId={m.id} myId={profile.id}/>
                       <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
                     </div>
                   ))}
@@ -6940,23 +7018,15 @@ export default function App() {
   }, []);
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
-  // Background reload: se in background >2min, ricarica la pagina
+  // Background: soft ping quando torna in primo piano (no reload)
   useEffect(() => {
     let hiddenAt = 0;
     function onVis() {
-      if (document.visibilityState === 'hidden') {
-        hiddenAt = Date.now();
-      } else if (document.visibilityState === 'visible' && hiddenAt > 0) {
-        const away = Date.now() - hiddenAt;
-        if (away > 120000) {
-          // >2 minuti in background → reload completo (soluzione più affidabile)
-          window.location.reload();
-        } else if (away > 20000) {
-          // 20s-2min → soft reload senza perdere sessione
-          sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
-        }
-        hiddenAt = 0;
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (hiddenAt > 0 && Date.now() - hiddenAt > 30000) {
+        sb.from("profiles").select("id").limit(1).then(()=>{}).catch(()=>{});
       }
+      hiddenAt = 0;
     }
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
