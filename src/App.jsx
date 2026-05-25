@@ -14,53 +14,35 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function registerPush(playerId) {
-  const steps = [];
   try {
-    steps.push('start');
-    if (!('serviceWorker' in navigator)) { addToast('⚠️ SW non supportato','error'); return; }
-    if (!('PushManager' in window)) { addToast('⚠️ Push non supportato','error'); return; }
-    steps.push('apis ok');
-
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     let reg;
-    try { reg = await navigator.serviceWorker.register('/sw.js'); steps.push('sw registered'); }
-    catch(e) { addToast('⚠️ SW reg: '+e.message,'error'); return; }
-
-    let swReady;
-    try {
-      swReady = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise((_,r) => setTimeout(() => r(new Error('SW timeout 8s')), 8000))
-      ]);
-      steps.push('sw ready');
-    } catch(e) { addToast('⚠️ SW ready: '+e.message,'error'); return; }
-
-    const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
-    if (perm !== 'granted') { addToast('⚠️ Permesso negato','error'); return; }
-    steps.push('perm ok');
-
-    const pushManager = swReady.pushManager || reg.pushManager;
-    if (!pushManager) { addToast('⚠️ PushManager null','error'); return; }
-    steps.push('pushManager ok');
-
-    let sub = await pushManager.getSubscription();
+    try { reg = await navigator.serviceWorker.register('/sw.js'); }
+    catch(_) { return; }
+    const swReady = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 8000))
+    ]).catch(() => null);
+    if (!swReady) return;
+    const perm = Notification.permission === 'granted'
+      ? 'granted'
+      : await Notification.requestPermission();
+    if (perm !== 'granted') return;
+    const pm = swReady.pushManager || reg.pushManager;
+    if (!pm) return;
+    let sub = await pm.getSubscription();
     if (!sub) {
-      sub = await pushManager.subscribe({
+      sub = await pm.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
     }
-    steps.push('subscribed');
-
     const { error } = await sb.from('push_subscriptions').upsert(
       { player_id: playerId, subscription: JSON.parse(JSON.stringify(sub)) },
       { onConflict: 'player_id' }
     );
-    if (error) { addToast('⚠️ DB: '+error.message,'error'); return; }
-    steps.push('saved to DB ✅');
-    addToast('✅ Push registrate!','ok');
-  } catch(e) {
-    addToast('⚠️ Push err: '+e.message,'error');
-  }
+    if (!error) addToast('🔔 Notifiche attivate!', 'ok');
+  } catch(_) {}
 }
 
 async function sendPush(playerId, title, body) {
@@ -4980,22 +4962,29 @@ function NotificationToggle({ playerId }) {
   }, []);
 
   async function requestPermission() {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
-      setStatus("unsupported"); return;
-    }
     setLoading(true);
+    // Diagnostica completa
+    const isStandalone = window.navigator.standalone === true
+      || window.matchMedia('(display-mode: standalone)').matches;
+    const hasSW = 'serviceWorker' in navigator;
+    const hasPush = 'PushManager' in window;
+    const hasNotif = 'Notification' in window;
+    if (!hasSW || !hasPush || !hasNotif) {
+      const missing = [!hasSW&&'SW',!hasPush&&'Push',!hasNotif&&'Notif'].filter(Boolean).join(',');
+      addToast(`⚠️ Mancante: ${missing} — standalone:${isStandalone}`, 'error');
+      setStatus("unsupported"); setLoading(false); return;
+    }
     try {
       const perm = await Notification.requestPermission();
       setStatus(perm);
       if (perm === "granted") {
         await registerPush(playerId);
-        addToast("🔔 Notifiche attivate!", "ok");
         setStatus("granted");
       } else {
-        addToast("⚠️ Permesso notifiche non concesso", "error");
+        addToast("⚠️ Permesso negato", "error");
       }
     } catch(e) {
-      setStatus("denied");
+      addToast("⚠️ Errore: "+e.message, "error");
     }
     setLoading(false);
   }
