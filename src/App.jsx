@@ -6581,7 +6581,10 @@ function EducatorShell({ profile, onLogout }) {
               <div className="theme-toggle-knob" style={{background:theme==="light"?"#c08800":"rgba(255,255,255,.6)",transform:theme==="light"?"translateX(20px)":"translateX(0)"}}/>
             </button>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{width:"100%",color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
+          <div style={{display:"flex",gap:6}}>
+            <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
+            <button className="btn btn-ghost btn-sm" style={{color:"rgba(255,204,0,.7)",border:"1px solid rgba(255,204,0,.2)",padding:"6px 10px"}} onClick={()=>setShowChangePwd(true)} title="Cambia password">🔑</button>
+          </div>
         </div>
       </div>
 
@@ -6775,7 +6778,11 @@ function EducatorShell({ profile, onLogout }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Il tuo avatar</div>
             <AvatarUpload playerId={profile.id} currentUrl={avatarUrl} onUploaded={url => setAvatarUrl(url)} />
-            <button className="btn btn-ghost" style={{ width: "100%", marginTop: 8 }} onClick={() => setShowAvatarModal(false)}>Chiudi</button>
+            <button onClick={()=>setResetTarget(e)}
+                style={{padding:"5px 10px",background:"rgba(255,204,0,.12)",border:"1px solid rgba(255,204,0,.3)",borderRadius:8,color:"#ffcc00",cursor:"pointer",fontSize:12,fontWeight:700,marginRight:4}}>
+                🔑 PWD
+              </button>
+              <button className="btn btn-ghost" style={{ width: "100%", marginTop: 8 }} onClick={() => setShowAvatarModal(false)}>Chiudi</button>
           </div>
         </div>
       )}
