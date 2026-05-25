@@ -4973,7 +4973,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [monthTarget, setMonthTarget] = useState(null);
   const [actBookingCounts, setActBookingCounts] = useState({});
   const [loading, setLoading] = useState(true);
-  const loadingRef = useRef(false);nst [visConfig, setVisConfig] = useState(() => {
+  const loadingRef = useRef(false);
+  const [visConfig, setVisConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
   });
   const [visReady, setVisReady] = useState(false);
