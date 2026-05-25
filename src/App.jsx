@@ -1875,21 +1875,24 @@ function QRCelebration({ xpGained, playerName, onDone }) {
 
 // ─── CHANGE PASSWORD MODAL ───────────────────────────────
 function ChangePwdModal({ onClose }) {
-  const [newPwd, setNewPwd] = useState("");
+  const [newPwd, setNewPwd]   = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-  const [ok, setOk] = useState(false);
+  const [err, setErr]         = useState("");
+  const [ok, setOk]           = useState(false);
+
   async function save() {
     setErr("");
-    if (newPwd.length < 8) { setErr("Minimo 8 caratteri."); return; }
-    if (newPwd !== confirm) { setErr("Le password non coincidono."); return; }
+    if (newPwd.length < 8) { setErr("La password deve avere almeno 8 caratteri."); return; }
+    if (newPwd !== confirm)  { setErr("Le password non coincidono."); return; }
     setLoading(true);
     const { error } = await sb.auth.updateUser({ password: newPwd });
     setLoading(false);
     if (error) { setErr(error.message); return; }
-    setOk(true); setTimeout(onClose, 2000);
+    setOk(true);
+    setTimeout(onClose, 2000);
   }
+
   return (
     <div>
       <div className="modal-title">🔑 Cambia Password</div>
@@ -1902,16 +1905,18 @@ function ChangePwdModal({ onClose }) {
         <>
           <div className="form-group">
             <label className="form-label">Nuova password</label>
-            <input type="password" className="form-input" value={newPwd} onChange={e=>setNewPwd(e.target.value)} placeholder="Minimo 8 caratteri" autoFocus/>
+            <input type="password" className="form-input" value={newPwd}
+              onChange={e=>setNewPwd(e.target.value)} placeholder="Minimo 8 caratteri" autoFocus/>
           </div>
           <div className="form-group">
             <label className="form-label">Conferma password</label>
-            <input type="password" className="form-input" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Ripeti la password"/>
+            <input type="password" className="form-input" value={confirm}
+              onChange={e=>setConfirm(e.target.value)} placeholder="Ripeti la nuova password"/>
           </div>
           {err && <div style={{color:"var(--danger)",fontSize:13,marginBottom:12}}>{err}</div>}
           <div style={{display:"flex",gap:8}}>
             <button className="btn btn-primary" style={{flex:1}} onClick={save} disabled={loading||!newPwd||!confirm}>
-              {loading ? "⏳ Salvataggio…" : "Salva password"}
+              {loading?"⏳ Salvataggio…":"Salva password"}
             </button>
             <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
           </div>
@@ -1920,6 +1925,7 @@ function ChangePwdModal({ onClose }) {
     </div>
   );
 }
+
 
 // ─── LOGIN ────────────────────────────────────────────────
 // Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
@@ -5996,37 +6002,44 @@ function AdminResetPwdForm({ educator, onClose }) {
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
   const [err, setErr] = useState("");
+
   async function reset() {
     if (newPwd.length < 8) { setErr("Minimo 8 caratteri"); return; }
     setLoading(true); setErr("");
-    const res = await fetch("https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/reset-password", {
-      method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI"},
-      body:JSON.stringify({educator_id:educator.id,new_password:newPwd}),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (data.error) { setErr(data.error); return; }
-    setOk(true); setTimeout(onClose, 2000);
+    try {
+      const res = await fetch("https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/delete-educator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI` },
+        body: JSON.stringify({ action: "reset_password", educator_id: educator.id, new_password: newPwd }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (data.error) { setErr(data.error); return; }
+      setOk(true);
+      setTimeout(onClose, 2000);
+    } catch(e) { setErr(e.message); setLoading(false); }
   }
+
   return (
     <div>
-      <div className="modal-title">🔑 Reset password — {educator.display_name}</div>
+      <div className="modal-title">🔑 Reset password</div>
+      <div style={{fontSize:13,color:"var(--text3)",marginBottom:14}}>Giardiniere: <strong style={{color:"var(--text)"}}>{educator.display_name}</strong></div>
       {ok ? (
         <div style={{textAlign:"center",padding:"20px 0"}}>
           <div style={{fontSize:40,marginBottom:8}}>✅</div>
-          <div style={{fontWeight:700,color:"var(--neon-green)"}}>Password resettata!</div>
+          <div style={{fontWeight:700,color:"var(--neon-green)"}}>Password aggiornata!</div>
         </div>
       ) : (
         <>
           <div className="form-group">
-            <label className="form-label">Nuova password per {educator.display_name}</label>
-            <input type="password" className="form-input" value={newPwd} onChange={e=>setNewPwd(e.target.value)} placeholder="Minimo 8 caratteri" autoFocus/>
+            <label className="form-label">Nuova password</label>
+            <input type="password" className="form-input" value={newPwd}
+              onChange={e=>setNewPwd(e.target.value)} placeholder="Minimo 8 caratteri" autoFocus/>
           </div>
           {err && <div style={{color:"var(--danger)",fontSize:13,marginBottom:12}}>{err}</div>}
           <div style={{display:"flex",gap:8}}>
             <button className="btn btn-primary" style={{flex:1}} onClick={reset} disabled={loading||newPwd.length<8}>
-              {loading?"⏳ Reset…":"Cambia password"}
+              {loading?"⏳ Aggiornamento…":"Salva nuova password"}
             </button>
             <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
           </div>
@@ -6035,6 +6048,7 @@ function AdminResetPwdForm({ educator, onClose }) {
     </div>
   );
 }
+
 
 // ─── ADMIN VIEW ──────────────────────────────────────────
 
