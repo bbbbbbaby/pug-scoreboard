@@ -3661,7 +3661,7 @@ function MessagesView({ profile }) {
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
       sb.from("activities").select("id,name").eq("is_active",true).order("name"),
-      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at,profiles!sender_id(display_name,avatar_url)").order("created_at",{ascending:false}).gt("expires_at", new Date().toISOString()).limit(100),
+      sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at,profiles!sender_id(display_name,avatar_url)").or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id},is_broadcast.eq.true,squad_id.not.is.null`).order("created_at",{ascending:false}).gt("expires_at", new Date().toISOString()).limit(100),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
   }
