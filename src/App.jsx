@@ -1931,147 +1931,181 @@ function ChangePwdModal({ onClose }) {
 // Due modalità: educator (email+password via Supabase Auth) e player (nickname+PIN diretto su profiles)
 
 function Login({ onLogin }) {
-  const [mode, setMode] = useState("player"); // "player" | "educator"
-
-  // Player login
+  const [mode, setMode] = useState("player");
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 250);
-  const [suggestions, setSuggestions] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [players, setPlayers] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [pin, setPin] = useState("");
-  const [pinErr, setPinErr] = useState("");
   const [loadingPin, setLoadingPin] = useState(false);
-
-  // Educator login
+  const [err, setErr] = useState("");
   const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [eduErr, setEduErr] = useState("");
+  const [password, setPassword] = useState("");
   const [loadingEdu, setLoadingEdu] = useState(false);
+  const [showEduLogin, setShowEduLogin] = useState(false);
+  const [leafTaps, setLeafTaps] = useState(0);
+  const debouncedSearch = useDebounce(search, 200);
 
-  // Cerca nickname mentre digiti
   useEffect(() => {
-    if (search.length < 2) { setSuggestions([]); return; }
-    const t = setTimeout(async () => {
-      const { data } = await sb.from("profiles").select("id, display_name, avatar_url, xp, squads(name)").eq("role", "player").ilike("display_name", `%${search}%`).limit(8);
-      setSuggestions(data || []);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search]);
+    sb.from("profiles")
+      .select("id,display_name,avatar_url,pin,squad_id,squads(name)")
+      .eq("role","player").neq("display_name","AppConfig")
+      .order("display_name").limit(300)
+      .then(({ data }) => setPlayers(data || []));
+  }, []);
+
+  // Hidden educator access: tap 🌿 3 times
+  function handleLeafTap() {
+    const next = leafTaps + 1;
+    setLeafTaps(next);
+    if (next >= 3) { setShowEduLogin(true); setLeafTaps(0); }
+    else setTimeout(() => setLeafTaps(0), 2000);
+  }
+
+  const filtered = players.filter(p =>
+    !debouncedSearch || p.display_name.toLowerCase().includes(debouncedSearch.toLowerCase())
+  );
 
   async function loginPlayer() {
-    if (!selectedPlayer || pin.length < 4) return;
-    setLoadingPin(true); setPinErr("");
-    const { data } = await sb.from("profiles").select("*, squads(name)").eq("id", selectedPlayer.id).single();
-    if (!data) { setPinErr("Giocatore non trovato."); setLoadingPin(false); return; }
-    const correctPin = data.pin || "1234";
-    if (pin !== correctPin) { setPinErr("PIN non corretto!"); setLoadingPin(false); return; }
-    // Salva sessione player in localStorage
+    if (!selected || pin.length !== 4) return;
+    setLoadingPin(true); setErr("");
+    const { data, error } = await sb.from("profiles")
+      .select("*, squads(name)").eq("id", selected.id).single();
+    if (error || !data) { setErr("Giocatore non trovato."); setLoadingPin(false); return; }
+    if (data.pin !== pin) { setErr("PIN errato. Riprova."); setPin(""); setLoadingPin(false); return; }
     localStorage.setItem("pug_player", JSON.stringify({ ...data, _playerSession: true }));
     onLogin({ ...data, _playerSession: true });
-    // Registra push in background (silenzioso)
     setTimeout(() => registerPush(data.id), 2000);
     setLoadingPin(false);
   }
 
   async function loginEducator() {
-    setLoadingEdu(true); setEduErr("");
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) { setEduErr(error.message); setLoadingEdu(false); return; }
+    if (!email || !password) return;
+    setLoadingEdu(true); setErr("");
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { setErr(error.message); setLoadingEdu(false); return; }
     const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
-    // Registra push educator in background (silenzioso)
     if (profile?.id) setTimeout(() => registerPush(profile.id), 2000);
     setLoadingEdu(false);
   }
 
-  const lv = selectedPlayer ? getLevel(selectedPlayer.xp || 0) : null;
-
   return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <div className="login-title">Per·You<br/>Garden</div>
-        <p className="login-sub">Accedi al tuo account</p>
+    <div className="login-wrap" style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px 16px",position:"relative"}}>
+      <style>{css}</style>
 
-        <div className="login-tabs">
-          <button className={`login-tab ${mode === "player" ? "active" : ""}`} onClick={() => setMode("player")}>🌿 Sono un giocatore</button>
-          <button className={`login-tab ${mode === "educator" ? "active" : ""}`} onClick={() => setMode("educator")}>🌱 Giardiniere</button>
+      {/* Logo */}
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:"clamp(48px,12vw,80px)",lineHeight:.9,textTransform:"uppercase",letterSpacing:"-.02em",background:"linear-gradient(135deg,#00d4ff 0%,#fff 40%,#ff2d78 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
+          PER·YOU<br/>GARDEN
         </div>
-
-        {mode === "player" && (
-          <>
-            {!selectedPlayer ? (
-              <>
-                <div className="form-group">
-                  <label className="form-label">Cerca il tuo nickname</label>
-                  <input className="form-input" value={search} onChange={e => { setSearch(e.target.value); setSelectedPlayer(null); }} placeholder="Scrivi il tuo nome…" autoComplete="off" />
-                </div>
-                {suggestions.length > 0 && (
-                  <div className="nickname-list">
-                    {suggestions.map(p => {
-                      const lv = getLevel(p.xp || 0);
-                      return (
-                        <div key={p.id} className="nickname-item" onClick={() => { setSelectedPlayer(p); setSearch(""); setSuggestions([]); }}>
-                          <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", border: "2px solid var(--border2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <Avatar url={p.avatar_url} emoji={lv.emoji} size={32} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 14, fontWeight: 700 }}>{p.display_name}</div>
-                            {p.squads?.name && (() => {
-                              try {
-                                const v = JSON.parse(localStorage.getItem("pug_visibility")||"{}");
-                                return v.squadre !== false ? <SquadPill name={p.squads.name}/> : null;
-                              } catch(_) { return null; }
-                            })()}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {search.length >= 2 && suggestions.length === 0 && (
-                  <div style={{ fontSize: 13, color: "var(--text3)", textAlign: "center", padding: "12px 0" }}>Nessun giocatore trovato</div>
-                )}
-              </>
-            ) : (
-              <>
-                {/* Giocatore selezionato — inserisci PIN */}
-                <div style={{ textAlign: "center", marginBottom: 20 }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", border: "3px solid var(--azzurro)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
-                    <Avatar url={selectedPlayer.avatar_url} emoji={lv?.emoji} size={64} />
-                  </div>
-                  <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{selectedPlayer.display_name}</div>
-                  {selectedPlayer.squads?.name && <SquadPill name={selectedPlayer.squads.name} />}
-                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 8 }} onClick={() => { setSelectedPlayer(null); setPin(""); setPinErr(""); }}>← Cambia</button>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">PIN (4 cifre)</label>
-                  <input className="form-input pin-input" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={pin} onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setPinErr(""); }} onKeyDown={e => e.key === "Enter" && loginPlayer()} placeholder="••••" autoFocus />
-                </div>
-                {pinErr && <p className="err-msg">{pinErr}</p>}
-                <button className="btn btn-primary" onClick={loginPlayer} disabled={loadingPin || pin.length < 4}>{loadingPin ? "Accesso…" : "Entra"}</button>
-              </>
-            )}
-          </>
-        )}
-
-        {mode === "educator" && (
-          <>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && loginEducator()} placeholder="nome@email.com" autoComplete="email" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input className="form-input" type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && loginEducator()} placeholder="••••••••" autoComplete="current-password" />
-            </div>
-            {eduErr && <p className="err-msg">{eduErr}</p>}
-            <button className="btn btn-primary" onClick={loginEducator} disabled={loadingEdu}>{loadingEdu ? "Accesso…" : "Accedi"}</button>
-          </>
-        )}
+        <div className="login-sub" style={{marginTop:8,fontSize:12,letterSpacing:".2em",textTransform:"uppercase"}}>
+          Grande Gioco del Garden
+        </div>
       </div>
+
+      {/* Player login card */}
+      {!showEduLogin ? (
+        <div className="login-card" style={{width:"100%",maxWidth:420,borderRadius:20,padding:"24px 20px",position:"relative"}}>
+          {selected ? (
+            /* PIN entry */
+            <div style={{textAlign:"center"}}>
+              <button onClick={()=>{setSelected(null);setPin("");setErr("");}} style={{position:"absolute",top:16,left:16,background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:20}}>←</button>
+              <div style={{width:72,height:72,borderRadius:"50%",overflow:"hidden",border:"3px solid var(--neon-blue)",margin:"0 auto 12px",boxShadow:"var(--glow-blue)"}}>
+                <Avatar url={selected.avatar_url} emoji="🌱" size={72}/>
+              </div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:24,fontWeight:900,color:"var(--text)",marginBottom:4}}>{selected.display_name}</div>
+              {(() => {
+                try { const v = JSON.parse(localStorage.getItem("pug_visibility")||"{}"); return v.squadre !== false && selected.squads?.name ? <SquadPill name={selected.squads.name}/> : null; } catch(_) { return null; }
+              })()}
+              <div style={{marginTop:20,marginBottom:6}}>
+                <label className="form-label" style={{textAlign:"left",display:"block"}}>PIN (4 cifre)</label>
+                <input className="form-input pin-input" type="password" inputMode="numeric" maxLength={4}
+                  value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,"").slice(0,4))}
+                  onKeyDown={e=>e.key==="Enter"&&loginPlayer()}
+                  placeholder="• • • •" autoFocus
+                  style={{textAlign:"center",fontSize:28,letterSpacing:8}}/>
+              </div>
+              {err && <div className="err-msg" style={{marginBottom:8}}>{err}</div>}
+              <button className="btn btn-primary" style={{width:"100%",padding:"14px",fontSize:16,marginTop:4}}
+                onClick={loginPlayer} disabled={loadingPin||pin.length!==4}>
+                {loadingPin?"⏳ Accesso…":"ENTRA"}
+              </button>
+            </div>
+          ) : (
+            /* Player selector */
+            <div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:12,letterSpacing:".05em"}}>
+                Chi sei?
+              </div>
+              <input className="search-inp" placeholder="🔍 Cerca il tuo nome…" value={search}
+                onChange={e=>setSearch(e.target.value)} style={{marginBottom:10}}/>
+              <div style={{maxHeight:300,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
+                {filtered.length===0
+                  ? <div className="empty" style={{padding:16,textAlign:"center"}}>Nessun giocatore trovato</div>
+                  : filtered.map(p => (
+                    <div key={p.id} onClick={()=>{setSelected(p);setPin("");setErr("");}}
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
+                        background:"rgba(255,255,255,.04)",border:"1px solid var(--border)",
+                        borderRadius:12,cursor:"pointer",transition:"all .15s"}}
+                      onMouseOver={e=>{e.currentTarget.style.background="rgba(0,212,255,.08)";e.currentTarget.style.borderColor="rgba(0,212,255,.3)";}}
+                      onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.04)";e.currentTarget.style.borderColor="var(--border)";}}>
+                      <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",border:"1.5px solid var(--border2)",flexShrink:0}}>
+                        <Avatar url={p.avatar_url} emoji="🌱" size={36}/>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:14,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                        {(() => { try { const v=JSON.parse(localStorage.getItem("pug_visibility")||"{}"); return v.squadre!==false&&p.squads?.name?<SquadPill name={p.squads.name}/>:null; } catch(_){return null;} })()}
+                      </div>
+                      <span style={{color:"var(--text3)",fontSize:16}}>→</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Educator login */
+        <div className="login-card" style={{width:"100%",maxWidth:420,borderRadius:20,padding:"24px 20px"}}>
+          <button onClick={()=>setShowEduLogin(false)} style={{position:"absolute",top:16,left:16,background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:20}}>←</button>
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16,textAlign:"center"}}>
+            🌱 Accesso Giardiniere
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@esempio.it" autoFocus/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" value={password} onChange={e=>setPassword(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&loginEducator()} placeholder="••••••••"/>
+          </div>
+          {err && <div className="err-msg" style={{marginBottom:8}}>{err}</div>}
+          <button className="btn btn-primary" style={{width:"100%",padding:"14px",fontSize:16}}
+            onClick={loginEducator} disabled={loadingEdu||!email||!password}>
+            {loadingEdu?"⏳ Accesso…":"ENTRA"}
+          </button>
+        </div>
+      )}
+
+      {/* Hidden educator trigger — piccola foglia in basso a destra */}
+      {!showEduLogin && (
+        <button onClick={handleLeafTap} style={{
+          position:"fixed",bottom:24,right:20,
+          background:"none",border:"none",cursor:"pointer",
+          fontSize:18,opacity:0.18,
+          transition:"opacity .2s",
+          WebkitTapHighlightColor:"transparent",
+          userSelect:"none",
+        }}
+        onMouseOver={e=>e.currentTarget.style.opacity="0.4"}
+        onMouseOut={e=>e.currentTarget.style.opacity="0.18"}
+        title="">🌿</button>
+      )}
     </div>
   );
 }
+
 
 // ─── EDUCATOR VIEWS ───────────────────────────────────────
 
