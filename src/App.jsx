@@ -2114,6 +2114,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [squadFilter, setSquadFilter] = useState("all");
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
   const [batchXp, setBatchXp] = useState(10);
   const [batchCoin, setBatchCoin] = useState(5);
   const [msg, setMsg] = useState("");
@@ -4973,7 +4974,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [monthTarget, setMonthTarget] = useState(null);
   const [actBookingCounts, setActBookingCounts] = useState({});
   const [loading, setLoading] = useState(true);
-  const [visConfig, setVisConfig] = useState(() => {
+  const loadingRef = useRef(false);nst [visConfig, setVisConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
   });
   const [visReady, setVisReady] = useState(false);
