@@ -62,8 +62,35 @@
 
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        window.addEventListener('load', async () => {
+          try {
+            const reg = await navigator.serviceWorker.register('/sw.js');
+
+            // Controlla aggiornamenti ogni 5 minuti
+            setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
+
+            // Nuovo SW trovato mentre la pagina è aperta
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // Nuova versione pronta — notifica l'app
+                  window.dispatchEvent(new CustomEvent('sw-update-ready', {
+                    detail: { worker: newWorker }
+                  }));
+                }
+              });
+            });
+
+            // SW appena attivato (dopo skipWaiting) — notifica l'app
+            navigator.serviceWorker.addEventListener('message', e => {
+              if (e.data?.type === 'SW_UPDATED') {
+                window.dispatchEvent(new CustomEvent('sw-activated'));
+              }
+            });
+
+          } catch(_) {}
         });
       }
     </script>
