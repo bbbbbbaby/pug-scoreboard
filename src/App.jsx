@@ -1822,6 +1822,68 @@ function useDebounce(value, delay=300) {
   return debounced;
 }
 
+// ─── INSTALL PWA (Android) ──────────────────────────────
+let _deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredPrompt = e;
+  // Notifica tutti i componenti in ascolto
+  window.dispatchEvent(new Event('pwa-installable'));
+});
+window.addEventListener('appinstalled', () => {
+  _deferredPrompt = null;
+  window.dispatchEvent(new Event('pwa-installed'));
+});
+
+function InstallPWAButton() {
+  const [canInstall, setCanInstall] = useState(!!_deferredPrompt);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    function onInstallable() { setCanInstall(true); }
+    function onInstalled() { setCanInstall(false); setInstalled(true); }
+    window.addEventListener('pwa-installable', onInstallable);
+    window.addEventListener('pwa-installed', onInstalled);
+    return () => {
+      window.removeEventListener('pwa-installable', onInstallable);
+      window.removeEventListener('pwa-installed', onInstalled);
+    };
+  }, []);
+
+  if (!canInstall || installed) return null;
+
+  async function install() {
+    if (!_deferredPrompt) return;
+    _deferredPrompt.prompt();
+    const { outcome } = await _deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      _deferredPrompt = null;
+      setCanInstall(false);
+      addToast('✅ App installata!', 'ok');
+    }
+  }
+
+  return (
+    <div onClick={install} style={{
+      display:'flex', alignItems:'center', gap:10,
+      background:'rgba(0,212,255,.08)',
+      border:'1px solid rgba(0,212,255,.25)',
+      borderRadius:14, padding:'12px 14px', marginBottom:10,
+      cursor:'pointer', transition:'all .15s',
+    }}
+    onMouseOver={e=>e.currentTarget.style.background='rgba(0,212,255,.15)'}
+    onMouseOut={e=>e.currentTarget.style.background='rgba(0,212,255,.08)'}
+    >
+      <span style={{fontSize:22,flexShrink:0}}>📲</span>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13,fontWeight:700,color:'var(--neon-blue)'}}>Installa app</div>
+        <div style={{fontSize:11,color:'var(--text3)',marginTop:1}}>Aggiunge PUG alla schermata Home</div>
+      </div>
+      <span style={{fontSize:11,color:'var(--neon-blue)',fontWeight:700,flexShrink:0}}>Installa →</span>
+    </div>
+  );
+}
+
 // ─── PIXEL SOUNDS ────────────────────────────────────────
 let soundEnabled = localStorage.getItem("pug_sounds") !== "false";
 
@@ -1959,9 +2021,13 @@ function Login({ onLogin }) {
   const [leafTaps, setLeafTaps] = useState(0);
   const debouncedSearch = useDebounce(search, 200);
 
+  const [showSquadLogin, setShowSquadLogin] = useState(true);
   useEffect(() => {
+    // Carica visibilità per squadre (anche senza login)
+    sb.from("profiles").select("app_config").eq("id","00000000-0000-0000-0000-000000000099").single()
+      .then(({data})=>{ if(data?.app_config?.squadre===false) setShowSquadLogin(false); }).catch(()=>{});
     sb.from("profiles")
-      .select("id,display_name,avatar_url,pin,squad_id,squads(name)")
+      .select("id,display_name,first_name,avatar_url,pin,squad_id,squads(name)")
       .eq("role","player").neq("display_name","AppConfig")
       .order("display_name").limit(300)
       .then(({ data }) => setPlayers(data || []));
@@ -1975,9 +2041,13 @@ function Login({ onLogin }) {
     else setTimeout(() => setLeafTaps(0), 2000);
   }
 
-  const filtered = players.filter(p =>
-    !debouncedSearch || p.display_name.toLowerCase().includes(debouncedSearch.toLowerCase())
-  );
+  // Mostra giocatori solo se l'utente ha digitato almeno 2 lettere
+  const filtered = debouncedSearch.length >= 2
+    ? players.filter(p =>
+        p.display_name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (p.first_name||"").toLowerCase().includes(debouncedSearch.toLowerCase())
+      )
+    : [];
 
   async function loginPlayer() {
     if (!selected || pin.length !== 4) return;
@@ -2048,11 +2118,11 @@ function Login({ onLogin }) {
               <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:12,letterSpacing:".05em"}}>
                 Chi sei?
               </div>
-              <input className="search-inp" placeholder="🔍 Cerca il tuo nome…" value={search}
+              <input className="search-inp" placeholder="🔍 Scrivi il tuo nome…" value={search}
                 onChange={e=>setSearch(e.target.value)} style={{marginBottom:10}}/>
               <div style={{maxHeight:300,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
                 {filtered.length===0
-                  ? <div className="empty" style={{padding:16,textAlign:"center"}}>Nessun giocatore trovato</div>
+                  ? <div className="empty" style={{padding:16,textAlign:"center"}}>{debouncedSearch.length < 2 ? "✏️ Digita il tuo nome per trovare il profilo" : "Nessun giocatore trovato"}</div>
                   : filtered.map(p => (
                     <div key={p.id} onClick={()=>{setSelected(p);setPin("");setErr("");}}
                       style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
@@ -2065,7 +2135,8 @@ function Login({ onLogin }) {
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:14,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                        {p.squads?.name && <SquadPill name={p.squads.name}/>}
+                        {p.first_name && <div style={{fontSize:11,color:"var(--text3)",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.first_name}</div>}
+                        {showSquadLogin && p.squads?.name && <SquadPill name={p.squads.name}/>}
                       </div>
                       <span style={{color:"var(--text3)",fontSize:16}}>→</span>
                     </div>
@@ -2102,7 +2173,7 @@ function Login({ onLogin }) {
       {/* Hidden educator trigger — piccola foglia in basso a destra */}
       {!showEduLogin && (
         <button onClick={handleLeafTap} style={{
-          position:"fixed",bottom:24,right:20,
+          position:"fixed",bottom:110,right:20,
           background:"none",border:"none",cursor:"pointer",
           fontSize:18,opacity:0.18,
           transition:"opacity .2s",
@@ -2296,6 +2367,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
                 <div key={p.id} className={`player-card ${selected.has(p.id) ? "selected" : ""}`} onClick={() => { const n = new Set(selected); n.has(p.id) ? n.delete(p.id) : n.add(p.id); setSelected(n); }}>
                   <div className="avatar-wrap"><Avatar url={p.avatar_url} emoji={lv.emoji} /></div>
                   <div className="p-name">{p.display_name}</div>
+                  {p.first_name && <div style={{fontSize:10,color:"var(--text3)",marginTop:-2,marginBottom:2}}>{p.first_name}</div>}
                   <div className="p-level">{lv.emoji} {lv.name}</div>
                   <div className="p-xp">{p.xp} XP</div>
                   <div className="p-coin">🪙 {p.coin}</div>
@@ -5711,7 +5783,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             )}
 
             {/* Notifiche */}
-            <NotificationToggle playerId={profile.id}/>
+            <InstallPWAButton/>
+          <NotificationToggle playerId={profile.id}/>
 
             {/* Check-in */}
             <div className="pd-checkin">
@@ -5875,16 +5948,26 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   {visibleMsgs.map(m => (
                     <div key={m.id} className="card-sm">
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6}}>
-                          <span style={{fontSize:18}}>🌱</span>
-                          <span style={{fontSize:12,fontWeight:700,color:"var(--verde)"}}>Giardiniere</span>
-                          {m.is_broadcast && <span style={{fontSize:9,color:"var(--text3)",background:"rgba(255,255,255,.06)",borderRadius:4,padding:"1px 5px"}}>a tutti</span>}
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          {m.profiles?.avatar_url
+                            ? <img src={m.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
+                            : <span style={{fontSize:18,flexShrink:0}}>🌱</span>}
+                          <div>
+                            <div style={{fontSize:12,fontWeight:700,color:"var(--verde)",lineHeight:1}}>{m.profiles?.display_name||"Giardiniere"}</div>
+                            <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>
+                              {m.is_broadcast?"📢 a tutti":m.squad_id?"🛡️ alla squadra":"👤 a te"}
+                            </div>
+                          </div>
                         </div>
                         <div style={{display:"flex",gap:6,alignItems:"center"}}>
                           {m.expires_at && <span style={{fontSize:9,color:"var(--text3)"}}>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
                           <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
                         </div>
                       </div>
+                      {m.media_data && m.media_data.startsWith("sticker:") && (() => {
+                        const st = ANIMATED_STICKERS.find(s=>s.id===m.media_data.split(":")[1]);
+                        return st ? <div style={{width:80,height:80,marginBottom:6}} dangerouslySetInnerHTML={{__html:st.svg}}/> : null;
+                      })()}
                       {m.media_data && !m.media_data.startsWith("sticker:") && (
                         <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt="" loading="lazy"/>
                       )}
@@ -6833,16 +6916,21 @@ function EducatorShell({ profile, onLogout }) {
   // Load educator notification counts
   const loadNotifCounts = useCallback(async () => {
     const today = new Date().toISOString().split("T")[0];
-    const [{ data: pending }, { data: allPlayers }, { data: todayAtt }] = await Promise.all([
+    const since24h = new Date(Date.now()-24*3600000).toISOString();
+    const [{ data: pending }, { data: allPlayers }, { data: todayAtt }, { data: unreadMsgs }] = await Promise.all([
       sb.from("bookings").select("id").eq("status","pending"),
       sb.from("profiles").select("id").eq("role","player").gt("xp", 1),
       sb.from("attendances").select("player_id").eq("date", today),
+      sb.from("messages").select("id").eq("recipient_id", profile.id)
+        .is("cancelled_at", null).gt("expires_at", new Date().toISOString())
+        .gt("created_at", since24h),
     ]);
     const markedIds = new Set((todayAtt||[]).map(a => a.player_id));
     const missing = (allPlayers||[]).filter(p => !markedIds.has(p.id)).length;
     const pBook = (pending||[]).length;
-    setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, total: pBook + (missing > 0 ? 1 : 0) });
-  }, []);
+    const msgs = (unreadMsgs||[]).length;
+    setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, unreadMessages: msgs, total: pBook + (missing > 0 ? 1 : 0) + msgs });
+  }, [profile.id]);
 
   useEffect(() => {
     loadNotifCounts();
@@ -6914,6 +7002,7 @@ function EducatorShell({ profile, onLogout }) {
             </button>
           </div>
           <NotificationToggle playerId={profile.id}/>
+          <InstallPWAButton/>
           <div style={{display:"flex",gap:6,marginTop:6}}>
             <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
             <button className="btn btn-ghost btn-sm" style={{color:"rgba(255,204,0,.7)",border:"1px solid rgba(255,204,0,.2)",padding:"6px 10px"}} onClick={()=>setShowChangePwd(true)} title="Cambia password">🔑</button>
@@ -7005,6 +7094,16 @@ function EducatorShell({ profile, onLogout }) {
                   <div className="edu-notif-sub">{notifCounts.missingAttendance} giocatori senza presenza</div>
                 </div>
                 <div className="edu-notif-count">{notifCounts.missingAttendance}</div>
+              </div>
+            )}
+            {notifCounts.unreadMessages > 0 && (
+              <div className="edu-notif-item" onClick={()=>{ setTab("messaggi"); setShowNotifPanel(false); }}>
+                <div className="edu-notif-icon">💬</div>
+                <div className="edu-notif-text">
+                  <div className="edu-notif-title">Messaggi ricevuti</div>
+                  <div className="edu-notif-sub">Ultimi 24 ore</div>
+                </div>
+                <div className="edu-notif-count">{notifCounts.unreadMessages}</div>
               </div>
             )}
             {notifCounts.total === 0 && (
