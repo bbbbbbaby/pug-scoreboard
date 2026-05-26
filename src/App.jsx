@@ -2316,6 +2316,8 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [showCreatePlayer, setShowCreatePlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
   const [createPlayerErr, setCreatePlayerErr] = useState("");
+  const [resetPinPlayer, setResetPinPlayer] = useState(null);
+  const [newPin, setNewPin] = useState("");
 
   const load = useCallback(async () => {
     if (loadingRef.current) return;
@@ -2487,6 +2489,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
                     {expandedPlayer === p.id ? "▲ Chiudi" : "🔍 Dettagli"}
                   </button>
                   <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setEditPlayer({ ...p, pin: p.pin || "1234" }); }}>✏️ Modifica</button>
+                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%", color:"var(--neon-blue)" }} onClick={e => { e.stopPropagation(); setResetPinPlayer(p); setNewPin(""); }}>🔑 Reset PIN</button>
                   <button className="btn btn-danger btn-xs" style={{ marginTop: 4, width: "100%", fontSize: 11 }} onClick={e => { e.stopPropagation(); deletePlayer(p.id, p.display_name); }}>🗑️ Elimina</button>
                 </div>
               );
@@ -7412,79 +7415,97 @@ export default function App() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(()=>{});
     }
-    // ── PLAYER cache ──
+    // ═══ SESSIONE PERMANENTE ═══
+    // Filosofia: la cache localStorage È la sessione.
+    // Il logout avviene SOLO con il tasto Esci. Mai automaticamente.
+    // La verifica di rete aggiorna solo i dati, non slogga mai.
+
+    // ── PLAYER: sessione cache-based, mai scade ──
     try {
       const sp = localStorage.getItem("pug_player");
       if (sp) {
         const p = JSON.parse(sp);
         if (p?._playerSession && p?.id) {
-          setProfile({ ...p, _playerSession: true }); setChecking(false);
+          // Mostra SUBITO dal cache — nessuna attesa
+          setProfile({ ...p, _playerSession: true });
+          setChecking(false);
+          // Verifica in background: aggiorna i dati, NON slogga mai
           sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
-            .then(({ data, error }) => {
-              if (data) { setProfile({...data,_playerSession:true}); localStorage.setItem("pug_player", JSON.stringify({...data,_playerSession:true})); }
-              else if (error?.code === 'PGRST116') { localStorage.removeItem("pug_player"); setProfile(null); }
-              // Se errore di rete: mantieni sessione dal cache
+            .then(({ data }) => {
+              if (data) {
+                const updated = { ...data, _playerSession: true };
+                setProfile(updated);
+                localStorage.setItem("pug_player", JSON.stringify(updated));
+              }
+              // Qualsiasi errore (rete, not found, RLS): rimani loggato col cache
             })
-            .catch(()=>{}); // errore rete: rimani loggato
-          return;
+            .catch(() => {}); // rimani loggato
+          return; // sessione player attiva, stop
         }
       }
-    } catch(_) { localStorage.removeItem("pug_player"); }
-    // ── EDUCATOR cache: mostra SUBITO, verifica in background ──
+    } catch(_) {} // anche su errore parse: non sloggare, prova educator
+
+    // ── EDUCATOR: sessione cache-based + Supabase auth in background ──
     try {
       const se = localStorage.getItem("pug_edu");
       if (se) {
         const cached = JSON.parse(se);
         if (cached?.id) {
-          setProfile(cached); setChecking(false);
-          sb.auth.getSession().then(async ({ data: { session } }) => {
-            if (session) {
-              const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-              if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
-            } else {
-              // Prova a refreshare il token prima di fare logout
-              const { data: refreshed } = await sb.auth.refreshSession().catch(()=>({data:null}));
-              if (!refreshed?.session) { localStorage.removeItem("pug_edu"); setProfile(null); }
-              else {
-                const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", refreshed.session.user.id).single();
-                if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+          // Mostra SUBITO dal cache — nessuna attesa
+          setProfile(cached);
+          setChecking(false);
+          // Verifica/aggiorna in background — NON slogga mai per errori
+          (async () => {
+            try {
+              let { data: { session } } = await sb.auth.getSession();
+              if (!session) {
+                // Token scaduto: prova a rinnovarlo
+                const r = await sb.auth.refreshSession().catch(() => ({ data: null }));
+                session = r?.data?.session || null;
               }
-            }
-          }).catch(()=>{}); // errore rete: rimani loggato
-          const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange(async (event, session) => {
-            if (event === "SIGNED_OUT") { setProfile(null); localStorage.removeItem("pug_edu"); }
+              if (session) {
+                const { data: p } = await sb.from("profiles")
+                  .select("*, squads(name)").eq("id", session.user.id).single();
+                if (p) {
+                  setProfile(p);
+                  localStorage.setItem("pug_edu", JSON.stringify(p));
+                }
+              }
+              // Se non c'è sessione: NON sloggare. L'educator resta col cache.
+              // Potrà ri-autenticarsi se serve, ma la navigazione resta fluida.
+            } catch(_) {} // rimani loggato
+          })();
+          // Ascolta solo il logout ESPLICITO
+          const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange((event, session) => {
             if (event === "SIGNED_IN" && session) {
-              const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-              if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+              sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single()
+                .then(({ data: p }) => {
+                  if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+                });
             }
+            // SIGNED_OUT NON slogga qui — solo il tasto Esci slogga
           });
           return () => sub1.unsubscribe();
         }
       }
-    } catch(_) { localStorage.removeItem("pug_edu"); }
-    // ── Nessuna cache: primo accesso ──
-    const _t = setTimeout(() => setChecking(false), 800);
-    sb.auth.getSession().then(async ({ data: { session } }) => {
-      clearTimeout(_t);
-      if (session) {
-        const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-        if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
-      }
-      setChecking(false);
-    }).catch(() => { clearTimeout(_t); setChecking(false); });
-    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_OUT") { setProfile(null); localStorage.removeItem("pug_edu"); }
+    } catch(_) {} // anche su errore parse: vai al login pulito
+
+    // ── Nessuna cache: primo accesso assoluto → mostra login ──
+    setChecking(false);
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        const { data: p } = await sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single();
-        if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+        sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single()
+          .then(({ data: p }) => {
+            if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
+          });
       }
     });
     return () => subscription.unsubscribe();
   }, []);
-  async function onLogout() {
+  async async function onLogout() {
     localStorage.removeItem("pug_player");
     localStorage.removeItem("pug_edu");
-    await sb.auth.signOut();
+    try { await sb.auth.signOut(); } catch(_) {}
     setProfile(null);
     document.body.classList.remove("light");
   }
