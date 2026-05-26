@@ -5269,7 +5269,18 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [newPin2, setNewPin2] = useState("");
   const [pinChangeErr, setPinChangeErr] = useState("");
 
+  const loadTimeoutRef = useRef(null);
   const load = useCallback(async () => {
+    // Debounce: ignora se già in corso, con safety reset dopo 12s
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    setLoading(true);
+    clearTimeout(loadTimeoutRef.current);
+    loadTimeoutRef.current = setTimeout(() => {
+      // Safety: sblocca dopo 12s anche se la fetch non risponde
+      loadingRef.current = false;
+      setLoading(false);
+    }, 12000);
   try {
     // Carica visibilità PRIMA di tutto — evita flash con vecchi dati
     const { data: visRow } = await sb.from("profiles")
@@ -5328,6 +5339,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     setMonthTarget(mConfig?.min_days || null);
   } catch(err) {
   } finally {
+    clearTimeout(loadTimeoutRef.current);
+    loadingRef.current = false;
     setLoading(false);
   }
   }, [profile.id]);
@@ -5337,10 +5350,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   useEffect(() => {
     let hiddenAt = 0;
     function onVis() {
-      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
-      if (document.visibilityState === 'visible' && hiddenAt > 0 && Date.now() - hiddenAt > 20000) {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        // Reset loadingRef quando va in background — evita blocchi
+        clearTimeout(loadTimeoutRef.current);
         loadingRef.current = false;
-        load();
+        return;
+      }
+      if (hiddenAt > 0 && Date.now() - hiddenAt > 20000) {
+        hiddenAt = 0;
+        load(); // loadingRef già false, può partire
+      } else {
         hiddenAt = 0;
       }
     }
@@ -5350,9 +5370,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   useEffect(() => {
     load();
     const channel = sb.channel("player_notifs_" + profile.id)
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, () => setTimeout(() => load(), 300))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` }, (payload) => {
-        load();
+        setTimeout(() => load(), 500); // debounce 500ms
         // Show toast for important notifications
         const n = payload.new;
         if (n?.type === "booking_confirmed") setToast({ msg:"✅ Prenotazione confermata!", color:"var(--verde)" });
@@ -5360,7 +5380,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         else if (n?.type === "badge_assigned") setToast({ msg:"🎖️ " + (n?.title||"Badge sbloccato!"), color:"var(--rosa)" });
         setTimeout(() => setToast(null), 4000);
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `player_id=eq.${profile.id}` }, load)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `player_id=eq.${profile.id}` }, () => setTimeout(() => load(), 500))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
           filter: `recipient_id=eq.${profile.id}` }, (payload) => {
         load();
@@ -5546,9 +5566,25 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     </div>
   );
 
+  const [loadStuck, setLoadStuck] = useState(false);
+  useEffect(() => {
+    if (!loading) { setLoadStuck(false); return; }
+    const t = setTimeout(() => setLoadStuck(true), 15000);
+    return () => clearTimeout(t);
+  }, [loading]);
+
   if (loading) return (
-    <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
+    <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#A3CFFE',letterSpacing:'.08em'}}>🌿 Caricamento…</div>
+      {loadStuck && (
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:12,color:'rgba(255,255,255,.4)',marginBottom:12}}>Qualcosa non va — riprova</div>
+          <button onClick={()=>{ loadingRef.current=false; setLoading(false); load(); }}
+            style={{background:'rgba(0,212,255,.15)',border:'1px solid rgba(0,212,255,.4)',borderRadius:99,padding:'10px 24px',color:'#00d4ff',fontSize:14,fontWeight:700,cursor:'pointer'}}>
+            🔄 Ricarica
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -6932,12 +6968,18 @@ function EducatorShell({ profile, onLogout }) {
     setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, unreadMessages: msgs, total: pBook + (missing > 0 ? 1 : 0) + msgs });
   }, [profile.id]);
 
+  const notifDebounceRef = useRef(null);
+  const debouncedLoadNotif = useCallback(() => {
+    clearTimeout(notifDebounceRef.current);
+    notifDebounceRef.current = setTimeout(loadNotifCounts, 800);
+  }, [loadNotifCounts]);
+
   useEffect(() => {
     loadNotifCounts();
-    const interval = setInterval(loadNotifCounts, 60000);
+    const interval = setInterval(loadNotifCounts, 90000);
     const channel = sb.channel("edu_realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, loadNotifCounts)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings" }, loadNotifCounts)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, debouncedLoadNotif)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings" }, debouncedLoadNotif)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
           filter: `recipient_id=eq.${profile.id}` }, (payload) => {
         loadNotifCounts();
