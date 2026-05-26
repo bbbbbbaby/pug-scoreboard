@@ -7036,11 +7036,6 @@ function AdminView({ profile }) {
     setEducators(data || []); setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    if (!loading) { setLoadStuck(false); return; }
-    const t = setTimeout(() => setLoadStuck(true), 15000);
-    return () => clearTimeout(t);
-  }, [loading]);
 
   async function createEducator() {
     setErr(""); setMsg("");
@@ -7510,7 +7505,6 @@ function EducatorShell({ profile, onLogout }) {
     setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, unreadMessages: msgs, total: pBook + (missing > 0 ? 1 : 0) + msgs });
   }, [profile.id]);
 
-  const [showEduPushDiag, setShowEduPushDiag] = useState(false);
   const notifDebounceRef = useRef(null);
   const debouncedLoadNotif = useCallback(() => {
     clearTimeout(notifDebounceRef.current);
@@ -7586,9 +7580,6 @@ function EducatorShell({ profile, onLogout }) {
               <div className="theme-toggle-knob" style={{background:theme==="light"?"#c08800":"rgba(255,255,255,.6)",transform:theme==="light"?"translateX(20px)":"translateX(0)"}}/>
             </button>
           </div>
-          <NotificationToggle playerId={profile.id}/>
-          <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,marginBottom:6,fontSize:11}}
-            onClick={()=>setShowEduPushDiag(true)}>🔧 Diagnostica notifiche</button>
           <InstallPWAButton/>
           <div style={{display:"flex",gap:6,marginTop:6}}>
             <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
@@ -7743,7 +7734,6 @@ function EducatorShell({ profile, onLogout }) {
       </div>
 
       <InAppNotifBanner/>
-      {showEduPushDiag && <PushDiagnostics playerId={profile.id} onClose={()=>setShowEduPushDiag(false)}/>}
       {showChangePwd && (
         <div className="modal-bg" onClick={()=>setShowChangePwd(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
