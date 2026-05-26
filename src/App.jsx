@@ -1951,6 +1951,184 @@ function OfflineBanner() {
   );
 }
 
+// ─── NOTIFICHE TAB (pagina intera) ───────────────────────
+function NotificheTab({ profile }) {
+  const [steps, setSteps] = useState([]);
+  const [running, setRunning] = useState(false);
+  const [permState, setPermState] = useState(
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported"
+  );
+
+  function add(label, status, detail) {
+    setSteps(prev => [...prev, { label, status, detail: detail || "" }]);
+  }
+
+  async function attiva() {
+    if (typeof Notification === "undefined") {
+      addToast("⚠️ Notifiche non supportate", "error"); return;
+    }
+    const p = await Notification.requestPermission();
+    setPermState(p);
+    if (p === "granted") {
+      await registerPush(profile.id);
+    } else {
+      addToast("⚠️ Permesso negato — abilita dalle impostazioni del telefono", "error");
+    }
+  }
+
+  async function diagnostica() {
+    setSteps([]);
+    setRunning(true);
+
+    const hasSW = "serviceWorker" in navigator;
+    const hasPush = "PushManager" in window;
+    const hasNotif = "Notification" in window;
+    add("API browser", hasSW && hasPush && hasNotif ? "ok" : "fail",
+      `SW:${hasSW?"sì":"NO"} · Push:${hasPush?"sì":"NO"} · Notif:${hasNotif?"sì":"NO"}`);
+    if (!hasSW || !hasPush || !hasNotif) {
+      add("STOP", "fail", "Browser senza supporto. Su iPhone installa l'app da Safari → Condividi → Aggiungi a Home, poi aprila dall'icona.");
+      setRunning(false); return;
+    }
+
+    const standalone = window.navigator.standalone === true
+      || window.matchMedia("(display-mode: standalone)").matches;
+    add("App installata (PWA)", standalone ? "ok" : "warn",
+      standalone ? "Gira come app installata" : "Aperta dal browser — su iPhone le push richiedono l'app installata");
+
+    let reg;
+    try {
+      reg = await navigator.serviceWorker.register("/sw.js");
+      add("Service Worker", "ok", "Registrato");
+    } catch (e) {
+      add("Service Worker", "fail", e.message);
+      setRunning(false); return;
+    }
+
+    let swReady;
+    try {
+      swReady = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, r) => setTimeout(() => r(new Error("timeout 8s")), 8000)),
+      ]);
+      add("Service Worker attivo", "ok", "Pronto");
+    } catch (e) {
+      add("Service Worker attivo", "fail", e.message);
+      setRunning(false); return;
+    }
+
+    let perm = Notification.permission;
+    if (perm === "default") perm = await Notification.requestPermission();
+    setPermState(perm);
+    add("Permesso notifiche", perm === "granted" ? "ok" : "fail", `Stato: ${perm}`);
+    if (perm !== "granted") {
+      add("STOP", "fail", "Permesso non concesso. Abilita le notifiche per PUG nelle impostazioni del telefono.");
+      setRunning(false); return;
+    }
+
+    let sub;
+    try {
+      const pm = swReady.pushManager || reg.pushManager;
+      sub = await pm.getSubscription();
+      if (!sub) {
+        sub = await pm.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+      add("Subscription push", "ok", "Creata");
+    } catch (e) {
+      add("Subscription push", "fail", e.message);
+      setRunning(false); return;
+    }
+
+    try {
+      const { error } = await sb.from("push_subscriptions").upsert(
+        { player_id: profile.id, subscription: JSON.parse(JSON.stringify(sub)) },
+        { onConflict: "player_id" }
+      );
+      if (error) { add("Salvataggio DB", "fail", error.message); setRunning(false); return; }
+      add("Salvataggio DB", "ok", "Subscription salvata nel database");
+    } catch (e) {
+      add("Salvataggio DB", "fail", e.message);
+      setRunning(false); return;
+    }
+
+    try {
+      const resp = await fetch(PUSH_EDGE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${PUSH_ANON_KEY}` },
+        body: JSON.stringify({
+          subscription: JSON.parse(JSON.stringify(sub)),
+          title: "🔔 Test PUG",
+          body: "Notifica di prova — se la vedi, funziona tutto!",
+        }),
+      });
+      const txt = await resp.text();
+      if (resp.ok) add("Invio notifica test", "ok", "Inviata! Controlla se arriva la notifica sul telefono.");
+      else add("Invio notifica test", "fail", `Server ${resp.status}: ${txt.slice(0,250)}`);
+    } catch (e) {
+      add("Invio notifica test", "fail", e.message);
+    }
+
+    setRunning(false);
+  }
+
+  const COLORS = { ok:"#00cc66", fail:"#ee3333", warn:"#dd9900" };
+  const ICONS  = { ok:"✅", fail:"❌", warn:"⚠️" };
+
+  return (
+    <div style={{ maxWidth: 480, margin: "0 auto" }}>
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:18, fontWeight:900, textTransform:"uppercase", color:"var(--text)", marginBottom:6 }}>
+          🔔 Notifiche push
+        </div>
+        <div style={{ fontSize:13, color:"var(--text2)", lineHeight:1.5, marginBottom:14 }}>
+          Attiva le notifiche per ricevere messaggi e avvisi anche quando l'app è chiusa.
+        </div>
+        <div style={{
+          fontSize:12, fontWeight:700, marginBottom:14,
+          color: permState === "granted" ? "var(--verde)" : permState === "denied" ? "var(--rosso)" : "var(--text3)",
+        }}>
+          Stato permesso: {permState === "granted" ? "✅ Concesso" : permState === "denied" ? "❌ Negato" : "⏳ Da attivare"}
+        </div>
+        <button className="btn btn-primary" style={{ width:"100%", marginBottom:8 }} onClick={attiva}>
+          🔔 Attiva notifiche
+        </button>
+        <button className="btn btn-ghost" style={{ width:"100%" }} onClick={diagnostica} disabled={running}>
+          {running ? "⏳ Diagnostica in corso…" : "🔧 Esegui diagnostica"}
+        </button>
+      </div>
+
+      {steps.length > 0 && (
+        <div className="card">
+          <div style={{ fontSize:13, fontWeight:900, textTransform:"uppercase", color:"var(--text2)", marginBottom:12, fontFamily:"'Barlow Condensed'" }}>
+            Risultato diagnostica
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {steps.map((s,i) => (
+              <div key={i} style={{
+                background:"rgba(255,255,255,.04)",
+                border:`1px solid ${COLORS[s.status]}44`,
+                borderRadius:10, padding:"10px 12px",
+              }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span>{ICONS[s.status]}</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:"var(--text)" }}>{s.label}</span>
+                </div>
+                {s.detail && (
+                  <div style={{ fontSize:11, color:COLORS[s.status], marginTop:4, marginLeft:24, lineHeight:1.45 }}>
+                    {s.detail}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── PUSH DIAGNOSTICS ────────────────────────────────────
 function PushDiagnostics({ playerId, onClose }) {
   const [steps, setSteps] = useState([]);
@@ -6382,6 +6560,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
         {tab === "notifiche" && (
           <div style={{ marginTop: 8 }}>
+            <NotificheTab profile={profile} />
+            <div style={{height:1,background:"var(--border)",margin:"20px 0 14px"}}/>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
             <div className="pd-tab-title" style={{color:"#ffcc00",marginBottom:0}}>🔔 Notifiche</div>
             {notifications.length > 0 && (
@@ -7011,7 +7191,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["notifiche","🔔","Notifiche"], ["admin","⚙️","Admin"],
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -7529,6 +7709,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "annunci"      && <AnnouncementsView profile={profile}/>}
           {tab === "social_edu"   && <EducatorSocialView profile={profile}/>}
           {tab === "visibilita"   && <VisibilityView />}
+          {tab === "notifiche"    && <NotificheTab profile={profile} />}
           {tab === "admin"        && <AdminView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
