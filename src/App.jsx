@@ -7502,7 +7502,7 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
-  async async function onLogout() {
+  async function onLogout() {
     localStorage.removeItem("pug_player");
     localStorage.removeItem("pug_edu");
     try { await sb.auth.signOut(); } catch(_) {}
