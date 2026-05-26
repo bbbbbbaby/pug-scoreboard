@@ -2761,7 +2761,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
   }
 
   async function savePlayer(p) {
-    await sb.from("profiles").update({ display_name: p.display_name, squad_id: p.squad_id, xp: p.xp, coin: p.coin, pin: p.pin || "1234", avatar_url: p.avatar_url || null }).eq("id", p.id);
+    await sb.from("profiles").update({ display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: p.xp, coin: p.coin, pin: p.pin || "1234", avatar_url: p.avatar_url || null }).eq("id", p.id);
     setEditPlayer(null); load();
   }
 
