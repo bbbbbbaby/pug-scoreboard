@@ -2940,6 +2940,11 @@ function SquadsView() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!loading) { setLoadStuck(false); return; }
+    const t = setTimeout(() => setLoadStuck(true), 15000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   async function createSquad() {
     if (!newSquad.name.trim()) return;
@@ -5382,6 +5387,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [pinChangeErr, setPinChangeErr] = useState("");
 
   const loadTimeoutRef = useRef(null);
+  const [loadStuck, setLoadStuck] = useState(false);
   const load = useCallback(async () => {
     // Debounce: ignora se già in corso, con safety reset dopo 12s
     if (loadingRef.current) return;
@@ -5680,13 +5686,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       </div>
     </div>
   );
-
-  const [loadStuck, setLoadStuck] = useState(false);
-  useEffect(() => {
-    if (!loading) { setLoadStuck(false); return; }
-    const t = setTimeout(() => setLoadStuck(true), 15000);
-    return () => clearTimeout(t);
-  }, [loading]);
 
   if (loading) return (
     <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
