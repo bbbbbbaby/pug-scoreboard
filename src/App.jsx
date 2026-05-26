@@ -2926,7 +2926,8 @@ function PlayersView({ sectionColors, setSectionColors }) {
               squadFilter={squads.find(s=>s.id===editPlayer.squad_id)?.name || "Azzurra"}
             />
             <div style={{height:1,background:"var(--border)",margin:"10px 0"}}/>
-            <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={editPlayer.display_name} onChange={e => setEditPlayer(p => ({ ...p, display_name: e.target.value }))} /></div>
+            <div className="form-group"><label className="form-label">Nickname</label><input className="form-input" value={editPlayer.display_name} onChange={e => setEditPlayer(p => ({ ...p, display_name: e.target.value }))} /></div>
+            <div className="form-group"><label className="form-label">Nome reale</label><input className="form-input" value={editPlayer.first_name || ""} placeholder="Nome del ragazzo" onChange={e => setEditPlayer(p => ({ ...p, first_name: e.target.value }))} /></div>
             <div className="form-group">
               <label className="form-label">Squadra</label>
               <select value={editPlayer.squad_id || ""} onChange={e => setEditPlayer(p => ({ ...p, squad_id: e.target.value || null }))}>
