@@ -1951,6 +1951,181 @@ function OfflineBanner() {
   );
 }
 
+// ─── PUSH DIAGNOSTICS ────────────────────────────────────
+function PushDiagnostics({ playerId, onClose }) {
+  const [steps, setSteps] = useState([]);
+  const [running, setRunning] = useState(false);
+
+  function add(label, status, detail) {
+    setSteps(prev => [...prev, { label, status, detail: detail || "" }]);
+  }
+
+  async function runDiagnostics() {
+    setSteps([]);
+    setRunning(true);
+
+    // 1. API disponibili
+    const hasSW = "serviceWorker" in navigator;
+    const hasPush = "PushManager" in window;
+    const hasNotif = "Notification" in window;
+    add("API browser", hasSW && hasPush && hasNotif ? "ok" : "fail",
+      `SW:${hasSW?"sì":"NO"} Push:${hasPush?"sì":"NO"} Notif:${hasNotif?"sì":"NO"}`);
+    if (!hasSW || !hasPush || !hasNotif) {
+      add("STOP", "fail", "Il browser non supporta le notifiche. Su iPhone l'app DEVE essere installata da Safari → Condividi → Aggiungi a Home.");
+      setRunning(false); return;
+    }
+
+    // 2. Modalità standalone (PWA installata)
+    const standalone = window.navigator.standalone === true
+      || window.matchMedia("(display-mode: standalone)").matches;
+    add("App installata (PWA)", standalone ? "ok" : "warn",
+      standalone ? "Sì, gira come app" : "NO — aperta dal browser. Su iPhone le push NON funzionano dal browser.");
+
+    // 3. Service Worker
+    let reg;
+    try {
+      reg = await navigator.serviceWorker.register("/sw.js");
+      add("Service Worker", "ok", "Registrato");
+    } catch (e) {
+      add("Service Worker", "fail", e.message);
+      setRunning(false); return;
+    }
+
+    // 4. SW pronto
+    let swReady;
+    try {
+      swReady = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, r) => setTimeout(() => r(new Error("timeout 8s")), 8000)),
+      ]);
+      add("Service Worker attivo", "ok", "Pronto");
+    } catch (e) {
+      add("Service Worker attivo", "fail", e.message);
+      setRunning(false); return;
+    }
+
+    // 5. Permesso notifiche
+    let perm = Notification.permission;
+    if (perm === "default") {
+      perm = await Notification.requestPermission();
+    }
+    add("Permesso notifiche", perm === "granted" ? "ok" : "fail", `Stato: ${perm}`);
+    if (perm !== "granted") {
+      add("STOP", "fail", "Permesso negato. Vai nelle impostazioni del telefono e abilita le notifiche per PUG.");
+      setRunning(false); return;
+    }
+
+    // 6. Subscription push
+    let sub;
+    try {
+      const pm = swReady.pushManager || reg.pushManager;
+      sub = await pm.getSubscription();
+      if (!sub) {
+        sub = await pm.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+      add("Subscription push", "ok", "Creata correttamente");
+    } catch (e) {
+      add("Subscription push", "fail", e.message);
+      setRunning(false); return;
+    }
+
+    // 7. Salvataggio nel database
+    try {
+      const { error } = await sb.from("push_subscriptions").upsert(
+        { player_id: playerId, subscription: JSON.parse(JSON.stringify(sub)) },
+        { onConflict: "player_id" }
+      );
+      if (error) {
+        add("Salvataggio DB", "fail", error.message);
+        setRunning(false); return;
+      }
+      add("Salvataggio DB", "ok", "Subscription salvata");
+    } catch (e) {
+      add("Salvataggio DB", "fail", e.message);
+      setRunning(false); return;
+    }
+
+    // 8. Test invio reale
+    try {
+      const resp = await fetch(PUSH_EDGE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${PUSH_ANON_KEY}` },
+        body: JSON.stringify({
+          subscription: JSON.parse(JSON.stringify(sub)),
+          title: "🔔 Test PUG",
+          body: "Se vedi questa notifica, funziona tutto!",
+        }),
+      });
+      const txt = await resp.text();
+      if (resp.ok) {
+        add("Invio notifica test", "ok", "Inviata! Controlla se arriva la notifica.");
+      } else {
+        add("Invio notifica test", "fail", `Server ${resp.status}: ${txt.slice(0,200)}`);
+      }
+    } catch (e) {
+      add("Invio notifica test", "fail", e.message);
+    }
+
+    setRunning(false);
+  }
+
+  const COLORS = { ok:"#00ff88", fail:"#ff5555", warn:"#ffbb33" };
+  const ICONS = { ok:"✅", fail:"❌", warn:"⚠️" };
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:380,maxHeight:"85vh",overflowY:"auto"}}>
+        <div className="modal-title">🔧 Diagnostica notifiche</div>
+        <div style={{fontSize:12,color:"var(--text3)",marginBottom:16,textAlign:"center"}}>
+          Premi Avvia e controlla riga per riga dove si ferma.
+        </div>
+
+        {steps.length === 0 && !running && (
+          <button className="btn btn-primary" style={{width:"100%",marginBottom:12}} onClick={runDiagnostics}>
+            ▶️ Avvia diagnostica
+          </button>
+        )}
+
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {steps.map((s,i) => (
+            <div key={i} style={{
+              background:"rgba(255,255,255,.04)",
+              border:`1px solid ${COLORS[s.status]}44`,
+              borderRadius:10, padding:"10px 12px",
+            }}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span>{ICONS[s.status]}</span>
+                <span style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>{s.label}</span>
+              </div>
+              {s.detail && (
+                <div style={{fontSize:11,color:COLORS[s.status],marginTop:4,marginLeft:24,lineHeight:1.4}}>
+                  {s.detail}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {running && (
+          <div style={{textAlign:"center",padding:12,fontSize:13,color:"var(--text3)"}}>⏳ In corso…</div>
+        )}
+
+        {steps.length > 0 && !running && (
+          <button className="btn btn-ghost" style={{width:"100%",marginTop:12}} onClick={runDiagnostics}>
+            🔄 Ripeti test
+          </button>
+        )}
+        <button className="btn btn-ghost" style={{width:"100%",marginTop:8}} onClick={onClose}>
+          Chiudi
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── INSTALL PWA (Android) ──────────────────────────────
 let _deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
@@ -5444,6 +5619,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const loadTimeoutRef = useRef(null);
   const [loadStuck, setLoadStuck] = useState(false);
+  const [showPushDiag, setShowPushDiag] = useState(false);
   const load = useCallback(async () => {
     // Debounce: ignora se già in corso, con safety reset dopo 12s
     if (loadingRef.current) return;
@@ -5807,6 +5983,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       {/* Toast notifications */}
       <ToastContainer/>
       <InAppNotifBanner/>
+      {showPushDiag && <PushDiagnostics playerId={profile.id} onClose={()=>setShowPushDiag(false)}/>}
       {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
       {/* Top bar */}
       <div className="pd-topbar" style={{paddingTop:"max(10px, calc(env(safe-area-inset-top, 0px) + 8px))"}}>
@@ -5999,6 +6176,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             {/* Notifiche */}
             <InstallPWAButton/>
           <NotificationToggle playerId={profile.id}/>
+            <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,fontSize:11}}
+              onClick={()=>setShowPushDiag(true)}>🔧 Diagnostica notifiche</button>
 
             {/* Check-in */}
             <div className="pd-checkin">
@@ -7151,6 +7330,7 @@ function EducatorShell({ profile, onLogout }) {
     setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, unreadMessages: msgs, total: pBook + (missing > 0 ? 1 : 0) + msgs });
   }, [profile.id]);
 
+  const [showEduPushDiag, setShowEduPushDiag] = useState(false);
   const notifDebounceRef = useRef(null);
   const debouncedLoadNotif = useCallback(() => {
     clearTimeout(notifDebounceRef.current);
@@ -7227,6 +7407,8 @@ function EducatorShell({ profile, onLogout }) {
             </button>
           </div>
           <NotificationToggle playerId={profile.id}/>
+          <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,marginBottom:6,fontSize:11}}
+            onClick={()=>setShowEduPushDiag(true)}>🔧 Diagnostica notifiche</button>
           <InstallPWAButton/>
           <div style={{display:"flex",gap:6,marginTop:6}}>
             <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
@@ -7380,6 +7562,7 @@ function EducatorShell({ profile, onLogout }) {
       </div>
 
       <InAppNotifBanner/>
+      {showEduPushDiag && <PushDiagnostics playerId={profile.id} onClose={()=>setShowEduPushDiag(false)}/>}
       {showChangePwd && (
         <div className="modal-bg" onClick={()=>setShowChangePwd(false)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
