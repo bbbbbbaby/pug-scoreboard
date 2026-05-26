@@ -4256,19 +4256,44 @@ function BookingsView() {
 function QrView() {
   const [qr, setQr] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    sb.from("daily_qr").select("*").eq("date", today).single().then(({ data }) => { setQr(data); setLoading(false); });
+    sb.from("daily_qr").select("*").eq("date", today).single()
+      .then(({ data }) => { setQr(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, [today]);
 
   async function generateQr() {
+    setWorking(true);
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const vf = new Date(); vf.setHours(8, 0, 0, 0);
-    const vu = new Date(); vu.setHours(18, 0, 0, 0);
-    const { data } = await sb.from("daily_qr").upsert({ date: today, code, valid_from: vf.toISOString(), valid_until: vu.toISOString() }).select().single();
+    // Validità fissa: 13:00 – 19:00 della giornata
+    const vf = new Date(); vf.setHours(13, 0, 0, 0);
+    const vu = new Date(); vu.setHours(19, 0, 0, 0);
+    const { data } = await sb.from("daily_qr").upsert(
+      { date: today, code, valid_from: vf.toISOString(), valid_until: vu.toISOString() },
+      { onConflict: "date" }
+    ).select().single();
     setQr(data);
+    setWorking(false);
+    if (typeof addToast === "function") addToast("✅ Nuovo QR generato", "ok");
   }
+
+  async function cancelQr() {
+    if (!qr) return;
+    if (!window.confirm("Annullare il QR di oggi? I ragazzi non potranno più usarlo finché non ne generi uno nuovo.")) return;
+    setWorking(true);
+    await sb.from("daily_qr").delete().eq("date", today);
+    setQr(null);
+    setWorking(false);
+    if (typeof addToast === "function") addToast("🗑️ QR annullato", "ok");
+  }
+
+  // Stato orario: il QR è "attivo" solo tra 13:00 e 19:00
+  const now = new Date();
+  const isWithinWindow = qr && now >= new Date(qr.valid_from) && now <= new Date(qr.valid_until);
+  const beforeWindow = qr && now < new Date(qr.valid_from);
 
   return (
     <div className="card" style={{ maxWidth: 400, margin: "0 auto", textAlign: "center" }}>
@@ -4277,17 +4302,33 @@ function QrView() {
         <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 24 }}>{today}</div>
         {loading ? <div className="loading">⏳</div> : qr ? (
           <>
-            <div style={{ background: "var(--surface2)", borderRadius: 16, padding: "24px 32px", marginBottom: 16, display: "inline-block", border: "1.5px solid var(--border2)" }}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8 }}/>
+            <div style={{ background: "var(--surface2)", borderRadius: 16, padding: "24px 32px", marginBottom: 16, display: "inline-block", border: "1.5px solid var(--border2)", position:"relative" }}>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qr.code}&size=200x200&bgcolor=ffffff&color=000000&qzone=1`} alt={qr.code} style={{ width:200, height:200, display:"block", borderRadius:8, opacity: isWithinWindow ? 1 : 0.35 }}/>
+              {!isWithinWindow && (
+                <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <span style={{background:"rgba(0,0,0,.75)",color:"#fff",padding:"6px 14px",borderRadius:99,fontSize:12,fontWeight:700}}>
+                    {beforeWindow ? "⏰ Non ancora attivo" : "⏰ Scaduto"}
+                  </span>
+                </div>
+              )}
             </div>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:34, fontWeight:900, color:"var(--neon-blue)", letterSpacing:8, margin:"10px 0 6px", textShadow:"var(--glow-blue)" }}>{qr.code}</div>
-            <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Valido {new Date(qr.valid_from).getHours()}:00 – {new Date(qr.valid_until).getHours()}:00</div>
-            <button className="btn btn-ghost" style={{ width:"100%" }} onClick={generateQr}>🔄 Rigenera</button>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:34, fontWeight:900, color: isWithinWindow ? "var(--neon-blue)" : "var(--text3)", letterSpacing:8, margin:"10px 0 6px", textShadow: isWithinWindow ? "var(--glow-blue)" : "none" }}>{qr.code}</div>
+            <div style={{ fontSize:13, color:"var(--text2)", marginBottom:4 }}>Valido dalle 13:00 alle 19:00</div>
+            <div style={{ fontSize:11, color: isWithinWindow ? "var(--verde)" : "var(--text3)", marginBottom:16, fontWeight:700 }}>
+              {isWithinWindow ? "● Attivo ora" : beforeWindow ? "Si attiva alle 13:00" : "Finestra oraria conclusa"}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-ghost" style={{ flex:1 }} disabled={working} onClick={generateQr}>🔄 Rigenera</button>
+              <button className="btn btn-danger" style={{ flex:1 }} disabled={working} onClick={cancelQr}>🗑️ Annulla</button>
+            </div>
+            <div style={{ fontSize:10, color:"var(--text3)", marginTop:10, lineHeight:1.4 }}>
+              Rigenera se il codice è stato condiviso con assenti — il vecchio smette subito di funzionare.
+            </div>
           </>
         ) : (
           <>
             <div style={{ color: "var(--text3)", fontSize: 14, marginBottom: 24 }}>Nessun codice per oggi</div>
-            <button className="btn btn-primary" onClick={generateQr}>Genera QR di oggi</button>
+            <button className="btn btn-primary" disabled={working} onClick={generateQr}>Genera QR di oggi</button>
           </>
         )}
       </div>
@@ -5580,6 +5621,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const { data: qr } = await sb.from("daily_qr").select("*").eq("date", today).single();
     if (!qr) { setQrMsg("Nessun QR attivo oggi."); return; }
     if (code !== qr.code) { setQrMsg("❌ Codice non valido."); return; }
+    // Controlla finestra oraria 13:00–19:00
+    const nowT = new Date();
+    if (qr.valid_from && nowT < new Date(qr.valid_from)) {
+      setQrMsg("⏰ Il check-in apre alle 13:00."); return;
+    }
+    if (qr.valid_until && nowT > new Date(qr.valid_until)) {
+      setQrMsg("⏰ Il check-in è chiuso (orario 13–19)."); return;
+    }
     const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: 10, coin_awarded: 5, qr_verified: true });
     if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
     // Calcola streak
