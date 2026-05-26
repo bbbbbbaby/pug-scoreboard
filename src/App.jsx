@@ -14,35 +14,55 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function registerPush(playerId) {
+  const log = (m) => { try { addToast(m, 'ok'); } catch(_) {} };
+  const err = (m) => { try { addToast(m, 'error'); } catch(_) {} };
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!('serviceWorker' in navigator)) { err('1️⃣ No serviceWorker'); return; }
+    if (!('PushManager' in window))      { err('1️⃣ No PushManager — installa la PWA'); return; }
+    log('1️⃣ API ok');
+
     let reg;
-    try { reg = await navigator.serviceWorker.register('/sw.js'); }
-    catch(_) { return; }
+    try { reg = await navigator.serviceWorker.register('/sw.js'); log('2️⃣ SW registrato'); }
+    catch(e) { err('2️⃣ SW fail: ' + e.message); return; }
+
     const swReady = await Promise.race([
       navigator.serviceWorker.ready,
-      new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 8000))
-    ]).catch(() => null);
+      new Promise((_,r) => setTimeout(() => r(new Error('timeout 8s')), 8000))
+    ]).catch((e) => { err('3️⃣ SW ready fail: ' + e.message); return null; });
     if (!swReady) return;
+    log('3️⃣ SW ready');
+
     const perm = Notification.permission === 'granted'
       ? 'granted'
       : await Notification.requestPermission();
-    if (perm !== 'granted') return;
+    if (perm !== 'granted') { err('4️⃣ Permesso: ' + perm); return; }
+    log('4️⃣ Permesso ok');
+
     const pm = swReady.pushManager || reg.pushManager;
-    if (!pm) return;
-    let sub = await pm.getSubscription();
-    if (!sub) {
-      sub = await pm.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-    }
+    if (!pm) { err('5️⃣ pushManager null'); return; }
+    log('5️⃣ pushManager ok');
+
+    let sub;
+    try {
+      sub = await pm.getSubscription();
+      if (!sub) {
+        sub = await pm.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+      log('6️⃣ Subscription ok');
+    } catch(e) { err('6️⃣ Subscribe fail: ' + e.message); return; }
+
     const { error } = await sb.from('push_subscriptions').upsert(
       { player_id: playerId, subscription: JSON.parse(JSON.stringify(sub)) },
       { onConflict: 'player_id' }
     );
-    if (!error) addToast('🔔 Notifiche attivate!', 'ok');
-  } catch(_) {}
+    if (error) { err('7️⃣ DB fail: ' + error.message); return; }
+    log('✅ Notifiche attivate!');
+  } catch(e) {
+    err('❌ ' + (e?.message || e));
+  }
 }
 
 async function sendPush(playerId, title, body) {
