@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- PWA Primary -->
+    <meta name="theme-color" content="#d5111d" />
+    <meta name="application-name" content="PUG" />
+    <meta name="description" content="Per·You Garden — il centro giovani gamificato" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- PWA iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PUG" />
+    <link rel="apple-touch-icon" href="/icon-180x180.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icon-120x120.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icon-167x167.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180x180.png" />
+
+    <!-- iOS Splash Screens -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <!-- iPhone SE, iPod Touch -->
+    <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" href="/splash-640x1136.png"/>
+    <!-- iPhone 8, 7, 6s, 6 -->
+    <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/splash-750x1334.png"/>
+    <!-- iPhone X, XS, 11 Pro, 12 mini -->
+    <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="/splash-1125x2436.png"/>
+    <!-- iPhone 11 Pro Max, XS Max -->
+    <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" href="/splash-1242x2688.png"/>
+    <!-- iPhone 12, 13, 14 -->
+    <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/splash-1170x2532.png"/>
+    <!-- iPhone 14 Pro, 15 -->
+    <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" href="/splash-1179x2556.png"/>
+    <!-- iPhone 14 Plus, 15 Plus -->
+    <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="/splash-1290x2796.png"/>
+
+    <!-- PWA Android -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+    <link rel="icon" type="image/png" href="/icon-192x192.png" />
+
+    <!-- Open Graph (share preview) -->
+    <meta property="og:title" content="PUG Scoreboard" />
+    <meta property="og:description" content="Per·You Garden — il centro giovani gamificato" />
+    <meta property="og:image" content="/icon-512x512.png" />
+    <meta property="og:type" content="website" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://pkbahkxivoygnzwdnfci.supabase.co" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Funnel+Display:wght@300;400;500;600;700;800&display=swap" />
+
+    <!-- jsQR for QR scanner -->
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js" defer></script>
+
+    <title>PUG Scoreboard</title>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+          try {
+            const reg = await navigator.serviceWorker.register('/sw.js');
+
+            // Controlla aggiornamenti ogni 5 minuti
+            setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
+
+            // Nuovo SW trovato mentre la pagina è aperta
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // Nuova versione pronta — notifica l'app
+                  window.dispatchEvent(new CustomEvent('sw-update-ready', {
+                    detail: { worker: newWorker }
+                  }));
+                }
+              });
+            });
+
+            // SW appena attivato (dopo skipWaiting) — notifica l'app
+            navigator.serviceWorker.addEventListener('message', e => {
+              if (e.data?.type === 'SW_UPDATED') {
+                window.dispatchEvent(new CustomEvent('sw-activated'));
+              }
+            });
+
+          } catch(_) {}
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
