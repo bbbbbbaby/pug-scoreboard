@@ -2960,11 +2960,6 @@ function SquadsView() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    if (!loading) { setLoadStuck(false); return; }
-    const t = setTimeout(() => setLoadStuck(true), 15000);
-    return () => clearTimeout(t);
-  }, [loading]);
 
   async function createSquad() {
     if (!newSquad.name.trim()) return;
@@ -6682,6 +6677,11 @@ function AdminView({ profile }) {
     setEducators(data || []); setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!loading) { setLoadStuck(false); return; }
+    const t = setTimeout(() => setLoadStuck(true), 15000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   async function createEducator() {
     setErr(""); setMsg("");
