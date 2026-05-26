@@ -1822,6 +1822,115 @@ function useDebounce(value, delay=300) {
   return debounced;
 }
 
+// ─── UPDATE BANNER ───────────────────────────────────────
+function UpdateBanner() {
+  const [pending, setPending] = useState(null); // waiting SW worker
+  const [reloading, setReloading] = useState(false);
+
+  useEffect(() => {
+    // Nuova versione trovata mentre la pagina è aperta
+    function onUpdateReady(e) {
+      setPending(e.detail?.worker || true);
+    }
+    window.addEventListener('sw-update-ready', onUpdateReady);
+    return () => window.removeEventListener('sw-update-ready', onUpdateReady);
+  }, []);
+
+  if (!pending || reloading) return null;
+
+  function applyUpdate() {
+    setReloading(true);
+    // Dì al nuovo SW di prendere controllo subito
+    if (pending?.postMessage) pending.postMessage({ type: 'SKIP_WAITING' });
+    // Aspetta che il nuovo SW sia attivo, poi ricarica
+    const reload = () => window.location.reload();
+    window.addEventListener('sw-activated', reload, { once: true });
+    // Fallback: ricarica dopo 2s anche senza evento
+    setTimeout(reload, 2000);
+  }
+
+  return (
+    <div style={{
+      position:'fixed', top:0, left:0, right:0, zIndex:99999,
+      background:'linear-gradient(90deg,#0a2a1a,#0d3a22)',
+      borderBottom:'2px solid #00ff88',
+      padding:'10px 16px',
+      display:'flex', alignItems:'center', gap:12,
+      boxShadow:'0 2px 20px rgba(0,255,136,.3)',
+      animation:'slideDown .3s ease',
+    }}>
+      <span style={{fontSize:20}}>🆕</span>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13,fontWeight:700,color:'#00ff88'}}>Nuova versione disponibile</div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,.5)'}}>Aggiorna per avere le ultime novità</div>
+      </div>
+      <button onClick={applyUpdate} style={{
+        background:'#00ff88', border:'none', borderRadius:99,
+        padding:'8px 16px', color:'#000', fontSize:13,
+        fontWeight:900, cursor:'pointer', flexShrink:0,
+        fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:'.04em',
+      }}>
+        {reloading ? '⏳' : 'Aggiorna'}
+      </button>
+      <button onClick={()=>setPending(null)} style={{
+        background:'none', border:'none', color:'rgba(255,255,255,.3)',
+        cursor:'pointer', fontSize:18, flexShrink:0, padding:'0 4px',
+      }}>✕</button>
+    </div>
+  );
+}
+
+// ─── OFFLINE BANNER ──────────────────────────────────────
+function OfflineBanner() {
+  const [offline, setOffline] = useState(!navigator.onLine);
+  const [justBack, setJustBack] = useState(false);
+
+  useEffect(() => {
+    function onOnline() {
+      setOffline(false);
+      setJustBack(true);
+      setTimeout(() => setJustBack(false), 3000);
+    }
+    function onOffline() { setOffline(true); setJustBack(false); }
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  if (!offline && !justBack) return null;
+
+  return (
+    <div style={{
+      position:'fixed', bottom:80, left:12, right:12, zIndex:9998,
+      background: justBack
+        ? 'linear-gradient(90deg,#0a2a1a,#0d3a22)'
+        : 'linear-gradient(90deg,#2a0a0a,#3a0d0d)',
+      border:`2px solid ${justBack?'#00ff88':'#ff4444'}`,
+      borderRadius:14,
+      padding:'12px 16px',
+      display:'flex', alignItems:'center', gap:10,
+      boxShadow:`0 4px 20px ${justBack?'rgba(0,255,136,.3)':'rgba(255,68,68,.3)'}`,
+      animation:'slideUp .3s ease',
+    }}>
+      <style>{`@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+      <span style={{fontSize:22}}>
+        {justBack ? '✅' : '📵'}
+      </span>
+      <div>
+        <div style={{fontSize:13,fontWeight:700,color:justBack?'#00ff88':'#ff6666'}}>
+          {justBack ? 'Connessione ripristinata' : 'Sei offline'}
+        </div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,.45)'}}>
+          {justBack ? 'Tutto torna a funzionare normalmente' : "L'app funziona con gli ultimi dati salvati"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── INSTALL PWA (Android) ──────────────────────────────
 let _deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
@@ -5273,11 +5382,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const load = useCallback(async () => {
     // Debounce: ignora se già in corso, con safety reset dopo 12s
     if (loadingRef.current) return;
+    // Offline: non bloccare su loading, usa dati già in stato
+    if (!navigator.onLine) { setLoading(false); return; }
     loadingRef.current = true;
     setLoading(true);
     clearTimeout(loadTimeoutRef.current);
     loadTimeoutRef.current = setTimeout(() => {
-      // Safety: sblocca dopo 12s anche se la fetch non risponde
       loadingRef.current = false;
       setLoading(false);
     }, 12000);
@@ -7393,6 +7503,8 @@ export default function App() {
   return (
     <>
       <style>{css}</style>
+      <UpdateBanner/>
+      <OfflineBanner/>
       {!profile
         ? <Login onLogin={setProfile} />
         : profile.role === "player"
