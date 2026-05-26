@@ -5382,8 +5382,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const load = useCallback(async () => {
     // Debounce: ignora se già in corso, con safety reset dopo 12s
     if (loadingRef.current) return;
-    // Offline: non bloccare su loading, usa dati già in stato
-    if (!navigator.onLine) { setLoading(false); return; }
+    // Offline: solo se ci sono già dati cached, non bloccare al primo load
+    if (!navigator.onLine && (messages.length > 0 || badges.length > 0)) {
+      setLoading(false); return;
+    }
     loadingRef.current = true;
     setLoading(true);
     clearTimeout(loadTimeoutRef.current);
