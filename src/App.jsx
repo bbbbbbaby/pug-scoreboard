@@ -2689,8 +2689,6 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [showCreatePlayer, setShowCreatePlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
   const [createPlayerErr, setCreatePlayerErr] = useState("");
-  const [resetPinPlayer, setResetPinPlayer] = useState(null);
-  const [newPin, setNewPin] = useState("");
 
   const load = useCallback(async () => {
     if (loadingRef.current) return;
@@ -2766,9 +2764,28 @@ function PlayersView({ sectionColors, setSectionColors }) {
   }
 
   async function resetAllPins() {
-    if (!confirm("Resettare tutti i PIN a 1234?")) return;
-    await sb.from("profiles").update({ pin: "1234" }).eq("role", "player");
-    setMsg("Tutti i PIN resettati a 1234");
+    const hasSelection = selected.size > 0;
+    let target;
+    if (hasSelection) {
+      target = confirm(`Resettare il PIN a 1234 per i ${selected.size} giocatori selezionati?\n\nOK = solo selezionati\nAnnulla = scegli`)
+        ? "selected" : null;
+      if (!target) {
+        if (!confirm("Resettare il PIN di TUTTI i giocatori a 1234?")) return;
+        target = "all";
+      }
+    } else {
+      if (!confirm("Resettare il PIN di tutti i giocatori a 1234?")) return;
+      target = "all";
+    }
+    if (target === "selected") {
+      await sb.from("profiles").update({ pin: "1234" }).in("id", [...selected]);
+      setMsg(`PIN resettati a 1234 per ${selected.size} giocatori`);
+      setSelected(new Set());
+    } else {
+      await sb.from("profiles").update({ pin: "1234" }).eq("role", "player");
+      setMsg("Tutti i PIN resettati a 1234");
+    }
+    load();
     setTimeout(() => setMsg(""), 3000);
   }
 
@@ -2862,7 +2879,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
                     {expandedPlayer === p.id ? "▲ Chiudi" : "🔍 Dettagli"}
                   </button>
                   <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setEditPlayer({ ...p, pin: p.pin || "1234" }); }}>✏️ Modifica</button>
-                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%", color:"var(--neon-blue)" }} onClick={e => { e.stopPropagation(); setResetPinPlayer(p); setNewPin(""); }}>🔑 Reset PIN</button>
+
                   <button className="btn btn-danger btn-xs" style={{ marginTop: 4, width: "100%", fontSize: 11 }} onClick={e => { e.stopPropagation(); deletePlayer(p.id, p.display_name); }}>🗑️ Elimina</button>
                 </div>
               );
@@ -5188,7 +5205,7 @@ function EducatorSocialView({ profile }) {
       </div>
       {view==="community" && (
         <CommunityTab
-          players={players.filter(p=>p.role==="player"||!p.role)}
+          players={players.filter(p=>(p.role==="player"||!p.role) && (p.xp||0) > 2)}
           myId={profile.id}
           myProfile={profile}
         />
@@ -5798,7 +5815,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   const loadTimeoutRef = useRef(null);
   const [loadStuck, setLoadStuck] = useState(false);
-  const [showPushDiag, setShowPushDiag] = useState(false);
   const load = useCallback(async () => {
     // Debounce: ignora se già in corso, con safety reset dopo 12s
     if (loadingRef.current) return;
@@ -5832,7 +5848,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,created_by").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
-      sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").order("xp", { ascending: false }),
+      sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").gt("xp", 2).order("xp", { ascending: false }),
       sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at,sender_id,profiles!sender_id(display_name,avatar_url)").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
       sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
@@ -6162,7 +6178,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       {/* Toast notifications */}
       <ToastContainer/>
       <InAppNotifBanner/>
-      {showPushDiag && <PushDiagnostics playerId={profile.id} onClose={()=>setShowPushDiag(false)}/>}
       {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
       {/* Top bar */}
       <div className="pd-topbar" style={{paddingTop:"max(10px, calc(env(safe-area-inset-top, 0px) + 8px))"}}>
@@ -6352,11 +6367,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               </div>
             )}
 
-            {/* Notifiche */}
             <InstallPWAButton/>
-          <NotificationToggle playerId={profile.id}/>
-            <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,fontSize:11}}
-              onClick={()=>setShowPushDiag(true)}>🔧 Diagnostica notifiche</button>
 
             {/* Check-in */}
             <div className="pd-checkin">
