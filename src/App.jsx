@@ -4127,7 +4127,7 @@ function DiaryView() {
           created_at: a.created_at || (dateFilter + "T12:00:00"),
         };
       });
-      const allEntries = [...(notifs||[]).filter(n => n.profiles), ...presEvents]
+      const allEntries = [...(notifs||[]).filter(n => n.profiles && n.type !== "educator_msg"), ...presEvents]
         .sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
       setEntries(allEntries); setLoading(false);
     }
@@ -4975,7 +4975,10 @@ function BachecaView({ profile }) {
                 {n.profiles?.avatar_url
                   ? <img src={n.profiles.avatar_url} style={{width:18,height:18,borderRadius:"50%",objectFit:"cover"}} alt=""/>
                   : <span style={{fontSize:12}}>🌱</span>}
-                <span style={{fontSize:10,color:"rgba(0,0,0,.6)",fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.profiles?.display_name}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:10,color:"rgba(0,0,0,.7)",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.profiles?.display_name}</div>
+                  {n.created_at && <div style={{fontSize:8.5,color:"rgba(0,0,0,.45)",fontWeight:600}}>{new Date(n.created_at).toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"})} · {new Date(n.created_at).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</div>}
+                </div>
                 {n.educator_id===profile.id && (
                   <button
                     onClick={async()=>{
