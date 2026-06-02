@@ -3279,12 +3279,12 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
     }
     // Pari merito: avatar piccoli affiancati
     const xpShown = timeFilter === "oggi" || timeFilter === "mese" ? xpData[players[0].id]||0 : players[0].xp;
-    const tieSize = Math.max(28, sizes[i] - 14 * Math.min(players.length - 1, 2));
+    const tieSize = Math.max(24, sizes[i] - 9 * Math.min(players.length - 1, 4));
     return (
       <div key={"tie-" + i} className={`pod-col ${cols[i]}`}>
         {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
         <div style={{display:"flex",justifyContent:"center",gap:-6,marginBottom:6,flexWrap:"wrap",maxWidth:"100%"}}>
-          {players.slice(0, 4).map(p => {
+          {players.slice(0, 5).map(p => {
             const lv = getLevel(p.xp);
             const isMe = p.id === highlightId;
             return (
@@ -3295,7 +3295,9 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
           })}
         </div>
         <div className="pod-name" style={{fontSize:11}}>
-          {players.length === 2 ? `${players[0].display_name} & ${players[1].display_name}` : `${players.length} a pari merito`}
+          {players.length === 2 ? `${players[0].display_name} & ${players[1].display_name}` :
+           players.length <= 5 ? `${players.length} a pari merito` :
+           `${players.slice(0,5).length} a pari merito (+${players.length-5})`}
         </div>
         <div className="pod-xp">{xpShown} XP</div>
         <div className="pod-base">
@@ -3530,17 +3532,21 @@ function AttendanceView({ sectionColors, setSectionColors }) {
           lv: getLevel(playerMap[a.player_id]?.xp || 0),
         })));
 
-        // Config — carica quella del mese corrente (fallback: la più recente)
-        const now = new Date();
-        let { data: cfg } = await sb.from("streak_config").select("*")
-          .eq("month", now.getMonth()+1).eq("year", now.getFullYear()).maybeSingle();
-        if (!cfg) {
-          // Nessuna config per questo mese: prendi la più recente come base
-          const { data: latest } = await sb.from("streak_config").select("*")
-            .order("year",{ascending:false}).order("month",{ascending:false}).limit(1);
-          cfg = latest && latest[0];
+        // Config: carica da profiles.app_config (sistema) — più affidabile di una tabella dedicata
+        const { data: sysProfile } = await sb.from("profiles").select("app_config")
+          .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
+        const stored = sysProfile?.app_config?.attendance_config;
+        if (stored) {
+          setConfig({
+            xp_daily_checkin: stored.xp_daily_checkin ?? 10,
+            coin_daily_checkin: stored.coin_daily_checkin ?? 5,
+            xp_week_bonus: stored.xp_week_bonus ?? 5,
+            min_days: stored.min_days ?? 10,
+            xp_reward: stored.xp_reward ?? 50,
+            coin_reward: stored.coin_reward ?? 25,
+            badge_name: stored.badge_name ?? "Badge mese",
+          });
         }
-        if (cfg) setConfig(cfg);
       } catch(e) {
         setErr("Errore caricamento: " + (e?.message || String(e)));
       }
@@ -3665,9 +3671,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                 </div>
               </div>
               <button className="btn btn-yellow btn-sm" style={{width:"100%"}} onClick={async()=>{
-                const now = new Date();
                 const payload = {
-                  month: now.getMonth()+1, year: now.getFullYear(),
                   xp_daily_checkin: Number(config.xp_daily_checkin ?? 10),
                   coin_daily_checkin: Number(config.coin_daily_checkin ?? 5),
                   xp_week_bonus: Number(config.xp_week_bonus ?? 5),
@@ -3676,15 +3680,19 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                   coin_reward: Number(config.coin_reward ?? 25),
                   badge_name: config.badge_name ?? "Badge mese",
                 };
-                const { error } = await sb.from("streak_config").upsert(payload, {onConflict:"month,year"});
+                // Leggi app_config esistente (per non sovrascrivere altre impostazioni)
+                const { data: existing } = await sb.from("profiles").select("app_config")
+                  .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
+                const newAppConfig = { ...(existing?.app_config || {}), attendance_config: payload };
+                const { error } = await sb.from("profiles").update({ app_config: newAppConfig })
+                  .eq("id", "00000000-0000-0000-0000-000000000099");
                 if (error) {
                   if (typeof addToast === "function") addToast("❌ " + error.message, "error");
                   return;
                 }
-                // Aggiorna lo stato locale col valore salvato (con id se restituito)
                 setConfig(prev => ({ ...prev, ...payload }));
                 setEditConfig(false);
-                if (typeof addToast === "function") addToast("✅ Configurazione salvata", "ok");
+                if (typeof addToast === "function") addToast("✅ Configurazione salvata per tutti", "ok");
               }}>💾 Salva configurazione</button>
               <div style={{fontSize:10,color:"var(--text3)",marginTop:6}}>Le nuove presenze di oggi useranno questi valori. Le presenze già segnate non cambiano.</div>
             </div>
@@ -6248,17 +6256,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     if (qr.valid_until && nowT > new Date(qr.valid_until)) {
       setQrMsg("⏰ Il check-in è chiuso (orario 13–19)."); return;
     }
-    // Leggi i valori XP/Coin dalla configurazione del mese corrente
-    const cmNow = new Date();
-    let { data: cfgRow } = await sb.from("streak_config").select("xp_daily_checkin,coin_daily_checkin")
-      .eq("month", cmNow.getMonth()+1).eq("year", cmNow.getFullYear()).maybeSingle();
-    if (!cfgRow) {
-      const { data: latestCfg } = await sb.from("streak_config").select("xp_daily_checkin,coin_daily_checkin")
-        .order("year",{ascending:false}).order("month",{ascending:false}).limit(1);
-      cfgRow = latestCfg && latestCfg[0];
-    }
-    const xpAward = cfgRow?.xp_daily_checkin ?? 10;
-    const coinAward = cfgRow?.coin_daily_checkin ?? 5;
+    // Leggi config XP/Coin presenza dal profilo sistema
+    const { data: sysCfg } = await sb.from("profiles").select("app_config")
+      .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
+    const att = sysCfg?.app_config?.attendance_config || {};
+    const xpAward = Number(att.xp_daily_checkin ?? 10);
+    const coinAward = Number(att.coin_daily_checkin ?? 5);
 
     const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: xpAward, coin_awarded: coinAward, qr_verified: true });
     if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
