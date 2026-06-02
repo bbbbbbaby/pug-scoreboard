@@ -7834,14 +7834,46 @@ function EducatorShell({ profile, onLogout }) {
           <div style={{fontFamily:"'Barlow Condensed',sans-serif",background:"#111",color:"#ffe600",fontSize:9,fontWeight:900,borderRadius:4,padding:"2px 8px",textTransform:"uppercase",letterSpacing:".07em",display:"inline-block"}}>🌱 Giardiniere</div>
         </div>
         <nav style={{flex:1,padding:"8px 0",overflowY:"auto"}}>
-          {EDUCATOR_TABS.filter(([id]) => id !== "admin" || profile.role === "admin").map(([id, icon, label]) => (
-            <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => { setTab(id); setDrawerOpen(false); }}>
-              <span className="nav-icon">{icon}</span>
-              <span style={{flex:1}}>{label}</span>
-              {id === "prenotazioni" && notifCounts.pendingBookings > 0 && <span className="nav-badge">{notifCounts.pendingBookings}</span>}
-              {id === "presenze" && notifCounts.missingAttendance > 0 && <span className="nav-badge">{notifCounts.missingAttendance}</span>}
-            </div>
-          ))}
+          {EDUCATOR_GROUPS.map(group => {
+            const groupTabs = group.tabs
+              .filter(tid => tid !== "admin" || profile.role === "admin")
+              .map(tid => EDUCATOR_TABS.find(t => t[0] === tid))
+              .filter(Boolean);
+            if (groupTabs.length === 0) return null;
+            const isOpen = openGroup === group.id;
+            const hasActiveTab = groupTabs.some(([tid]) => tid === tab);
+            let groupBadge = 0;
+            groupTabs.forEach(([tid]) => {
+              if (tid === "prenotazioni") groupBadge += notifCounts.pendingBookings || 0;
+              if (tid === "presenze" && notifCounts.missingAttendance > 0) groupBadge += 1;
+              if (tid === "notifiche") groupBadge += notifCounts.unreadMessages || 0;
+            });
+            return (
+              <div key={group.id} style={{marginBottom:4}}>
+                <div className="nav-item"
+                  onClick={() => setOpenGroup(isOpen ? null : group.id)}
+                  style={{fontWeight:800, background: hasActiveTab && !isOpen ? "rgba(0,212,255,.08)" : undefined}}>
+                  <span className="nav-icon">{group.icon}</span>
+                  <span style={{flex:1}}>{group.label}</span>
+                  {groupBadge > 0 && !isOpen && <span className="nav-badge">{groupBadge}</span>}
+                  <span style={{fontSize:11,opacity:.5,transition:"transform .2s",
+                    transform:isOpen?"rotate(90deg)":"rotate(0deg)",display:"inline-block"}}>▶</span>
+                </div>
+                {isOpen && groupTabs.map(([id, icon, label]) => (
+                  <div key={id}
+                    className={`nav-item ${tab === id ? "active" : ""}`}
+                    onClick={() => { setTab(id); setDrawerOpen(false); }}
+                    style={{paddingLeft:28,fontSize:13}}>
+                    <span className="nav-icon" style={{fontSize:15}}>{icon}</span>
+                    <span style={{flex:1}}>{label}</span>
+                    {id === "prenotazioni" && notifCounts.pendingBookings > 0 && <span className="nav-badge">{notifCounts.pendingBookings}</span>}
+                    {id === "presenze" && notifCounts.missingAttendance > 0 && <span className="nav-badge">{notifCounts.missingAttendance}</span>}
+                    {id === "notifiche" && notifCounts.unreadMessages > 0 && <span className="nav-badge">{notifCounts.unreadMessages}</span>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </nav>
         <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,.08)"}}>
           <button className="btn btn-ghost btn-sm" style={{width:"100%"}} onClick={onLogout}>Esci</button>
