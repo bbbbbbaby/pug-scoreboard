@@ -13,6 +13,14 @@ function urlBase64ToUint8Array(base64String) {
   return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
 }
 
+// Data locale in formato YYYY-MM-DD (NON UTC — evita lo sfasamento dopo mezzanotte)
+function localToday() {
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().split("T")[0];
+}
+
+
 async function registerPush(playerId) {
   const log = (m) => { try { addToast(m, 'ok'); } catch(_) {} };
   const err = (m) => { try { addToast(m, 'error'); } catch(_) {} };
@@ -413,16 +421,16 @@ const css = `
   .delete-btn:hover { background:rgba(255,34,68,.2); }
 
   /* ═══ BADGES ═══ */
-  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; }
+  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:14px; }
   .badge-card {
     background:rgba(80,0,80,0.08); border:1px solid rgba(255,0,204,0.15);
-    border-radius:var(--radius); padding:14px 10px; text-align:center;
+    border-radius:var(--radius); padding:18px 14px; text-align:center;
     cursor:pointer; position:relative; transition:all .2s;
   }
   .badge-card:hover { border-color:rgba(255,0,204,0.4); box-shadow:var(--glow-pink); transform:translateY(-3px) scale(1.02); }
-  .badge-img { width:60px; height:60px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:block; border:2px solid rgba(255,0,204,0.4); box-shadow:0 0 16px rgba(255,0,204,0.3); }
-  .badge-emoji { font-size:40px; display:block; margin:0 auto 8px; line-height:1; }
-  .badge-name { font-size:11px; font-weight:700; color:var(--text); line-height:1.3; }
+  .badge-img { width:96px; height:96px; border-radius:50%; object-fit:cover; margin:0 auto 12px; display:block; border:3px solid rgba(255,0,204,0.5); box-shadow:0 0 16px rgba(255,0,204,0.3); }
+  .badge-emoji { font-size:64px; display:block; margin:0 auto 12px; line-height:1; }
+  .badge-name { font-size:13px; font-weight:700; color:var(--text); line-height:1.3; }
   .badge-pts { font-size:10px; color:var(--rosa); margin-top:3px; font-weight:700; }
 
   /* ═══ SFIDA ═══ */
@@ -3241,7 +3249,7 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
 
   useEffect(() => {
     async function load() {
-      const today = new Date().toISOString().split("T")[0];
+      const today = localToday();
       const monthStart = today.slice(0, 7) + "-01";
       const [{ data }, { data: sq }, { data: attToday }, { data: attMonth }] = await Promise.all([
         sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role", "player").order("xp", { ascending: false }),
@@ -3390,7 +3398,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   const [attendances, setAttendances] = useState({});
   const [labAtts, setLabAtts]     = useState([]);
   const [loading, setLoading]     = useState(true);
-  const [date, setDate]           = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate]           = useState(localToday());
   const [config, setConfig]       = useState({ xp_daily_checkin:10, coin_daily_checkin:5, xp_week_bonus:5 });
   const [customizing, setCustomizing] = useState(false);
   const [search, setSearch]       = useState("");
@@ -3439,8 +3447,16 @@ function AttendanceView({ sectionColors, setSectionColors }) {
           lv: getLevel(playerMap[a.player_id]?.xp || 0),
         })));
 
-        // Config
-        const { data: cfg } = await sb.from("streak_config").select("*").single();
+        // Config — carica quella del mese corrente (fallback: la più recente)
+        const now = new Date();
+        let { data: cfg } = await sb.from("streak_config").select("*")
+          .eq("month", now.getMonth()+1).eq("year", now.getFullYear()).maybeSingle();
+        if (!cfg) {
+          // Nessuna config per questo mese: prendi la più recente come base
+          const { data: latest } = await sb.from("streak_config").select("*")
+            .order("year",{ascending:false}).order("month",{ascending:false}).limit(1);
+          cfg = latest && latest[0];
+        }
         if (cfg) setConfig(cfg);
       } catch(e) {
         setErr("Errore caricamento: " + (e?.message || String(e)));
@@ -3467,17 +3483,33 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   async function setStatus(playerId, status) {
     const today = date;
     const xp = status === "full" ? (config.xp_daily_checkin||10) : status === "completed" ? (config.xp_daily_checkin||10) + 5 : status === "partial" ? Math.round((config.xp_daily_checkin||10)/2) : 0;
-    const coin = status === "full" ? (config.coin_daily_checkin||5) : 0;
+    const coin = status === "full" ? (config.coin_daily_checkin||5) : status === "completed" ? (config.coin_daily_checkin||5) : status === "partial" ? Math.round((config.coin_daily_checkin||5)/2) : 0;
     const existing = attendances[playerId];
+    // XP/coin già assegnati in precedenza (per non sommarli due volte)
+    const prevXp = existing?.xp_awarded || 0;
+    const prevCoin = existing?.coin_awarded || 0;
+
     if (existing) {
       await sb.from("attendances").update({ status, xp_awarded:xp, coin_awarded:coin }).eq("id", existing.id);
     } else {
       await sb.from("attendances").insert({ player_id:playerId, date:today, status, xp_awarded:xp, coin_awarded:coin, check_type:"daily" });
     }
-    if (status !== "none") {
-      await sb.from("profiles").update({ xp: sb.rpc ? undefined : undefined, coin: undefined }).eq("id", playerId);
+
+    // Aggiorna il profilo: togli i punti vecchi, aggiungi quelli nuovi (delta)
+    const deltaXp = xp - prevXp;
+    const deltaCoin = coin - prevCoin;
+    if (deltaXp !== 0 || deltaCoin !== 0) {
+      const p = players.find(pl => pl.id === playerId);
+      if (p) {
+        const newXp = Math.max(0, (p.xp || 0) + deltaXp);
+        const newCoin = Math.max(0, (p.coin || 0) + deltaCoin);
+        await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", playerId);
+        setPlayers(prev => prev.map(pl => pl.id === playerId ? { ...pl, xp: newXp, coin: newCoin } : pl));
+        // Push solo se ha guadagnato qualcosa
+        if (deltaXp > 0) sendPush(playerId, "✅ Presenza registrata!", `+${deltaXp} XP${deltaCoin>0?` e +${deltaCoin} Coin`:""}`).catch(()=>{});
+      }
     }
-    setAttendances(prev => ({ ...prev, [playerId]: { ...(existing||{}), player_id:playerId, status, xp_awarded:xp } }));
+    setAttendances(prev => ({ ...prev, [playerId]: { ...(existing||{}), player_id:playerId, status, xp_awarded:xp, coin_awarded:coin } }));
   }
 
   return (
@@ -3558,6 +3590,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                   badge_name: config.badge_name||"Badge mese",
                 }, {onConflict:"month,year"});
                 setEditConfig(false);
+                if (typeof addToast === "function") addToast("✅ Configurazione salvata", "ok");
               }}>💾 Salva configurazione</button>
               <div style={{fontSize:10,color:"var(--text3)",marginTop:6}}>Le nuove presenze di oggi useranno questi valori. Le presenze già segnate non cambiano.</div>
             </div>
@@ -3645,7 +3678,7 @@ function LabQRButton({ actId, actName }) {
 
   async function generate() {
     setLoading(true);
-    const today = new Date().toISOString().split("T")[0];
+    const today = localToday();
     // Check if exists
     const { data: existing } = await sb.from("lab_qr").select("code").eq("activity_id", actId).eq("date", today).single();
     if (existing?.code) { setCode(existing.code); setShow(true); setLoading(false); return; }
@@ -3690,7 +3723,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       sb.from("activities").select("id,name,description,link,schedule,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("profiles").select("id,display_name").eq("role","educator").order("display_name"),
     ]);
-    const acts = data || [];
+    const acts = (data || []).filter(a => !(a.description || "").startsWith("SFIDA"));
     setActivities(acts); setEducators(edu || []);
 
     if (acts.length > 0) {
@@ -4081,7 +4114,7 @@ function SfidaView({ sectionColors, setSectionColors }) {
             </div>
             <div className="form-group">
               <label className="form-label">Data scadenza (opzionale)</label>
-              <input className="form-input" type="date" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} min={new Date().toISOString().split("T")[0]} />
+              <input className="form-input" type="date" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} min={localToday()} />
               <div style={{ fontSize:10, color:"var(--text3)", marginTop:4 }}>Lascia vuoto per sfida senza scadenza</div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -4099,7 +4132,7 @@ function SfidaView({ sectionColors, setSectionColors }) {
 function DiaryView() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split("T")[0]);
+  const [dateFilter, setDateFilter] = useState(localToday());
 
   useEffect(() => {
     async function load() {
@@ -4142,7 +4175,7 @@ function DiaryView() {
       <div style={{ fontFamily: "'Barlow Condensed'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)", marginBottom: 16 }}>📜 Diario giornate</div>
       <div className="filter-bar">
         <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
-        <button className="btn btn-ghost btn-sm" onClick={() => setDateFilter(new Date().toISOString().split("T")[0])}>Oggi</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setDateFilter(localToday())}>Oggi</button>
       </div>
       {loading ? <div className="loading">⏳</div> : (
         entries.length === 0
@@ -4476,7 +4509,7 @@ function MessagesView({ profile }) {
         {/* Scadenza opzionale */}
         <div className="form-group">
           <label className="form-label">Scadenza (opzionale) — dopo questa data il messaggio sparisce</label>
-          <input type="date" className="form-input" value={expiry} onChange={e=>setExpiry(e.target.value)} min={new Date().toISOString().split("T")[0]}/>
+          <input type="date" className="form-input" value={expiry} onChange={e=>setExpiry(e.target.value)} min={localToday()}/>
         </div>
 
         {sent && <div style={{fontSize:13,color:"var(--verde)",fontWeight:700,marginBottom:8}}>{sent}</div>}
@@ -4643,7 +4676,7 @@ function QrView() {
   const [qr, setQr] = useState(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
-  const today = new Date().toISOString().split("T")[0];
+  const today = localToday();
 
   useEffect(() => {
     sb.from("daily_qr").select("*").eq("date", today).single()
@@ -4895,6 +4928,14 @@ function BachecaView({ profile }) {
     if (!body.trim()) return;
     setSaving(true);
     const { error } = await sb.from("educator_notes").insert({ educator_id:profile.id, body:body.trim(), color });
+    // Notifica gli altri giardinieri del nuovo post-it
+    try {
+      const { data: otherEdu } = await sb.from("profiles").select("id").eq("role","educator").neq("id", profile.id);
+      (otherEdu || []).forEach(e => {
+        sb.from("notifications").insert({ user_id:e.id, type:"educator_msg", title:"📌 Nuovo post-it in bacheca", body:`${profile.display_name}: ${body.trim().slice(0,50)}` }).then(()=>{});
+        sendPush(e.id, "📌 Bacheca team", `${profile.display_name} ha aggiunto un post-it`).catch(()=>{});
+      });
+    } catch(_) {}
     if (error) {
       addToast("❌ Errore: " + error.message, "error");
       setSaving(false);
@@ -5843,7 +5884,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     }
   } catch(_) {}
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = localToday();
     const monthStart = today.slice(0, 7) + "-01";
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }] = await Promise.all([
       sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,longest_streak,last_checkin_date,squads(name)").eq("id", profile.id).single(),
@@ -5864,7 +5905,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       if (newLv.name !== oldLv.name) setLevelUpData({ oldLevel:oldLv, newLevel:newLv });
     }
     localStorage.setItem("pug_xp_"+p.id, String(curXP));
-    const acts = a || [];
+    const acts = (a || []).filter(x => !(x.description || "").startsWith("SFIDA"));
     setBadges(b || []); setActivities(acts); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
     if (acts.length > 0) {
       const { data: actBk } = await sb.from("bookings")
@@ -5980,7 +6021,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   }
 
   async function doCheckin(codeOverride) {
-    const today = new Date().toISOString().split("T")[0];
+    const today = localToday();
     const code = (codeOverride || qrInput).toUpperCase();
     if (!code) { setQrMsg("Inserisci o scansiona un codice."); return; }
     if (codeOverride) setQrInput(codeOverride);
@@ -6648,7 +6689,7 @@ function DashboardView() {
   useEffect(() => {
     async function load() {
       try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = localToday();
       const weekAgo = new Date(Date.now()-7*86400000).toISOString().split("T")[0];
       const monthStart = today.slice(0,7)+"-01";
 
@@ -6736,7 +6777,7 @@ function DashboardView() {
           {stats.days.map(d=>{
             const count = stats.pressByDay[d.date]||0;
             const pct = Math.round((count/maxPressDay)*100);
-            const isToday = d.date === new Date().toISOString().split("T")[0];
+            const isToday = d.date === localToday();
             return (
               <div key={d.date} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                 <div style={{fontSize:10,color:"var(--neon-blue)",fontWeight:700}}>{count||""}</div>
@@ -7202,6 +7243,18 @@ const EDUCATOR_TABS = [
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
   ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["notifiche","🔔","Notifiche"], ["admin","⚙️","Admin"],
+]
+
+// Macro-cartelle per la sidebar giardiniere
+const EDUCATOR_GROUPS = [
+  { id:"gioco", icon:"🎮", label:"Gioco",
+    tabs:["dashboard","giocatori","classifica","squadre","presenze","qr"] },
+  { id:"attivita_grp", icon:"⚡", label:"Attività",
+    tabs:["attivita","sfida","badge","streak","prenotazioni"] },
+  { id:"comunicazione", icon:"💬", label:"Comunicazione",
+    tabs:["messaggi","annunci","bacheca","social_edu"] },
+  { id:"gestione", icon:"📊", label:"Gestione",
+    tabs:["diario","export","pulizia","visibilita","notifiche","admin"] },
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -7223,7 +7276,7 @@ function ExportView() {
     const { data } = await sb.from("profiles").select("display_name,first_name,xp,coin,current_streak,longest_streak,squads(name)").eq("role","player").order("xp",{ascending:false});
     const rows = [["Nickname","Nome","Squadra","XP","Coin","Streak attuale","Streak record","Livello"]];
     (data||[]).forEach(p => rows.push([p.display_name, p.first_name||"", p.squads?.name||"", p.xp, p.coin, p.current_streak||0, p.longest_streak||0, getLevel(p.xp).name]));
-    downloadCSV(rows, `pug_giocatori_${new Date().toISOString().split("T")[0]}.csv`);
+    downloadCSV(rows, `pug_giocatori_${localToday()}.csv`);
     setLoading("");
   }
 
@@ -7238,7 +7291,7 @@ function ExportView() {
     }
     const rows = [["Giocatore","Data","Tipo","Lab","Stato","XP","Coin","QR Verificato"]];
     (att||[]).forEach(a => rows.push([a.profiles?.display_name||"—", a.date, a.check_type==="lab"?"Lab":"Giornaliero", a.activity_id?actMap[a.activity_id]||"Lab":"—", a.status, a.xp_awarded||0, a.coin_awarded||0, a.qr_verified?"Sì":"No"]));
-    downloadCSV(rows, `pug_presenze_${new Date().toISOString().split("T")[0]}.csv`);
+    downloadCSV(rows, `pug_presenze_${localToday()}.csv`);
     setLoading("");
   }
 
@@ -7253,7 +7306,7 @@ function ExportView() {
       const checkins = (att||[]).filter(b=>b.activity_id===a.id).length;
       rows.push([a.name, a.schedule||"—", a.duration_days, a.max_participants||"∞", a.xp_completed, confirmed, checkins]);
     });
-    downloadCSV(rows, `pug_lab_${new Date().toISOString().split("T")[0]}.csv`);
+    downloadCSV(rows, `pug_lab_${localToday()}.csv`);
     setLoading("");
   }
 
@@ -7262,7 +7315,7 @@ function ExportView() {
     const { data } = await sb.from("notifications").select("title,body,type,created_at,profiles(display_name)").order("created_at",{ascending:false}).limit(2000);
     const rows = [["Giocatore","Azione","Dettaglio","Tipo","Data"]];
     (data||[]).filter(n=>n.profiles).forEach(n => rows.push([n.profiles?.display_name||"—", n.title, n.body||"", n.type, new Date(n.created_at).toLocaleDateString("it-IT")]));
-    downloadCSV(rows, `pug_storico_${new Date().toISOString().split("T")[0]}.csv`);
+    downloadCSV(rows, `pug_storico_${localToday()}.csv`);
     setLoading("");
   }
 
@@ -7475,6 +7528,7 @@ const EduTabColors = {
 
 function EducatorShell({ profile, onLogout }) {
   const [tab, setTab] = useState("dashboard");
+  const [openGroup, setOpenGroup] = useState("gioco");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
@@ -7503,7 +7557,7 @@ function EducatorShell({ profile, onLogout }) {
 
   // Load educator notification counts
   const loadNotifCounts = useCallback(async () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = localToday();
     const since24h = new Date(Date.now()-24*3600000).toISOString();
     const [{ data: pending }, { data: allPlayers }, { data: todayAtt }, { data: unreadMsgs }] = await Promise.all([
       sb.from("bookings").select("id").eq("status","pending"),
@@ -7525,6 +7579,11 @@ function EducatorShell({ profile, onLogout }) {
     clearTimeout(notifDebounceRef.current);
     notifDebounceRef.current = setTimeout(loadNotifCounts, 800);
   }, [loadNotifCounts]);
+
+    useEffect(() => {
+    const g = EDUCATOR_GROUPS.find(grp => grp.tabs.includes(tab));
+    if (g) setOpenGroup(g.id);
+  }, [tab]);
 
   useEffect(() => {
     loadNotifCounts();
@@ -7569,14 +7628,54 @@ function EducatorShell({ profile, onLogout }) {
           <div className="sidebar-badge">🌱 Pannello Giardiniere</div>
         </div>
         <nav className="nav">
-          {EDUCATOR_TABS.filter(([id]) => id !== "admin" || profile.role === "admin").map(([id, icon, label]) => (
-            <div key={id} className={`nav-item ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
-              <span className="nav-icon">{icon}</span>
-              <span style={{flex:1}}>{label}</span>
-              {id === "prenotazioni" && notifCounts.pendingBookings > 0 && <span className="nav-badge">{notifCounts.pendingBookings}</span>}
-              {id === "presenze" && notifCounts.missingAttendance > 0 && <span className="nav-badge">{notifCounts.missingAttendance}</span>}
-            </div>
-          ))}
+          {EDUCATOR_GROUPS.map(group => {
+            // Voci del gruppo (Admin solo per ruolo admin)
+            const groupTabs = group.tabs
+              .filter(tid => tid !== "admin" || profile.role === "admin")
+              .map(tid => EDUCATOR_TABS.find(t => t[0] === tid))
+              .filter(Boolean);
+            if (groupTabs.length === 0) return null;
+            const isOpen = openGroup === group.id;
+            const hasActiveTab = groupTabs.some(([tid]) => tid === tab);
+            // Badge totale del gruppo (somma notifiche delle voci dentro)
+            let groupBadge = 0;
+            groupTabs.forEach(([tid]) => {
+              if (tid === "prenotazioni") groupBadge += notifCounts.pendingBookings || 0;
+              if (tid === "presenze" && notifCounts.missingAttendance > 0) groupBadge += 1;
+              if (tid === "notifiche") groupBadge += notifCounts.unreadMessages || 0;
+            });
+            return (
+              <div key={group.id} style={{marginBottom:4}}>
+                {/* Intestazione cartella */}
+                <div
+                  className="nav-item"
+                  onClick={() => setOpenGroup(isOpen ? null : group.id)}
+                  style={{
+                    fontWeight:800,
+                    background: hasActiveTab && !isOpen ? "rgba(0,212,255,.08)" : undefined,
+                  }}>
+                  <span className="nav-icon">{group.icon}</span>
+                  <span style={{flex:1}}>{group.label}</span>
+                  {groupBadge > 0 && !isOpen && <span className="nav-badge">{groupBadge}</span>}
+                  <span style={{fontSize:11,opacity:.5,transition:"transform .2s",
+                    transform:isOpen?"rotate(90deg)":"rotate(0deg)",display:"inline-block"}}>▶</span>
+                </div>
+                {/* Voci della cartella */}
+                {isOpen && groupTabs.map(([id, icon, label]) => (
+                  <div key={id}
+                    className={`nav-item ${tab === id ? "active" : ""}`}
+                    onClick={() => setTab(id)}
+                    style={{paddingLeft:28,fontSize:13}}>
+                    <span className="nav-icon" style={{fontSize:15}}>{icon}</span>
+                    <span style={{flex:1}}>{label}</span>
+                    {id === "prenotazioni" && notifCounts.pendingBookings > 0 && <span className="nav-badge">{notifCounts.pendingBookings}</span>}
+                    {id === "presenze" && notifCounts.missingAttendance > 0 && <span className="nav-badge">{notifCounts.missingAttendance}</span>}
+                    {id === "notifiche" && notifCounts.unreadMessages > 0 && <span className="nav-badge">{notifCounts.unreadMessages}</span>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </nav>
         <div className="sidebar-user">
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,cursor:"pointer",padding:"8px 10px",background:"rgba(255,255,255,.04)",borderRadius:10,border:"1px solid rgba(255,255,255,.07)"}} onClick={() => setShowAvatarModal(true)}>
