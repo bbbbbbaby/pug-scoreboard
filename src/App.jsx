@@ -1472,6 +1472,8 @@ async function logXPGain(playerId, xpGained, xpTotal, reason) {
       if (typeof addToast === "function") addToast("⚠️ xp_history: " + error.message, "error");
     } else {
       console.log("[xp_history] OK +" + xpGained + " " + reason);
+      // Toast verde di conferma — RIMUOVERE DOPO IL TEST
+      if (typeof addToast === "function") addToast(`📊 +${xpGained} tracciato (${reason})`, "ok");
     }
   } catch(e) {
     console.warn("[xp_history] EXCEPTION:", e);
