@@ -87,7 +87,7 @@
           }
 
           // SW endpoint ok: registra normalmente
-          const reg = await navigator.serviceWorker.register('/sw.js?v=' + Date.now());
+          const reg = await navigator.serviceWorker.register('/sw.js');
           setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
 
           reg.addEventListener('updatefound', () => {
