@@ -3647,35 +3647,42 @@ function AttendanceView({ sectionColors, setSectionColors }) {
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
                 <div>
                   <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>XP presenza</label>
-                  <input type="number" value={config.xp_daily_checkin||10}
+                  <input type="number" value={config.xp_daily_checkin ?? 10}
                     onChange={e=>setConfig(c=>({...c,xp_daily_checkin:Number(e.target.value)}))}
                     style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
                 </div>
                 <div>
                   <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>Coin presenza</label>
-                  <input type="number" value={config.coin_daily_checkin||5}
+                  <input type="number" value={config.coin_daily_checkin ?? 5}
                     onChange={e=>setConfig(c=>({...c,coin_daily_checkin:Number(e.target.value)}))}
                     style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
                 </div>
                 <div>
                   <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>XP bonus settimana</label>
-                  <input type="number" value={config.xp_week_bonus||5}
+                  <input type="number" value={config.xp_week_bonus ?? 5}
                     onChange={e=>setConfig(c=>({...c,xp_week_bonus:Number(e.target.value)}))}
                     style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
                 </div>
               </div>
               <button className="btn btn-yellow btn-sm" style={{width:"100%"}} onClick={async()=>{
                 const now = new Date();
-                await sb.from("streak_config").upsert({
+                const payload = {
                   month: now.getMonth()+1, year: now.getFullYear(),
-                  xp_daily_checkin: config.xp_daily_checkin||10,
-                  coin_daily_checkin: config.coin_daily_checkin||5,
-                  xp_week_bonus: config.xp_week_bonus||5,
-                  min_days: config.min_days||10,
-                  xp_reward: config.xp_reward||50,
-                  coin_reward: config.coin_reward||25,
-                  badge_name: config.badge_name||"Badge mese",
-                }, {onConflict:"month,year"});
+                  xp_daily_checkin: Number(config.xp_daily_checkin ?? 10),
+                  coin_daily_checkin: Number(config.coin_daily_checkin ?? 5),
+                  xp_week_bonus: Number(config.xp_week_bonus ?? 5),
+                  min_days: Number(config.min_days ?? 10),
+                  xp_reward: Number(config.xp_reward ?? 50),
+                  coin_reward: Number(config.coin_reward ?? 25),
+                  badge_name: config.badge_name ?? "Badge mese",
+                };
+                const { error } = await sb.from("streak_config").upsert(payload, {onConflict:"month,year"});
+                if (error) {
+                  if (typeof addToast === "function") addToast("❌ " + error.message, "error");
+                  return;
+                }
+                // Aggiorna lo stato locale col valore salvato (con id se restituito)
+                setConfig(prev => ({ ...prev, ...payload }));
                 setEditConfig(false);
                 if (typeof addToast === "function") addToast("✅ Configurazione salvata", "ok");
               }}>💾 Salva configurazione</button>
@@ -6241,16 +6248,30 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     if (qr.valid_until && nowT > new Date(qr.valid_until)) {
       setQrMsg("⏰ Il check-in è chiuso (orario 13–19)."); return;
     }
-    const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: 10, coin_awarded: 5, qr_verified: true });
+    // Leggi i valori XP/Coin dalla configurazione del mese corrente
+    const cmNow = new Date();
+    let { data: cfgRow } = await sb.from("streak_config").select("xp_daily_checkin,coin_daily_checkin")
+      .eq("month", cmNow.getMonth()+1).eq("year", cmNow.getFullYear()).maybeSingle();
+    if (!cfgRow) {
+      const { data: latestCfg } = await sb.from("streak_config").select("xp_daily_checkin,coin_daily_checkin")
+        .order("year",{ascending:false}).order("month",{ascending:false}).limit(1);
+      cfgRow = latestCfg && latestCfg[0];
+    }
+    const xpAward = cfgRow?.xp_daily_checkin ?? 10;
+    const coinAward = cfgRow?.coin_daily_checkin ?? 5;
+
+    const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: xpAward, coin_awarded: coinAward, qr_verified: true });
     if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
     // Calcola streak
     const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
     const wasYesterday = fullProfile?.last_checkin_date === yesterday;
     const newStreak = wasYesterday ? (fullProfile?.current_streak || 0) + 1 : 1;
     const newLongest = Math.max(newStreak, fullProfile?.longest_streak || 0);
-    const newXp = (fullProfile?.xp || 0) + 10;
-    const newCoin = (fullProfile?.coin || 0) + 5;
+    const newXp = (fullProfile?.xp || 0) + xpAward;
+    const newCoin = (fullProfile?.coin || 0) + coinAward;
     await sb.from("profiles").update({ xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }).eq("id", profile.id);
+    // Traccia in xp_history per classifica oggi/mese
+    try { await sb.from("xp_history").insert({ player_id: profile.id, xp_gained: xpAward, xp_total: newXp, reason: "presenza_qr" }); } catch(_) {}
     setQrMsg(`✅ Check-in! +10 XP +5 Coin · 🔥 ${newStreak} giorni`);
     playPixel("checkin"); setQrCelebration({ xpGained: 10, playerName: fullProfile?.display_name||"" });
     setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }));
