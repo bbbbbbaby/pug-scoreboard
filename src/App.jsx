@@ -3716,15 +3716,20 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   const [showForm, setShowForm] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const [bookingCounts, setBookingCounts] = useState({});
+  const [players, setPlayers] = useState([]);
+  const [selectedPlayers, setSelectedPlayers] = useState(new Set());
+  const [addPlayersTo, setAddPlayersTo] = useState(null); // lab a cui aggiungere player
+  const [playerSearch, setPlayerSearch] = useState("");
   const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" });
 
   const load = useCallback(async () => {
-    const [{ data }, { data: edu }] = await Promise.all([
+    const [{ data }, { data: edu }, { data: pls }] = await Promise.all([
       sb.from("activities").select("id,name,description,link,schedule,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("profiles").select("id,display_name").eq("role","educator").order("display_name"),
+      sb.from("profiles").select("id,display_name,first_name,avatar_url,squad_id,squads(name)").eq("role","player").order("display_name"),
     ]);
     const acts = (data || []).filter(a => !(a.description || "").startsWith("SFIDA"));
-    setActivities(acts); setEducators(edu || []);
+    setPlayers(pls || []); setActivities(acts); setEducators(edu || []);
 
     if (acts.length > 0) {
       const { data: bk } = await sb.from("bookings")
@@ -3742,6 +3747,24 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
 
   const [createErr, setCreateErr] = useState("");
 
+
+  async function enrollPlayers(actId, playerIds, actName) {
+    if (!playerIds.length) return;
+    // Crea bookings confermati per i player scelti (salta i già iscritti)
+    const { data: existing } = await sb.from("bookings").select("player_id").eq("activity_id", actId).in("status",["pending","confirmed"]);
+    const already = new Set((existing||[]).map(b => b.player_id));
+    const toAdd = playerIds.filter(pid => !already.has(pid));
+    if (!toAdd.length) { addToast("Già tutti iscritti", "ok"); return; }
+    const rows = toAdd.map(pid => ({ player_id: pid, activity_id: actId, status: "confirmed", coin_held: 0 }));
+    const { error } = await sb.from("bookings").insert(rows);
+    if (error) { addToast("❌ " + error.message, "error"); return; }
+    // Notifica i player aggiunti
+    toAdd.forEach(pid => {
+      sb.from("notifications").insert({ user_id: pid, type: "booking_confirmed", title: "⚡ Iscritto a un Lab", body: `Sei stato iscritto a "${actName||"un Lab"}"` }).then(()=>{});
+      sendPush(pid, "⚡ Iscritto a un Lab", `Sei stato iscritto a "${actName||"un Lab"}"`).catch(()=>{});
+    });
+    addToast(`✅ ${toAdd.length} giocatori iscritti`, "ok");
+  }
 
   async function createActivity() {
     const name = (form.name || "").trim();
@@ -3778,6 +3801,13 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       sb.from("profiles").select("id").eq("role","player").then(({data})=>{
         (data||[]).forEach(p => sendPush(p.id, "⚡ Nuovo Lab disponibile!", `"${name}" è ora disponibile — prenota ora!`).catch(()=>{}));
       });
+      // Iscrivi i player selezionati durante la creazione
+      if (selectedPlayers.size > 0) {
+        const { data: newAct } = await sb.from("activities").select("id").eq("name", name).order("created_at",{ascending:false}).limit(1);
+        const actId = newAct && newAct[0]?.id;
+        if (actId) await enrollPlayers(actId, [...selectedPlayers], name);
+        setSelectedPlayers(new Set());
+      }
       load();
     } catch(e) {
       setCreateErr("❌ Eccezione: " + (e?.message || String(e)));
@@ -3823,6 +3853,10 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               {a.schedule && <div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
               <LabQRButton actId={a.id} actName={a.name}/>
+              <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,marginBottom:6,color:"var(--neon-blue)"}}
+                onClick={()=>{ setAddPlayersTo(a); setSelectedPlayers(new Set()); setPlayerSearch(""); }}>
+                ➕ Aggiungi giocatori
+              </button>
               {a.link && (
                 <a href={a.link} target="_blank" rel="noreferrer"
                   style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(0,212,255,.06)", border:"1px solid rgba(0,212,255,.18)", borderRadius:8, padding:"4px 10px", marginBottom:8 }}>
@@ -3846,6 +3880,48 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
             </div>
           ))}
           {activities.length === 0 && <div className="empty">Nessuna lab.</div>}
+        </div>
+      )}
+      {/* Modale: aggiungi giocatori a un Lab esistente */}
+      {addPlayersTo && (
+        <div className="modal-bg" onClick={()=>setAddPlayersTo(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">➕ Aggiungi giocatori</div>
+            <div style={{fontSize:13,color:"var(--text2)",marginBottom:12,textAlign:"center"}}>
+              a <strong style={{color:"var(--text)"}}>{addPlayersTo.name}</strong>
+            </div>
+            <input className="form-input" placeholder="🔍 Cerca giocatore…" value={playerSearch}
+              onChange={e=>setPlayerSearch(e.target.value)} style={{marginBottom:8}}/>
+            <div style={{maxHeight:300,overflowY:"auto",border:"1px solid var(--border)",borderRadius:10,padding:6,marginBottom:12}}>
+              {players.filter(p => !playerSearch || p.display_name.toLowerCase().includes(playerSearch.toLowerCase()) || (p.first_name||"").toLowerCase().includes(playerSearch.toLowerCase())).map(p => {
+                const sel = selectedPlayers.has(p.id);
+                return (
+                  <div key={p.id} onClick={()=>setSelectedPlayers(prev=>{const n=new Set(prev); n.has(p.id)?n.delete(p.id):n.add(p.id); return n;})}
+                    style={{display:"flex",alignItems:"center",gap:8,padding:"8px",borderRadius:8,cursor:"pointer",
+                      background: sel ? "rgba(0,212,255,.12)" : "transparent"}}>
+                    <span style={{fontSize:16}}>{sel?"☑️":"⬜"}</span>
+                    {p.avatar_url ? <img src={p.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt=""/> : <span style={{fontSize:18}}>🌱</span>}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:700}}>{p.display_name}</div>
+                      {p.first_name && <div style={{fontSize:11,color:"var(--text3)"}}>{p.first_name}</div>}
+                    </div>
+                    {p.squads?.name && <SquadPill name={p.squads.name}/>}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-primary" style={{flex:2}} disabled={selectedPlayers.size===0}
+                onClick={async()=>{
+                  await enrollPlayers(addPlayersTo.id, [...selectedPlayers], addPlayersTo.name);
+                  setAddPlayersTo(null); setSelectedPlayers(new Set());
+                  load();
+                }}>
+                ✅ Iscrivi {selectedPlayers.size > 0 ? `(${selectedPlayers.size})` : ""}
+              </button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setAddPlayersTo(null)}>Annulla</button>
+            </div>
+          </div>
         </div>
       )}
       {showForm && (
@@ -3875,6 +3951,25 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
                 <div key={k}><label className="form-label">{l}</label><input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} /></div>
               ))}
             </div>
+            {/* Selezione player da iscrivere subito */}
+            <div className="section-label" style={{marginTop:8}}>Iscrivi giocatori (opzionale)</div>
+            <input className="form-input" placeholder="🔍 Cerca giocatore…" value={playerSearch}
+              onChange={e=>setPlayerSearch(e.target.value)} style={{marginBottom:8}}/>
+            <div style={{maxHeight:180,overflowY:"auto",border:"1px solid var(--border)",borderRadius:10,padding:6,marginBottom:8}}>
+              {players.filter(p => !playerSearch || p.display_name.toLowerCase().includes(playerSearch.toLowerCase()) || (p.first_name||"").toLowerCase().includes(playerSearch.toLowerCase())).map(p => {
+                const sel = selectedPlayers.has(p.id);
+                return (
+                  <div key={p.id} onClick={()=>setSelectedPlayers(prev=>{const n=new Set(prev); n.has(p.id)?n.delete(p.id):n.add(p.id); return n;})}
+                    style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:8,cursor:"pointer",
+                      background: sel ? "rgba(0,212,255,.12)" : "transparent"}}>
+                    <span style={{fontSize:14}}>{sel?"☑️":"⬜"}</span>
+                    {p.avatar_url ? <img src={p.avatar_url} style={{width:24,height:24,borderRadius:"50%",objectFit:"cover"}} alt=""/> : <span>🌱</span>}
+                    <span style={{flex:1,fontSize:13,fontWeight:600}}>{p.display_name}{p.first_name?` · ${p.first_name}`:""}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {selectedPlayers.size > 0 && <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700,marginBottom:8}}>{selectedPlayers.size} giocatori selezionati</div>}
             {createErr && <div style={{ color:"var(--danger)", fontSize:12, fontWeight:700, marginBottom:8 }}>{createErr}</div>}
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={createActivity}>Crea</button>
