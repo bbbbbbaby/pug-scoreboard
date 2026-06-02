@@ -61,38 +61,54 @@
     <title>PUG Scoreboard</title>
 
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', async () => {
-          try {
-            const reg = await navigator.serviceWorker.register('/sw.js');
+      // KILL ZOMBIE SW: rileva e neutralizza SW vecchi che servono index.html cached
+      (async function killZombieSW() {
+        if (!('serviceWorker' in navigator)) return;
+        try {
+          // 1. Verifica se /sw.js viene servito come JavaScript (e non come HTML)
+          const resp = await fetch('/sw.js?cb=' + Date.now(), { cache: 'no-store' });
+          const text = await resp.text();
+          const isHtml = text.trim().startsWith('<') || text.includes('<!DOCTYPE');
 
-            // Controlla aggiornamenti ogni 5 minuti
-            setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
+          if (isHtml) {
+            // Il SW endpoint serve HTML → un SW vecchio sta intercettando
+            // Disinstalla TUTTI i SW e svuota TUTTE le cache, poi ricarica
+            console.warn('[ZombieSW] Detected stale SW, cleaning…');
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+            if (window.caches) {
+              const keys = await caches.keys();
+              await Promise.all(keys.map(k => caches.delete(k)));
+            }
+            // Forza reload dal server, no cache
+            sessionStorage.setItem('zombie_killed', '1');
+            window.location.reload();
+            return;
+          }
 
-            // Nuovo SW trovato mentre la pagina è aperta
-            reg.addEventListener('updatefound', () => {
-              const newWorker = reg.installing;
-              if (!newWorker) return;
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // Nuova versione pronta — notifica l'app
-                  window.dispatchEvent(new CustomEvent('sw-update-ready', {
-                    detail: { worker: newWorker }
-                  }));
-                }
-              });
-            });
+          // SW endpoint ok: registra normalmente
+          const reg = await navigator.serviceWorker.register('/sw.js?v=' + Date.now());
+          setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
 
-            // SW appena attivato (dopo skipWaiting) — notifica l'app
-            navigator.serviceWorker.addEventListener('message', e => {
-              if (e.data?.type === 'SW_UPDATED') {
-                window.dispatchEvent(new CustomEvent('sw-activated'));
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                window.dispatchEvent(new CustomEvent('sw-update-ready', { detail: { worker: nw } }));
               }
             });
+          });
 
-          } catch(_) {}
-        });
-      }
+          navigator.serviceWorker.addEventListener('message', e => {
+            if (e.data?.type === 'SW_UPDATED') {
+              window.dispatchEvent(new CustomEvent('sw-activated'));
+            }
+          });
+        } catch (e) {
+          console.warn('[SW] init error:', e);
+        }
+      })();
     </script>
   </head>
   <body>
