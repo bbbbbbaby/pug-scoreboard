@@ -1464,10 +1464,19 @@ function AvatarUpload({ playerId, currentUrl, onUploaded }) {
 }
 
 async function logXPGain(playerId, xpGained, xpTotal, reason) {
-  if (!xpGained || xpGained <= 0) return;
+  if (!xpGained || xpGained === 0) return;
   try {
-    await sb.from("xp_history").insert({ player_id:playerId, xp_gained:xpGained, xp_total:xpTotal, reason });
-  } catch(e) { }
+    const { error } = await sb.from("xp_history").insert({ player_id:playerId, xp_gained:xpGained, xp_total:xpTotal, reason });
+    if (error) {
+      console.warn("[xp_history] FAIL:", error.message, error.code, error.details);
+      if (typeof addToast === "function") addToast("⚠️ xp_history: " + error.message, "error");
+    } else {
+      console.log("[xp_history] OK +" + xpGained + " " + reason);
+    }
+  } catch(e) {
+    console.warn("[xp_history] EXCEPTION:", e);
+    if (typeof addToast === "function") addToast("⚠️ xp_history exception: " + (e?.message||"?"), "error");
+  }
 }
 
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
@@ -2739,7 +2748,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
     await sb.from("profiles").update({ [field]: newVal }).eq("id", playerId);
     // Traccia gli XP per la classifica oggi/mese
     if (field === "xp" && delta !== 0) {
-      try { await sb.from("xp_history").insert({ player_id: playerId, xp_gained: delta, xp_total: newVal, reason: "manuale" }); } catch(_) {}
+      await logXPGain(playerId, delta, newVal, "manuale");
     }
     await logAction({ playerId, action: field === "xp" ? "XP manuale" : "Coin manuale", xpDelta: field === "xp" ? delta : 0, coinDelta: field === "coin" ? delta : 0 });
     if (field === "xp" && delta > 0) {
@@ -2765,7 +2774,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
       await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", id);
       // Traccia gli XP per la classifica oggi/mese
       if (Number(batchXp) !== 0) {
-        try { await sb.from("xp_history").insert({ player_id: id, xp_gained: Number(batchXp), xp_total: newXp, reason: "batch" }); } catch(_) {}
+        await logXPGain(id, Number(batchXp), newXp, "batch");
       }
       await logAction({ playerId: id, action: "Assegnazione batch", xpDelta: Number(batchXp), coinDelta: Number(batchCoin) });
       const oldLv = getLevel(p.xp); const newLv = getLevel(newXp);
@@ -3054,6 +3063,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
   async function saveEdits() {
     if (!editing) return;
     await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId);
+    if (deltaXp !== 0) await logXPGain(playerId, deltaXp, Number(editing.xp), "modifica_dettagli");
     setSaveMsg("Salvato ✅"); setTimeout(() => setSaveMsg(""), 2000);
     loadData();
   }
@@ -3595,7 +3605,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
         await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", playerId);
         // Traccia per classifica oggi/mese
         if (deltaXp !== 0) {
-          try { await sb.from("xp_history").insert({ player_id: playerId, xp_gained: deltaXp, xp_total: newXp, reason: "presenza" }); } catch(_) {}
+          await logXPGain(playerId, deltaXp, newXp, "presenza");
         }
         setPlayers(prev => prev.map(pl => pl.id === playerId ? { ...pl, xp: newXp, coin: newCoin } : pl));
         // Push solo se ha guadagnato qualcosa
@@ -6235,9 +6245,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         coin_awarded: act.coin_full || 10, qr_verified: true, activity_id: act.id,
       });
       if (labErr?.code === "23505") { setQrMsg("Hai già fatto il check-in per questo Lab oggi!"); return; }
-      const newXp = (fullProfile?.xp||0) + (act.xp_full||20);
+      const xpGain = act.xp_full||20;
+      const newXp = (fullProfile?.xp||0) + xpGain;
       const newCoin = (fullProfile?.coin||0) + (act.coin_full||10);
       await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", profile.id);
+      await logXPGain(profile.id, xpGain, newXp, "lab_checkin");
       setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin }));
       setQrInput(""); setQrMsg(`✅ Check-in Lab "${act.name}"! +${act.xp_full||20} XP +${act.coin_full||10} 🪙`);
       playPixel("checkin"); setQrCelebration({ xpGained: act.xp_full||20, playerName: fullProfile?.display_name||"" });
@@ -6274,7 +6286,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const newCoin = (fullProfile?.coin || 0) + coinAward;
     await sb.from("profiles").update({ xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }).eq("id", profile.id);
     // Traccia in xp_history per classifica oggi/mese
-    try { await sb.from("xp_history").insert({ player_id: profile.id, xp_gained: xpAward, xp_total: newXp, reason: "presenza_qr" }); } catch(_) {}
+    await logXPGain(profile.id, xpAward, newXp, "presenza_qr");
     setQrMsg(`✅ Check-in! +10 XP +5 Coin · 🔥 ${newStreak} giorni`);
     playPixel("checkin"); setQrCelebration({ xpGained: 10, playerName: fullProfile?.display_name||"" });
     setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }));
