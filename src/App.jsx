@@ -1882,7 +1882,10 @@ function UpdateBanner() {
       position:'fixed', top:0, left:0, right:0, zIndex:99999,
       background:'linear-gradient(90deg,#0a2a1a,#0d3a22)',
       borderBottom:'2px solid #00ff88',
-      padding:'10px 16px',
+      paddingTop:'calc(env(safe-area-inset-top, 0px) + 10px)',
+      paddingBottom:'10px',
+      paddingLeft:'calc(env(safe-area-inset-left, 0px) + 16px)',
+      paddingRight:'calc(env(safe-area-inset-right, 0px) + 16px)',
       display:'flex', alignItems:'center', gap:12,
       boxShadow:'0 2px 20px rgba(0,255,136,.3)',
       animation:'slideDown .3s ease',
@@ -1894,15 +1897,17 @@ function UpdateBanner() {
       </div>
       <button onClick={applyUpdate} style={{
         background:'#00ff88', border:'none', borderRadius:99,
-        padding:'8px 16px', color:'#000', fontSize:13,
+        padding:'10px 20px', color:'#000', fontSize:14,
         fontWeight:900, cursor:'pointer', flexShrink:0,
         fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:'.04em',
+        minHeight:'44px',
       }}>
         {reloading ? '⏳' : 'Aggiorna'}
       </button>
       <button onClick={()=>setPending(null)} style={{
-        background:'none', border:'none', color:'rgba(255,255,255,.3)',
-        cursor:'pointer', fontSize:18, flexShrink:0, padding:'0 4px',
+        background:'none', border:'none', color:'rgba(255,255,255,.4)',
+        cursor:'pointer', fontSize:20, flexShrink:0, padding:'8px 10px',
+        minWidth:'40px', minHeight:'40px',
       }}>✕</button>
     </div>
   );
@@ -1932,7 +1937,7 @@ function OfflineBanner() {
 
   return (
     <div style={{
-      position:'fixed', bottom:80, left:12, right:12, zIndex:9998,
+      position:'fixed', bottom:'calc(env(safe-area-inset-bottom, 0px) + 80px)', left:12, right:12, zIndex:9998,
       background: justBack
         ? 'linear-gradient(90deg,#0a2a1a,#0d3a22)'
         : 'linear-gradient(90deg,#2a0a0a,#3a0d0d)',
