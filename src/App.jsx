@@ -423,16 +423,16 @@ const css = `
   .delete-btn:hover { background:rgba(255,34,68,.2); }
 
   /* ═══ BADGES ═══ */
-  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:14px; }
+  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; }
   .badge-card {
     background:rgba(80,0,80,0.08); border:1px solid rgba(255,0,204,0.15);
     border-radius:var(--radius); padding:18px 14px; text-align:center;
     cursor:pointer; position:relative; transition:all .2s;
   }
   .badge-card:hover { border-color:rgba(255,0,204,0.4); box-shadow:var(--glow-pink); transform:translateY(-3px) scale(1.02); }
-  .badge-img { width:96px; height:96px; border-radius:50%; object-fit:cover; margin:0 auto 12px; display:block; border:3px solid rgba(255,0,204,0.5); box-shadow:0 0 16px rgba(255,0,204,0.3); }
-  .badge-emoji { font-size:64px; display:block; margin:0 auto 12px; line-height:1; }
-  .badge-name { font-size:13px; font-weight:700; color:var(--text); line-height:1.3; }
+  .badge-img { width:128px; height:128px; border-radius:50%; object-fit:cover; margin:0 auto 14px; display:block; border:3px solid rgba(255,0,204,0.5); box-shadow:0 0 20px rgba(255,0,204,0.35); }
+  .badge-emoji { font-size:88px; display:block; margin:0 auto 14px; line-height:1; }
+  .badge-name { font-size:14px; font-weight:700; color:var(--text); line-height:1.3; }
   .badge-pts { font-size:10px; color:var(--rosa); margin-top:3px; font-weight:700; }
 
   /* ═══ SFIDA ═══ */
@@ -2737,6 +2737,10 @@ function PlayersView({ sectionColors, setSectionColors }) {
     if (!p) return;
     const newVal = Math.max(0, p[field] + delta);
     await sb.from("profiles").update({ [field]: newVal }).eq("id", playerId);
+    // Traccia gli XP per la classifica oggi/mese
+    if (field === "xp" && delta !== 0) {
+      try { await sb.from("xp_history").insert({ player_id: playerId, xp_gained: delta, xp_total: newVal, reason: "manuale" }); } catch(_) {}
+    }
     await logAction({ playerId, action: field === "xp" ? "XP manuale" : "Coin manuale", xpDelta: field === "xp" ? delta : 0, coinDelta: field === "coin" ? delta : 0 });
     if (field === "xp" && delta > 0) {
       const oldLv = getLevel(p.xp); const newLv = getLevel(newVal);
@@ -2759,6 +2763,10 @@ function PlayersView({ sectionColors, setSectionColors }) {
       const newXp = p.xp + Number(batchXp);
       const newCoin = p.coin + Number(batchCoin);
       await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", id);
+      // Traccia gli XP per la classifica oggi/mese
+      if (Number(batchXp) !== 0) {
+        try { await sb.from("xp_history").insert({ player_id: id, xp_gained: Number(batchXp), xp_total: newXp, reason: "batch" }); } catch(_) {}
+      }
       await logAction({ playerId: id, action: "Assegnazione batch", xpDelta: Number(batchXp), coinDelta: Number(batchCoin) });
       const oldLv = getLevel(p.xp); const newLv = getLevel(newXp);
       if (newLv.name !== oldLv.name) {
@@ -3318,18 +3326,18 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
     async function load() {
       const today = localToday();
       const monthStart = today.slice(0, 7) + "-01";
-      const [{ data }, { data: sq }, { data: attToday }, { data: attMonth }] = await Promise.all([
-        sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role", "player").order("xp", { ascending: false }),
+      const [{ data }, { data: sq }, { data: xpToday_hist }, { data: xpMonth_hist }] = await Promise.all([
+        sb.from("profiles").select("id,display_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role", "player").order("xp", { ascending: false }).order("coin", { ascending: false }),
         sb.from("squads").select("*"),
-        sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
-        sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
+        sb.from("xp_history").select("player_id, xp_gained").gte("created_at", today + "T00:00:00"),
+        sb.from("xp_history").select("player_id, xp_gained").gte("created_at", monthStart + "T00:00:00"),
       ]);
       setPlayers(data || []); setSquads(sq || []);
-      // Aggregate XP today
-      const td = {}; (attToday || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_awarded || 0); });
+      // Aggregate XP today (from xp_history — tutti i tipi di XP)
+      const td = {}; (xpToday_hist || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_gained || 0); });
       setXpToday(td);
       // Aggregate XP this month
-      const mt = {}; (attMonth || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_awarded || 0); });
+      const mt = {}; (xpMonth_hist || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_gained || 0); });
       setXpMonth(mt);
       setLoading(false);
     }
@@ -3338,9 +3346,17 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
 
   let ranked = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
   if (timeFilter === "oggi") {
-    ranked = [...ranked].sort((a, b) => (xpToday[b.id] || 0) - (xpToday[a.id] || 0)).slice(0, 3);
+    ranked = [...ranked].sort((a, b) => {
+      const xpA = xpToday[a.id]||0, xpB = xpToday[b.id]||0;
+      if (xpA !== xpB) return xpB - xpA;
+      return (b.coin || 0) - (a.coin || 0);
+    }).slice(0, 3);
   } else if (timeFilter === "mese") {
-    ranked = [...ranked].sort((a, b) => (xpMonth[b.id] || 0) - (xpMonth[a.id] || 0)).slice(0, 10);
+    ranked = [...ranked].sort((a, b) => {
+      const xpA = xpMonth[a.id]||0, xpB = xpMonth[b.id]||0;
+      if (xpA !== xpB) return xpB - xpA;
+      return (b.coin || 0) - (a.coin || 0);
+    }).slice(0, 10);
   }
 
   return (
@@ -3571,6 +3587,10 @@ function AttendanceView({ sectionColors, setSectionColors }) {
         const newXp = Math.max(0, (p.xp || 0) + deltaXp);
         const newCoin = Math.max(0, (p.coin || 0) + deltaCoin);
         await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", playerId);
+        // Traccia per classifica oggi/mese
+        if (deltaXp !== 0) {
+          try { await sb.from("xp_history").insert({ player_id: playerId, xp_gained: deltaXp, xp_total: newXp, reason: "presenza" }); } catch(_) {}
+        }
         setPlayers(prev => prev.map(pl => pl.id === playerId ? { ...pl, xp: newXp, coin: newCoin } : pl));
         // Push solo se ha guadagnato qualcosa
         if (deltaXp > 0) sendPush(playerId, "✅ Presenza registrata!", `+${deltaXp} XP${deltaCoin>0?` e +${deltaCoin} Coin`:""}`).catch(()=>{});
