@@ -409,7 +409,9 @@ const css = `
     background:rgba(0,80,40,0.08); border:1px solid rgba(0,255,136,0.15);
     border-radius:var(--radius); padding:16px; position:relative;
     transition:all .15s;
+    overflow:hidden; word-break:break-word;
   }
+  .act-title, .act-meta { overflow-wrap:anywhere; }
   .act-card:hover { border-color:rgba(0,255,136,0.3); box-shadow:var(--glow-green); }
   .act-title { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; letter-spacing:.02em; }
   .act-meta { font-size:12px; color:var(--text2); margin-bottom:10px; }
@@ -3209,35 +3211,95 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 }
 
 function Podium({ ranked, xpData, timeFilter, highlightId }) {
-  const top3 = ranked.slice(0, 3);
-  if (top3.length < 2) return null;
-  const order = [1, 0, 2]; // silver, gold, bronze
+  // Funzione che restituisce la "tripla di confronto" per un giocatore
+  // (XP, livello-derivato-da-XP, coin). Due giocatori condividono il podio
+  // solo se hanno TUTTI E TRE i valori uguali.
+  const tieKey = (p) => {
+    const xp = timeFilter === "oggi" || timeFilter === "mese" ? (xpData[p.id]||0) : (p.xp||0);
+    const lv = getLevel(p.xp||0).name;
+    return `${xp}|${lv}|${p.coin||0}`;
+  };
+
+  // Raggruppa in posizioni: 1ª, 2ª, 3ª. Stesso gruppo = stessa tieKey.
+  // Scorri ranked e crea gruppi consecutivi con stessa key
+  if (!ranked || ranked.length === 0) return null;
+  const groups = [];
+  let current = { key: tieKey(ranked[0]), players: [ranked[0]] };
+  for (let i = 1; i < ranked.length && groups.length < 3; i++) {
+    const k = tieKey(ranked[i]);
+    if (k === current.key) {
+      current.players.push(ranked[i]);
+    } else {
+      groups.push(current);
+      current = { key: k, players: [ranked[i]] };
+    }
+  }
+  if (groups.length < 3) groups.push(current);
+  const top3groups = groups.slice(0, 3);
+  if (top3groups.length < 1) return null;
+
+  // Render: 2°, 1°, 3° (layout podio classico)
+  const order = [1, 0, 2];
   const cols = ["pod-2", "pod-1", "pod-3"];
   const crowns = [null, "👑", null];
   const xpColors = ["#aac8e0", "#ffcc00", "#d4916a"];
   const sizes = [54, 68, 48];
+  const ranks = ["2°", "1°", "3°"];
+
+  function renderGroup(group, i) {
+    if (!group) return <div key={i} className={`pod-col ${cols[i]}`}/>;
+    const players = group.players;
+    // Se solo uno: render normale
+    if (players.length === 1) {
+      const p = players[0];
+      const lv = getLevel(p.xp);
+      const xpShown = timeFilter === "oggi" || timeFilter === "mese" ? xpData[p.id]||0 : p.xp;
+      const isMe = p.id === highlightId;
+      return (
+        <div key={p.id} className={`pod-col ${cols[i]}`}>
+          {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
+          <div className="pod-av-wrap" style={isMe?{outline:"2px solid var(--neon-blue)",outlineOffset:2}:{}}>
+            <Avatar url={p.avatar_url} emoji={lv.emoji} size={sizes[i]}/>
+          </div>
+          <div className="pod-name">{p.display_name}{isMe&&<span style={{color:"var(--azzurro)",fontSize:9,display:"block"}}>TU</span>}</div>
+          <div className="pod-xp">{xpShown} XP</div>
+          <div className="pod-base">
+            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:xpColors[i]}}>{ranks[i]}</div>
+          </div>
+        </div>
+      );
+    }
+    // Pari merito: avatar piccoli affiancati
+    const xpShown = timeFilter === "oggi" || timeFilter === "mese" ? xpData[players[0].id]||0 : players[0].xp;
+    const tieSize = Math.max(28, sizes[i] - 14 * Math.min(players.length - 1, 2));
+    return (
+      <div key={"tie-" + i} className={`pod-col ${cols[i]}`}>
+        {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
+        <div style={{display:"flex",justifyContent:"center",gap:-6,marginBottom:6,flexWrap:"wrap",maxWidth:"100%"}}>
+          {players.slice(0, 4).map(p => {
+            const lv = getLevel(p.xp);
+            const isMe = p.id === highlightId;
+            return (
+              <div key={p.id} className="pod-av-wrap" style={{marginLeft:-4, ...(isMe?{outline:"2px solid var(--neon-blue)",outlineOffset:1}:{})}}>
+                <Avatar url={p.avatar_url} emoji={lv.emoji} size={tieSize}/>
+              </div>
+            );
+          })}
+        </div>
+        <div className="pod-name" style={{fontSize:11}}>
+          {players.length === 2 ? `${players[0].display_name} & ${players[1].display_name}` : `${players.length} a pari merito`}
+        </div>
+        <div className="pod-xp">{xpShown} XP</div>
+        <div className="pod-base">
+          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:xpColors[i]}}>{ranks[i]}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="podium-wrap">
-      {order.map((pos, i) => {
-        const p = top3[pos];
-        if (!p) return <div key={i} className={`pod-col ${cols[i]}`}/>;
-        const lv = getLevel(p.xp);
-        const xpShown = timeFilter === "oggi" ? xpData[p.id]||0 : timeFilter === "mese" ? xpData[p.id]||0 : p.xp;
-        const isMe = p.id === highlightId;
-        return (
-          <div key={p.id} className={`pod-col ${cols[i]}`}>
-            {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
-            <div className="pod-av-wrap" style={isMe?{outline:"2px solid var(--neon-blue)",outlineOffset:2}:{}}>
-              <Avatar url={p.avatar_url} emoji={lv.emoji} size={sizes[i]}/>
-            </div>
-            <div className="pod-name">{p.display_name}{isMe&&<span style={{color:"var(--azzurro)",fontSize:9,display:"block"}}>TU</span>}</div>
-            <div className="pod-xp">{xpShown} XP</div>
-            <div className="pod-base">
-              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,color:xpColors[i]}}>{["2°","1°","3°"][i]}</div>
-            </div>
-          </div>
-        );
-      })}
+      {order.map((pos, i) => renderGroup(top3groups[pos], i))}
     </div>
   );
 }
