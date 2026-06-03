@@ -3398,6 +3398,9 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
   return (
     <div>
       <SectionBanner sectionKey="classifica" title="Classifica" sub={`${ranked.length} giocatori`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:6}}>
+        <button className="btn btn-ghost btn-xs" onClick={() => { setLoading(true); load(); }}>🔄 Aggiorna</button>
+      </div>
       <div className="filter-bar" style={{ marginBottom: 8 }}>
         <button className={`chip ${timeFilter === "generale" ? "active" : ""}`} onClick={() => setTimeFilter("generale")}>🏆 Generale</button>
         <button className={`chip ${timeFilter === "oggi" ? "active" : ""}`} style={{ borderColor: timeFilter === "oggi" ? "var(--giallo)" : undefined, background: timeFilter === "oggi" ? "var(--giallo)" : undefined, color: timeFilter === "oggi" ? "#101010" : undefined }} onClick={() => setTimeFilter("oggi")}>⚡ Top 3 Oggi</button>
