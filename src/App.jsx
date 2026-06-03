@@ -2886,7 +2886,18 @@ function PlayersView({ sectionColors, setSectionColors }) {
       {msg && <div style={{ background: "rgba(163,207,254,.1)", border: "1.5px solid rgba(163,207,254,.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "var(--azzurro)", fontWeight: 600 }}>{msg}</div>}
 
       <div className="filter-bar">
-        <input className="search-inp" placeholder="Cerca giocatore…" value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="search-inp" placeholder="Cerca per nickname o nome…" value={search} onChange={e => setSearch(e.target.value)} />
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
+          <span style={{fontSize:11,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>Ordina</span>
+          <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
+            style={{padding:"6px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+            <option value="alpha">A→Z (nickname)</option>
+            <option value="xp">XP più alti</option>
+            <option value="coin">Coin più alti</option>
+            <option value="squad">Per squadra</option>
+            <option value="recent">Aggiunti di recente</option>
+          </select>
+        </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
           {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
