@@ -3358,27 +3358,63 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
   const [xpToday, setXpToday] = useState({});
   const [xpMonth, setXpMonth] = useState({});
 
-  useEffect(() => {
-    async function load() {
-      const today = localToday();
-      const monthStart = today.slice(0, 7) + "-01";
-      const [{ data }, { data: sq }, { data: xpToday_hist }, { data: xpMonth_hist }] = await Promise.all([
-        sb.from("profiles").select("id,display_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role", "player").order("xp", { ascending: false }).order("coin", { ascending: false }),
-        sb.from("squads").select("*"),
-        sb.from("xp_history").select("player_id, xp_gained").gte("created_at", today + "T00:00:00"),
-        sb.from("xp_history").select("player_id, xp_gained").gte("created_at", monthStart + "T00:00:00"),
-      ]);
-      setPlayers(data || []); setSquads(sq || []);
-      // Aggregate XP today (from xp_history — tutti i tipi di XP)
-      const td = {}; (xpToday_hist || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_gained || 0); });
-      setXpToday(td);
-      // Aggregate XP this month
-      const mt = {}; (xpMonth_hist || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_gained || 0); });
-      setXpMonth(mt);
-      setLoading(false);
-    }
-    load();
+  const load = useCallback(async () => {
+    const today = localToday();
+    const monthStart = today.slice(0, 7) + "-01";
+    const [{ data }, { data: sq }, { data: xpToday_hist }, { data: xpMonth_hist }] = await Promise.all([
+      sb.from("profiles").select("id,display_name,avatar_url,xp,coin,squad_id,squads(name)").eq("role", "player").gt("xp", 2).order("xp", { ascending: false }).order("coin", { ascending: false }),
+      sb.from("squads").select("*"),
+      sb.from("xp_history").select("player_id, xp_gained").gte("created_at", today + "T00:00:00"),
+      sb.from("xp_history").select("player_id, xp_gained").gte("created_at", monthStart + "T00:00:00"),
+    ]);
+    setPlayers(data || []); setSquads(sq || []);
+    const td = {}; (xpToday_hist || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_gained || 0); });
+    setXpToday(td);
+    const mt = {}; (xpMonth_hist || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_gained || 0); });
+    setXpMonth(mt);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    load();
+
+    // Realtime: ogni volta che un giocatore guadagna XP (presenza, lab, manuale, badge…)
+    // la classifica si aggiorna istantaneamente, senza ricaricare.
+    const today = localToday();
+    const monthStart = today.slice(0, 7) + "-01";
+
+    const ch = sb.channel("leaderboard-realtime")
+      // Nuove righe in xp_history → aggiorna xpToday e xpMonth
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "xp_history" }, (payload) => {
+        const row = payload.new;
+        if (!row || !row.created_at) return;
+        if (row.created_at >= monthStart + "T00:00:00") {
+          setXpMonth(prev => ({ ...prev, [row.player_id]: (prev[row.player_id] || 0) + (row.xp_gained || 0) }));
+        }
+        if (row.created_at >= today + "T00:00:00") {
+          setXpToday(prev => ({ ...prev, [row.player_id]: (prev[row.player_id] || 0) + (row.xp_gained || 0) }));
+        }
+      })
+      // Aggiornamenti dei profili (xp/coin totali) → aggiorna la classifica generale
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
+        const row = payload.new;
+        if (!row) return;
+        setPlayers(prev => {
+          const idx = prev.findIndex(p => p.id === row.id);
+          if (idx < 0) {
+            // Nuovo giocatore appena salito sopra 2 XP: aggiungilo
+            if (row.xp > 2 && row.role === "player") return [...prev, row].sort((a,b)=>(b.xp||0)-(a.xp||0));
+            return prev;
+          }
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], xp: row.xp, coin: row.coin, display_name: row.display_name, avatar_url: row.avatar_url, squad_id: row.squad_id };
+          return updated;
+        });
+      })
+      .subscribe();
+
+    return () => { sb.removeChannel(ch); };
+  }, [load]);
 
   let ranked = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
   if (timeFilter === "oggi") {
@@ -3398,9 +3434,6 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
   return (
     <div>
       <SectionBanner sectionKey="classifica" title="Classifica" sub={`${ranked.length} giocatori`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
-      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:6}}>
-        <button className="btn btn-ghost btn-xs" onClick={() => { setLoading(true); load(); }}>🔄 Aggiorna</button>
-      </div>
       <div className="filter-bar" style={{ marginBottom: 8 }}>
         <button className={`chip ${timeFilter === "generale" ? "active" : ""}`} onClick={() => setTimeFilter("generale")}>🏆 Generale</button>
         <button className={`chip ${timeFilter === "oggi" ? "active" : ""}`} style={{ borderColor: timeFilter === "oggi" ? "var(--giallo)" : undefined, background: timeFilter === "oggi" ? "var(--giallo)" : undefined, color: timeFilter === "oggi" ? "#101010" : undefined }} onClick={() => setTimeFilter("oggi")}>⚡ Top 3 Oggi</button>
@@ -6219,6 +6252,31 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         load();
         const m = payload.new;
         showInAppNotif("📢 Annuncio", m?.body?.slice(0,60)||"Nuovo messaggio per tutti");
+      })
+      // Realtime classifica: tutti gli XP guadagnati da chiunque, in tempo reale
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "xp_history" }, (payload) => {
+        const row = payload.new;
+        if (!row?.created_at) return;
+        const today = localToday();
+        const monthStart = today.slice(0, 7) + "-01";
+        if (row.created_at >= monthStart + "T00:00:00") {
+          setXpMonth(prev => ({ ...prev, [row.player_id]: (prev[row.player_id]||0) + (row.xp_gained||0) }));
+        }
+        if (row.created_at >= today + "T00:00:00") {
+          setXpToday(prev => ({ ...prev, [row.player_id]: (prev[row.player_id]||0) + (row.xp_gained||0) }));
+        }
+      })
+      // Aggiornamenti dei profili altrui (classifica generale)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
+        const row = payload.new;
+        if (!row || row.id === profile.id) return; // il proprio è già gestito sopra
+        setPlayers(prev => {
+          const idx = prev.findIndex(p => p.id === row.id);
+          if (idx < 0) return prev;
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], xp: row.xp, coin: row.coin, display_name: row.display_name, avatar_url: row.avatar_url, squad_id: row.squad_id };
+          return updated;
+        });
       })
       .subscribe();
     return () => sb.removeChannel(channel);
