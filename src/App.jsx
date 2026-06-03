@@ -2739,8 +2739,18 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
   const visible = players.filter(p => {
     const sq = squadFilter === "all" || p.squads?.name === squadFilter;
-    const sr = !search || p.display_name.toLowerCase().includes(search.toLowerCase());
+    const sr = !search || p.display_name.toLowerCase().includes(search.toLowerCase()) || (p.first_name||"").toLowerCase().includes(search.toLowerCase());
     return sq && sr;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "xp":     return (b.xp||0) - (a.xp||0);
+      case "coin":   return (b.coin||0) - (a.coin||0);
+      case "level":  return (b.xp||0) - (a.xp||0);
+      case "recent": return (new Date(b.created_at||0)) - (new Date(a.created_at||0));
+      case "squad":  return (a.squads?.name||"zzz").localeCompare(b.squads?.name||"zzz");
+      case "alpha":
+      default:       return (a.display_name||"").localeCompare(b.display_name||"");
+    }
   });
 
   async function changeXP(playerId, delta, field = "xp") {
