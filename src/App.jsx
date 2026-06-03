@@ -2703,6 +2703,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
     const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("alpha");
   const [squadFilter, setSquadFilter] = useState("all");
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
