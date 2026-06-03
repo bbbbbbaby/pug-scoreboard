@@ -3418,17 +3418,23 @@ function LeaderboardView({ sectionColors, setSectionColors }) {
 
   let ranked = players.filter(p => squadFilter === "all" || p.squads?.name === squadFilter);
   if (timeFilter === "oggi") {
-    ranked = [...ranked].sort((a, b) => {
-      const xpA = xpToday[a.id]||0, xpB = xpToday[b.id]||0;
-      if (xpA !== xpB) return xpB - xpA;
-      return (b.coin || 0) - (a.coin || 0);
-    }).slice(0, 3);
+    ranked = [...ranked]
+      .filter(p => (xpToday[p.id]||0) > 0)
+      .sort((a, b) => {
+        const xpA = xpToday[a.id]||0, xpB = xpToday[b.id]||0;
+        if (xpA !== xpB) return xpB - xpA;
+        return (b.coin || 0) - (a.coin || 0);
+      })
+      .slice(0, 3);
   } else if (timeFilter === "mese") {
-    ranked = [...ranked].sort((a, b) => {
-      const xpA = xpMonth[a.id]||0, xpB = xpMonth[b.id]||0;
-      if (xpA !== xpB) return xpB - xpA;
-      return (b.coin || 0) - (a.coin || 0);
-    }).slice(0, 10);
+    ranked = [...ranked]
+      .filter(p => (xpMonth[p.id]||0) > 0)
+      .sort((a, b) => {
+        const xpA = xpMonth[a.id]||0, xpB = xpMonth[b.id]||0;
+        if (xpA !== xpB) return xpB - xpA;
+        return (b.coin || 0) - (a.coin || 0);
+      })
+      .slice(0, 10);
   }
 
   return (
@@ -6416,8 +6422,25 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   // Leaderboard ranked
   let lbRanked = [...players];
-  if (lbTimeFilter === "oggi") lbRanked = lbRanked.sort((a, b) => (xpToday[b.id] || 0) - (xpToday[a.id] || 0)).slice(0, 3);
-  else if (lbTimeFilter === "mese") lbRanked = lbRanked.sort((a, b) => (xpMonth[b.id] || 0) - (xpMonth[a.id] || 0)).slice(0, 10);
+  if (lbTimeFilter === "oggi") {
+    lbRanked = lbRanked
+      .filter(p => (xpToday[p.id]||0) > 0)
+      .sort((a, b) => {
+        const xpA = xpToday[a.id]||0, xpB = xpToday[b.id]||0;
+        if (xpA !== xpB) return xpB - xpA;
+        return (b.coin || 0) - (a.coin || 0);
+      })
+      .slice(0, 3);
+  } else if (lbTimeFilter === "mese") {
+    lbRanked = lbRanked
+      .filter(p => (xpMonth[p.id]||0) > 0)
+      .sort((a, b) => {
+        const xpA = xpMonth[a.id]||0, xpB = xpMonth[b.id]||0;
+        if (xpA !== xpB) return xpB - xpA;
+        return (b.coin || 0) - (a.coin || 0);
+      })
+      .slice(0, 10);
+  }
 
   async function saveNewPin() {
     if (newPin1.length < 4) { setPinChangeErr("Il PIN deve avere 4 cifre"); return; }
