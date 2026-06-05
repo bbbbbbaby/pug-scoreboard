@@ -2804,7 +2804,13 @@ function PlayersView({ sectionColors, setSectionColors }) {
   }
 
   async function savePlayer(p) {
-    await sb.from("profiles").update({ display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: p.xp, coin: p.coin, pin: p.pin || "1234", avatar_url: p.avatar_url || null }).eq("id", p.id);
+    // Calcola il delta XP rispetto al valore originale del giocatore
+    const prev = players.find(pl => pl.id === p.id);
+    const newXp = Number(p.xp) || 0;
+    const newCoin = Number(p.coin) || 0;
+    const deltaXp = newXp - (prev?.xp || 0);
+    await sb.from("profiles").update({ display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, pin: p.pin || "1234", avatar_url: p.avatar_url || null }).eq("id", p.id);
+    if (deltaXp !== 0) await logXPGain(p.id, deltaXp, newXp, "modifica_manuale");
     setEditPlayer(null); load();
   }
 
@@ -4189,7 +4195,9 @@ function BadgesView({ sectionColors, setSectionColors }) {
     const badge = badges.find(b => b.id === showAssign);
     const player = players.find(p => p.id === assignTarget);
     await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
-    await sb.from("profiles").update({ xp: (player?.xp || 0) + Number(assignXp), coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
+    const newBadgeXp = (player?.xp || 0) + Number(assignXp);
+    await sb.from("profiles").update({ xp: newBadgeXp, coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
+    if (Number(assignXp) > 0) await logXPGain(assignTarget, Number(assignXp), newBadgeXp, "badge");
     await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: `Badge: ${badge?.name}`, body: `+${assignXp} XP, +${assignCoin} Coin` });
     sendPush(assignTarget, `🎖️ Badge: ${badge?.name}`, `Hai guadagnato +${assignXp} XP e +${assignCoin} Coin!`).catch(()=>{});
     playPixel("badge");
@@ -6312,7 +6320,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     }
     if (!badge) return;
     await sb.from("player_badges").insert({ player_id: profile.id, badge_id: badge.id, xp_awarded: config.xp_reward, coin_awarded: config.coin_reward });
-    await sb.from("profiles").update({ xp: currentXp + config.xp_reward, coin: currentCoin + config.coin_reward }).eq("id", profile.id);
+    const newMonthXp = currentXp + config.xp_reward;
+    await sb.from("profiles").update({ xp: newMonthXp, coin: currentCoin + config.coin_reward }).eq("id", profile.id);
+    if (config.xp_reward > 0) await logXPGain(profile.id, config.xp_reward, newMonthXp, "streak_mensile");
     await sb.from("notifications").insert({ user_id: profile.id, type: "badge_assigned", title: `🏅 Badge ${badgeName} sbloccato!`, body: `+${config.xp_reward} XP · +${config.coin_reward} Coin` });
     setQrMsg(prev => prev + ` · 🏅 Badge ${badgeName}!`);
     setFullProfile(prev => ({ ...prev, xp: prev.xp + config.xp_reward, coin: prev.coin + config.coin_reward }));
