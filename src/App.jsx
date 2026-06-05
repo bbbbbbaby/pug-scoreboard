@@ -8277,6 +8277,11 @@ function EducatorShell({ profile, onLogout }) {
 // ─── ROOT ─────────────────────────────────────────────────
 
 export default function App() {
+  // [BUILD MARKER] — se vedi questo log nella console, la versione è quella nuova
+  useEffect(() => {
+    console.log("%c🌱 PUG v-TRACKING-2026 attivo", "background:#00ff88;color:#000;padding:4px 8px;font-weight:bold;border-radius:4px");
+  }, []);
+
   const [profile, setProfile] = useState(null);
   const [checking, setChecking] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
