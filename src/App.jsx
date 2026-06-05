@@ -7943,6 +7943,22 @@ function EducatorShell({ profile, onLogout }) {
         showInAppNotif("💬 Nuovo messaggio", m?.body?.slice(0,60)||"Hai un nuovo messaggio");
         playPixel("msg");
       })
+      // Notifiche dirette per il giardiniere (post-it, messaggi dal team, ecc.)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications",
+          filter: `user_id=eq.${profile.id}` }, (payload) => {
+        loadNotifCounts();
+        const n = payload.new;
+        if (n?.title) showInAppNotif(n.title, n.body || "");
+        playPixel("msg");
+      })
+      // Post-it bacheca team — listener diretto sulla tabella (fallback se la notification non arriva)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "educator_notes" }, (payload) => {
+        const note = payload.new;
+        if (!note || note.educator_id === profile.id) return; // ignora i miei
+        loadNotifCounts();
+        showInAppNotif("📌 Nuovo post-it in bacheca", (note.body||"").slice(0,80));
+        playPixel("msg");
+      })
       .subscribe();
     return () => { clearInterval(interval); sb.removeChannel(channel); };
   }, [loadNotifCounts]);
