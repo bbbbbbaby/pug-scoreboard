@@ -1467,18 +1467,8 @@ async function logXPGain(playerId, xpGained, xpTotal, reason) {
   if (!xpGained || xpGained === 0) return;
   try {
     const { error } = await sb.from("xp_history").insert({ player_id:playerId, xp_gained:xpGained, xp_total:xpTotal, reason });
-    if (error) {
-      console.warn("[xp_history] FAIL:", error.message, error.code, error.details);
-      if (typeof addToast === "function") addToast("⚠️ xp_history: " + error.message, "error");
-    } else {
-      console.log("[xp_history] OK +" + xpGained + " " + reason);
-      // Toast verde di conferma — RIMUOVERE DOPO IL TEST
-      if (typeof addToast === "function") addToast(`📊 +${xpGained} tracciato (${reason})`, "ok");
-    }
-  } catch(e) {
-    console.warn("[xp_history] EXCEPTION:", e);
-    if (typeof addToast === "function") addToast("⚠️ xp_history exception: " + (e?.message||"?"), "error");
-  }
+    if (error) console.warn("[xp_history]", error.message);
+  } catch(e) { console.warn("[xp_history]", e); }
 }
 
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
@@ -4420,36 +4410,49 @@ function DiaryView() {
       setLoading(true);
       const dayStart = dateFilter + "T00:00:00";
       const dayEnd = dateFilter + "T23:59:59";
-      const [{ data: notifs }, { data: atts }] = await Promise.all([
+      const [{ data: notifs }, { data: xpHist }] = await Promise.all([
         sb.from("notifications").select("*, profiles(display_name)")
           .gte("created_at", dayStart).lte("created_at", dayEnd)
-          .order("created_at", { ascending: false }).limit(200),
-        sb.from("attendances").select("id,date,status,xp_awarded,coin_awarded,check_type,activity_id,created_at,profiles(display_name)")
-          .eq("date", dateFilter).neq("status","none")
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false }).limit(300),
+        sb.from("xp_history").select("id,player_id,xp_gained,xp_total,reason,created_at,profiles(display_name)")
+          .gte("created_at", dayStart).lte("created_at", dayEnd)
+          .order("created_at", { ascending: false }).limit(300),
       ]);
-      // Merge: notifiche + presenze come eventi
-      const presEvents = (atts || []).filter(a => a.profiles).map(a => {
-        const isLab = a.check_type === "lab" || !!a.activity_id;
+      // Eventi XP: ogni guadagno tracciato (presenza, lab, badge, manuale, batch...)
+      const reasonMap = {
+        presenza: { title: "📍 Presenza", icon: "📍" },
+        presenza_qr: { title: "📍 Check-in QR", icon: "📍" },
+        lab_checkin: { title: "⚡ Lab QR", icon: "⚡" },
+        badge: { title: "🎖️ Badge ricevuto", icon: "🎖️" },
+        manuale: { title: "✋ XP manuali", icon: "✋" },
+        modifica_manuale: { title: "✏️ Modifica profilo", icon: "✏️" },
+        modifica_dettagli: { title: "✏️ Modifica dettagli", icon: "✏️" },
+        batch: { title: "📋 Assegnazione gruppo", icon: "📋" },
+        streak_mensile: { title: "🔥 Premio streak", icon: "🔥" },
+      };
+      const xpEvents = (xpHist || []).filter(h => h.profiles).map(h => {
+        const info = reasonMap[h.reason] || { title: `+ ${h.xp_gained} XP`, icon: "⭐" };
         return {
-          id: "att_" + a.id,
-          type: "presenza",
-          activity_id: a.activity_id,
-          title: isLab ? `⚡ Lab check-in` : `📍 Presenza ${a.status === "full" ? "completa" : a.status === "partial" ? "parziale" : "completata"}`,
-          body: `+${a.xp_awarded || 0} XP · +${a.coin_awarded || 0} Coin`,
-          profiles: a.profiles,
-          created_at: a.created_at || (dateFilter + "T12:00:00"),
+          id: "xp_" + h.id,
+          type: "xp_gain",
+          title: info.title,
+          body: `${h.xp_gained >= 0 ? "+" : ""}${h.xp_gained} XP`,
+          profiles: h.profiles,
+          created_at: h.created_at,
+          _icon: info.icon,
         };
       });
-      const allEntries = [...(notifs||[]).filter(n => n.profiles && n.type !== "educator_msg"), ...presEvents]
-        .sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+      const allEntries = [
+        ...(notifs||[]).filter(n => n.profiles && n.type !== "educator_msg"),
+        ...xpEvents
+      ].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
       setEntries(allEntries); setLoading(false);
     }
     load();
   }, [dateFilter]);
 
-  const typeIcon = { badge_assigned:"🎖️", booking_confirmed:"✅", booking_rejected:"❌", log_action:"📌", presenza:"✅", new_message:"💬", level_up:"🆙" };
-  const typeColor = { badge_assigned:"var(--rosa)", booking_confirmed:"var(--verde)", booking_rejected:"var(--danger)", presenza:"var(--neon-green)", new_message:"var(--azzurro)", level_up:"var(--neon-gold)" };
+  const typeIcon = { badge_assigned:"🎖️", booking_confirmed:"✅", booking_rejected:"❌", log_action:"📌", presenza:"✅", new_message:"💬", level_up:"🆙", xp_gain:"⭐" };
+  const typeColor = { badge_assigned:"var(--rosa)", booking_confirmed:"var(--verde)", booking_rejected:"var(--danger)", presenza:"var(--neon-green)", new_message:"var(--azzurro)", level_up:"var(--neon-gold)", xp_gain:"var(--neon-gold)" };
 
   return (
     <div>
@@ -4468,7 +4471,7 @@ function DiaryView() {
               </div>
               {entries.map(e => (
                 <div key={e.id} className="diary-entry">
-                  <span className="diary-icon" style={{ color: typeColor[e.type] || "var(--text2)" }}>{typeIcon[e.type] || "🔔"}</span>
+                  <span className="diary-icon" style={{ color: typeColor[e.type] || "var(--text2)" }}>{e._icon || typeIcon[e.type] || "🔔"}</span>
                   <div className="diary-text">
                     <strong style={{ color:"var(--text)" }}>{e.profiles?.display_name}</strong>
                     <span style={{ color:"var(--text2)", marginLeft:6 }}>{e.title}</span>
@@ -4617,10 +4620,25 @@ function MessagesView({ profile }) {
         await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`, message_id:sqMsgId});
         sendPush(p.id, "💬 Messaggio squadra", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
       }
-    } else if (destType === "educator" && selectedPlayers[0]) {
-      const { data: pm } = await sb.from("messages").insert({...base, recipient_id:selectedPlayers[0]}).select("id").single();
-      await sb.from("notifications").insert({user_id:selectedPlayers[0], type:"new_message", title:"💬 Messaggio dal team", body:`${senderName} ti ha scritto`, message_id:pm?.id||null});
-      sendPush(selectedPlayers[0], "💬 Messaggio dal team", `${senderName} ti ha scritto`).catch(()=>{});
+    } else if (destType === "educators") {
+      // Invia a TUTTI i giardinieri (esclude chi invia)
+      const { data: eduP } = await sb.from("profiles").select("id").eq("role","educator").neq("id", profile.id);
+      const recipients = eduP || [];
+      for (const e of recipients) {
+        const { data: pm } = await sb.from("messages").insert({...base, recipient_id:e.id}).select("id").single();
+        await sb.from("notifications").insert({user_id:e.id, type:"educator_msg", title:"💬 Messaggio dal team", body:`${senderName}: ${body.trim().slice(0,60)}`, message_id:pm?.id||null});
+        sendPush(e.id, "💬 Messaggio team", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
+      }
+      setSent(`Inviato a ${recipients.length} giardinieri ✅`);
+    } else if (destType === "selection" && selectedPlayers.length > 0) {
+      // Selezione mista: player + giardinieri insieme
+      for (const pid of selectedPlayers) {
+        const { data: pm } = await sb.from("messages").insert({...base, recipient_id:pid}).select("id").single();
+        const isEdu = educators.some(e => e.id === pid);
+        await sb.from("notifications").insert({user_id:pid, type: isEdu ? "educator_msg" : "new_message", title: isEdu ? "💬 Messaggio dal team" : "Hai un nuovo messaggio", body:`${senderName} ti ha scritto`, message_id:pm?.id||null});
+        sendPush(pid, `💬 ${senderName}`, body.trim().slice(0,80)).catch(()=>{});
+      }
+      setSent(`Inviato a ${selectedPlayers.length} destinatari ✅`);
     } else if (destType === "player" && selectedPlayers.length > 0) {
       for (const pid of selectedPlayers) {
         const { data: pm } = await sb.from("messages").insert({...base, recipient_id:pid}).select("id").single();
@@ -4665,9 +4683,17 @@ function MessagesView({ profile }) {
     setMsgs(prev => prev.map(m => m.id===id ? {...m, cancelled_at: new Date().toISOString()} : m));
   }
 
-  const sortedPlayers = [...players]
-    .filter(p => !playerSearch || p.display_name.toLowerCase().includes(playerSearch.toLowerCase()))
-    .sort((a,b) => playerSort==="level" ? (b.xp||0)-(a.xp||0) : (a.display_name||"").localeCompare(b.display_name||""));
+  // In modalità "selection" includiamo player + giardinieri (esclude se stesso)
+  const selectableList = destType === "selection"
+    ? [...players, ...educators.filter(e => e.id !== profile.id).map(e => ({...e, _isEdu:true}))]
+    : [...players];
+  const sortedPlayers = selectableList
+    .filter(p => !playerSearch || (p.display_name||"").toLowerCase().includes(playerSearch.toLowerCase()) || (p.first_name||"").toLowerCase().includes(playerSearch.toLowerCase()))
+    .sort((a,b) => {
+      // Giardinieri sempre in cima (in modalità selezione)
+      if (a._isEdu !== b._isEdu) return a._isEdu ? -1 : 1;
+      return playerSort === "level" ? (b.xp||0)-(a.xp||0) : (a.display_name||"").localeCompare(b.display_name||"");
+    });
 
   const now = new Date().toISOString();
   const activeMsgs = msgs.filter(m => !m.cancelled_at && (!m.expires_at || m.expires_at > now));
@@ -4685,7 +4711,7 @@ function MessagesView({ profile }) {
         <div className="form-group">
           <label className="form-label">Destinatario</label>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-            {[["tutti","📢 Tutti"],["squad","🛡️ Squadra"],["player","👤 Giocatori"],["activity","⚡ Lab"],["educator","🌱 Giardinieri"]].map(([k,l])=>(
+            {[["tutti","📢 Tutti i giocatori"],["squad","🛡️ Squadra"],["activity","⚡ Lab"],["educators","🌱 Tutti i giardinieri"],["selection","👤 Selezione"]].map(([k,l])=>(
               <button key={k} className={`chip ${destType===k?"active":""}`} onClick={()=>setDestType(k)}>{l}</button>
             ))}
           </div>
@@ -4695,31 +4721,12 @@ function MessagesView({ profile }) {
               {squads.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
-          {destType==="educator" && (
-            <div className="form-group">
-              <label className="form-label">Seleziona giardiniere</label>
-              {educators.length === 0 ? (
-                <div style={{fontSize:13,color:"var(--text3)",padding:"10px 0"}}>⏳ Caricamento giardinieri…</div>
-              ) : (
-                <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:240,overflowY:"auto"}}>
-                  {educators.map(e=>(
-                    <div key={e.id} onClick={()=>setSelectedPlayers([e.id])}
-                      style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
-                        borderRadius:10,cursor:"pointer",border:`1.5px solid ${selectedPlayers[0]===e.id?"var(--neon-blue)":"var(--border)"}`,
-                        background:selectedPlayers[0]===e.id?"rgba(0,212,255,.08)":"rgba(255,255,255,.03)",
-                        transition:"all .15s"}}>
-                      <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:"1.5px solid var(--border2)",flexShrink:0}}>
-                        {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/> : <span style={{fontSize:18,lineHeight:"32px",display:"block",textAlign:"center"}}>🌱</span>}
-                      </div>
-                      <span style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{e.display_name}</span>
-                      {selectedPlayers[0]===e.id && <span style={{marginLeft:"auto",color:"var(--neon-blue)",fontSize:16}}>✓</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
+          {destType==="educators" && (
+            <div style={{fontSize:13,color:"var(--text3)",padding:"8px 12px",background:"rgba(0,212,255,.06)",border:"1px solid rgba(0,212,255,.2)",borderRadius:10,marginBottom:8}}>
+              Il messaggio verrà inviato a tutti gli altri giardinieri ({educators.filter(e=>e.id!==profile.id).length}).
             </div>
           )}
-          {destType==="player" && (
+{destType==="selection" && (
             <div>
               <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
                 <input className="search-inp" placeholder="🔍 Cerca…" value={playerSearch} onChange={e=>setPlayerSearch(e.target.value)} style={{flex:1,minWidth:100}}/>
@@ -4744,7 +4751,9 @@ function MessagesView({ profile }) {
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:600,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                        <div style={{fontSize:10,color:"var(--text3)"}}>{lv.emoji} Lv.{lv.id} · {p.xp} XP</div>
+                        <div style={{fontSize:10,color:"var(--text3)"}}>
+                          {p._isEdu ? "🌱 Giardiniere" : `${lv.emoji} Lv.${lv.id} · ${p.xp} XP`}
+                        </div>
                       </div>
                     </div>
                   );
@@ -8287,10 +8296,6 @@ function EducatorShell({ profile, onLogout }) {
 // ─── ROOT ─────────────────────────────────────────────────
 
 export default function App() {
-  // [BUILD MARKER] — se vedi questo log nella console, la versione è quella nuova
-  useEffect(() => {
-    console.log("%c🌱 PUG v-TRACKING-2026 attivo", "background:#00ff88;color:#000;padding:4px 8px;font-weight:bold;border-radius:4px");
-  }, []);
 
   const [profile, setProfile] = useState(null);
   const [checking, setChecking] = useState(true);
