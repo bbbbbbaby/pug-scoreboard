@@ -20,6 +20,30 @@ function localToday() {
   return new Date(d.getTime() - off * 60000).toISOString().split("T")[0];
 }
 
+// Fetch della config di visibilità con dedupe: chiamate concorrenti
+// condividono la stessa richiesta (evita doppio fetch al mount).
+let _visFetch = null;
+async function fetchVisibilityConfig() {
+  if (_visFetch) return _visFetch;
+  _visFetch = (async () => {
+    try {
+      const { data } = await sb.from("profiles").select("app_config")
+        .eq("id", "00000000-0000-0000-0000-000000000099").single();
+      return data?.app_config || null;
+    } catch(_) {
+      return null;
+    } finally {
+      setTimeout(() => { _visFetch = null; }, 1000);
+    }
+  })();
+  return _visFetch;
+}
+
+// Converte una Date in YYYY-MM-DD locale (stessa logica di localToday)
+function localDateStr(d) {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+}
+
 
 async function registerPush(playerId) {
   const log = (m) => { try { addToast(m, 'ok'); } catch(_) {} };
@@ -90,7 +114,20 @@ async function sendPush(playerId, title, body) {
 }
 
 async function sendPushToAll(playerIds, title, body) {
-  for (const pid of playerIds) { await sendPush(pid, title, body); }
+  if (!playerIds?.length) return;
+  try {
+    // Una sola query per tutte le subscription, poi invii in parallelo
+    const { data: subs } = await sb.from('push_subscriptions')
+      .select('subscription').in('player_id', playerIds);
+    if (!subs?.length) return;
+    await Promise.all(subs.map(sub =>
+      fetch(PUSH_EDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${PUSH_ANON_KEY}` },
+        body: JSON.stringify({ subscription: sub.subscription, title, body }),
+      }).catch(()=>{})
+    ));
+  } catch(e) { }
 }
 
 
@@ -1432,6 +1469,19 @@ async function compressToWebP(file, maxPx = 400, quality = 0.85) {
   });
 }
 
+// Carica una foto messaggio nel bucket Storage e ritorna l'URL pubblico.
+// Avviene in automatico quando l'educatore sceglie il file: nessun passo
+// manuale. Le immagini pesano nel bucket, non nella tabella messages.
+async function uploadMessageMedia(file) {
+  const compressed = await compressToWebP(file, 1024, 0.82);
+  const path = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const { error } = await sb.storage.from("message-media")
+    .upload(path, compressed, { contentType: "image/webp", cacheControl: "31536000" });
+  if (error) throw error;
+  const { data } = sb.storage.from("message-media").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   const fileRef = useRef();
   const [uploading, setUploading] = useState(false);
@@ -1469,6 +1519,15 @@ async function logXPGain(playerId, xpGained, xpTotal, reason) {
     const { error } = await sb.from("xp_history").insert({ player_id:playerId, xp_gained:xpGained, xp_total:xpTotal, reason });
     if (error) console.warn("[xp_history]", error.message);
   } catch(e) { console.warn("[xp_history]", e); }
+}
+
+// Se il giocatore è salito di livello: notifica in-app + push. Ritorna true se level-up.
+async function checkLevelUp(playerId, oldXp, newXp) {
+  const oldLv = getLevel(oldXp); const newLv = getLevel(newXp);
+  if (newLv.name === oldLv.name) return false;
+  sendPush(playerId, "🆙 Sei salito di livello!", `Sei diventato ${newLv.emoji} ${newLv.name}!`).catch(()=>{});
+  await sb.from("notifications").insert({user_id:playerId, type:"level_up", title:"🆙 Nuovo livello!", body:`${newLv.emoji} ${newLv.name}`});
+  return true;
 }
 
 async function logAction({ playerId, action, xpDelta = 0, coinDelta = 0, note = "" }) {
@@ -2525,7 +2584,7 @@ function Login({ onLogin }) {
     sb.from("profiles").select("app_config").eq("id","00000000-0000-0000-0000-000000000099").single()
       .then(({data})=>{ if(data?.app_config?.squadre===false) setShowSquadLogin(false); }).catch(()=>{});
     sb.from("profiles")
-      .select("id,display_name,first_name,avatar_url,pin,squad_id,squads(name)")
+      .select("id,display_name,first_name,avatar_url,squad_id,squads(name)")
       .eq("role","player").neq("display_name","AppConfig")
       .order("display_name").limit(300)
       .then(({ data }) => setPlayers(data || []));
@@ -2550,12 +2609,15 @@ function Login({ onLogin }) {
   async function loginPlayer() {
     if (!selected || pin.length !== 4) return;
     setLoadingPin(true); setErr("");
-    const { data, error } = await sb.from("profiles")
-      .select("*, squads(name)").eq("id", selected.id).single();
-    if (error || !data) { setErr("Giocatore non trovato."); setLoadingPin(false); return; }
-    if (data.pin !== pin) { setErr("PIN errato. Riprova."); setPin(""); setLoadingPin(false); return; }
-    localStorage.setItem("pug_player", JSON.stringify({ ...data, _playerSession: true }));
-    onLogin({ ...data, _playerSession: true });
+    // Verifica lato server: il PIN viene controllato nel database e non
+    // viaggia mai verso il browser. Include rate limiting (5 tentativi/10min).
+    const { data: res, error } = await sb.rpc("verify_pin", { p_player_id: selected.id, p_pin: pin });
+    if (error) { setErr("Errore di rete. Riprova."); setLoadingPin(false); return; }
+    if (res?.error === "rate_limited") { setErr("Troppi tentativi errati. Riprova tra 10 minuti."); setPin(""); setLoadingPin(false); return; }
+    if (!res?.ok || !res?.profile) { setErr("PIN errato. Riprova."); setPin(""); setLoadingPin(false); return; }
+    const data = { ...res.profile, _playerSession: true, _mustChangePin: res.must_change_pin === true };
+    localStorage.setItem("pug_player", JSON.stringify(data));
+    onLogin(data);
     setTimeout(() => registerPush(data.id), 2000);
     setLoadingPin(false);
   }
@@ -2693,6 +2755,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
     const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
+  const searchDeb = useDebounce(search, 250);
   const [sortBy, setSortBy] = useState("alpha");
   const [squadFilter, setSquadFilter] = useState("all");
   const [selected, setSelected] = useState(new Set());
@@ -2716,9 +2779,17 @@ function PlayersView({ sectionColors, setSectionColors }) {
       loadingRef.current = false;
       setLoading(false);
     }, 8000);
-    const { data } = await sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false });
-    const { data: sq } = await sb.from("squads").select("*");
-    setPlayers(data || []); setSquads(sq || []); setLoading(false);
+    try {
+      const [{ data }, { data: sq }] = await Promise.all([
+        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false }),
+        sb.from("squads").select("*"),
+      ]);
+      setPlayers(data || []); setSquads(sq || []);
+    } finally {
+      clearTimeout(safetyTimeout);
+      loadingRef.current = false;
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -2730,7 +2801,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
   const visible = players.filter(p => {
     const sq = squadFilter === "all" || p.squads?.name === squadFilter;
-    const sr = !search || p.display_name.toLowerCase().includes(search.toLowerCase()) || (p.first_name||"").toLowerCase().includes(search.toLowerCase());
+    const sr = !searchDeb || p.display_name.toLowerCase().includes(searchDeb.toLowerCase()) || (p.first_name||"").toLowerCase().includes(searchDeb.toLowerCase());
     return sq && sr;
   }).sort((a, b) => {
     switch (sortBy) {
@@ -2747,47 +2818,45 @@ function PlayersView({ sectionColors, setSectionColors }) {
   async function changeXP(playerId, delta, field = "xp") {
     const p = players.find(x => x.id === playerId);
     if (!p) return;
-    const newVal = Math.max(0, p[field] + delta);
-    await sb.from("profiles").update({ [field]: newVal }).eq("id", playerId);
-    // Traccia gli XP per la classifica oggi/mese
-    if (field === "xp" && delta !== 0) {
-      await logXPGain(playerId, delta, newVal, "manuale");
-    }
-    await logAction({ playerId, action: field === "xp" ? "XP manuale" : "Coin manuale", xpDelta: field === "xp" ? delta : 0, coinDelta: field === "coin" ? delta : 0 });
+    // RPC atomica: update + xp_history + log in un'unica transazione lato server
+    const { data: res, error } = await sb.rpc("award_xp", {
+      p_player_id: playerId,
+      p_xp: field === "xp" ? delta : 0,
+      p_coin: field === "coin" ? delta : 0,
+      p_reason: "manuale",
+      p_log_title: field === "xp" ? "XP manuale" : "Coin manuale",
+    });
+    if (error) { addToast("Errore: " + error.message, "error"); return; }
+    const newXp = res?.xp ?? Math.max(0, p.xp + (field === "xp" ? delta : 0));
+    const newCoin = res?.coin ?? Math.max(0, p.coin + (field === "coin" ? delta : 0));
     if (field === "xp" && delta > 0) {
-      const oldLv = getLevel(p.xp); const newLv = getLevel(newVal);
-      if (newLv.name !== oldLv.name) {
-        sendPush(playerId, "🆙 Sei salito di livello!", `Sei diventato ${newLv.emoji} ${newLv.name}!`).catch(()=>{});
-        await sb.from("notifications").insert({user_id:playerId, type:"level_up", title:"🆙 Nuovo livello!", body:`${newLv.emoji} ${newLv.name}`});
-      } else {
-        sendPush(playerId, "⭐ Hai ricevuto XP!", `+${delta} XP — continua così!`).catch(()=>{});
-      }
+      const leveled = await checkLevelUp(playerId, p.xp, newXp);
+      if (!leveled) sendPush(playerId, "⭐ Hai ricevuto XP!", `+${delta} XP — continua così!`).catch(()=>{});
     }
     if (field === "coin" && delta > 0) sendPush(playerId, "🪙 Hai ricevuto Coin!", `+${delta} Coin!`).catch(()=>{});
-    setPlayers(prev => prev.map(x => x.id === playerId ? { ...x, [field]: newVal } : x));
+    setPlayers(prev => prev.map(x => x.id === playerId ? { ...x, xp: newXp, coin: newCoin } : x));
   }
 
   async function applyBatch() {
     if (!selected.size) return;
-    for (const id of [...selected]) {
+    await Promise.all([...selected].map(async (id) => {
       const p = players.find(x => x.id === id);
-      if (!p) continue;
-      const newXp = p.xp + Number(batchXp);
-      const newCoin = p.coin + Number(batchCoin);
-      await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", id);
-      // Traccia gli XP per la classifica oggi/mese
-      if (Number(batchXp) !== 0) {
-        await logXPGain(id, Number(batchXp), newXp, "batch");
-      }
-      await logAction({ playerId: id, action: "Assegnazione batch", xpDelta: Number(batchXp), coinDelta: Number(batchCoin) });
-      const oldLv = getLevel(p.xp); const newLv = getLevel(newXp);
-      if (newLv.name !== oldLv.name) {
-        sendPush(id, "🆙 Sei salito di livello!", `${newLv.emoji} ${newLv.name}!`).catch(()=>{});
-        await sb.from("notifications").insert({user_id:id, type:"level_up", title:"🆙 Nuovo livello!", body:`${newLv.emoji} ${newLv.name}`});
-      } else if (Number(batchXp) > 0) {
+      if (!p) return;
+      // RPC atomica: 1 query al posto di 3-4, niente aggiornamenti persi
+      const { data: res, error } = await sb.rpc("award_xp", {
+        p_player_id: id,
+        p_xp: Number(batchXp),
+        p_coin: Number(batchCoin),
+        p_reason: "batch",
+        p_log_title: "Assegnazione batch",
+      });
+      if (error) return;
+      const newXp = res?.xp ?? (p.xp + Number(batchXp));
+      const leveled = await checkLevelUp(id, p.xp, newXp);
+      if (!leveled && Number(batchXp) > 0) {
         sendPush(id, "⭐ Hai ricevuto XP!", `+${batchXp} XP e +${batchCoin} Coin!`).catch(()=>{});
       }
-    }
+    }));
     setMsg(`+${batchXp} XP e +${batchCoin} coin assegnati a ${selected.size} giocatori`);
     setSelected(new Set()); load();
     setTimeout(() => setMsg(""), 3000);
@@ -3854,7 +3923,7 @@ function LabQRButton({ actId, actName }) {
     setLoading(true);
     const today = localToday();
     // Check if exists
-    const { data: existing } = await sb.from("lab_qr").select("code").eq("activity_id", actId).eq("date", today).single();
+    const { data: existing } = await sb.from("lab_qr").select("code").eq("activity_id", actId).eq("date", today).maybeSingle();
     if (existing?.code) { setCode(existing.code); setShow(true); setLoading(false); return; }
     // Create new
     const newCode = Math.random().toString(36).substring(2,8).toUpperCase();
@@ -3992,17 +4061,24 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
     if (!confirm("Eliminare il lab? Le prenotazioni verranno annullate e le coin rimborsate.")) return;
     // Rimborsa coin per prenotazioni pending/confirmed
     const { data: bks } = await sb.from("bookings").select("player_id,coin_held,status").eq("activity_id",id).in("status",["pending","confirmed"]);
-    for (const b of (bks||[])) {
-      if ((b.coin_held||0) > 0) {
-        const { data: p } = await sb.from("profiles").select("coin").eq("id",b.player_id).single();
-        await sb.from("profiles").update({ coin:(p?.coin||0)+b.coin_held }).eq("id",b.player_id);
-        await sb.from("notifications").insert({ user_id:b.player_id, type:"booking_rejected", title:"Lab cancellato", body:"Le tue coin sono state rimborsate." });
-      }
+    // Prima pulisce le vecchie notifiche booking (una query), POI rimborsa
+    // e notifica — così la notifica di rimborso non viene cancellata.
+    const playerIdsToClean = [...new Set((bks||[]).map(b=>b.player_id).filter(Boolean))];
+    if (playerIdsToClean.length) {
+      await sb.from("notifications").delete().in("user_id", playerIdsToClean).in("type",["booking_confirmed","booking_rejected"]);
     }
-    // Cancella notifiche prenotazioni correlate
-    const playerIdsToClean = (bks||[]).map(b=>b.player_id).filter(Boolean);
-    for (const pid of playerIdsToClean) {
-      await sb.from("notifications").delete().eq("user_id",pid).in("type",["booking_confirmed","booking_rejected"]);
+    // Rimborsi aggregati per giocatore, atomici lato server
+    const refunds = {};
+    for (const b of (bks||[])) {
+      if ((b.coin_held||0) > 0 && b.player_id) refunds[b.player_id] = (refunds[b.player_id]||0) + b.coin_held;
+    }
+    await Promise.all(Object.entries(refunds).map(([pid, amount]) =>
+      sb.rpc("award_xp", { p_player_id: pid, p_xp: 0, p_coin: amount, p_reason: "rimborso", p_log_title: null })
+    ));
+    if (Object.keys(refunds).length) {
+      await sb.from("notifications").insert(Object.keys(refunds).map(pid =>
+        ({ user_id: pid, type: "booking_rejected", title: "Lab cancellato", body: "Le tue coin sono state rimborsate." })
+      ));
     }
     // Cancella prenotazioni
     await sb.from("bookings").delete().eq("activity_id", id);
@@ -4574,6 +4650,7 @@ function MessagesView({ profile }) {
   const [sent, setSent]   = useState("");
   const [educators, setEducators] = useState([]);
   const [mediaData, setMediaData] = useState(null);
+  const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaType, setMediaType] = useState(null);
   const mediaRef = useRef();
 
@@ -4603,57 +4680,66 @@ function MessagesView({ profile }) {
     const defaultExpiry = new Date(Date.now() + 30*24*60*60*1000).toISOString();
     const base = { sender_id: profile.id, body: body.trim(), media_data: mediaData || null, is_broadcast:false, squad_id:null, recipient_id:null, expires_at: expiresAt || defaultExpiry };
 
+    // Helper locali: insert batch notifiche (1 query) + push in parallelo
+    const notifyBatch = (rows) => rows.length ? sb.from("notifications").insert(rows) : Promise.resolve();
+    const pushBatch = (ids, title, txt) => sendPushToAll(ids, title, txt).catch(()=>{});
+
     if (destType === "tutti") {
-      const { data: allP } = await sb.from("profiles").select("id").eq("role","player");
-      const { data: newMsg } = await sb.from("messages").insert({...base, is_broadcast:true}).select("id").single();
+      const [{ data: allP }, { data: newMsg }] = await Promise.all([
+        sb.from("profiles").select("id").eq("role","player"),
+        sb.from("messages").insert({...base, is_broadcast:true}).select("id").single(),
+      ]);
       const msgId = newMsg?.id || null;
-      for (const p of (allP||[])) {
-        await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto a tutti`, message_id:msgId});
-        sendPush(p.id, "💬 Messaggio", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
-      }
+      const ids = (allP||[]).map(p => p.id);
+      await notifyBatch(ids.map(id => ({user_id:id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto a tutti`, message_id:msgId})));
+      pushBatch(ids, "💬 Messaggio", `${senderName}: ${body.trim().slice(0,60)}`);
     } else if (destType === "squad" && destSquad) {
       const sq = squads.find(s=>s.id===destSquad);
-      const { data: sqMsg } = await sb.from("messages").insert({...base, squad_id:destSquad}).select("id").single();
+      const [{ data: sqMsg }, { data: sqP }] = await Promise.all([
+        sb.from("messages").insert({...base, squad_id:destSquad}).select("id").single(),
+        sb.from("profiles").select("id").eq("squad_id",destSquad),
+      ]);
       const sqMsgId = sqMsg?.id || null;
-      const { data: sqP } = await sb.from("profiles").select("id").eq("squad_id",destSquad);
-      for (const p of (sqP||[])) {
-        await sb.from("notifications").insert({user_id:p.id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`, message_id:sqMsgId});
-        sendPush(p.id, "💬 Messaggio squadra", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
-      }
+      const ids = (sqP||[]).map(p => p.id);
+      await notifyBatch(ids.map(id => ({user_id:id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto alla squadra ${sq?.name||""}`, message_id:sqMsgId})));
+      pushBatch(ids, "💬 Messaggio squadra", `${senderName}: ${body.trim().slice(0,60)}`);
     } else if (destType === "educators") {
       // Invia a TUTTI i giardinieri (esclude chi invia)
       const { data: eduP } = await sb.from("profiles").select("id").eq("role","educator").neq("id", profile.id);
       const recipients = eduP || [];
-      for (const e of recipients) {
-        const { data: pm } = await sb.from("messages").insert({...base, recipient_id:e.id}).select("id").single();
-        await sb.from("notifications").insert({user_id:e.id, type:"educator_msg", title:"💬 Messaggio dal team", body:`${senderName}: ${body.trim().slice(0,60)}`, message_id:pm?.id||null});
-        sendPush(e.id, "💬 Messaggio team", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
-      }
+      // Un messaggio per destinatario (in parallelo), poi notifiche in un solo insert
+      const pms = await Promise.all(recipients.map(e =>
+        sb.from("messages").insert({...base, recipient_id:e.id}).select("id").single()
+      ));
+      await notifyBatch(recipients.map((e, i) => ({user_id:e.id, type:"educator_msg", title:"💬 Messaggio dal team", body:`${senderName}: ${body.trim().slice(0,60)}`, message_id:pms[i]?.data?.id||null})));
+      pushBatch(recipients.map(e=>e.id), "💬 Messaggio team", `${senderName}: ${body.trim().slice(0,60)}`);
       setSent(`Inviato a ${recipients.length} giardinieri ✅`);
     } else if (destType === "selection" && selectedPlayers.length > 0) {
       // Selezione mista: player + giardinieri insieme
-      for (const pid of selectedPlayers) {
-        const { data: pm } = await sb.from("messages").insert({...base, recipient_id:pid}).select("id").single();
+      const pms = await Promise.all(selectedPlayers.map(pid =>
+        sb.from("messages").insert({...base, recipient_id:pid}).select("id").single()
+      ));
+      await notifyBatch(selectedPlayers.map((pid, i) => {
         const isEdu = educators.some(e => e.id === pid);
-        await sb.from("notifications").insert({user_id:pid, type: isEdu ? "educator_msg" : "new_message", title: isEdu ? "💬 Messaggio dal team" : "Hai un nuovo messaggio", body:`${senderName} ti ha scritto`, message_id:pm?.id||null});
-        sendPush(pid, `💬 ${senderName}`, body.trim().slice(0,80)).catch(()=>{});
-      }
+        return {user_id:pid, type: isEdu ? "educator_msg" : "new_message", title: isEdu ? "💬 Messaggio dal team" : "Hai un nuovo messaggio", body:`${senderName} ti ha scritto`, message_id:pms[i]?.data?.id||null};
+      }));
+      pushBatch(selectedPlayers, `💬 ${senderName}`, body.trim().slice(0,80));
       setSent(`Inviato a ${selectedPlayers.length} destinatari ✅`);
     } else if (destType === "player" && selectedPlayers.length > 0) {
-      for (const pid of selectedPlayers) {
-        const { data: pm } = await sb.from("messages").insert({...base, recipient_id:pid}).select("id").single();
-        await sb.from("notifications").insert({user_id:pid, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ti ha scritto`, message_id:pm?.id||null});
-        sendPush(pid, `💬 ${senderName}`, body.trim().slice(0,80)).catch(()=>{});
-        sendPush(pid, `💬 ${senderName}`, body.trim().slice(0,80)).catch(()=>{});
-      }
+      const pms = await Promise.all(selectedPlayers.map(pid =>
+        sb.from("messages").insert({...base, recipient_id:pid}).select("id").single()
+      ));
+      await notifyBatch(selectedPlayers.map((pid, i) => ({user_id:pid, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ti ha scritto`, message_id:pms[i]?.data?.id||null})));
+      pushBatch(selectedPlayers, `💬 ${senderName}`, body.trim().slice(0,80));
     } else if (destType === "activity" && destActivity) {
       const { data: bk } = await sb.from("bookings").select("player_id").eq("activity_id",destActivity).eq("status","confirmed");
       if (bk?.length) {
-        for (const b of bk) {
-          await sb.from("messages").insert({...base, recipient_id:b.player_id});
-          await sb.from("notifications").insert({user_id:b.player_id, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto ai partecipanti del Lab`});
-          sendPush(b.player_id, "💬 Messaggio lab", `${senderName}: ${body.trim().slice(0,60)}`).catch(()=>{});
-        }
+        const ids = bk.map(b => b.player_id);
+        await Promise.all([
+          sb.from("messages").insert(ids.map(pid => ({...base, recipient_id:pid}))),
+          notifyBatch(ids.map(pid => ({user_id:pid, type:"new_message", title:"Hai un nuovo messaggio", body:`${senderName} ha scritto ai partecipanti del Lab`}))),
+        ]);
+        pushBatch(ids, "💬 Messaggio lab", `${senderName}: ${body.trim().slice(0,60)}`);
         setSent(`Inviato a ${bk.length} partecipanti ✅`);
       } else { setSent("Nessun partecipante confermato"); }
       setSending(false); setTimeout(()=>setSent(""),3000); setBody(""); setExpiry(""); return;
@@ -4781,12 +4867,21 @@ function MessagesView({ profile }) {
           <label className="form-label">📷 Immagine allegata (opzionale)</label>
           <input ref={mediaRef} type="file" accept="image/*" style={{display:"none"}} onChange={async e => {
             const file = e.target.files[0]; if (!file) return;
-            const compressed = await compressToWebP(file, 600, 0.85);
-            const reader = new FileReader();
-            reader.onload = ev => { setMediaData(ev.target.result); setMediaType("image"); };
-            reader.readAsDataURL(compressed);
+            setMediaUploading(true);
+            try {
+              // Upload automatico su Storage: nel messaggio va solo l'URL
+              const url = await uploadMessageMedia(file);
+              setMediaData(url); setMediaType("image");
+            } catch(err) {
+              addToast("❌ Errore caricamento foto: " + (err?.message || ""), "error");
+            } finally {
+              setMediaUploading(false);
+              e.target.value = "";
+            }
           }}/>
-          {mediaData ? (
+          {mediaUploading ? (
+            <div style={{fontSize:13,color:"var(--text2)",padding:"8px 0"}}>⏳ Caricamento foto…</div>
+          ) : mediaData ? (
             <div style={{position:"relative",display:"inline-block",marginBottom:8}}>
               <img src={mediaData} style={{maxWidth:"100%",maxHeight:180,borderRadius:12,border:"1px solid var(--border)",display:"block"}} alt="" loading="lazy"/>
               <button onClick={()=>{setMediaData(null);setMediaType(null);}} style={{position:"absolute",top:-8,right:-8,background:"rgba(0,0,0,.8)",border:"none",color:"#fff",borderRadius:"50%",width:24,height:24,cursor:"pointer",fontSize:14,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
@@ -4906,9 +5001,9 @@ function BookingsView() {
 
   async function review(id, status, playerId, coinHeld) {
     await sb.from("bookings").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
-    if (status === "rejected") {
-      const { data: p } = await sb.from("profiles").select("coin").eq("id", playerId).single();
-      await sb.from("profiles").update({ coin: (p?.coin||0) + coinHeld }).eq("id", playerId);
+    if (status === "rejected" && (coinHeld||0) > 0) {
+      // Rimborso atomico lato server (registra anche chi l'ha fatto)
+      await sb.rpc("award_xp", { p_player_id: playerId, p_xp: 0, p_coin: coinHeld, p_reason: "rimborso", p_log_title: null });
     }
     const pushTitle = status==="confirmed" ? "✅ Prenotazione confermata!" : "❌ Prenotazione rifiutata";
     const pushBody  = status==="confirmed" ? "Sei dentro! Apri l'app per i dettagli." : "Le tue coin sono state restituite.";
@@ -4969,7 +5064,7 @@ function QrView() {
   const today = localToday();
 
   useEffect(() => {
-    sb.from("daily_qr").select("*").eq("date", today).single()
+    sb.from("daily_qr").select("*").eq("date", today).maybeSingle()
       .then(({ data }) => { setQr(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, [today]);
@@ -5590,7 +5685,7 @@ function MsgReactions({ msgId, myId }) {
       }).catch(()=>{});
     sb.from("reactions").select("type")
       .eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null)
-      .single().then(({data})=>{ if(data) setMine(data.type); }).catch(()=>{});
+      .maybeSingle().then(({data})=>{ if(data) setMine(data.type); }).catch(()=>{});
   }, [msgId, myId]);
 
   async function react(emoji) {
@@ -5660,7 +5755,7 @@ function ProfileReactions({ targetId, myId }) {
         (data||[]).forEach(r => { c[r.type] = (c[r.type]||0)+1; });
         setCounts(c);
       });
-    sb.from("reactions").select("type").eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null).single()
+    sb.from("reactions").select("type").eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null).maybeSingle()
       .then(({ data }) => { if (data) setMine(data.type); })
       .catch(()=>{});
   }, [targetId, myId]);
@@ -5897,7 +5992,7 @@ function XPHistoryChart({ playerId }) {
         const days = [];
         for (let i=13; i>=0; i--) {
           const d = new Date(Date.now()-i*86400000);
-          const key = d.toISOString().slice(0,10);
+          const key = localDateStr(d);
           days.push({ label: d.toLocaleDateString("it-IT",{day:"numeric",month:"short"}), xp: byDay[key]||0, key });
         }
         setData(days); setLoading(false);
@@ -6111,6 +6206,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [actBookingCounts, setActBookingCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false);
+  const hasDataRef = useRef(false); // true dopo il primo load riuscito
   const [visConfig, setVisConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pug_visibility")||"{}"); } catch(_) { return {}; }
   });
@@ -6120,10 +6216,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
-    sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
-      .then(({ data, error }) => {
-        if (error) { return; }
-        const cfg = data?.app_config;
+    fetchVisibilityConfig()
+      .then((cfg) => {
         if (cfg && typeof cfg === "object") {
           localStorage.setItem("pug_visibility", JSON.stringify(cfg));
           setVisConfig(cfg);
@@ -6136,7 +6230,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [newFirstName, setNewFirstName] = useState("");
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
   const [selectedBadge, setSelectedBadge] = useState(null);
-  const [mustChangePin, setMustChangePin] = useState(profile.pin === "1234");
+  const [mustChangePin, setMustChangePin] = useState(profile._mustChangePin === true || profile.pin === "1234");
   const [playerTheme, setPlayerTheme] = useState(() => localStorage.getItem("pug_theme") || "dark");
 
   useEffect(() => {
@@ -6153,7 +6247,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     // Debounce: ignora se già in corso, con safety reset dopo 12s
     if (loadingRef.current) return;
     // Offline: solo se ci sono già dati cached, non bloccare al primo load
-    if (!navigator.onLine && (messages.length > 0 || badges.length > 0)) {
+    if (!navigator.onLine && hasDataRef.current) {
       setLoading(false); return;
     }
     loadingRef.current = true;
@@ -6165,9 +6259,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     }, 12000);
   try {
     // Carica visibilità PRIMA di tutto — evita flash con vecchi dati
-    const { data: visRow } = await sb.from("profiles")
-      .select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single();
-    const visCfg = visRow?.app_config;
+    const visCfg = await fetchVisibilityConfig();
     if (visCfg && typeof visCfg === "object") {
       localStorage.setItem("pug_visibility", JSON.stringify(visCfg));
       setVisConfig(visCfg);
@@ -6176,8 +6268,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   try {
     const today = localToday();
     const monthStart = today.slice(0, 7) + "-01";
-    const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }] = await Promise.all([
-      sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,longest_streak,last_checkin_date,squads(name)").eq("id", profile.id).single(),
+    const _now = new Date();
+    const cm = _now.getMonth() + 1;
+    const cy = _now.getFullYear();
+    const mStart = `${cy}-${String(cm).padStart(2,"0")}-01`;
+    const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }, { data: myPres }, { data: mConfig }] = await Promise.all([
+      sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,current_streak,longest_streak,last_checkin_date,squads(name)").eq("id", profile.id).single(),
       sb.from("player_badges").select("id,assigned_at,xp_awarded,coin_awarded,badges(name,image_url,xp_default,description,link)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
       sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,created_by").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
@@ -6186,6 +6282,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,expires_at,cancelled_at,created_at,sender_id,profiles!sender_id(display_name,avatar_url)").or(`is_broadcast.eq.true,recipient_id.eq.${profile.id}${fullProfile?.squad_id ? `,squad_id.eq.${fullProfile.squad_id}` : ""}`).order("created_at",{ascending:false}).limit(30),
       sb.from("attendances").select("player_id, xp_awarded").eq("date", today),
       sb.from("attendances").select("player_id, xp_awarded").gte("date", monthStart),
+      sb.from("attendances").select("id").eq("player_id", profile.id).gte("date", mStart).neq("status","none"),
+      sb.from("streak_config").select("min_days").eq("month", cm).eq("year", cy).maybeSingle(),
     ]);
     if (p) setFullProfile(p);
     const prevXP = parseInt(localStorage.getItem("pug_xp_"+p.id)||"0");
@@ -6197,6 +6295,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     localStorage.setItem("pug_xp_"+p.id, String(curXP));
     const acts = (a || []).filter(x => !(x.description || "").startsWith("SFIDA"));
     setBadges(b || []); setActivities(acts); setBookings(bk || []); setNotifications(n || []); setPlayers(pl || []); setMessages(m || []);
+    hasDataRef.current = true;
     if (acts.length > 0) {
       const { data: actBk } = await sb.from("bookings")
         .select("activity_id,status")
@@ -6208,15 +6307,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     }
     const td = {}; (attToday || []).forEach(a => { td[a.player_id] = (td[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpToday(td);
     const mt = {}; (attMonth || []).forEach(a => { mt[a.player_id] = (mt[a.player_id] || 0) + (a.xp_awarded || 0); }); setXpMonth(mt);
-    // Presenze mese corrente per il giocatore
-    const now = new Date();
-    const cm = now.getMonth() + 1;
-    const cy = now.getFullYear();
-    const mStart = `${cy}-${String(cm).padStart(2,"0")}-01`;
-    const [{ data: myPres }, { data: mConfig }] = await Promise.all([
-      sb.from("attendances").select("id").eq("player_id", profile.id).gte("date", mStart).neq("status","none"),
-      sb.from("streak_config").select("min_days").eq("month", cm).eq("year", cy).single(),
-    ]);
+    // Presenze mese corrente per il giocatore (già caricate nel batch sopra)
     setMonthPresences(myPres?.length || 0);
     setMonthTarget(mConfig?.min_days || null);
   } catch(err) {
@@ -6227,6 +6318,13 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   }
   }, [profile.id]);
 
+
+  // Coalesce i reload da eventi realtime: una raffica di eventi → un solo load
+  const reloadTimerRef = useRef(null);
+  const scheduleLoad = useCallback((ms = 500) => {
+    clearTimeout(reloadTimerRef.current);
+    reloadTimerRef.current = setTimeout(() => load(), ms);
+  }, [load]);
 
   // Ricarica quando l'app torna in primo piano
   useEffect(() => {
@@ -6252,9 +6350,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   useEffect(() => {
     load();
     const channel = sb.channel("player_notifs_" + profile.id)
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, () => setTimeout(() => load(), 300))
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `id=eq.${profile.id}` }, () => scheduleLoad(300))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` }, (payload) => {
-        setTimeout(() => load(), 500); // debounce 500ms
+        scheduleLoad(500);
         // Show toast for important notifications
         const n = payload.new;
         if (n?.type === "booking_confirmed") setToast({ msg:"✅ Prenotazione confermata!", color:"var(--verde)" });
@@ -6262,17 +6360,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         else if (n?.type === "badge_assigned") setToast({ msg:"🎖️ " + (n?.title||"Badge sbloccato!"), color:"var(--rosa)" });
         setTimeout(() => setToast(null), 4000);
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `player_id=eq.${profile.id}` }, () => setTimeout(() => load(), 500))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `player_id=eq.${profile.id}` }, () => scheduleLoad(500))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
           filter: `recipient_id=eq.${profile.id}` }, (payload) => {
-        load();
+        scheduleLoad(200);
         const m = payload.new;
         showInAppNotif("💬 Nuovo messaggio", m?.body?.slice(0,60)||"Hai un nuovo messaggio");
         playPixel("msg");
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages",
           filter: `is_broadcast=eq.true` }, (payload) => {
-        load();
+        scheduleLoad(200);
         const m = payload.new;
         showInAppNotif("📢 Annuncio", m?.body?.slice(0,60)||"Nuovo messaggio per tutti");
       })
@@ -6302,125 +6400,63 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         });
       })
       .subscribe();
-    return () => sb.removeChannel(channel);
+    return () => { clearTimeout(reloadTimerRef.current); sb.removeChannel(channel); };
   }, [profile.id, load]);
 
   async function checkAndAssignMonthlyBadge(currentXp, currentCoin) {
-    const now = new Date();
-    if (now.getDate() > 5) return; // Solo nei primi 5 giorni del mese
-    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-    const { data: config } = await sb.from("streak_config").select("*").eq("month", prevMonth).eq("year", prevYear).single();
-    if (!config) return;
-    const badgeName = config.badge_name || `${MONTH_NAMES[prevMonth-1]} ${prevYear}`;
-    const monthStart = `${prevYear}-${String(prevMonth).padStart(2,"0")}-01`;
-    const monthEnd = `${prevYear}-${String(prevMonth).padStart(2,"0")}-31`;
-    const [{ data: presences }, { data: existingBadge }] = await Promise.all([
-      sb.from("attendances").select("id").eq("player_id", profile.id).gte("date", monthStart).lte("date", monthEnd).neq("status","none"),
-      sb.from("player_badges").select("id, badges(name)").eq("player_id", profile.id),
-    ]);
-    const alreadyHas = existingBadge?.some(pb => pb.badges?.name === badgeName);
-    if (alreadyHas) return;
-    if ((presences?.length || 0) < config.min_days) return;
-    let { data: badge } = await sb.from("badges").select("id").eq("name", badgeName).single();
-    if (!badge) {
-      const { data: nb } = await sb.from("badges").insert({ name: badgeName, description: `Presente almeno ${config.min_days} giorni in ${badgeName}!`, xp_default: config.xp_reward, coin_default: config.coin_reward }).select().single();
-      badge = nb;
-    }
-    if (!badge) return;
-    await sb.from("player_badges").insert({ player_id: profile.id, badge_id: badge.id, xp_awarded: config.xp_reward, coin_awarded: config.coin_reward });
-    const newMonthXp = currentXp + config.xp_reward;
-    await sb.from("profiles").update({ xp: newMonthXp, coin: currentCoin + config.coin_reward }).eq("id", profile.id);
-    if (config.xp_reward > 0) await logXPGain(profile.id, config.xp_reward, newMonthXp, "streak_mensile");
-    await sb.from("notifications").insert({ user_id: profile.id, type: "badge_assigned", title: `🏅 Badge ${badgeName} sbloccato!`, body: `+${config.xp_reward} XP · +${config.coin_reward} Coin` });
-    setQrMsg(prev => prev + ` · 🏅 Badge ${badgeName}!`);
-    setFullProfile(prev => ({ ...prev, xp: prev.xp + config.xp_reward, coin: prev.coin + config.coin_reward }));
+    // Tutta la logica (finestra primi 5 giorni, config mese, conteggio
+    // presenze, creazione badge, premi) avviene lato server in una
+    // transazione: il client riceve solo l'esito.
+    const { data: res } = await sb.rpc("claim_monthly_badge", { p_player_id: profile.id });
+    if (!res?.ok) return;
+    setQrMsg(prev => prev + ` · 🏅 Badge ${res.badge_name}!`);
+    setFullProfile(prev => ({ ...prev, xp: res.new_xp, coin: res.new_coin }));
   }
 
   async function doCheckin(codeOverride) {
-    const today = localToday();
     const code = (codeOverride || qrInput).toUpperCase();
     if (!code) { setQrMsg("Inserisci o scansiona un codice."); return; }
     if (codeOverride) setQrInput(codeOverride);
 
-    // Controlla prima se è un codice Lab
-    const { data: labQr } = await sb.from("lab_qr")
-      .select("*, activities(id,name,xp_full,coin_full)")
-      .eq("date", today).eq("code", code).single();
-    if (labQr?.activities) {
-      const act = labQr.activities;
-      const { error: labErr } = await sb.from("attendances").insert({
-        player_id: profile.id, date: today, check_type: "lab",
-        status: "full", xp_awarded: act.xp_full || 20,
-        coin_awarded: act.coin_full || 10, qr_verified: true, activity_id: act.id,
-      });
-      if (labErr?.code === "23505") { setQrMsg("Hai già fatto il check-in per questo Lab oggi!"); return; }
-      const xpGain = act.xp_full||20;
-      const newXp = (fullProfile?.xp||0) + xpGain;
-      const newCoin = (fullProfile?.coin||0) + (act.coin_full||10);
-      await sb.from("profiles").update({ xp: newXp, coin: newCoin }).eq("id", profile.id);
-      await logXPGain(profile.id, xpGain, newXp, "lab_checkin");
-      setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin }));
-      setQrInput(""); setQrMsg(`✅ Check-in Lab "${act.name}"! +${act.xp_full||20} XP +${act.coin_full||10} 🪙`);
-      playPixel("checkin"); setQrCelebration({ xpGained: act.xp_full||20, playerName: fullProfile?.display_name||"" });
+    // Tutta la validazione (codice, finestra oraria, doppioni, XP dalla
+    // config, streak) avviene lato server in una transazione atomica.
+    const { data: res, error } = await sb.rpc("do_checkin", { p_player_id: profile.id, p_code: code });
+    if (error) { setQrMsg("❌ Errore di rete. Riprova."); return; }
+    if (res?.error === "lab_already") { setQrMsg("Hai già fatto il check-in per questo Lab oggi!"); return; }
+    if (res?.error === "already") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
+    if (res?.error === "no_qr") { setQrMsg("Nessun QR attivo oggi."); return; }
+    if (res?.error === "invalid_code") { setQrMsg("❌ Codice non valido."); return; }
+    if (res?.error === "too_early") { setQrMsg("⏰ Il check-in apre alle 13:00."); return; }
+    if (res?.error === "too_late") { setQrMsg("⏰ Il check-in è chiuso (orario 13–19)."); return; }
+    if (res?.error || !res?.type) { setQrMsg("❌ Errore. Riprova."); return; }
+
+    if (res.type === "lab") {
+      setFullProfile(prev => ({ ...prev, xp: res.new_xp, coin: res.new_coin }));
+      setQrInput(""); setQrMsg(`✅ Check-in Lab "${res.name}"! +${res.xp} XP +${res.coin} 🪙`);
+      playPixel("checkin"); setQrCelebration({ xpGained: res.xp, playerName: fullProfile?.display_name||"" });
       return;
     }
 
-    // Controlla check-in giornaliero
-    const { data: qr } = await sb.from("daily_qr").select("*").eq("date", today).single();
-    if (!qr) { setQrMsg("Nessun QR attivo oggi."); return; }
-    if (code !== qr.code) { setQrMsg("❌ Codice non valido."); return; }
-    // Controlla finestra oraria 13:00–19:00
-    const nowT = new Date();
-    if (qr.valid_from && nowT < new Date(qr.valid_from)) {
-      setQrMsg("⏰ Il check-in apre alle 13:00."); return;
-    }
-    if (qr.valid_until && nowT > new Date(qr.valid_until)) {
-      setQrMsg("⏰ Il check-in è chiuso (orario 13–19)."); return;
-    }
-    // Leggi config XP/Coin presenza dal profilo sistema
-    const { data: sysCfg } = await sb.from("profiles").select("app_config")
-      .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
-    const att = sysCfg?.app_config?.attendance_config || {};
-    const xpAward = Number(att.xp_daily_checkin ?? 10);
-    const coinAward = Number(att.coin_daily_checkin ?? 5);
-
-    const { error } = await sb.from("attendances").insert({ player_id: profile.id, date: today, check_type: "daily", status: "full", xp_awarded: xpAward, coin_awarded: coinAward, qr_verified: true });
-    if (error?.code === "23505") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
-    // Calcola streak
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-    const wasYesterday = fullProfile?.last_checkin_date === yesterday;
-    const newStreak = wasYesterday ? (fullProfile?.current_streak || 0) + 1 : 1;
-    const newLongest = Math.max(newStreak, fullProfile?.longest_streak || 0);
-    const newXp = (fullProfile?.xp || 0) + xpAward;
-    const newCoin = (fullProfile?.coin || 0) + coinAward;
-    await sb.from("profiles").update({ xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }).eq("id", profile.id);
-    // Traccia in xp_history per classifica oggi/mese
-    await logXPGain(profile.id, xpAward, newXp, "presenza_qr");
-    setQrMsg(`✅ Check-in! +10 XP +5 Coin · 🔥 ${newStreak} giorni`);
-    playPixel("checkin"); setQrCelebration({ xpGained: 10, playerName: fullProfile?.display_name||"" });
-    setFullProfile(prev => ({ ...prev, xp: newXp, coin: newCoin, current_streak: newStreak, longest_streak: newLongest, last_checkin_date: today }));
-    await checkAndAssignMonthlyBadge(newXp, newCoin);
+    // Check-in giornaliero riuscito
+    setQrMsg(`✅ Check-in! +${res.xp} XP +${res.coin} Coin · 🔥 ${res.streak} giorni`);
+    playPixel("checkin"); setQrCelebration({ xpGained: res.xp, playerName: fullProfile?.display_name||"" });
+    setFullProfile(prev => ({ ...prev, xp: res.new_xp, coin: res.new_coin, current_streak: res.streak, longest_streak: Math.max(res.streak, prev?.longest_streak || 0), last_checkin_date: localToday() }));
+    await checkAndAssignMonthlyBadge(res.new_xp, res.new_coin);
   }
 
   async function bookActivity(actId, cost) {
-    if ((fullProfile?.coin || 0) < cost) { alert("Coin insufficienti!"); return; }
     try {
-      const { error } = await sb.from("bookings").insert({
-        player_id: profile.id,
-        activity_id: actId,
-        coin_held: cost,
-        status: "pending",
-      });
+      // Costo letto dal server e saldo verificato in un'unica transazione
+      const { data: res, error } = await sb.rpc("book_activity", { p_player_id: profile.id, p_activity_id: actId });
       if (error) { alert("❌ Errore prenotazione: " + error.message); return; }
+      if (res?.error === "insufficient") { alert("Coin insufficienti!"); return; }
+      if (res?.error === "not_found") { alert("❌ Lab non disponibile."); return; }
+      if (!res?.ok) { alert("❌ Errore prenotazione."); return; }
       // Notifica push a tutti gli educator
       sb.from("profiles").select("id").in("role",["educator","admin"]).then(({ data: edus }) => {
         (edus||[]).forEach(e => sendPush(e.id, "📋 Nuova prenotazione", `${fullProfile?.display_name||"Un giocatore"} ha prenotato un Lab`).catch(()=>{}));
       });
-      if (cost > 0) {
-        await sb.from("profiles").update({ coin: (fullProfile?.coin || 0) - cost }).eq("id", profile.id);
-        setFullProfile(prev => ({ ...prev, coin: (prev?.coin || 0) - cost }));
-      }
+      if (res.coin_held > 0) setFullProfile(prev => ({ ...prev, coin: res.new_coin }));
       alert("✅ Prenotazione inviata!");
       load();
     } catch(e) {
@@ -6465,10 +6501,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     if (newPin1.length < 4) { setPinChangeErr("Il PIN deve avere 4 cifre"); return; }
     if (newPin1 !== newPin2) { setPinChangeErr("I PIN non coincidono"); return; }
     if (newPin1 === "1234") { setPinChangeErr("Scegli un PIN diverso da 1234"); return; }
-    const { error } = await sb.from("profiles").update({ pin: newPin1 }).eq("id", profile.id);
-    if (error) { setPinChangeErr("Errore: " + error.message); return; }
+    // Cambio lato server: consentito solo se il PIN attuale è quello di default
+    const { data: res, error } = await sb.rpc("change_pin", { p_player_id: profile.id, p_new_pin: newPin1 });
+    if (error || res?.error) { setPinChangeErr("Errore: " + (error?.message || res?.error)); return; }
     const saved = JSON.parse(localStorage.getItem("pug_player") || "{}");
-    localStorage.setItem("pug_player", JSON.stringify({ ...saved, pin: newPin1 }));
+    delete saved.pin; // ripulisce eventuali sessioni vecchie con il pin in cache
+    localStorage.setItem("pug_player", JSON.stringify({ ...saved, _mustChangePin: false }));
     setMustChangePin(false);
   }
 
@@ -7035,7 +7073,7 @@ function DashboardView() {
     async function load() {
       try {
       const today = localToday();
-      const weekAgo = new Date(Date.now()-7*86400000).toISOString().split("T")[0];
+      const weekAgo = localDateStr(new Date(Date.now()-7*86400000));
       const monthStart = today.slice(0,7)+"-01";
 
       const [
@@ -7061,7 +7099,7 @@ function DashboardView() {
       // XP per day last 7 days
       const days = Array.from({length:7},(_,i)=>{
         const d = new Date(Date.now()-(6-i)*86400000);
-        return { date: d.toISOString().split("T")[0], label: d.toLocaleDateString("it-IT",{weekday:"short"}) };
+        return { date: localDateStr(d), label: d.toLocaleDateString("it-IT",{weekday:"short"}) };
       });
       const xpByDay = {};
       const pressByDay = {};
@@ -7236,7 +7274,7 @@ function PuliziaView() {
   async function deleteAllNotifs() {
     if (selected?.id === "__all__") {
       if (!confirm("Cancellare TUTTE le notifiche di TUTTI i giocatori? Operazione irreversibile.")) return;
-      for (const p of players) { await sb.from("notifications").delete().eq("user_id",p.id); }
+      await sb.from("notifications").delete().in("user_id", players.map(p => p.id));
       setNotifs([]); setMsg("✅ Notifiche di tutti i giocatori cancellate");
       return;
     }
@@ -7248,8 +7286,7 @@ function PuliziaView() {
   async function deleteBooking(bk) {
     if (!confirm(`Eliminare prenotazione di ${selected.display_name}?`)) return;
     if ((bk.coin_held||0) > 0 && bk.status !== "rejected") {
-      const { data: p } = await sb.from("profiles").select("coin").eq("id",selected.id).single();
-      await sb.from("profiles").update({ coin:(p?.coin||0)+bk.coin_held }).eq("id",selected.id);
+      await sb.rpc("award_xp", { p_player_id: selected.id, p_xp: 0, p_coin: bk.coin_held, p_reason: "rimborso", p_log_title: null });
       setMsg(`✅ Prenotazione eliminata · +${bk.coin_held} 🪙 rimborsate`);
     }
     await sb.from("bookings").delete().eq("id",bk.id);
@@ -7258,13 +7295,12 @@ function PuliziaView() {
 
   async function deleteAllBookings() {
     if (!confirm(`Eliminare tutte le prenotazioni di ${selected.display_name}? Le coin verranno rimborsate.`)) return;
-    for (const b of bookings) {
-      if ((b.coin_held||0)>0 && b.status!=="rejected") {
-        const { data: p } = await sb.from("profiles").select("coin").eq("id",selected.id).single();
-        await sb.from("profiles").update({ coin:(p?.coin||0)+b.coin_held }).eq("id",selected.id);
-      }
-      await sb.from("bookings").delete().eq("id",b.id);
+    // Rimborso calcolato in una volta sola, poi delete batch (evita N round-trip e race sulle coin)
+    const refund = bookings.reduce((s,b) => s + ((b.status!=="rejected" && (b.coin_held||0)>0) ? b.coin_held : 0), 0);
+    if (refund > 0) {
+      await sb.rpc("award_xp", { p_player_id: selected.id, p_xp: 0, p_coin: refund, p_reason: "rimborso", p_log_title: null });
     }
+    await sb.from("bookings").delete().in("id", bookings.map(b => b.id));
     setBookings([]); setMsg("✅ Prenotazioni cancellate e coin rimborsate");
   }
 
@@ -7376,7 +7412,7 @@ function AdminResetPwdForm({ educator, onClose }) {
     try {
       const res = await fetch("https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/delete-educator", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI` },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${PUSH_ANON_KEY}` },
         body: JSON.stringify({ action: "reset_password", educator_id: educator.id, new_password: newPwd }),
       });
       const data = await res.json();
@@ -7416,6 +7452,88 @@ function AdminResetPwdForm({ educator, onClose }) {
   );
 }
 
+
+// ─── ACCOUNT ADMIN (cessione account) ────────────────────
+// Permette all'admin di cambiare nome visualizzato ed email di accesso,
+// così l'account capo può essere ceduto a un'altra persona.
+function AdminAccountCard({ profile }) {
+  const [open, setOpen] = useState(false);
+  const [curEmail, setCurEmail] = useState("");
+  const [newName, setNewName] = useState(profile.display_name || "");
+  const [newEmail, setNewEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    sb.auth.getUser().then(({ data }) => setCurEmail(data?.user?.email || "")).catch(()=>{});
+  }, []);
+
+  async function saveName() {
+    setErr(""); setMsg("");
+    const name = newName.trim();
+    if (!name) { setErr("Il nome non può essere vuoto."); return; }
+    if (name === profile.display_name) { setErr("Il nome è già questo."); return; }
+    setSaving(true);
+    const { error } = await sb.from("profiles").update({ display_name: name }).eq("id", profile.id);
+    setSaving(false);
+    if (error) { setErr(error.message); return; }
+    setMsg(`✅ Nome aggiornato in "${name}" — lo vedrai ovunque al prossimo accesso.`);
+  }
+
+  async function saveEmail() {
+    setErr(""); setMsg("");
+    const email = newEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr("Inserisci un'email valida."); return; }
+    if (email === curEmail) { setErr("Questa è già l'email attuale."); return; }
+    if (!confirm(`Cambiare l'email di accesso admin in:\n\n${email}\n\nVerrà inviata una mail di conferma. Finché il link non viene cliccato, continua a valere l'email attuale.`)) return;
+    setSaving(true);
+    const { error } = await sb.auth.updateUser({ email });
+    setSaving(false);
+    if (error) { setErr(error.message); return; }
+    setNewEmail("");
+    setMsg(`📧 Richiesta inviata! Controlla la casella di ${email} (e per sicurezza anche ${curEmail}) e clicca il link di conferma. Dopo la conferma si accede SOLO con la nuova email.`);
+  }
+
+  return (
+    <div className="card-sm" style={{marginBottom:16,border:"1px solid rgba(255,204,0,.35)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
+        <div style={{fontSize:22}}>👑</div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,color:"#ffcc00"}}>Account Admin</div>
+          <div style={{fontSize:12,color:"var(--text3)"}}>Cambia nome o email per cedere l'account · {curEmail || "…"}</div>
+        </div>
+        <div style={{fontSize:14,color:"var(--text3)"}}>{open ? "▲" : "▼"}</div>
+      </div>
+
+      {open && (
+        <div style={{marginTop:14}}>
+          {msg && <div style={{background:"rgba(0,255,136,.1)",border:"1px solid rgba(0,255,136,.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
+          {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
+
+          <div className="form-group">
+            <label className="form-label">Nome visualizzato</label>
+            <div style={{display:"flex",gap:8}}>
+              <input className="form-input" style={{flex:1}} value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nuovo nome"/>
+              <button className="btn btn-yellow btn-sm" onClick={saveName} disabled={saving}>{saving?"⏳":"Salva"}</button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Nuova email di accesso</label>
+            <div style={{display:"flex",gap:8}}>
+              <input className="form-input" type="email" style={{flex:1}} value={newEmail} onChange={e=>setNewEmail(e.target.value)} placeholder="nuova@email.it"/>
+              <button className="btn btn-yellow btn-sm" onClick={saveEmail} disabled={saving||!newEmail.trim()}>{saving?"⏳":"Cambia"}</button>
+            </div>
+            <div style={{fontSize:11,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
+              Per cedere l'account: ① inserisci qui l'email del nuovo responsabile → ② lui clicca il link di conferma che riceve → ③ cambia la password dal menu (🔑 Cambia password) e aggiorna il nome qui sopra. Da quel momento l'account admin è suo.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── ADMIN VIEW ──────────────────────────────────────────
 
@@ -7482,6 +7600,8 @@ function AdminView({ profile }) {
         </div>
       )}
       <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#ffcc00",marginBottom:16}}>⚙️ Gestione Giardinieri</div>
+
+      <AdminAccountCard profile={profile} />
       {msg && <div style={{background:"rgba(0,255,136,.1)",border:"1px solid rgba(0,255,136,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
       {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
 
@@ -7904,18 +8024,18 @@ function EducatorShell({ profile, onLogout }) {
   const loadNotifCounts = useCallback(async () => {
     const today = localToday();
     const since24h = new Date(Date.now()-24*3600000).toISOString();
-    const [{ data: pending }, { data: allPlayers }, { data: todayAtt }, { data: unreadMsgs }] = await Promise.all([
-      sb.from("bookings").select("id").eq("status","pending"),
+    const [{ count: pendingCount }, { data: allPlayers }, { data: todayAtt }, { count: msgCount }] = await Promise.all([
+      sb.from("bookings").select("id", { count: "exact", head: true }).eq("status","pending"),
       sb.from("profiles").select("id").eq("role","player").gt("xp", 1),
       sb.from("attendances").select("player_id").eq("date", today),
-      sb.from("messages").select("id").eq("recipient_id", profile.id)
+      sb.from("messages").select("id", { count: "exact", head: true }).eq("recipient_id", profile.id)
         .is("cancelled_at", null).gt("expires_at", new Date().toISOString())
         .gt("created_at", since24h),
     ]);
     const markedIds = new Set((todayAtt||[]).map(a => a.player_id));
     const missing = (allPlayers||[]).filter(p => !markedIds.has(p.id)).length;
-    const pBook = (pending||[]).length;
-    const msgs = (unreadMsgs||[]).length;
+    const pBook = pendingCount || 0;
+    const msgs = msgCount || 0;
     setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, unreadMessages: msgs, total: pBook + (missing > 0 ? 1 : 0) + msgs });
   }, [profile.id]);
 
@@ -7941,22 +8061,6 @@ function EducatorShell({ profile, onLogout }) {
         loadNotifCounts();
         const m = payload.new;
         showInAppNotif("💬 Nuovo messaggio", m?.body?.slice(0,60)||"Hai un nuovo messaggio");
-        playPixel("msg");
-      })
-      // Notifiche dirette per il giardiniere (post-it, messaggi dal team, ecc.)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications",
-          filter: `user_id=eq.${profile.id}` }, (payload) => {
-        loadNotifCounts();
-        const n = payload.new;
-        if (n?.title) showInAppNotif(n.title, n.body || "");
-        playPixel("msg");
-      })
-      // Post-it bacheca team — listener diretto sulla tabella (fallback se la notification non arriva)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "educator_notes" }, (payload) => {
-        const note = payload.new;
-        if (!note || note.educator_id === profile.id) return; // ignora i miei
-        loadNotifCounts();
-        showInAppNotif("📌 Nuovo post-it in bacheca", (note.body||"").slice(0,80));
         playPixel("msg");
       })
       .subscribe();
@@ -8360,10 +8464,10 @@ export default function App() {
           setProfile({ ...p, _playerSession: true });
           setChecking(false);
           // Verifica in background: aggiorna i dati, NON slogga mai
-          sb.from("profiles").select("*, squads(name)").eq("id", p.id).single()
+          sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,role,current_streak,longest_streak,last_checkin_date,xp_goal,created_at,squads(name)").eq("id", p.id).single()
             .then(({ data }) => {
               if (data) {
-                const updated = { ...data, _playerSession: true };
+                const updated = { ...data, _playerSession: true, _mustChangePin: p._mustChangePin === true };
                 setProfile(updated);
                 localStorage.setItem("pug_player", JSON.stringify(updated));
               }
