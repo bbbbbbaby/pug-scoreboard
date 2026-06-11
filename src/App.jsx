@@ -1484,6 +1484,17 @@ async function uploadMessageMedia(file) {
   return data.publicUrl;
 }
 
+// Carica un'immagine badge nel bucket Storage e ritorna l'URL pubblico.
+async function uploadBadgeImage(file) {
+  const compressed = await compressToWebP(file, 512, 0.85);
+  const path = `badge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const { error } = await sb.storage.from("badge-images")
+    .upload(path, compressed, { contentType: "image/webp", cacheControl: "31536000" });
+  if (error) throw error;
+  const { data } = sb.storage.from("badge-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   const fileRef = useRef();
   const [uploading, setUploading] = useState(false);
@@ -4246,6 +4257,8 @@ function BadgesView({ sectionColors, setSectionColors }) {
   const [assignXp, setAssignXp] = useState(0);
   const [assignCoin, setAssignCoin] = useState(0);
   const [newBadge, setNewBadge] = useState({ name: "", description: "", link: "", xp_default: 20, coin_default: 10, image_url: null });
+  const [badgeImgUploading, setBadgeImgUploading] = useState(false);
+  const badgeImgRef = useRef(null);
 
 
   const load = useCallback(async () => {
@@ -4261,14 +4274,17 @@ function BadgesView({ sectionColors, setSectionColors }) {
   async function assignBadge() {
     if (!assignTarget || !showAssign) return;
     const badge = badges.find(b => b.id === showAssign);
-    const player = players.find(p => p.id === assignTarget);
-    await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
-    const newBadgeXp = (player?.xp || 0) + Number(assignXp);
-    await sb.from("profiles").update({ xp: newBadgeXp, coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
-    if (Number(assignXp) > 0) await logXPGain(assignTarget, Number(assignXp), newBadgeXp, "badge");
+    // 1. Registra il badge — se fallisce, lo dice (prima falliva in silenzio)
+    const { error: insErr } = await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
+    if (insErr) { addToast("❌ Badge non assegnato: " + insErr.message, "error"); return; }
+    // 2. XP/Coin in transazione atomica lato server (traccia anche xp_history)
+    const { error: xpErr } = await sb.rpc("award_xp", { p_player_id: assignTarget, p_xp: Number(assignXp), p_coin: Number(assignCoin), p_reason: "badge", p_log_title: null });
+    if (xpErr) { addToast("❌ Badge registrato ma XP non assegnati: " + xpErr.message + " — prova logout/login", "error"); return; }
+    // 3. Solo ora notifica e push (dopo che badge e XP sono davvero a posto)
     await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: `Badge: ${badge?.name}`, body: `+${assignXp} XP, +${assignCoin} Coin` });
     sendPush(assignTarget, `🎖️ Badge: ${badge?.name}`, `Hai guadagnato +${assignXp} XP e +${assignCoin} Coin!`).catch(()=>{});
     playPixel("badge");
+    addToast("🎖️ Badge assegnato!", "ok");
     setShowAssign(null);
   }
 
@@ -4345,6 +4361,23 @@ function BadgesView({ sectionColors, setSectionColors }) {
                 </div>
               </div>
             )}
+            <input ref={badgeImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={async e => {
+              const file = e.target.files[0]; if (!file) return;
+              setBadgeImgUploading(true);
+              try {
+                const url = await uploadBadgeImage(file);
+                setNewBadge(f => ({ ...f, image_url: url }));
+              } catch(err) {
+                addToast("❌ Errore caricamento: " + (err?.message || ""), "error");
+              } finally {
+                setBadgeImgUploading(false);
+                e.target.value = "";
+              }
+            }}/>
+            <button className="btn btn-ghost btn-sm" style={{width:"100%",marginBottom:10}} disabled={badgeImgUploading} onClick={() => badgeImgRef.current?.click()}>
+              {badgeImgUploading ? "⏳ Caricamento…" : "📷 Carica immagine (anche da telefono)"}
+            </button>
+            <div className="section-label" style={{marginTop:2}}>…oppure scegli dalla galleria</div>
             <AvatarPicker selected={newBadge.image_url||""} onSelect={url=>setNewBadge(f=>({...f,image_url:url||null}))} squadFilter="Badge"/>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={newBadge.name} onChange={e => setNewBadge(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Descrizione</label><textarea value={newBadge.description} onChange={e => setNewBadge(f => ({ ...f, description: e.target.value }))} placeholder="Racconta questo badge…" /></div>
