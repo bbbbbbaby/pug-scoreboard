@@ -1,10 +1,12 @@
-import { sb } from "./supabase.js";
+import { sb, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 // ─── PUSH NOTIFICATIONS ───────────────────────────────
-const VAPID_PUBLIC_KEY = "BB29nPfLuESEo3G7G7yKcIZ6pERzx13f9_kR8EIe-4BpE8tReQ-nHAjOniz0vCK95-TmbaRx5sVkZRx5lmsMTNg";
-const PUSH_EDGE_URL = "https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/send-push";
-const PUSH_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrYmFoa3hpdm95Z256d2RuZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTI2OTUsImV4cCI6MjA5MzQ4ODY5NX0.h0yAL-uCyhWsG5FKV-8t2WmSxMZQR-DcdTNWwzgoOUI";
+// URL e chiave derivano dall'ambiente (vedi supabase.js): in produzione
+// non cambia nulla, sullo staging puntano al progetto di prova.
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "BB29nPfLuESEo3G7G7yKcIZ6pERzx13f9_kR8EIe-4BpE8tReQ-nHAjOniz0vCK95-TmbaRx5sVkZRx5lmsMTNg";
+const PUSH_EDGE_URL = `${SUPABASE_URL}/functions/v1/send-push`;
+const PUSH_ANON_KEY = SUPABASE_ANON_KEY;
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -7410,7 +7412,7 @@ function AdminResetPwdForm({ educator, onClose }) {
     if (newPwd.length < 8) { setErr("Minimo 8 caratteri"); return; }
     setLoading(true); setErr("");
     try {
-      const res = await fetch("https://pkbahkxivoygnzwdnfci.supabase.co/functions/v1/delete-educator", {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-educator`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${PUSH_ANON_KEY}` },
         body: JSON.stringify({ action: "reset_password", educator_id: educator.id, new_password: newPwd }),
