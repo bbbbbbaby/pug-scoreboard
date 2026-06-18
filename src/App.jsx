@@ -4189,9 +4189,9 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         </div>
       )}
       {showForm && (
-        <div className="modal-bg" onClick={() => setShowForm(false)}>
+        <div className="modal-bg" onClick={() => { setShowForm(false); setEditingId(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Nuovo Lab</div>
+            <div className="modal-title">{editingId ? "✏️ Modifica Lab" : "Nuovo Lab"}</div>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Descrizione</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Link (opzionale)</label><input className="form-input" type="url" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://…" /></div>
@@ -4218,7 +4218,8 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
             <div style={{fontSize:10,color:"var(--text3)",marginTop:4,lineHeight:1.5}}>
               Completando tutti i {form.duration_days||"N"} appuntamenti il giocatore riceve il totale ×{form.lab_multiplier||2} (presenze × XP × moltiplicatore).
             </div>
-            {/* Selezione player da iscrivere subito */}
+            {/* Selezione player da iscrivere subito — solo in creazione */}
+            {!editingId && <>
             <div className="section-label" style={{marginTop:8}}>Iscrivi giocatori (opzionale)</div>
             <input className="form-input" placeholder="🔍 Cerca giocatore…" value={playerSearch}
               onChange={e=>setPlayerSearch(e.target.value)} style={{marginBottom:8}}/>
@@ -4237,10 +4238,11 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               })}
             </div>
             {selectedPlayers.size > 0 && <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700,marginBottom:8}}>{selectedPlayers.size} giocatori selezionati</div>}
+            </>}
             {createErr && <div style={{ color:"var(--danger)", fontSize:12, fontWeight:700, marginBottom:8 }}>{createErr}</div>}
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createActivity}>Crea</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annulla</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={editingId ? saveEdit : createActivity}>{editingId ? "Salva modifiche" : "Crea"}</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setEditingId(null); }}>Annulla</button>
             </div>
           </div>
         </div>
