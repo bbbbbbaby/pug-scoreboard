@@ -1299,6 +1299,7 @@ const css = `
   /* XP bar animated fill */
   @keyframes xpFill { from{width:0} }
   @keyframes barShine { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+  @keyframes barStripes { 0%{background-position:0 0} 100%{background-position:28px 0} }
   @keyframes leaffall { 0%{transform:translateY(-20px) rotate(0) scale(var(--s,1));opacity:0} 10%{opacity:1} 100%{transform:translateY(110vh) rotate(var(--r,360deg)) scale(var(--s,1));opacity:0} }
   @keyframes leafsway { 0%,100%{margin-left:-12px} 50%{margin-left:12px} }
 
@@ -6299,22 +6300,35 @@ function AnimatedLevelBar({ xp, lv }) {
   const target = nextLv ? Math.min(100, Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100)) : 100;
   const remaining = nextLv ? Math.max(0, nextLv.xp - xp) : 0;
   const [width, setWidth] = useState(0);
+  const [shownPct, setShownPct] = useState(0);
   const [bump, setBump] = useState(false);
   const prevXp = useRef(null);
 
-  // Riempimento all'apertura (una volta) + baing
+  // Conta la percentuale a schermo da 0 al target (effetto "tachimetro")
+  function countTo(to) {
+    let cur = 0;
+    const step = Math.max(1, Math.round(to / 28));
+    const iv = setInterval(() => {
+      cur += step;
+      if (cur >= to) { cur = to; clearInterval(iv); }
+      setShownPct(cur);
+    }, 22);
+  }
+
+  // Riempimento all'apertura (una volta) + baing + conteggio
   useEffect(() => {
-    const t1 = setTimeout(() => setWidth(target), 250);
-    const t2 = setTimeout(() => { try { playPixel("levelfill"); } catch(_){} }, 300);
+    const t1 = setTimeout(() => { setWidth(target); countTo(target); }, 300);
+    const t2 = setTimeout(() => { try { playPixel("levelfill"); } catch(_){} }, 340);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []); // solo al mount
 
-  // Guizzo quando gli XP aumentano (durante l'uso)
+  // Guizzo + ri-conteggio quando gli XP aumentano durante l'uso
   useEffect(() => {
     if (prevXp.current !== null && xp > prevXp.current) {
-      setWidth(target);
+      setWidth(target); countTo(target);
       setBump(true);
-      const t = setTimeout(() => setBump(false), 600);
+      try { playPixel("xp"); } catch(_){}
+      const t = setTimeout(() => setBump(false), 900);
       return () => clearTimeout(t);
     }
     prevXp.current = xp;
@@ -6322,19 +6336,49 @@ function AnimatedLevelBar({ xp, lv }) {
 
   return (
     <div>
-      <div style={{fontSize:9,fontWeight:900,color:'rgba(255,255,255,.35)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:5,display:'flex',justifyContent:'space-between'}}>
-        <span>{lv.emoji} {lv.name}</span>
-        <span>{xp} / {nextLv?.xp || 'MAX'} XP</span>
+      {/* Riga livello attuale + prossimo */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:7}}>
+        <div style={{display:'flex',alignItems:'center',gap:7}}>
+          <span style={{fontSize:26,lineHeight:1,filter:'drop-shadow(0 0 6px rgba(170,68,255,.6))'}}>{lv.emoji}</span>
+          <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:20,fontWeight:900,textTransform:'uppercase',letterSpacing:'.03em',color:'#fff',lineHeight:1}}>{lv.name}</span>
+        </div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,fontWeight:900,lineHeight:.9,color:bump?'#ff2d78':'#aa44ff',transition:'color .3s ease',textShadow:bump?'0 0 14px rgba(255,45,120,.7)':'0 0 10px rgba(170,68,255,.5)'}}>
+          {shownPct}<span style={{fontSize:16}}>%</span>
+        </div>
       </div>
-      <div style={{height:10,background:'rgba(255,255,255,.08)',borderRadius:99,overflow:'hidden',position:'relative',transform:bump?'scaleY(1.35)':'scaleY(1)',transition:'transform .25s ease'}}>
-        <div style={{height:'100%',background:'linear-gradient(90deg,#6644ff,#aa44ff,#ff2d78)',backgroundSize:'200% 100%',borderRadius:99,width:width+'%',boxShadow:bump?'0 0 16px rgba(255,45,120,.8)':'0 0 8px rgba(130,80,255,.5)',transition:'width .9s cubic-bezier(.34,1.4,.5,1), box-shadow .3s ease',animation:bump?'barShine 1s ease':undefined}}/>
+
+      {/* LA BARRA — spessa, bordata, con strisce diagonali animate */}
+      <div style={{
+        height:22, background:'rgba(0,0,0,.45)', borderRadius:12, overflow:'hidden', position:'relative',
+        border:'2px solid rgba(255,255,255,.12)',
+        boxShadow: bump ? '0 0 22px rgba(255,45,120,.6), inset 0 2px 6px rgba(0,0,0,.5)' : 'inset 0 2px 6px rgba(0,0,0,.5)',
+        transform: bump ? 'scale(1.02)' : 'scale(1)', transition:'transform .25s ease, box-shadow .3s ease',
+      }}>
+        <div style={{
+          height:'100%', width:width+'%', borderRadius:9, position:'relative', overflow:'hidden',
+          background:'linear-gradient(90deg,#6644ff,#aa44ff 50%,#ff2d78)',
+          boxShadow:'0 0 16px rgba(170,68,255,.7)',
+          transition:'width 1.1s cubic-bezier(.22,1.5,.4,1)',
+        }}>
+          {/* Strisce diagonali che scorrono (effetto caricamento da gioco) */}
+          <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(45deg,rgba(255,255,255,.18) 0,rgba(255,255,255,.18) 10px,transparent 10px,transparent 20px)',backgroundSize:'28px 28px',animation:'barStripes .7s linear infinite'}}/>
+          {/* Riflesso lucido in alto */}
+          <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',background:'linear-gradient(180deg,rgba(255,255,255,.35),transparent)',borderRadius:'9px 9px 0 0'}}/>
+        </div>
       </div>
+
+      {/* Numeri XP grossi sotto la barra */}
+      <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:13}}>
+        <span style={{color:'#ffcc00'}}>{xp} XP</span>
+        <span style={{color:'rgba(255,255,255,.4)'}}>{nextLv?.xp || 'MAX'} XP</span>
+      </div>
+
       {nextLv ? (
-        <div style={{fontSize:10,color:bump?'#ff2d78':'rgba(255,255,255,.45)',marginTop:5,fontWeight:700,textAlign:'center',transition:'color .3s ease'}}>
-          ✨ Ti mancano <strong style={{color:'#ffcc00'}}>{remaining} XP</strong> per diventare {nextLv.emoji} {nextLv.name}
+        <div style={{fontSize:12,color:bump?'#ff2d78':'rgba(255,255,255,.6)',marginTop:6,fontWeight:800,textAlign:'center',transition:'color .3s ease'}}>
+          ⚡ Ancora <strong style={{color:'#ffcc00',fontSize:14}}>{remaining} XP</strong> per <span style={{whiteSpace:'nowrap'}}>{nextLv.emoji} {nextLv.name}</span>
         </div>
       ) : (
-        <div style={{fontSize:10,color:'#ffcc00',marginTop:5,fontWeight:800,textAlign:'center'}}>🏆 Livello massimo raggiunto!</div>
+        <div style={{fontSize:13,color:'#ffcc00',marginTop:6,fontWeight:900,textAlign:'center'}}>🏆 LIVELLO MASSIMO!</div>
       )}
     </div>
   );
