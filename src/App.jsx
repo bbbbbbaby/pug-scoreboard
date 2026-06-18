@@ -3977,6 +3977,8 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   const [addPlayersTo, setAddPlayersTo] = useState(null); // lab a cui aggiungere player
   const [playerSearch, setPlayerSearch] = useState("");
   const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 6, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 0, max_participants: "", lab_multiplier: 2 });
+  const [editingId, setEditingId] = useState(null);
+  const [origAppointments, setOrigAppointments] = useState(null);
 
   const load = useCallback(async () => {
     const [{ data }, { data: edu }, { data: pls }] = await Promise.all([
@@ -4020,6 +4022,49 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       sendPush(pid, "⚡ Iscritto a un Lab", `Sei stato iscritto a "${actName||"un Lab"}"`).catch(()=>{});
     });
     addToast(`✅ ${toAdd.length} giocatori iscritti`, "ok");
+  }
+
+  function openEdit(a) {
+    setEditingId(a.id);
+    setOrigAppointments(a.duration_days || 1);
+    setForm({
+      name: a.name || "", description: a.description || "", link: a.link || "",
+      educator_id: a.educator_id || "", schedule: a.schedule || "",
+      duration_days: a.duration_days || 1,
+      xp_partial: a.xp_partial ?? 10, xp_full: a.xp_full ?? 20, xp_completed: a.xp_completed ?? 35,
+      coin_partial: a.coin_partial ?? 5, coin_full: a.coin_full ?? 10, coin_completed: a.coin_completed ?? 18,
+      coin_cost: a.coin_cost ?? 0, max_participants: a.max_participants ?? "",
+      lab_multiplier: a.lab_multiplier ?? 2,
+    });
+    setSelectedPlayers(new Set());
+    setCreateErr("");
+    setShowForm(true);
+  }
+
+  async function saveEdit() {
+    const name = (form.name || "").trim();
+    if (!name) { setCreateErr("Nome obbligatorio"); return; }
+    if (Number(form.duration_days) !== Number(origAppointments)) {
+      if (!confirm(`Stai cambiando gli appuntamenti da ${origAppointments} a ${form.duration_days}.\n\nLe presenze già registrate restano invariate; la modifica vale solo da ora. Chi avrà segnato tutti gli appuntamenti riceverà il bonus completamento.\n\nConfermi?`)) return;
+    }
+    setCreateErr("Salvataggio…");
+    const { error } = await sb.from("activities").update({
+      name,
+      description: (form.description || "").trim() || null,
+      schedule: (form.schedule || "").trim() || null,
+      duration_days: Number(form.duration_days) || 1,
+      lab_multiplier: Number(form.lab_multiplier) || 2,
+      xp_partial: Number(form.xp_partial) || 0,
+      coin_partial: Number(form.coin_partial) || 0,
+      coin_cost: Number(form.coin_cost) || 0,
+      max_participants: form.max_participants ? Number(form.max_participants) : null,
+      educator_id: form.educator_id || null,
+      link: (form.link || "").trim() || null,
+    }).eq("id", editingId);
+    if (error) { setCreateErr("❌ " + error.message); return; }
+    setCreateErr(""); setShowForm(false); setEditingId(null); setOrigAppointments(null);
+    load();
+    addToast("✅ Lab aggiornato", "ok");
   }
 
   async function createActivity() {
@@ -4105,7 +4150,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
     <div>
       <SectionBanner sectionKey="attivita" title="Lab" sub={`${activities.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
-        <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuovo Lab</button>
+        <button className="btn btn-yellow btn-sm" onClick={() => { setEditingId(null); setShowForm(true); }}>+ Nuovo Lab</button>
       </div>
       {loading ? <div className="loading">⏳</div> : (
         <div className="act-grid">
@@ -4117,6 +4162,10 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               {a.schedule && <div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
               <LabQRButton actId={a.id} actName={a.name}/>
+              <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,color:"#ffcc00"}}
+                onClick={()=>openEdit(a)}>
+                ✏️ Modifica Lab
+              </button>
               <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,marginBottom:6,color:"var(--neon-blue)"}}
                 onClick={()=>{ setAddPlayersTo(a); setSelectedPlayers(new Set()); setPlayerSearch(""); }}>
                 ➕ Aggiungi giocatori
