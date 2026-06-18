@@ -1484,6 +1484,17 @@ async function uploadMessageMedia(file) {
   return data.publicUrl;
 }
 
+// Carica un'immagine badge nel bucket Storage e ritorna l'URL pubblico.
+async function uploadBadgeImage(file) {
+  const compressed = await compressToWebP(file, 512, 0.85);
+  const path = `badge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const { error } = await sb.storage.from("badge-images")
+    .upload(path, compressed, { contentType: "image/webp", cacheControl: "31536000" });
+  if (error) throw error;
+  const { data } = sb.storage.from("badge-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 function AvatarUpload({ playerId, currentUrl, onUploaded }) {
   const fileRef = useRef();
   const [uploading, setUploading] = useState(false);
@@ -3678,9 +3689,11 @@ function AttendanceView({ sectionColors, setSectionColors }) {
         // Config: carica da profiles.app_config (sistema) — più affidabile di una tabella dedicata
         const { data: sysProfile } = await sb.from("profiles").select("app_config")
           .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
+        const labMult = sysProfile?.app_config?.lab_multiplier;
         const stored = sysProfile?.app_config?.attendance_config;
         if (stored) {
           setConfig({
+            lab_multiplier: labMult ?? 2,
             xp_daily_checkin: stored.xp_daily_checkin ?? 10,
             coin_daily_checkin: stored.coin_daily_checkin ?? 5,
             xp_week_bonus: stored.xp_week_bonus ?? 5,
@@ -3812,6 +3825,12 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                     onChange={e=>setConfig(c=>({...c,xp_week_bonus:Number(e.target.value)}))}
                     style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
                 </div>
+                <div>
+                  <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>Moltiplic. Lab ×</label>
+                  <input type="number" step="0.5" min="1" value={config.lab_multiplier ?? 2}
+                    onChange={e=>setConfig(c=>({...c,lab_multiplier:Number(e.target.value)}))}
+                    style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
+                </div>
               </div>
               <button className="btn btn-yellow btn-sm" style={{width:"100%"}} onClick={async()=>{
                 const payload = {
@@ -3826,7 +3845,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                 // Leggi app_config esistente (per non sovrascrivere altre impostazioni)
                 const { data: existing } = await sb.from("profiles").select("app_config")
                   .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
-                const newAppConfig = { ...(existing?.app_config || {}), attendance_config: payload };
+                const newAppConfig = { ...(existing?.app_config || {}), attendance_config: payload, lab_multiplier: Number(config.lab_multiplier ?? 2) };
                 const { error } = await sb.from("profiles").update({ app_config: newAppConfig })
                   .eq("id", "00000000-0000-0000-0000-000000000099");
                 if (error) {
@@ -3925,12 +3944,10 @@ function LabQRButton({ actId, actName }) {
     setLoading(true);
     const today = localToday();
     // Check if exists
-    const { data: existing } = await sb.from("lab_qr").select("code").eq("activity_id", actId).eq("date", today).maybeSingle();
-    if (existing?.code) { setCode(existing.code); setShow(true); setLoading(false); return; }
-    // Create new
-    const newCode = Math.random().toString(36).substring(2,8).toUpperCase();
-    const { data } = await sb.from("lab_qr").insert({ activity_id: actId, date: today, code: newCode }).select("code").single();
-    setCode(data?.code || newCode); setShow(true); setLoading(false);
+    // Generazione lato server (gli educatori non scrivono più direttamente su lab_qr)
+    const { data: res, error } = await sb.rpc("generate_lab_qr", { p_activity_id: actId });
+    if (error || !res?.code) { addToast("❌ Errore generazione QR: " + (error?.message || ""), "error"); setLoading(false); return; }
+    setCode(res.code); setShow(true); setLoading(false);
   }
 
   return (
@@ -3955,6 +3972,11 @@ function LabQRButton({ actId, actName }) {
 }
 
 function ActivitiesView({ sectionColors, setSectionColors }) {
+  const [labMultiplier, setLabMultiplier] = useState(2);
+  useEffect(() => {
+    sb.from("profiles").select("app_config").eq("id","00000000-0000-0000-0000-000000000099").maybeSingle()
+      .then(({ data }) => { const m = data?.app_config?.lab_multiplier; if (m) setLabMultiplier(m); }).catch(()=>{});
+  }, []);
   const [activities, setActivities] = useState([]);
   const [educators, setEducators] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3965,7 +3987,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   const [selectedPlayers, setSelectedPlayers] = useState(new Set());
   const [addPlayersTo, setAddPlayersTo] = useState(null); // lab a cui aggiungere player
   const [playerSearch, setPlayerSearch] = useState("");
-  const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" });
+  const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 6, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 0, max_participants: "" });
 
   const load = useCallback(async () => {
     const [{ data }, { data: edu }, { data: pls }] = await Promise.all([
@@ -4194,14 +4216,16 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <input className="form-input" value={form.schedule||""} onChange={e=>setForm(f=>({...f,schedule:e.target.value}))} placeholder="es. Martedì e Giovedì 15:00–17:00"/>
               <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Indica i giorni e gli orari delle sessioni</div>
             </div>
-            {[["duration_days","Durata totale (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
+            {[["duration_days","Numero di appuntamenti","number"],["coin_cost","Costo coin iscrizione","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
               <div className="form-group" key={k}><label className="form-label">{l}</label><input className="form-input" type={t} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} /></div>
             ))}
-            <div className="section-label">XP per livello</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {[["xp_partial","Parz."],["xp_full","Compl."],["xp_completed","Fine"]].map(([k,l]) => (
-                <div key={k}><label className="form-label">{l}</label><input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} /></div>
-              ))}
+            <div className="section-label">Punti per ogni presenza</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div><label className="form-label">XP a presenza</label><input className="form-input" type="number" value={form.xp_partial} onChange={e => setForm(f => ({ ...f, xp_partial: Number(e.target.value) }))} /></div>
+              <div><label className="form-label">Coin a presenza</label><input className="form-input" type="number" value={form.coin_partial} onChange={e => setForm(f => ({ ...f, coin_partial: Number(e.target.value) }))} /></div>
+            </div>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:4,lineHeight:1.5}}>
+              Completando tutti gli appuntamenti il giocatore riceve un bonus ×{labMultiplier} (impostabile in Presenze).
             </div>
             {/* Selezione player da iscrivere subito */}
             <div className="section-label" style={{marginTop:8}}>Iscrivi giocatori (opzionale)</div>
@@ -4246,6 +4270,8 @@ function BadgesView({ sectionColors, setSectionColors }) {
   const [assignXp, setAssignXp] = useState(0);
   const [assignCoin, setAssignCoin] = useState(0);
   const [newBadge, setNewBadge] = useState({ name: "", description: "", link: "", xp_default: 20, coin_default: 10, image_url: null });
+  const [badgeImgUploading, setBadgeImgUploading] = useState(false);
+  const badgeImgRef = useRef(null);
 
 
   const load = useCallback(async () => {
@@ -4261,14 +4287,17 @@ function BadgesView({ sectionColors, setSectionColors }) {
   async function assignBadge() {
     if (!assignTarget || !showAssign) return;
     const badge = badges.find(b => b.id === showAssign);
-    const player = players.find(p => p.id === assignTarget);
-    await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
-    const newBadgeXp = (player?.xp || 0) + Number(assignXp);
-    await sb.from("profiles").update({ xp: newBadgeXp, coin: (player?.coin || 0) + Number(assignCoin) }).eq("id", assignTarget);
-    if (Number(assignXp) > 0) await logXPGain(assignTarget, Number(assignXp), newBadgeXp, "badge");
+    // 1. Registra il badge — se fallisce, lo dice (prima falliva in silenzio)
+    const { error: insErr } = await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
+    if (insErr) { addToast("❌ Badge non assegnato: " + insErr.message, "error"); return; }
+    // 2. XP/Coin in transazione atomica lato server (traccia anche xp_history)
+    const { error: xpErr } = await sb.rpc("award_xp", { p_player_id: assignTarget, p_xp: Number(assignXp), p_coin: Number(assignCoin), p_reason: "badge", p_log_title: null });
+    if (xpErr) { addToast("❌ Badge registrato ma XP non assegnati: " + xpErr.message + " — prova logout/login", "error"); return; }
+    // 3. Solo ora notifica e push (dopo che badge e XP sono davvero a posto)
     await sb.from("notifications").insert({ user_id: assignTarget, type: "badge_assigned", title: `Badge: ${badge?.name}`, body: `+${assignXp} XP, +${assignCoin} Coin` });
     sendPush(assignTarget, `🎖️ Badge: ${badge?.name}`, `Hai guadagnato +${assignXp} XP e +${assignCoin} Coin!`).catch(()=>{});
     playPixel("badge");
+    addToast("🎖️ Badge assegnato!", "ok");
     setShowAssign(null);
   }
 
@@ -4345,6 +4374,23 @@ function BadgesView({ sectionColors, setSectionColors }) {
                 </div>
               </div>
             )}
+            <input ref={badgeImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={async e => {
+              const file = e.target.files[0]; if (!file) return;
+              setBadgeImgUploading(true);
+              try {
+                const url = await uploadBadgeImage(file);
+                setNewBadge(f => ({ ...f, image_url: url }));
+              } catch(err) {
+                addToast("❌ Errore caricamento: " + (err?.message || ""), "error");
+              } finally {
+                setBadgeImgUploading(false);
+                e.target.value = "";
+              }
+            }}/>
+            <button className="btn btn-ghost btn-sm" style={{width:"100%",marginBottom:10}} disabled={badgeImgUploading} onClick={() => badgeImgRef.current?.click()}>
+              {badgeImgUploading ? "⏳ Caricamento…" : "📷 Carica immagine (anche da telefono)"}
+            </button>
+            <div className="section-label" style={{marginTop:2}}>…oppure scegli dalla galleria</div>
             <AvatarPicker selected={newBadge.image_url||""} onSelect={url=>setNewBadge(f=>({...f,image_url:url||null}))} squadFilter="Badge"/>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={newBadge.name} onChange={e => setNewBadge(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Descrizione</label><textarea value={newBadge.description} onChange={e => setNewBadge(f => ({ ...f, description: e.target.value }))} placeholder="Racconta questo badge…" /></div>
@@ -6434,8 +6480,15 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
     if (res.type === "lab") {
       setFullProfile(prev => ({ ...prev, xp: res.new_xp, coin: res.new_coin }));
-      setQrInput(""); setQrMsg(`✅ Check-in Lab "${res.name}"! +${res.xp} XP +${res.coin} 🪙`);
-      playPixel("checkin"); setQrCelebration({ xpGained: res.xp, playerName: fullProfile?.display_name||"" });
+      setQrInput("");
+      if (res.completed) {
+        setQrMsg(`🎉 LAB COMPLETATO "${res.name}"! Bonus ×→ +${res.bonus_xp} XP, +${res.bonus_coin} 🪙`);
+        setQrCelebration({ xpGained: res.xp + (res.bonus_xp||0), playerName: fullProfile?.display_name||"", special: true });
+      } else {
+        setQrMsg(`✅ Presenza "${res.name}" (${res.progress}/${res.total})! +${res.xp} XP +${res.coin} 🪙`);
+        setQrCelebration({ xpGained: res.xp, playerName: fullProfile?.display_name||"" });
+      }
+      playPixel(res.completed ? "badge" : "checkin");
       return;
     }
 
