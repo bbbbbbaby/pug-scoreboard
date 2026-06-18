@@ -3689,9 +3689,11 @@ function AttendanceView({ sectionColors, setSectionColors }) {
         // Config: carica da profiles.app_config (sistema) — più affidabile di una tabella dedicata
         const { data: sysProfile } = await sb.from("profiles").select("app_config")
           .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
+        const labMult = sysProfile?.app_config?.lab_multiplier;
         const stored = sysProfile?.app_config?.attendance_config;
         if (stored) {
           setConfig({
+            lab_multiplier: labMult ?? 2,
             xp_daily_checkin: stored.xp_daily_checkin ?? 10,
             coin_daily_checkin: stored.coin_daily_checkin ?? 5,
             xp_week_bonus: stored.xp_week_bonus ?? 5,
@@ -3936,12 +3938,10 @@ function LabQRButton({ actId, actName }) {
     setLoading(true);
     const today = localToday();
     // Check if exists
-    const { data: existing } = await sb.from("lab_qr").select("code").eq("activity_id", actId).eq("date", today).maybeSingle();
-    if (existing?.code) { setCode(existing.code); setShow(true); setLoading(false); return; }
-    // Create new
-    const newCode = Math.random().toString(36).substring(2,8).toUpperCase();
-    const { data } = await sb.from("lab_qr").insert({ activity_id: actId, date: today, code: newCode }).select("code").single();
-    setCode(data?.code || newCode); setShow(true); setLoading(false);
+    // Generazione lato server (gli educatori non scrivono più direttamente su lab_qr)
+    const { data: res, error } = await sb.rpc("generate_lab_qr", { p_activity_id: actId });
+    if (error || !res?.code) { addToast("❌ Errore generazione QR: " + (error?.message || ""), "error"); setLoading(false); return; }
+    setCode(res.code); setShow(true); setLoading(false);
   }
 
   return (
@@ -3976,7 +3976,9 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   const [selectedPlayers, setSelectedPlayers] = useState(new Set());
   const [addPlayersTo, setAddPlayersTo] = useState(null); // lab a cui aggiungere player
   const [playerSearch, setPlayerSearch] = useState("");
-  const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 4, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 20, max_participants: "" });
+  const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 6, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 0, max_participants: "", lab_multiplier: 2 });
+  const [editingId, setEditingId] = useState(null);
+  const [origAppointments, setOrigAppointments] = useState(null);
 
   const load = useCallback(async () => {
     const [{ data }, { data: edu }, { data: pls }] = await Promise.all([
@@ -4022,6 +4024,49 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
     addToast(`✅ ${toAdd.length} giocatori iscritti`, "ok");
   }
 
+  function openEdit(a) {
+    setEditingId(a.id);
+    setOrigAppointments(a.duration_days || 1);
+    setForm({
+      name: a.name || "", description: a.description || "", link: a.link || "",
+      educator_id: a.educator_id || "", schedule: a.schedule || "",
+      duration_days: a.duration_days || 1,
+      xp_partial: a.xp_partial ?? 10, xp_full: a.xp_full ?? 20, xp_completed: a.xp_completed ?? 35,
+      coin_partial: a.coin_partial ?? 5, coin_full: a.coin_full ?? 10, coin_completed: a.coin_completed ?? 18,
+      coin_cost: a.coin_cost ?? 0, max_participants: a.max_participants ?? "",
+      lab_multiplier: a.lab_multiplier ?? 2,
+    });
+    setSelectedPlayers(new Set());
+    setCreateErr("");
+    setShowForm(true);
+  }
+
+  async function saveEdit() {
+    const name = (form.name || "").trim();
+    if (!name) { setCreateErr("Nome obbligatorio"); return; }
+    if (Number(form.duration_days) !== Number(origAppointments)) {
+      if (!confirm(`Stai cambiando gli appuntamenti da ${origAppointments} a ${form.duration_days}.\n\nLe presenze già registrate restano invariate; la modifica vale solo da ora. Chi avrà segnato tutti gli appuntamenti riceverà il bonus completamento.\n\nConfermi?`)) return;
+    }
+    setCreateErr("Salvataggio…");
+    const { error } = await sb.from("activities").update({
+      name,
+      description: (form.description || "").trim() || null,
+      schedule: (form.schedule || "").trim() || null,
+      duration_days: Number(form.duration_days) || 1,
+      lab_multiplier: Number(form.lab_multiplier) || 2,
+      xp_partial: Number(form.xp_partial) || 0,
+      coin_partial: Number(form.coin_partial) || 0,
+      coin_cost: Number(form.coin_cost) || 0,
+      max_participants: form.max_participants ? Number(form.max_participants) : null,
+      educator_id: form.educator_id || null,
+      link: (form.link || "").trim() || null,
+    }).eq("id", editingId);
+    if (error) { setCreateErr("❌ " + error.message); return; }
+    setCreateErr(""); setShowForm(false); setEditingId(null); setOrigAppointments(null);
+    load();
+    addToast("✅ Lab aggiornato", "ok");
+  }
+
   async function createActivity() {
     const name = (form.name || "").trim();
     if (!name) { setCreateErr("Nome obbligatorio"); return; }
@@ -4032,6 +4077,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         description: (form.description || "").trim() || null,
         schedule: (form.schedule || "").trim() || null,
         duration_days: Number(form.duration_days) || 1,
+        lab_multiplier: Number(form.lab_multiplier) || 2,
         xp_partial:    Number(form.xp_partial)    || 0,
         xp_full:       Number(form.xp_full)       || 0,
         xp_completed:  Number(form.xp_completed)  || 0,
@@ -4051,8 +4097,8 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       setCreateErr("");
       setShowForm(false);
       setForm({ name:"", description:"", link:"", educator_id:"",
-        duration_days:4, xp_partial:10, xp_full:20, xp_completed:35,
-        coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
+        duration_days:6, xp_partial:10, xp_full:20, xp_completed:35,
+        coin_partial:5, coin_full:10, coin_completed:18, coin_cost:0, max_participants:"", lab_multiplier:2 });
       // Notifica tutti i giocatori del nuovo lab
       sb.from("profiles").select("id").eq("role","player").then(({data})=>{
         (data||[]).forEach(p => sendPush(p.id, "⚡ Nuovo Lab disponibile!", `"${name}" è ora disponibile — prenota ora!`).catch(()=>{}));
@@ -4104,7 +4150,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
     <div>
       <SectionBanner sectionKey="attivita" title="Lab" sub={`${activities.length} attive`} sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
-        <button className="btn btn-yellow btn-sm" onClick={() => setShowForm(true)}>+ Nuovo Lab</button>
+        <button className="btn btn-yellow btn-sm" onClick={() => { setEditingId(null); setShowForm(true); }}>+ Nuovo Lab</button>
       </div>
       {loading ? <div className="loading">⏳</div> : (
         <div className="act-grid">
@@ -4116,6 +4162,10 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               {a.schedule && <div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
               <LabQRButton actId={a.id} actName={a.name}/>
+              <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,color:"#ffcc00"}}
+                onClick={()=>openEdit(a)}>
+                ✏️ Modifica Lab
+              </button>
               <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,marginBottom:6,color:"var(--neon-blue)"}}
                 onClick={()=>{ setAddPlayersTo(a); setSelectedPlayers(new Set()); setPlayerSearch(""); }}>
                 ➕ Aggiungi giocatori
@@ -4188,9 +4238,9 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         </div>
       )}
       {showForm && (
-        <div className="modal-bg" onClick={() => setShowForm(false)}>
+        <div className="modal-bg" onClick={() => { setShowForm(false); setEditingId(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">Nuovo Lab</div>
+            <div className="modal-title">{editingId ? "✏️ Modifica Lab" : "Nuovo Lab"}</div>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Descrizione</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Link (opzionale)</label><input className="form-input" type="url" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://…" /></div>
@@ -4205,16 +4255,20 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <input className="form-input" value={form.schedule||""} onChange={e=>setForm(f=>({...f,schedule:e.target.value}))} placeholder="es. Martedì e Giovedì 15:00–17:00"/>
               <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Indica i giorni e gli orari delle sessioni</div>
             </div>
-            {[["duration_days","Durata totale (giorni)","number"],["coin_cost","Costo coin","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
+            {[["duration_days","Numero di appuntamenti","number"],["coin_cost","Costo coin iscrizione","number"],["max_participants","Max partecipanti (opt.)","number"]].map(([k,l,t]) => (
               <div className="form-group" key={k}><label className="form-label">{l}</label><input className="form-input" type={t} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} /></div>
             ))}
-            <div className="section-label">XP per livello</div>
+            <div className="section-label">Punti per ogni presenza</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              {[["xp_partial","Parz."],["xp_full","Compl."],["xp_completed","Fine"]].map(([k,l]) => (
-                <div key={k}><label className="form-label">{l}</label><input className="form-input" type="number" value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: Number(e.target.value) }))} /></div>
-              ))}
+              <div><label className="form-label">XP a presenza</label><input className="form-input" type="number" value={form.xp_partial} onChange={e => setForm(f => ({ ...f, xp_partial: Number(e.target.value) }))} /></div>
+              <div><label className="form-label">Coin a presenza</label><input className="form-input" type="number" value={form.coin_partial} onChange={e => setForm(f => ({ ...f, coin_partial: Number(e.target.value) }))} /></div>
+              <div><label className="form-label">Moltiplic. ×</label><input className="form-input" type="number" step="0.5" min="1" value={form.lab_multiplier} onChange={e => setForm(f => ({ ...f, lab_multiplier: Number(e.target.value) }))} /></div>
             </div>
-            {/* Selezione player da iscrivere subito */}
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:4,lineHeight:1.5}}>
+              Completando tutti i {form.duration_days||"N"} appuntamenti il giocatore riceve il totale ×{form.lab_multiplier||2} (presenze × XP × moltiplicatore).
+            </div>
+            {/* Selezione player da iscrivere subito — solo in creazione */}
+            {!editingId && <>
             <div className="section-label" style={{marginTop:8}}>Iscrivi giocatori (opzionale)</div>
             <input className="form-input" placeholder="🔍 Cerca giocatore…" value={playerSearch}
               onChange={e=>setPlayerSearch(e.target.value)} style={{marginBottom:8}}/>
@@ -4233,10 +4287,11 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               })}
             </div>
             {selectedPlayers.size > 0 && <div style={{fontSize:12,color:"var(--neon-blue)",fontWeight:700,marginBottom:8}}>{selectedPlayers.size} giocatori selezionati</div>}
+            </>}
             {createErr && <div style={{ color:"var(--danger)", fontSize:12, fontWeight:700, marginBottom:8 }}>{createErr}</div>}
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createActivity}>Crea</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annulla</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={editingId ? saveEdit : createActivity}>{editingId ? "Salva modifiche" : "Crea"}</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setEditingId(null); }}>Annulla</button>
             </div>
           </div>
         </div>
@@ -6467,8 +6522,15 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
     if (res.type === "lab") {
       setFullProfile(prev => ({ ...prev, xp: res.new_xp, coin: res.new_coin }));
-      setQrInput(""); setQrMsg(`✅ Check-in Lab "${res.name}"! +${res.xp} XP +${res.coin} 🪙`);
-      playPixel("checkin"); setQrCelebration({ xpGained: res.xp, playerName: fullProfile?.display_name||"" });
+      setQrInput("");
+      if (res.completed) {
+        setQrMsg(`🎉 LAB COMPLETATO "${res.name}"! Bonus ×→ +${res.bonus_xp} XP, +${res.bonus_coin} 🪙`);
+        setQrCelebration({ xpGained: res.xp + (res.bonus_xp||0), playerName: fullProfile?.display_name||"", special: true });
+      } else {
+        setQrMsg(`✅ Presenza "${res.name}" (${res.progress}/${res.total})! +${res.xp} XP +${res.coin} 🪙`);
+        setQrCelebration({ xpGained: res.xp, playerName: fullProfile?.display_name||"" });
+      }
+      playPixel(res.completed ? "badge" : "checkin");
       return;
     }
 
