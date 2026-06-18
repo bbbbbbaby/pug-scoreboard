@@ -3825,12 +3825,6 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                     onChange={e=>setConfig(c=>({...c,xp_week_bonus:Number(e.target.value)}))}
                     style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
                 </div>
-                <div>
-                  <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>Moltiplic. Lab ×</label>
-                  <input type="number" step="0.5" min="1" value={config.lab_multiplier ?? 2}
-                    onChange={e=>setConfig(c=>({...c,lab_multiplier:Number(e.target.value)}))}
-                    style={{width:"100%",padding:"8px 10px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:16,fontWeight:900,textAlign:"center"}}/>
-                </div>
               </div>
               <button className="btn btn-yellow btn-sm" style={{width:"100%"}} onClick={async()=>{
                 const payload = {
@@ -3845,7 +3839,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                 // Leggi app_config esistente (per non sovrascrivere altre impostazioni)
                 const { data: existing } = await sb.from("profiles").select("app_config")
                   .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
-                const newAppConfig = { ...(existing?.app_config || {}), attendance_config: payload, lab_multiplier: Number(config.lab_multiplier ?? 2) };
+                const newAppConfig = { ...(existing?.app_config || {}), attendance_config: payload };
                 const { error } = await sb.from("profiles").update({ app_config: newAppConfig })
                   .eq("id", "00000000-0000-0000-0000-000000000099");
                 if (error) {
@@ -3972,11 +3966,6 @@ function LabQRButton({ actId, actName }) {
 }
 
 function ActivitiesView({ sectionColors, setSectionColors }) {
-  const [labMultiplier, setLabMultiplier] = useState(2);
-  useEffect(() => {
-    sb.from("profiles").select("app_config").eq("id","00000000-0000-0000-0000-000000000099").maybeSingle()
-      .then(({ data }) => { const m = data?.app_config?.lab_multiplier; if (m) setLabMultiplier(m); }).catch(()=>{});
-  }, []);
   const [activities, setActivities] = useState([]);
   const [educators, setEducators] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3987,7 +3976,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
   const [selectedPlayers, setSelectedPlayers] = useState(new Set());
   const [addPlayersTo, setAddPlayersTo] = useState(null); // lab a cui aggiungere player
   const [playerSearch, setPlayerSearch] = useState("");
-  const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 6, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 0, max_participants: "" });
+  const [form, setForm] = useState({ name: "", description: "", link: "", educator_id: "", duration_days: 6, xp_partial: 10, xp_full: 20, xp_completed: 35, coin_partial: 5, coin_full: 10, coin_completed: 18, coin_cost: 0, max_participants: "", lab_multiplier: 2 });
 
   const load = useCallback(async () => {
     const [{ data }, { data: edu }, { data: pls }] = await Promise.all([
@@ -4043,6 +4032,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         description: (form.description || "").trim() || null,
         schedule: (form.schedule || "").trim() || null,
         duration_days: Number(form.duration_days) || 1,
+        lab_multiplier: Number(form.lab_multiplier) || 2,
         xp_partial:    Number(form.xp_partial)    || 0,
         xp_full:       Number(form.xp_full)       || 0,
         xp_completed:  Number(form.xp_completed)  || 0,
@@ -4062,8 +4052,8 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       setCreateErr("");
       setShowForm(false);
       setForm({ name:"", description:"", link:"", educator_id:"",
-        duration_days:4, xp_partial:10, xp_full:20, xp_completed:35,
-        coin_partial:5, coin_full:10, coin_completed:18, coin_cost:20, max_participants:"" });
+        duration_days:6, xp_partial:10, xp_full:20, xp_completed:35,
+        coin_partial:5, coin_full:10, coin_completed:18, coin_cost:0, max_participants:"", lab_multiplier:2 });
       // Notifica tutti i giocatori del nuovo lab
       sb.from("profiles").select("id").eq("role","player").then(({data})=>{
         (data||[]).forEach(p => sendPush(p.id, "⚡ Nuovo Lab disponibile!", `"${name}" è ora disponibile — prenota ora!`).catch(()=>{}));
@@ -4220,12 +4210,13 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <div className="form-group" key={k}><label className="form-label">{l}</label><input className="form-input" type={t} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} /></div>
             ))}
             <div className="section-label">Punti per ogni presenza</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
               <div><label className="form-label">XP a presenza</label><input className="form-input" type="number" value={form.xp_partial} onChange={e => setForm(f => ({ ...f, xp_partial: Number(e.target.value) }))} /></div>
               <div><label className="form-label">Coin a presenza</label><input className="form-input" type="number" value={form.coin_partial} onChange={e => setForm(f => ({ ...f, coin_partial: Number(e.target.value) }))} /></div>
+              <div><label className="form-label">Moltiplic. ×</label><input className="form-input" type="number" step="0.5" min="1" value={form.lab_multiplier} onChange={e => setForm(f => ({ ...f, lab_multiplier: Number(e.target.value) }))} /></div>
             </div>
             <div style={{fontSize:10,color:"var(--text3)",marginTop:4,lineHeight:1.5}}>
-              Completando tutti gli appuntamenti il giocatore riceve un bonus ×{labMultiplier} (impostabile in Presenze).
+              Completando tutti i {form.duration_days||"N"} appuntamenti il giocatore riceve il totale ×{form.lab_multiplier||2} (presenze × XP × moltiplicatore).
             </div>
             {/* Selezione player da iscrivere subito */}
             <div className="section-label" style={{marginTop:8}}>Iscrivi giocatori (opzionale)</div>
