@@ -1298,6 +1298,9 @@ const css = `
 
   /* XP bar animated fill */
   @keyframes xpFill { from{width:0} }
+  @keyframes barShine { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+  @keyframes leaffall { 0%{transform:translateY(-20px) rotate(0) scale(var(--s,1));opacity:0} 10%{opacity:1} 100%{transform:translateY(110vh) rotate(var(--r,360deg)) scale(var(--s,1));opacity:0} }
+  @keyframes leafsway { 0%,100%{margin-left:-12px} 50%{margin-left:12px} }
 
   /* Avatar idle breathe */
   @keyframes breathe { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-6px) scale(1.02)} }
@@ -2475,7 +2478,10 @@ function playPixel(type) {
       osc.stop(ctx.currentTime + start + dur);
     };
 
-    if (type === "xp") {
+    if (type === "levelfill") {
+      // "baing" felice: campanella ascendente arrotondata
+      play(523,.0,.12,.07,"sine"); play(659,.1,.12,.07,"sine"); play(784,.2,.18,.08,"sine"); play(1047,.34,.25,.06,"sine");
+    } else if (type === "xp") {
       play(440, 0, .1); play(660, .1, .15);
     } else if (type === "coin") {
       play(523, 0, .08); play(784, .08, .12);
@@ -6245,8 +6251,14 @@ function InAppNotifBanner() {
 // ─── LEVEL UP ANIMATION ──────────────────────────────────
 function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t); }, [onDone]);
-  const colors = ["#ffcc00","#00d4ff","#ff2d78","#00ff88","#ff8c00","#a78bfa"];
-  const particles = Array.from({length:28},(_,i)=>({ id:i, left:Math.random()*100, delay:Math.random()*1.2, dur:1.8+Math.random()*1.5, color:colors[i%6], size:6+Math.random()*10, shape:i%3===0?"50%":"3px" }));
+  useEffect(() => { try { playPixel("levelup"); } catch(_){} }, []);
+  // Foglie e petali che cadono ondeggiando (effetto floreale celebrativo)
+  const leafColors = ["#00ff88","#3ddc84","#7CFC00","#ffcc00","#ff2d78","#aa44ff"];
+  const particles = Array.from({length:34},(_,i)=>({
+    id:i, left:Math.random()*100, delay:Math.random()*1.8, dur:2.6+Math.random()*2.2,
+    color:leafColors[i%6], size:10+Math.random()*14, rot:(Math.random()*720-360)+"deg",
+    scale:0.7+Math.random()*0.8, leaf:i%2===0,
+  }));
   return (
     <div onClick={onDone} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,.88)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
       <style>{`
@@ -6256,11 +6268,15 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
         @keyframes pulse2{0%,100%{opacity:1}50%{opacity:.6}}
       `}</style>
       {particles.map(p=>(
-        <div key={p.id} style={{position:"absolute",top:-10,left:`${p.left}%`,width:p.size,height:p.size,background:p.color,borderRadius:p.shape,animation:`cffall ${p.dur}s ${p.delay}s ease-in infinite`}}/>
+        <div key={p.id} style={{position:"absolute",top:-20,left:`${p.left}%`,animation:`leaffall ${p.dur}s ${p.delay}s ease-in infinite`,["--r"]:p.rot,["--s"]:p.scale}}>
+          <div style={{animation:`leafsway ${1.2+Math.random()}s ease-in-out infinite`,fontSize:p.size,filter:"drop-shadow(0 0 4px rgba(0,255,136,.4))"}}>
+            {p.leaf ? "🍃" : "🌸"}
+          </div>
+        </div>
       ))}
       <div style={{background:"linear-gradient(135deg,#0d1428,#1a2540)",border:"2px solid rgba(255,204,0,.5)",borderRadius:28,padding:"40px 48px",textAlign:"center",animation:"lvlpop .6s cubic-bezier(.34,1.56,.64,1) forwards",position:"relative",overflow:"hidden",maxWidth:340,width:"90%",boxShadow:"0 0 60px rgba(255,204,0,.25)"}}>
         <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"linear-gradient(105deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%)",animation:"lvlshine 2.5s .6s ease-in-out infinite"}}/>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".2em",color:"rgba(255,255,255,.4)",marginBottom:8}}>🎉 LEVEL UP!</div>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".2em",color:"rgba(255,255,255,.4)",marginBottom:8}}>🌿 SEI CRESCIUTO! 🌿</div>
         <div style={{fontSize:76,lineHeight:1,marginBottom:10,filter:"drop-shadow(0 0 16px rgba(255,204,0,.5))"}}>{newLevel.emoji}</div>
         <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:34,fontWeight:900,textTransform:"uppercase",background:"linear-gradient(135deg,#ffcc00,#ff8c00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>{newLevel.name}</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:20}}>Hai sbloccato il livello <strong style={{color:"#ffcc00"}}>{newLevel.name}</strong>!</div>
@@ -6271,6 +6287,55 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
         </div>
         <div style={{fontSize:10,color:"rgba(255,255,255,.2)",animation:"pulse2 2s infinite"}}>Tocca per continuare</div>
       </div>
+    </div>
+  );
+}
+
+// Barra livello animata: all'apertura si riempie da 0 al valore reale
+// con un "baing"; quando gli XP aumentano, fa un guizzo. Estetica
+// volutamente semplice (le grafiche definitive cambieranno solo i colori).
+function AnimatedLevelBar({ xp, lv }) {
+  const nextLv = LEVELS.find(l => l.xp > (xp || 0));
+  const target = nextLv ? Math.min(100, Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100)) : 100;
+  const remaining = nextLv ? Math.max(0, nextLv.xp - xp) : 0;
+  const [width, setWidth] = useState(0);
+  const [bump, setBump] = useState(false);
+  const prevXp = useRef(null);
+
+  // Riempimento all'apertura (una volta) + baing
+  useEffect(() => {
+    const t1 = setTimeout(() => setWidth(target), 250);
+    const t2 = setTimeout(() => { try { playPixel("levelfill"); } catch(_){} }, 300);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []); // solo al mount
+
+  // Guizzo quando gli XP aumentano (durante l'uso)
+  useEffect(() => {
+    if (prevXp.current !== null && xp > prevXp.current) {
+      setWidth(target);
+      setBump(true);
+      const t = setTimeout(() => setBump(false), 600);
+      return () => clearTimeout(t);
+    }
+    prevXp.current = xp;
+  }, [xp, target]);
+
+  return (
+    <div>
+      <div style={{fontSize:9,fontWeight:900,color:'rgba(255,255,255,.35)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:5,display:'flex',justifyContent:'space-between'}}>
+        <span>{lv.emoji} {lv.name}</span>
+        <span>{xp} / {nextLv?.xp || 'MAX'} XP</span>
+      </div>
+      <div style={{height:10,background:'rgba(255,255,255,.08)',borderRadius:99,overflow:'hidden',position:'relative',transform:bump?'scaleY(1.35)':'scaleY(1)',transition:'transform .25s ease'}}>
+        <div style={{height:'100%',background:'linear-gradient(90deg,#6644ff,#aa44ff,#ff2d78)',backgroundSize:'200% 100%',borderRadius:99,width:width+'%',boxShadow:bump?'0 0 16px rgba(255,45,120,.8)':'0 0 8px rgba(130,80,255,.5)',transition:'width .9s cubic-bezier(.34,1.4,.5,1), box-shadow .3s ease',animation:bump?'barShine 1s ease':undefined}}/>
+      </div>
+      {nextLv ? (
+        <div style={{fontSize:10,color:bump?'#ff2d78':'rgba(255,255,255,.45)',marginTop:5,fontWeight:700,textAlign:'center',transition:'color .3s ease'}}>
+          ✨ Ti mancano <strong style={{color:'#ffcc00'}}>{remaining} XP</strong> per diventare {nextLv.emoji} {nextLv.name}
+        </div>
+      ) : (
+        <div style={{fontSize:10,color:'#ffcc00',marginTop:5,fontWeight:800,textAlign:'center'}}>🏆 Livello massimo raggiunto!</div>
+      )}
     </div>
   );
 }
@@ -6678,8 +6743,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     notifiche:  'linear-gradient(160deg,#3d2200 0%,#7a4400 50%,#3d2200 100%)',
   };
 
-  const xpPct = (() => { const nxt = LEVELS.find(l => l.xp > (fullProfile?.xp||0)); return nxt ? Math.min(100,Math.round(((fullProfile.xp-lv.xp)/(nxt.xp-lv.xp))*100)) : 100; })();
-
     return (
     <div className="player-wrap" style={{background:TAB_BG[tab]||TAB_BG.profilo,transition:'background 0.5s ease'}}>
       {/* Toast notification */}
@@ -6793,13 +6856,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   <button className="btn btn-ghost btn-xs" onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>✏️</button>
                 </div>
               )}
-              <div style={{fontSize:9,fontWeight:900,color:'rgba(255,255,255,.35)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:5,display:'flex',justifyContent:'space-between'}}>
-                <span>{lv.emoji} {lv.name}</span>
-                <span>{fullProfile.xp} / {LEVELS.find(l=>l.xp>(fullProfile.xp||0))?.xp||'MAX'} XP</span>
-              </div>
-              <div style={{height:8,background:'rgba(255,255,255,.08)',borderRadius:99,overflow:'hidden'}}>
-                <div style={{height:'100%',background:'linear-gradient(90deg,#6644ff,#aa44ff)',borderRadius:99,width:xpPct+'%',boxShadow:'0 0 8px rgba(130,80,255,.5)'}}/>
-              </div>
+              <AnimatedLevelBar xp={fullProfile.xp||0} lv={lv} />
             </div>
 
             {/* Stats grid 1: XP, Coin, Badge */}
