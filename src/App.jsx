@@ -8,6 +8,14 @@ const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "BB29nPfLuESEo
 const PUSH_EDGE_URL = `${SUPABASE_URL}/functions/v1/send-push`;
 const PUSH_ANON_KEY = SUPABASE_ANON_KEY;
 
+// ─── AUTH GIOCATORI ───────────────────────────────────────────
+// Email sintetica e password derivata: DEVONO combaciare con lo
+// script di migrazione (migra-auth-players.mjs) e la edge function.
+// Il giocatore non le vede mai: login resta nickname + PIN.
+const playerEmail = (id) => `p-${id}@players.pug.local`;
+const playerPwd   = (pin, id) => `${pin || "1234"}.${id}`;
+const PLAYER_ADMIN_FN = `${SUPABASE_URL}/functions/v1/player-admin`;
+
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -2629,8 +2637,29 @@ function Login({ onLogin }) {
   async function loginPlayer() {
     if (!selected || pin.length !== 4) return;
     setLoadingPin(true); setErr("");
-    // Verifica lato server: il PIN viene controllato nel database e non
-    // viaggia mai verso il browser. Include rate limiting (5 tentativi/10min).
+
+    // ① Login Auth vero: crea una sessione Supabase firmata (serve alle RLS).
+    //    Il giocatore vede solo nome+PIN; email e password sono sintetiche.
+    const { data: authData, error: authErr } = await sb.auth.signInWithPassword({
+      email: playerEmail(selected.id),
+      password: playerPwd(pin, selected.id),
+    });
+
+    if (!authErr && authData?.user) {
+      // Sessione Auth ottenuta → carica il profilo e entra
+      const { data: prof } = await sb.from("profiles")
+        .select("id,display_name,first_name,avatar_url,xp,coin,squad_id,role,current_streak,longest_streak,last_checkin_date,xp_goal,created_at,squads(name)")
+        .eq("id", selected.id).single();
+      const data = { ...(prof || { id: selected.id, display_name: selected.display_name }), _playerSession: true, _mustChangePin: pin === "1234" };
+      localStorage.setItem("pug_player", JSON.stringify(data));
+      onLogin(data);
+      setTimeout(() => registerPush(data.id), 2000);
+      setLoadingPin(false);
+      return;
+    }
+
+    // ② Fallback (paracadute): se Auth non va (giocatore non ancora
+    //    migrato, o problema di rete), usa la verifica server verify_pin.
     const { data: res, error } = await sb.rpc("verify_pin", { p_player_id: selected.id, p_pin: pin });
     if (error) { setErr("Errore di rete. Riprova."); setLoadingPin(false); return; }
     if (res?.error === "rate_limited") { setErr("Troppi tentativi errati. Riprova tra 10 minuti."); setPin(""); setLoadingPin(false); return; }
@@ -6707,11 +6736,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     if (newPin1.length < 4) { setPinChangeErr("Il PIN deve avere 4 cifre"); return; }
     if (newPin1 !== newPin2) { setPinChangeErr("I PIN non coincidono"); return; }
     if (newPin1 === "1234") { setPinChangeErr("Scegli un PIN diverso da 1234"); return; }
-    // Cambio lato server: consentito solo se il PIN attuale è quello di default
+    // Aggiorna sia la colonna pin (change_pin) sia la password Auth,
+    // così il prossimo login funziona con il nuovo PIN.
     const { data: res, error } = await sb.rpc("change_pin", { p_player_id: profile.id, p_new_pin: newPin1 });
     if (error || res?.error) { setPinChangeErr("Errore: " + (error?.message || res?.error)); return; }
+    // Aggiorna la password Auth ri-loggando con la nuova (la sessione è la propria)
+    try {
+      await sb.auth.updateUser({ password: playerPwd(newPin1, profile.id) });
+    } catch(_) { /* se la sessione Auth non c'è, il change_pin basta per il fallback */ }
     const saved = JSON.parse(localStorage.getItem("pug_player") || "{}");
-    delete saved.pin; // ripulisce eventuali sessioni vecchie con il pin in cache
+    delete saved.pin;
     localStorage.setItem("pug_player", JSON.stringify({ ...saved, _mustChangePin: false }));
     setMustChangePin(false);
   }
