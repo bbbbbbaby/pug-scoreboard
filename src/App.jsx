@@ -30,7 +30,12 @@ async function playerAdmin(action, payload = {}) {
       },
       body: JSON.stringify({ action, ...payload }),
     });
-    return await res.json();
+    let body = null;
+    try { body = await res.json(); } catch (_) {}
+    if (!res.ok) {
+      return { error: body?.error || body?.message || body?.msg || `HTTP ${res.status}` };
+    }
+    return body || { error: "risposta vuota dalla funzione" };
   } catch (e) {
     return { error: e?.message || "rete" };
   }
