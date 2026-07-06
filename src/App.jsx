@@ -16,6 +16,26 @@ const playerEmail = (id) => `p-${id}@players.pug.local`;
 const playerPwd   = (pin, id) => `${pin || "1234"}.${id}`;
 const PLAYER_ADMIN_FN = `${SUPABASE_URL}/functions/v1/player-admin`;
 
+// Chiama la edge function player-admin con la sessione educatore corrente
+async function playerAdmin(action, payload = {}) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { error: "Sessione educatore assente: rifai il login" };
+  try {
+    const res = await fetch(PLAYER_ADMIN_FN, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ action, ...payload }),
+    });
+    return await res.json();
+  } catch (e) {
+    return { error: e?.message || "rete" };
+  }
+}
+
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -2676,7 +2696,7 @@ function Login({ onLogin }) {
     setLoadingEdu(true); setErr("");
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) { setErr(error.message); setLoadingEdu(false); return; }
-    const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
+    const { data: profile } = await sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
     if (profile?.id) setTimeout(() => registerPush(profile.id), 2000);
     setLoadingEdu(false);
@@ -2829,11 +2849,14 @@ function PlayersView({ sectionColors, setSectionColors }) {
       setLoading(false);
     }, 8000);
     try {
-      const [{ data }, { data: sq }] = await Promise.all([
-        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false }),
+      const [{ data }, { data: sq }, { data: pins }] = await Promise.all([
+        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false }),
         sb.from("squads").select("*"),
+        sb.rpc("educator_player_pins"),
       ]);
-      setPlayers(data || []); setSquads(sq || []);
+      const pinMap = Object.fromEntries((pins || []).map(r => [r.player_id, r.pin]));
+      setPlayers((data || []).map(p => ({ ...p, pin: pinMap[p.id] || "1234" })));
+      setSquads(sq || []);
     } finally {
       clearTimeout(safetyTimeout);
       loadingRef.current = false;
@@ -2917,7 +2940,11 @@ function PlayersView({ sectionColors, setSectionColors }) {
     const newXp = Number(p.xp) || 0;
     const newCoin = Number(p.coin) || 0;
     const deltaXp = newXp - (prev?.xp || 0);
-    await sb.from("profiles").update({ display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, pin: p.pin || "1234", avatar_url: p.avatar_url || null }).eq("id", p.id);
+    await sb.from("profiles").update({ display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, avatar_url: p.avatar_url || null }).eq("id", p.id);
+    if ((p.pin || "1234") !== (prev?.pin || "1234")) {
+      const r = await playerAdmin("set_pin", { player_id: p.id, pin: p.pin || "1234" });
+      if (r?.error) { setMsg("⚠️ PIN non aggiornato: " + r.error); setTimeout(() => setMsg(""), 4000); }
+    }
     if (deltaXp !== 0) await logXPGain(p.id, deltaXp, newXp, "modifica_manuale");
     setEditPlayer(null); load();
   }
@@ -2936,14 +2963,17 @@ function PlayersView({ sectionColors, setSectionColors }) {
       if (!confirm("Resettare il PIN di tutti i giocatori a 1234?")) return;
       target = "all";
     }
-    if (target === "selected") {
-      await sb.from("profiles").update({ pin: "1234" }).in("id", [...selected]);
-      setMsg(`PIN resettati a 1234 per ${selected.size} giocatori`);
-      setSelected(new Set());
-    } else {
-      await sb.from("profiles").update({ pin: "1234" }).eq("role", "player");
-      setMsg("Tutti i PIN resettati a 1234");
+    const ids = target === "selected" ? [...selected] : players.map(p => p.id);
+    setMsg(`Reset PIN in corso… (0/${ids.length})`);
+    let done = 0, fails = 0;
+    for (let i = 0; i < ids.length; i += 5) {
+      const chunk = ids.slice(i, i + 5);
+      const results = await Promise.all(chunk.map(id => playerAdmin("set_pin", { player_id: id, pin: "1234" })));
+      results.forEach(r => { if (r?.error) fails++; else done++; });
+      setMsg(`Reset PIN in corso… (${done}/${ids.length})`);
     }
+    setMsg(fails ? `PIN resettati: ${done}. ⚠️ Falliti: ${fails} (riprova)` : `PIN resettati a 1234 per ${done} giocatori`);
+    if (target === "selected") setSelected(new Set());
     load();
     setTimeout(() => setMsg(""), 3000);
   }
@@ -2960,19 +2990,19 @@ function PlayersView({ sectionColors, setSectionColors }) {
   async function createPlayer() {
     setCreatePlayerErr("");
     if (!newPlayer.display_name.trim()) { setCreatePlayerErr("Inserisci il nickname"); return; }
-    const payload = {
-      id: crypto.randomUUID(),
+    // La edge function crea profilo + utente Auth insieme (con rollback)
+    const r = await playerAdmin("create_player", {
       display_name: newPlayer.display_name.trim(),
       first_name: newPlayer.first_name.trim() || null,
-      role: "player",
       pin: newPlayer.pin || "1234",
       squad_id: newPlayer.squad_id || null,
-      xp: Number(newPlayer.xp) || 0,
-      coin: Number(newPlayer.coin) || 0,
       avatar_url: newPlayer.avatar_url || null,
-    };
-    const { error } = await sb.from("profiles").insert(payload);
-    if (error) { setCreatePlayerErr("Errore: " + error.message); return; }
+    });
+    if (r?.error) { setCreatePlayerErr("Errore: " + r.error); return; }
+    // XP/coin iniziali (se impostati) con un update successivo
+    if ((Number(newPlayer.xp) || 0) !== 0 || (Number(newPlayer.coin) || 0) !== 0) {
+      await sb.from("profiles").update({ xp: Number(newPlayer.xp) || 0, coin: Number(newPlayer.coin) || 0 }).eq("id", r.player_id);
+    }
     setShowCreatePlayer(false);
     setNewPlayer({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
     setMsg("Giocatore creato! PIN: " + (newPlayer.pin || "1234"));
@@ -3180,7 +3210,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 
   const loadData = useCallback(async () => {
     const [{ data: p }, { data: badges }, { data: att }, { data: notifs }] = await Promise.all([
-      sb.from("profiles").select("*, squads(name)").eq("id", playerId).single(),
+      sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", playerId).single(),
       sb.from("player_badges").select("*, badges(name,image_url)").eq("player_id", playerId).order("assigned_at", { ascending: false }),
       sb.from("attendances").select("*").eq("player_id", playerId).order("date", { ascending: false }).limit(30),
       sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(40),
@@ -3193,14 +3223,25 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
         labNames = Object.fromEntries((labs||[]).map(l=>[l.id,l.name]));
       }
       setData({ profile: p, badges: badges || [], attendances: att || [], history: notifs || [], labNames });
-    if (p) setEditing({ xp: p.xp, coin: p.coin, pin: p.pin || "1234", display_name: p.display_name, squad_id: p.squad_id, avatar_url: p.avatar_url || "" });
+    if (p) {
+      let curPin = "1234";
+      try {
+        const { data: pins } = await sb.rpc("educator_player_pins");
+        curPin = (pins || []).find(r => r.player_id === playerId)?.pin || "1234";
+      } catch(_) {}
+      setEditing({ xp: p.xp, coin: p.coin, pin: curPin, _origPin: curPin, display_name: p.display_name, squad_id: p.squad_id, avatar_url: p.avatar_url || "" });
+    }
   }, [playerId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   async function saveEdits() {
     if (!editing) return;
-    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId);
+    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), display_name: editing.display_name, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId);
+    if ((editing.pin || "1234") !== (editing._origPin || "1234")) {
+      const r = await playerAdmin("set_pin", { player_id: playerId, pin: editing.pin || "1234" });
+      if (r?.error) { setSaveMsg("⚠️ PIN non salvato: " + r.error); setTimeout(() => setSaveMsg(""), 4000); }
+    }
     if (deltaXp !== 0) await logXPGain(playerId, deltaXp, Number(editing.xp), "modifica_dettagli");
     setSaveMsg("Salvato ✅"); setTimeout(() => setSaveMsg(""), 2000);
     loadData();
@@ -8731,7 +8772,7 @@ export default function App() {
               }
               if (session) {
                 const { data: p } = await sb.from("profiles")
-                  .select("*, squads(name)").eq("id", session.user.id).single();
+                  .select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single();
                 if (p) {
                   setProfile(p);
                   localStorage.setItem("pug_edu", JSON.stringify(p));
@@ -8744,7 +8785,7 @@ export default function App() {
           // Ascolta solo il logout ESPLICITO
           const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange((event, session) => {
             if (event === "SIGNED_IN" && session) {
-              sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single()
+              sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single()
                 .then(({ data: p }) => {
                   if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
                 });
@@ -8760,7 +8801,7 @@ export default function App() {
     setChecking(false);
     const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single()
+        sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single()
           .then(({ data: p }) => {
             if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
           });
