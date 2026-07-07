@@ -16,29 +16,28 @@ const playerEmail = (id) => `p-${id}@players.pug.local`;
 const playerPwd   = (pin, id) => `${pin || "1234"}.${id}`;
 const PLAYER_ADMIN_FN = `${SUPABASE_URL}/functions/v1/player-admin`;
 
-// Chiama la edge function player-admin con la sessione educatore corrente
+// Operazioni educatore sui giocatori: funzioni SQL nel database
+// (admin_set_player_pin / admin_create_player / admin_delete_player)
 async function playerAdmin(action, payload = {}) {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) return { error: "Sessione educatore assente: rifai il login" };
-  try {
-    const res = await fetch(PLAYER_ADMIN_FN, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ action, ...payload }),
+  let call = null;
+  if (action === "set_pin") {
+    call = sb.rpc("admin_set_player_pin", { p_player_id: payload.player_id, p_pin: payload.pin });
+  } else if (action === "create_player") {
+    call = sb.rpc("admin_create_player", {
+      p_display_name: payload.display_name,
+      p_first_name: payload.first_name || null,
+      p_pin: payload.pin || "1234",
+      p_squad_id: payload.squad_id || null,
+      p_avatar_url: payload.avatar_url || null,
     });
-    let body = null;
-    try { body = await res.json(); } catch (_) {}
-    if (!res.ok) {
-      return { error: body?.error || body?.message || body?.msg || `HTTP ${res.status}` };
-    }
-    return body || { error: "risposta vuota dalla funzione" };
-  } catch (e) {
-    return { error: e?.message || "rete" };
+  } else if (action === "delete_player") {
+    call = sb.rpc("admin_delete_player", { p_player_id: payload.player_id });
+  } else {
+    return { error: "unknown_action" };
   }
+  const { data, error } = await call;
+  if (error) return { error: error.message };
+  return data || { error: "risposta vuota" };
 }
 
 function urlBase64ToUint8Array(base64String) {
