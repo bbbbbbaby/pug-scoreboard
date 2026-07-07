@@ -5647,6 +5647,7 @@ function VisibilityView() {
     { key:"coin",       label:"🪙 Coin",               desc:"Mostra il saldo coin nel profilo" },
     { key:"xp",         label:"⭐ XP",                 desc:"Mostra i punti XP nel profilo" },
     { key:"lab",        label:"⚡ Tab Lab",            desc:"Mostra la tab Lab nel menu player" },
+    { key:"bigtop",     label:"🎪 Tab BIG TOP",        desc:"Mostra la sezione Circo nel menu player" },
     { key:"messaggi",   label:"💬 Messaggi",           desc:"Mostra la tab messaggi nel menu player" },
   ];
   const allVisible = sections.every(s => vis[s.key] !== false);
@@ -6854,6 +6855,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     ["social","🌍","Social"],
     visConfig.classifica !== false ? ["classifica","🏆","Classifica"] : null,
     visConfig.lab !== false ? ["attivita","⚡","Lab"] : null,
+    visConfig.bigtop !== false ? ["bigtop","🎪","BIG TOP"] : null,
     visConfig.messaggi !== false ? ["messaggi","💬","Messaggi"] : null,
     ["notifiche","🔔","Notifiche"],
   ].filter(Boolean);
@@ -6862,6 +6864,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     profilo:    'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',
     classifica: 'linear-gradient(160deg,#001a6e 0%,#0030b8 50%,#001a6e 100%)',
     attivita:   'linear-gradient(160deg,#043a14 0%,#0a6a28 50%,#043a14 100%)',
+    bigtop:     'linear-gradient(160deg,#4a1500 0%,#8a2c00 45%,#5a0520 100%)',
     messaggi:   'linear-gradient(160deg,#5a0535 0%,#a00860 50%,#5a0535 100%)',
     notifiche:  'linear-gradient(160deg,#3d2200 0%,#7a4400 50%,#3d2200 100%)',
   };
@@ -7141,6 +7144,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
 
         {/* ── ATTIVITÀ ── */}
+        {tab === "bigtop" && fullProfile && (
+          <BigTopPlayerView fullProfile={fullProfile} setFullProfile={setFullProfile} />
+        )}
+
         {tab === "attivita" && (
           <div style={{ marginTop: 8 }}>
             <div className="pd-tab-title" style={{color:"#00ff88"}}>⚡ Lab</div>
@@ -7976,6 +7983,192 @@ function AdminView({ profile }) {
           <div style={{fontSize:11,color:"var(--text3)",marginTop:10}}>💡 Comunica email e password al giardiniere. Accede dal tab "Giardiniere" nel login.</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── BIG TOP 🎪: tab giocatore ──────────────────────────────────
+function BigTopPlayerView({ fullProfile, setFullProfile }) {
+  const now = new Date();
+  const CUR = { y: now.getFullYear(), m: now.getMonth() + 1 };
+  const NEXT = CUR.m === 12 ? { y: CUR.y + 1, m: 1 } : { y: CUR.y, m: CUR.m + 1 };
+  const [cursor, setCursor] = useState(CUR);
+  const [slots, setSlots] = useState([]);
+  const [counts, setCounts] = useState({});
+  const [mine, setMine] = useState({});      // slot_id -> status
+  const [sel, setSel] = useState(new Set());
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const isNext = cursor.m === NEXT.m && cursor.y === NEXT.y;
+  const monthName = new Date(cursor.y, cursor.m - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const from = `${cursor.y}-${String(cursor.m).padStart(2,"0")}-01`;
+    const toD = new Date(cursor.y, cursor.m, 0).getDate();
+    const to = `${cursor.y}-${String(cursor.m).padStart(2,"0")}-${String(toD).padStart(2,"0")}`;
+    const { data: sl } = await sb.from("bigtop_slots").select("*").gte("date", from).lte("date", to).is("cancelled_at", null).order("date").order("start_time");
+    const ids = (sl || []).map(s => s.id);
+    let bk = [];
+    if (ids.length) {
+      const { data } = await sb.from("bigtop_bookings").select("slot_id,player_id,status").in("slot_id", ids);
+      bk = data || [];
+    }
+    const cnt = {}, my = {};
+    bk.forEach(b => {
+      if (["booked","present"].includes(b.status)) cnt[b.slot_id] = (cnt[b.slot_id] || 0) + 1;
+      if (b.player_id === fullProfile.id) my[b.slot_id] = b.status;
+    });
+    setSlots(sl || []); setCounts(cnt); setMine(my); setSel(new Set()); setLoading(false);
+  }, [cursor, fullProfile.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function canCancel(s) {
+    // fino alle 22:00 del giorno prima
+    const d = new Date(s.date + "T22:00:00");
+    d.setDate(d.getDate() - 1);
+    return new Date() <= d;
+  }
+  function bookable(s) {
+    return s.date >= localToday() && !mine[s.id] && (counts[s.id] || 0) < s.max_participants;
+  }
+  function toggle(sid) {
+    setSel(prev => { const n = new Set(prev); n.has(sid) ? n.delete(sid) : n.add(sid); return n; });
+  }
+
+  async function book() {
+    if (sel.size === 0) return;
+    setBusy(true); setMsg("");
+    const { data: r, error } = await sb.rpc("bigtop_book", { p_player_id: fullProfile.id, p_slot_ids: [...sel] });
+    setBusy(false);
+    if (error || r?.error) { setMsg("❌ " + (error?.message || r.error)); return; }
+    const errs = (r.errors || []).length;
+    setMsg(r.booked > 0 ? `🎪 Prenotati ${r.booked} turni!${errs ? ` (${errs} non disponibili)` : ""}` : "⚠️ Nessun turno prenotato (pieni o non disponibili)");
+    playPixel("checkin");
+    load();
+  }
+
+  async function cancel(sid) {
+    if (!confirm("Disdire questa prenotazione?")) return;
+    const { data: r, error } = await sb.rpc("bigtop_cancel", { p_player_id: fullProfile.id, p_slot_id: sid });
+    if (error || r?.error) {
+      setMsg(r?.error === "troppo_tardi" ? "⏰ Troppo tardi per disdire (entro le 22:00 del giorno prima)" : "❌ " + (error?.message || r?.error));
+      return;
+    }
+    setMsg("Prenotazione disdetta 👍");
+    load();
+  }
+
+  async function checkin() {
+    if (code.trim().length < 4) return;
+    setBusy(true); setMsg("");
+    const { data: r, error } = await sb.rpc("bigtop_checkin", { p_player_id: fullProfile.id, p_code: code.trim() });
+    setBusy(false);
+    if (error) { setMsg("❌ Errore di rete, riprova"); return; }
+    if (r?.error) {
+      const M = { invalid_code: "❌ Codice non valido (o non è il giorno del turno)", already: "✅ Check-in già fatto per questo turno!", pieno: "😕 Turno pieno, niente posti walk-in" };
+      setMsg(M[r.error] || "❌ " + r.error);
+      return;
+    }
+    setFullProfile(prev => ({ ...prev, xp: r.new_xp, coin: r.new_coin }));
+    setMsg(`🎪 Check-in BIG TOP ${r.slot}!${r.xp > 0 ? ` +${r.xp} XP` : ""}${r.coin > 0 ? ` +${r.coin} 🪙` : ""}`);
+    setCode("");
+    playPixel("checkin");
+    load();
+  }
+
+  // Raggruppa per data
+  const byDate = {};
+  slots.forEach(s => { (byDate[s.date] = byDate[s.date] || []).push(s); });
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className="pd-tab-title" style={{color:"#ff8c00"}}>🎪 BIG TOP</div>
+
+      {/* Check-in col codice */}
+      <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(255,140,0,.25)",borderRadius:14,padding:12,marginBottom:12}}>
+        <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"#ff8c00",marginBottom:8}}>📍 Check-in BIG TOP — inserisci il codice del turno</div>
+        <div style={{display:"flex",gap:8}}>
+          <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="CODICE"
+            maxLength={8}
+            style={{flex:1,padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid rgba(255,140,0,.3)",borderRadius:10,color:"var(--text)",fontSize:16,fontWeight:900,letterSpacing:4,textAlign:"center"}}/>
+          <button className="btn btn-primary btn-sm" disabled={busy||code.trim().length<4} onClick={checkin}>{busy?"⏳":"Vai"}</button>
+        </div>
+      </div>
+
+      {msg && <div style={{fontSize:13,fontWeight:800,textAlign:"center",padding:"8px 10px",marginBottom:10,background:"rgba(0,0,0,.35)",borderRadius:10}}>{msg}</div>}
+
+      {/* Navigazione mese: solo corrente e successivo */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:12}}>
+        <button className="btn btn-ghost btn-xs" disabled={!isNext} onClick={()=>setCursor(CUR)}>‹</button>
+        <div style={{fontWeight:900,textTransform:"capitalize",minWidth:140,textAlign:"center"}}>{monthName}</div>
+        <button className="btn btn-ghost btn-xs" disabled={isNext} onClick={()=>setCursor(NEXT)}>›</button>
+      </div>
+
+      {loading ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center"}}>⏳ Caricamento…</div> :
+       slots.length === 0 ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center",padding:"18px 0"}}>Nessun turno in programma questo mese 🎪</div> :
+       Object.entries(byDate).map(([date, daySlots]) => (
+        <div key={date} style={{marginBottom:12}}>
+          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".08em",color:"var(--text3)",marginBottom:6}}>
+            {new Date(date+"T12:00").toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
+            {date < localToday() && " · passato"}
+          </div>
+          {daySlots.map(s => {
+            const my = mine[s.id];
+            const free = s.max_participants - (counts[s.id] || 0);
+            const isPast = s.date < localToday();
+            const selectable = bookable(s);
+            return (
+              <div key={s.id}
+                onClick={selectable ? ()=>toggle(s.id) : undefined}
+                style={{
+                  display:"flex",alignItems:"center",gap:10,padding:"10px 12px",marginBottom:6,
+                  background: sel.has(s.id) ? "rgba(255,140,0,.18)" : "rgba(0,0,0,.35)",
+                  border: sel.has(s.id) ? "1.5px solid #ff8c00" : "1px solid var(--border2)",
+                  borderRadius:12, opacity: isPast ? .5 : 1,
+                  cursor: selectable ? "pointer" : "default", transition:"all .15s ease",
+                }}>
+                {selectable && (
+                  <div style={{width:20,height:20,borderRadius:6,border:"2px solid #ff8c00",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#ff8c00",flexShrink:0}}>
+                    {sel.has(s.id) ? "✓" : ""}
+                  </div>
+                )}
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:900,fontSize:15}}>{s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}</div>
+                  <div style={{fontSize:11,color:"var(--text3)"}}>
+                    {my === "present" ? "✅ Presente!" :
+                     my === "booked" ? "📌 Sei prenotato" :
+                     my === "absent" ? "❌ Assente" :
+                     free <= 0 ? "😕 Pieno" :
+                     `${free} ${free === 1 ? "posto libero" : "posti liberi"}`}
+                    {(s.xp_checkin > 0 || s.coin_checkin > 0) && ` · check-in: ${s.xp_checkin>0?`+${s.xp_checkin} XP`:""}${s.coin_checkin>0?` +${s.coin_checkin} 🪙`:""}`}
+                  </div>
+                </div>
+                {my === "booked" && !isPast && canCancel(s) && (
+                  <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={e=>{e.stopPropagation();cancel(s.id);}}>Disdici</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+
+      {sel.size > 0 && (
+        <button className="btn btn-primary" disabled={busy}
+          style={{position:"sticky",bottom:12,width:"100%",fontSize:16,fontWeight:900,boxShadow:"0 4px 20px rgba(255,140,0,.4)"}}
+          onClick={book}>
+          {busy ? "⏳…" : `🎪 Prenota ${sel.size} ${sel.size === 1 ? "turno" : "turni"}`}
+        </button>
+      )}
+
+      <div style={{fontSize:10,color:"var(--text3)",textAlign:"center",marginTop:14,lineHeight:1.6}}>
+        Il BIG TOP è gratis! Prenota i turni che vuoi (anche tutto il mese).<br/>
+        Puoi disdire fino alle 22:00 del giorno prima. Se prenoti e non vieni: −2 🪙
+      </div>
     </div>
   );
 }
