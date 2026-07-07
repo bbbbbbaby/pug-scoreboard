@@ -7980,9 +7980,207 @@ function AdminView({ profile }) {
   );
 }
 
+// ─── BIG TOP 🎪: pannello educatore ─────────────────────────────
+function BigTopEducatorView() {
+  const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() + 1 }; });
+  const [slots, setSlots] = useState([]);
+  const [books, setBooks] = useState({});   // slot_id -> array prenotazioni
+  const [expanded, setExpanded] = useState(null);
+  const [editSlot, setEditSlot] = useState(null);
+  const [qrShow, setQrShow] = useState({}); // slot_id -> code
+  const [players, setPlayers] = useState([]);
+  const [bookFor, setBookFor] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const monthName = new Date(cursor.y, cursor.m - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const from = `${cursor.y}-${String(cursor.m).padStart(2,"0")}-01`;
+    const toD = new Date(cursor.y, cursor.m, 0).getDate();
+    const to = `${cursor.y}-${String(cursor.m).padStart(2,"0")}-${String(toD).padStart(2,"0")}`;
+    const { data: sl } = await sb.from("bigtop_slots").select("*").gte("date", from).lte("date", to).order("date").order("start_time");
+    const ids = (sl || []).map(s => s.id);
+    let bk = [];
+    if (ids.length) {
+      const { data } = await sb.from("bigtop_bookings").select("*, profiles(display_name, avatar_url)").in("slot_id", ids);
+      bk = data || [];
+    }
+    const map = {};
+    bk.forEach(b => { (map[b.slot_id] = map[b.slot_id] || []).push(b); });
+    setSlots(sl || []); setBooks(map); setLoading(false);
+  }, [cursor]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    sb.from("profiles").select("id,display_name").eq("role","player").order("display_name")
+      .then(({ data }) => setPlayers(data || []));
+  }, []);
+
+  function taken(sid) { return (books[sid] || []).filter(b => ["booked","present"].includes(b.status)).length; }
+  function isPast(s) { return s.date < localToday(); }
+
+  async function generateMonth() {
+    setBusy(true);
+    const { data: r, error } = await sb.rpc("bigtop_generate_month", { p_year: cursor.y, p_month: cursor.m });
+    setBusy(false);
+    if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
+    addToast(r.created > 0 ? `🎪 Creati ${r.created} turni di ${monthName}` : "Turni già tutti presenti", "ok");
+    load();
+  }
+
+  async function showQr(sid) {
+    if (qrShow[sid]) { setQrShow(q => { const n = { ...q }; delete n[sid]; return n; }); return; }
+    const { data: r, error } = await sb.rpc("bigtop_generate_qr", { p_slot_id: sid });
+    if (error || r?.error || !r?.code) { addToast("❌ QR: " + (error?.message || r?.error || ""), "error"); return; }
+    setQrShow(q => ({ ...q, [sid]: r.code }));
+  }
+
+  async function saveSlot() {
+    const s = editSlot;
+    const { error } = await sb.from("bigtop_slots").update({
+      start_time: s.start_time, end_time: s.end_time,
+      max_participants: Number(s.max_participants) || 10,
+      xp_checkin: Number(s.xp_checkin) || 0, coin_checkin: Number(s.coin_checkin) || 0,
+    }).eq("id", s.id);
+    if (error) { addToast("❌ " + error.message, "error"); return; }
+    setEditSlot(null); addToast("✅ Turno aggiornato", "ok"); load();
+  }
+
+  async function markAbsents(s) {
+    if (!confirm(`Segnare come ASSENTI tutti i prenotati senza check-in del turno ${s.date.split("-").reverse().join("/")} ${s.start_time.slice(0,5)}?\n\nOgnuno riceverà −2 🪙 e una notifica.`)) return;
+    const { data: r, error } = await sb.rpc("bigtop_mark_absents", { p_slot_id: s.id });
+    if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
+    addToast(r.absents > 0 ? `Segnati ${r.absents} assenti (−2 🪙 ciascuno)` : "Nessun assente da segnare", "ok");
+    load();
+  }
+
+  async function cancelSlot(s) {
+    if (!confirm(`Annullare il turno del ${s.date.split("-").reverse().join("/")} ${s.start_time.slice(0,5)}?\n\nGli iscritti riceveranno una notifica.`)) return;
+    const { data: r, error } = await sb.rpc("bigtop_cancel_slot", { p_slot_id: s.id });
+    if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
+    addToast(`Turno annullato (avvisati ${r.notified})`, "ok");
+    load();
+  }
+
+  async function bookForPlayer(sid) {
+    if (!bookFor) { addToast("Scegli un giocatore", "error"); return; }
+    const { data: r, error } = await sb.rpc("bigtop_book", { p_player_id: bookFor, p_slot_ids: [sid] });
+    if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
+    if (r.booked > 0) addToast("✅ Prenotato!", "ok");
+    else addToast("⚠️ " + ((r.errors?.[0]?.why) || "non prenotabile").replace(/_/g, " "), "error");
+    load();
+  }
+
+  const STATUS = { booked: ["📌", "prenotato", "var(--neon-blue)"], present: ["✅", "presente", "#00ff88"], absent: ["❌", "assente", "#ff4d6d"], cancelled: ["🚫", "disdetto", "var(--text3)"] };
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,fontWeight:900}}>🎪 BIG TOP</div>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+          <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===1?c.y-1:c.y, m: c.m===1?12:c.m-1 }))}>‹</button>
+          <div style={{fontWeight:800,minWidth:130,textAlign:"center",textTransform:"capitalize"}}>{monthName}</div>
+          <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===12?c.y+1:c.y, m: c.m===12?1:c.m+1 }))}>›</button>
+        </div>
+      </div>
+
+      <button className="btn btn-yellow btn-sm" style={{width:"100%",marginBottom:14}} disabled={busy} onClick={generateMonth}>
+        {busy ? "⏳…" : `➕ Genera turni di ${monthName} (mar/gio 16-17 e 17-18)`}
+      </button>
+
+      {loading ? <div style={{color:"var(--text3)",fontSize:13}}>⏳ Caricamento…</div> :
+       slots.length === 0 ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center",padding:"20px 0"}}>Nessun turno questo mese — premi "Genera turni"</div> :
+      slots.map(s => {
+        const t = taken(s.id);
+        const dead = !!s.cancelled_at;
+        return (
+        <div key={s.id} className="card" style={{marginBottom:10,opacity:dead?.55:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+            <div>
+              <div style={{fontWeight:900,fontSize:15}}>
+                {new Date(s.date+"T12:00").toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})} · {s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}
+                {dead && <span style={{color:"#ff4d6d",fontSize:11,marginLeft:8}}>ANNULLATO</span>}
+              </div>
+              <div style={{fontSize:12,color:"var(--text3)"}}>
+                👥 {t}/{s.max_participants} · {s.xp_checkin>0 && `+${s.xp_checkin} XP `}{s.coin_checkin>0 && `+${s.coin_checkin} 🪙`}{s.xp_checkin===0&&s.coin_checkin===0&&"nessun punto extra"}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:6,marginLeft:"auto",flexWrap:"wrap"}}>
+              {!dead && <button className="btn btn-ghost btn-xs" onClick={()=>showQr(s.id)}>{qrShow[s.id]?"▲ QR":"📍 QR"}</button>}
+              {!dead && <button className="btn btn-ghost btn-xs" style={{color:"#ffcc00"}} onClick={()=>setEditSlot({...s})}>✏️</button>}
+              <button className="btn btn-ghost btn-xs" onClick={()=>setExpanded(expanded===s.id?null:s.id)}>👥</button>
+              {!dead && isPast(s) === false && s.date === localToday() && null}
+              {!dead && s.date <= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={()=>markAbsents(s)}>Assenti</button>}
+              {!dead && s.date >= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={()=>cancelSlot(s)}>🚫</button>}
+            </div>
+          </div>
+
+          {qrShow[s.id] && (
+            <div style={{marginTop:10,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(0,212,255,.2)"}}>
+              <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".08em"}}>QR BIG TOP · {s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}</div>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qrShow[s.id]}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={qrShow[s.id]} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8,cursor:"pointer"}}
+                onClick={()=>navigator.clipboard?.writeText(qrShow[s.id]).then(()=>addToast("📋 Codice copiato!","ok")).catch(()=>{})}>{qrShow[s.id]}</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo il giorno del turno</div>
+            </div>
+          )}
+
+          {expanded === s.id && (
+            <div style={{marginTop:10,borderTop:"1px solid var(--border2)",paddingTop:10}}>
+              {(books[s.id]||[]).length === 0 && <div style={{fontSize:12,color:"var(--text3)"}}>Nessuna prenotazione</div>}
+              {(books[s.id]||[]).map(b => {
+                const [ic, lbl, col] = STATUS[b.status] || ["·", b.status, "var(--text3)"];
+                return (
+                  <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",fontSize:13}}>
+                    <span>{ic}</span>
+                    <span style={{fontWeight:700}}>{b.profiles?.display_name || "?"}</span>
+                    <span style={{marginLeft:"auto",fontSize:11,color:col,fontWeight:800,textTransform:"uppercase"}}>{lbl}</span>
+                  </div>
+                );
+              })}
+              {!dead && s.date >= localToday() && (
+                <div style={{display:"flex",gap:6,marginTop:8}}>
+                  <select value={bookFor} onChange={e=>setBookFor(e.target.value)}
+                    style={{flex:1,padding:"7px 9px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:13}}>
+                    <option value="">Prenota per un giocatore…</option>
+                    {players.map(p=><option key={p.id} value={p.id}>{p.display_name}</option>)}
+                  </select>
+                  <button className="btn btn-primary btn-xs" onClick={()=>bookForPlayer(s.id)}>➕</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );})}
+
+      {editSlot && (
+        <div className="modal-bg" onClick={()=>setEditSlot(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">✏️ Modifica turno</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div><label className="form-label">Inizio</label><input className="form-input" type="time" value={editSlot.start_time.slice(0,5)} onChange={e=>setEditSlot(s=>({...s,start_time:e.target.value}))}/></div>
+              <div><label className="form-label">Fine</label><input className="form-input" type="time" value={editSlot.end_time.slice(0,5)} onChange={e=>setEditSlot(s=>({...s,end_time:e.target.value}))}/></div>
+              <div><label className="form-label">Max partecipanti</label><input className="form-input" type="number" value={editSlot.max_participants} onChange={e=>setEditSlot(s=>({...s,max_participants:e.target.value}))}/></div>
+              <div/>
+              <div><label className="form-label">XP check-in</label><input className="form-input" type="number" value={editSlot.xp_checkin} onChange={e=>setEditSlot(s=>({...s,xp_checkin:e.target.value}))}/></div>
+              <div><label className="form-label">Coin check-in</label><input className="form-input" type="number" value={editSlot.coin_checkin} onChange={e=>setEditSlot(s=>({...s,coin_checkin:e.target.value}))}/></div>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:16}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={saveSlot}>Salva</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setEditSlot(null)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
-  ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
+  ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["bigtop","🎪","BIG TOP"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
   ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["notifiche","🔔","Notifiche"], ["admin","⚙️","Admin"],
 ]
@@ -7992,7 +8190,7 @@ const EDUCATOR_GROUPS = [
   { id:"gioco", icon:"🎮", label:"Gioco",
     tabs:["dashboard","giocatori","classifica","squadre","presenze","qr"] },
   { id:"attivita_grp", icon:"⚡", label:"Attività",
-    tabs:["attivita","sfida","badge","streak","prenotazioni"] },
+    tabs:["attivita","bigtop","sfida","badge","streak","prenotazioni"] },
   { id:"comunicazione", icon:"💬", label:"Comunicazione",
     tabs:["messaggi","annunci","bacheca","social_edu"] },
   { id:"gestione", icon:"📊", label:"Gestione",
@@ -8595,6 +8793,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "squadre"      && <SquadsView />}
           {tab === "presenze"     && <AttendanceView {...sharedProps} />}
           {tab === "attivita"     && <ActivitiesView {...sharedProps} />}
+          {tab === "bigtop"       && <BigTopEducatorView />}
           {tab === "sfida"        && <SfidaView {...sharedProps} />}
           {tab === "badge"        && <BadgesView {...sharedProps} />}
           {tab === "streak"       && <StreakConfigView />}
