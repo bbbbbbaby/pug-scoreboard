@@ -8197,7 +8197,8 @@ function BigTopEducatorView() {
     const ids = (sl || []).map(s => s.id);
     let bk = [];
     if (ids.length) {
-      const { data } = await sb.from("bigtop_bookings").select("*, profiles(display_name, avatar_url)").in("slot_id", ids);
+      const { data, error } = await sb.from("bigtop_bookings").select("*, profiles!bigtop_bookings_player_id_fkey(display_name, avatar_url)").in("slot_id", ids);
+      if (error) addToast("❌ Prenotazioni: " + error.message, "error");
       bk = data || [];
     }
     const map = {};
