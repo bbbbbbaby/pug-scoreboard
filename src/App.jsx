@@ -237,6 +237,9 @@ const css = `
   .login-card .search-inp { background:#FDEF26 !important; color:#101010 !important;
     border:2px solid #101010 !important; font-weight:800; box-shadow:3px 3px 0 rgba(16,16,16,.9) !important; }
   .login-card .search-inp::placeholder { color:rgba(16,16,16,.5) !important; }
+  .edu-login-card .form-input { background:#FDEF26 !important; color:#101010 !important;
+    border:2px solid #101010 !important; font-weight:800; box-shadow:3px 3px 0 rgba(16,16,16,.9) !important; }
+  .edu-login-card .form-input::placeholder { color:rgba(16,16,16,.45) !important; }
   .login-card button:not(.btn-primary):not(.btn) { color:#101010 !important; }
   .login-doodles { color:#101010 !important; opacity:.10 !important; z-index:-1; }
 
@@ -837,11 +840,15 @@ const css = `
   .light .edu-layout { background: #eef2fb; }
 
   .light .sidebar {
-    background: linear-gradient(180deg, #0d1428 0%, #1a2540 100%);
-    border-right: 1px solid rgba(255,255,255,.06);
-    box-shadow: 4px 0 24px rgba(0,0,0,.2);
+    background: #ffffff;
+    border-right: 2px solid #101010;
+    box-shadow: none;
   }
-  .light .sidebar-logo-box { background: #cc1111; }
+  .light .sidebar-logo-box { background: transparent; }
+  .light .sidebar * { color:#101010; }
+  .light .sidebar .sidebar-badge { background:#FDEF26; border:2px solid #101010; color:#101010; }
+  .light .sidebar .nav-item.active { background:#FDEF26 !important; color:#101010 !important; border:2px solid #101010; }
+  .light .sidebar-user { border-top:2px solid #101010; }
   .light .sidebar-badge {
     background: rgba(100,160,255,.15);
     border-color: rgba(100,160,255,.3);
@@ -2817,9 +2824,9 @@ function Login({ onLogin }) {
         </div>
       ) : (
         /* Educator login */
-        <div className="login-card" style={{width:"100%",maxWidth:420,borderRadius:20,padding:"24px 20px"}}>
-          <button onClick={()=>setShowEduLogin(false)} style={{position:"absolute",top:16,left:16,background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:20}}>←</button>
-          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16,textAlign:"center"}}>
+        <div className="login-card edu-login-card" style={{width:"100%",maxWidth:420,borderRadius:20,padding:"24px 20px",position:"relative"}}>
+          <button onClick={()=>setShowEduLogin(false)} style={{position:"absolute",top:16,left:16,background:"none",border:"none",color:"#101010",cursor:"pointer",fontSize:20}}>←</button>
+          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"#101010",marginBottom:16,textAlign:"center"}}>
             🌱 Accesso Giardiniere
           </div>
           <div className="form-group">
@@ -8851,8 +8858,8 @@ function EducatorShell({ profile, onLogout }) {
       {/* Sidebar desktop */}
       <div className="sidebar">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-box"><div className="sidebar-logo-t">PeR·You<br/>GaRDeN</div></div>
-          <div className="sidebar-logo-sub">gratuito &amp; popolare</div>
+          <div className="pd-logo-img logo-b" style={{width:130,height:42,margin:"0 auto"}}/>
+          <div className="pd-logo-img logo-w" style={{width:130,height:42,margin:"0 auto"}}/>
           <div className="sidebar-badge">🌱 Pannello Giardiniere</div>
         </div>
         <nav className="nav">
