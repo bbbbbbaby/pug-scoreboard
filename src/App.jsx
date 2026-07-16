@@ -8,6 +8,38 @@ const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "BB29nPfLuESEo
 const PUSH_EDGE_URL = `${SUPABASE_URL}/functions/v1/send-push`;
 const PUSH_ANON_KEY = SUPABASE_ANON_KEY;
 
+// ─── AUTH GIOCATORI ───────────────────────────────────────────
+// Email sintetica e password derivata: DEVONO combaciare con lo
+// script di migrazione (migra-auth-players.mjs) e la edge function.
+// Il giocatore non le vede mai: login resta nickname + PIN.
+const playerEmail = (id) => `p-${id}@players.pug.local`;
+const playerPwd   = (pin, id) => `${pin || "1234"}.${id}`;
+const PLAYER_ADMIN_FN = `${SUPABASE_URL}/functions/v1/player-admin`;
+
+// Operazioni educatore sui giocatori: funzioni SQL nel database
+// (admin_set_player_pin / admin_create_player / admin_delete_player)
+async function playerAdmin(action, payload = {}) {
+  let call = null;
+  if (action === "set_pin") {
+    call = sb.rpc("admin_set_player_pin", { p_player_id: payload.player_id, p_pin: payload.pin });
+  } else if (action === "create_player") {
+    call = sb.rpc("admin_create_player", {
+      p_display_name: payload.display_name,
+      p_first_name: payload.first_name || null,
+      p_pin: payload.pin || "1234",
+      p_squad_id: payload.squad_id || null,
+      p_avatar_url: payload.avatar_url || null,
+    });
+  } else if (action === "delete_player") {
+    call = sb.rpc("admin_delete_player", { p_player_id: payload.player_id });
+  } else {
+    return { error: "unknown_action" };
+  }
+  const { data, error } = await call;
+  if (error) return { error: error.message };
+  return data || { error: "risposta vuota" };
+}
+
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -2629,8 +2661,29 @@ function Login({ onLogin }) {
   async function loginPlayer() {
     if (!selected || pin.length !== 4) return;
     setLoadingPin(true); setErr("");
-    // Verifica lato server: il PIN viene controllato nel database e non
-    // viaggia mai verso il browser. Include rate limiting (5 tentativi/10min).
+
+    // ① Login Auth vero: crea una sessione Supabase firmata (serve alle RLS).
+    //    Il giocatore vede solo nome+PIN; email e password sono sintetiche.
+    const { data: authData, error: authErr } = await sb.auth.signInWithPassword({
+      email: playerEmail(selected.id),
+      password: playerPwd(pin, selected.id),
+    });
+
+    if (!authErr && authData?.user) {
+      // Sessione Auth ottenuta → carica il profilo e entra
+      const { data: prof } = await sb.from("profiles")
+        .select("id,display_name,first_name,avatar_url,xp,coin,squad_id,role,current_streak,longest_streak,last_checkin_date,xp_goal,created_at,squads(name)")
+        .eq("id", selected.id).single();
+      const data = { ...(prof || { id: selected.id, display_name: selected.display_name }), _playerSession: true, _mustChangePin: pin === "1234" };
+      localStorage.setItem("pug_player", JSON.stringify(data));
+      onLogin(data);
+      setTimeout(() => registerPush(data.id), 2000);
+      setLoadingPin(false);
+      return;
+    }
+
+    // ② Fallback (paracadute): se Auth non va (giocatore non ancora
+    //    migrato, o problema di rete), usa la verifica server verify_pin.
     const { data: res, error } = await sb.rpc("verify_pin", { p_player_id: selected.id, p_pin: pin });
     if (error) { setErr("Errore di rete. Riprova."); setLoadingPin(false); return; }
     if (res?.error === "rate_limited") { setErr("Troppi tentativi errati. Riprova tra 10 minuti."); setPin(""); setLoadingPin(false); return; }
@@ -2647,7 +2700,7 @@ function Login({ onLogin }) {
     setLoadingEdu(true); setErr("");
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) { setErr(error.message); setLoadingEdu(false); return; }
-    const { data: profile } = await sb.from("profiles").select("*, squads(name)").eq("id", data.user.id).single();
+    const { data: profile } = await sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
     if (profile?.id) setTimeout(() => registerPush(profile.id), 2000);
     setLoadingEdu(false);
@@ -2800,11 +2853,14 @@ function PlayersView({ sectionColors, setSectionColors }) {
       setLoading(false);
     }, 8000);
     try {
-      const [{ data }, { data: sq }] = await Promise.all([
-        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,pin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false }),
+      const [{ data }, { data: sq }, { data: pins }] = await Promise.all([
+        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false }),
         sb.from("squads").select("*"),
+        sb.rpc("educator_player_pins"),
       ]);
-      setPlayers(data || []); setSquads(sq || []);
+      const pinMap = Object.fromEntries((pins || []).map(r => [r.player_id, r.pin]));
+      setPlayers((data || []).map(p => ({ ...p, pin: pinMap[p.id] || "1234" })));
+      setSquads(sq || []);
     } finally {
       clearTimeout(safetyTimeout);
       loadingRef.current = false;
@@ -2888,7 +2944,11 @@ function PlayersView({ sectionColors, setSectionColors }) {
     const newXp = Number(p.xp) || 0;
     const newCoin = Number(p.coin) || 0;
     const deltaXp = newXp - (prev?.xp || 0);
-    await sb.from("profiles").update({ display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, pin: p.pin || "1234", avatar_url: p.avatar_url || null }).eq("id", p.id);
+    await sb.from("profiles").update({ display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, avatar_url: p.avatar_url || null }).eq("id", p.id);
+    if ((p.pin || "1234") !== (prev?.pin || "1234")) {
+      const r = await playerAdmin("set_pin", { player_id: p.id, pin: p.pin || "1234" });
+      if (r?.error) { setMsg("⚠️ PIN non aggiornato: " + r.error); setTimeout(() => setMsg(""), 4000); }
+    }
     if (deltaXp !== 0) await logXPGain(p.id, deltaXp, newXp, "modifica_manuale");
     setEditPlayer(null); load();
   }
@@ -2907,14 +2967,17 @@ function PlayersView({ sectionColors, setSectionColors }) {
       if (!confirm("Resettare il PIN di tutti i giocatori a 1234?")) return;
       target = "all";
     }
-    if (target === "selected") {
-      await sb.from("profiles").update({ pin: "1234" }).in("id", [...selected]);
-      setMsg(`PIN resettati a 1234 per ${selected.size} giocatori`);
-      setSelected(new Set());
-    } else {
-      await sb.from("profiles").update({ pin: "1234" }).eq("role", "player");
-      setMsg("Tutti i PIN resettati a 1234");
+    const ids = target === "selected" ? [...selected] : players.map(p => p.id);
+    setMsg(`Reset PIN in corso… (0/${ids.length})`);
+    let done = 0, fails = 0;
+    for (let i = 0; i < ids.length; i += 5) {
+      const chunk = ids.slice(i, i + 5);
+      const results = await Promise.all(chunk.map(id => playerAdmin("set_pin", { player_id: id, pin: "1234" })));
+      results.forEach(r => { if (r?.error) fails++; else done++; });
+      setMsg(`Reset PIN in corso… (${done}/${ids.length})`);
     }
+    setMsg(fails ? `PIN resettati: ${done}. ⚠️ Falliti: ${fails} (riprova)` : `PIN resettati a 1234 per ${done} giocatori`);
+    if (target === "selected") setSelected(new Set());
     load();
     setTimeout(() => setMsg(""), 3000);
   }
@@ -2931,19 +2994,19 @@ function PlayersView({ sectionColors, setSectionColors }) {
   async function createPlayer() {
     setCreatePlayerErr("");
     if (!newPlayer.display_name.trim()) { setCreatePlayerErr("Inserisci il nickname"); return; }
-    const payload = {
-      id: crypto.randomUUID(),
+    // La edge function crea profilo + utente Auth insieme (con rollback)
+    const r = await playerAdmin("create_player", {
       display_name: newPlayer.display_name.trim(),
       first_name: newPlayer.first_name.trim() || null,
-      role: "player",
       pin: newPlayer.pin || "1234",
       squad_id: newPlayer.squad_id || null,
-      xp: Number(newPlayer.xp) || 0,
-      coin: Number(newPlayer.coin) || 0,
       avatar_url: newPlayer.avatar_url || null,
-    };
-    const { error } = await sb.from("profiles").insert(payload);
-    if (error) { setCreatePlayerErr("Errore: " + error.message); return; }
+    });
+    if (r?.error) { setCreatePlayerErr("Errore: " + r.error); return; }
+    // XP/coin iniziali (se impostati) con un update successivo
+    if ((Number(newPlayer.xp) || 0) !== 0 || (Number(newPlayer.coin) || 0) !== 0) {
+      await sb.from("profiles").update({ xp: Number(newPlayer.xp) || 0, coin: Number(newPlayer.coin) || 0 }).eq("id", r.player_id);
+    }
     setShowCreatePlayer(false);
     setNewPlayer({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
     setMsg("Giocatore creato! PIN: " + (newPlayer.pin || "1234"));
@@ -3151,7 +3214,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 
   const loadData = useCallback(async () => {
     const [{ data: p }, { data: badges }, { data: att }, { data: notifs }] = await Promise.all([
-      sb.from("profiles").select("*, squads(name)").eq("id", playerId).single(),
+      sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", playerId).single(),
       sb.from("player_badges").select("*, badges(name,image_url)").eq("player_id", playerId).order("assigned_at", { ascending: false }),
       sb.from("attendances").select("*").eq("player_id", playerId).order("date", { ascending: false }).limit(30),
       sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(40),
@@ -3164,14 +3227,25 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
         labNames = Object.fromEntries((labs||[]).map(l=>[l.id,l.name]));
       }
       setData({ profile: p, badges: badges || [], attendances: att || [], history: notifs || [], labNames });
-    if (p) setEditing({ xp: p.xp, coin: p.coin, pin: p.pin || "1234", display_name: p.display_name, squad_id: p.squad_id, avatar_url: p.avatar_url || "" });
+    if (p) {
+      let curPin = "1234";
+      try {
+        const { data: pins } = await sb.rpc("educator_player_pins");
+        curPin = (pins || []).find(r => r.player_id === playerId)?.pin || "1234";
+      } catch(_) {}
+      setEditing({ xp: p.xp, coin: p.coin, pin: curPin, _origPin: curPin, display_name: p.display_name, squad_id: p.squad_id, avatar_url: p.avatar_url || "" });
+    }
   }, [playerId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   async function saveEdits() {
     if (!editing) return;
-    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), pin: editing.pin || "1234", display_name: editing.display_name, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId);
+    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), display_name: editing.display_name, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId);
+    if ((editing.pin || "1234") !== (editing._origPin || "1234")) {
+      const r = await playerAdmin("set_pin", { player_id: playerId, pin: editing.pin || "1234" });
+      if (r?.error) { setSaveMsg("⚠️ PIN non salvato: " + r.error); setTimeout(() => setSaveMsg(""), 4000); }
+    }
     if (deltaXp !== 0) await logXPGain(playerId, deltaXp, Number(editing.xp), "modifica_dettagli");
     setSaveMsg("Salvato ✅"); setTimeout(() => setSaveMsg(""), 2000);
     loadData();
@@ -5573,6 +5647,7 @@ function VisibilityView() {
     { key:"coin",       label:"🪙 Coin",               desc:"Mostra il saldo coin nel profilo" },
     { key:"xp",         label:"⭐ XP",                 desc:"Mostra i punti XP nel profilo" },
     { key:"lab",        label:"⚡ Tab Lab",            desc:"Mostra la tab Lab nel menu player" },
+    { key:"bigtop",     label:"🎪 Tab BIG TOP",        desc:"Mostra la sezione Circo nel menu player" },
     { key:"messaggi",   label:"💬 Messaggi",           desc:"Mostra la tab messaggi nel menu player" },
   ];
   const allVisible = sections.every(s => vis[s.key] !== false);
@@ -6707,11 +6782,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     if (newPin1.length < 4) { setPinChangeErr("Il PIN deve avere 4 cifre"); return; }
     if (newPin1 !== newPin2) { setPinChangeErr("I PIN non coincidono"); return; }
     if (newPin1 === "1234") { setPinChangeErr("Scegli un PIN diverso da 1234"); return; }
-    // Cambio lato server: consentito solo se il PIN attuale è quello di default
+    // Aggiorna sia la colonna pin (change_pin) sia la password Auth,
+    // così il prossimo login funziona con il nuovo PIN.
     const { data: res, error } = await sb.rpc("change_pin", { p_player_id: profile.id, p_new_pin: newPin1 });
     if (error || res?.error) { setPinChangeErr("Errore: " + (error?.message || res?.error)); return; }
+    // Aggiorna la password Auth ri-loggando con la nuova (la sessione è la propria)
+    try {
+      await sb.auth.updateUser({ password: playerPwd(newPin1, profile.id) });
+    } catch(_) { /* se la sessione Auth non c'è, il change_pin basta per il fallback */ }
     const saved = JSON.parse(localStorage.getItem("pug_player") || "{}");
-    delete saved.pin; // ripulisce eventuali sessioni vecchie con il pin in cache
+    delete saved.pin;
     localStorage.setItem("pug_player", JSON.stringify({ ...saved, _mustChangePin: false }));
     setMustChangePin(false);
   }
@@ -6775,6 +6855,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     ["social","🌍","Social"],
     visConfig.classifica !== false ? ["classifica","🏆","Classifica"] : null,
     visConfig.lab !== false ? ["attivita","⚡","Lab"] : null,
+    visConfig.bigtop !== false ? ["bigtop","🎪","BIG TOP"] : null,
     visConfig.messaggi !== false ? ["messaggi","💬","Messaggi"] : null,
     ["notifiche","🔔","Notifiche"],
   ].filter(Boolean);
@@ -6783,6 +6864,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     profilo:    'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',
     classifica: 'linear-gradient(160deg,#001a6e 0%,#0030b8 50%,#001a6e 100%)',
     attivita:   'linear-gradient(160deg,#043a14 0%,#0a6a28 50%,#043a14 100%)',
+    bigtop:     'linear-gradient(160deg,#4a1500 0%,#8a2c00 45%,#5a0520 100%)',
     messaggi:   'linear-gradient(160deg,#5a0535 0%,#a00860 50%,#5a0535 100%)',
     notifiche:  'linear-gradient(160deg,#3d2200 0%,#7a4400 50%,#3d2200 100%)',
   };
@@ -7062,6 +7144,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
 
         {/* ── ATTIVITÀ ── */}
+        {tab === "bigtop" && fullProfile && (
+          <BigTopPlayerView fullProfile={fullProfile} setFullProfile={setFullProfile} />
+        )}
+
         {tab === "attivita" && (
           <div style={{ marginTop: 8 }}>
             <div className="pd-tab-title" style={{color:"#00ff88"}}>⚡ Lab</div>
@@ -7901,9 +7987,444 @@ function AdminView({ profile }) {
   );
 }
 
+// ─── BIG TOP 🎪: tab giocatore ──────────────────────────────────
+function BigTopPlayerView({ fullProfile, setFullProfile }) {
+  const now = new Date();
+  const CUR = { y: now.getFullYear(), m: now.getMonth() + 1 };
+  const NEXT = CUR.m === 12 ? { y: CUR.y + 1, m: 1 } : { y: CUR.y, m: CUR.m + 1 };
+  const [cursor, setCursor] = useState(CUR);
+  const [slots, setSlots] = useState([]);
+  const [counts, setCounts] = useState({});
+  const [mine, setMine] = useState({});      // slot_id -> status
+  const [sel, setSel] = useState(new Set());
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const isNext = cursor.m === NEXT.m && cursor.y === NEXT.y;
+  const monthName = new Date(cursor.y, cursor.m - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const from = `${cursor.y}-${String(cursor.m).padStart(2,"0")}-01`;
+    const toD = new Date(cursor.y, cursor.m, 0).getDate();
+    const to = `${cursor.y}-${String(cursor.m).padStart(2,"0")}-${String(toD).padStart(2,"0")}`;
+    const { data: sl } = await sb.from("bigtop_slots").select("*").gte("date", from).lte("date", to).is("cancelled_at", null).order("date").order("start_time");
+    const ids = (sl || []).map(s => s.id);
+    let bk = [];
+    if (ids.length) {
+      const { data } = await sb.from("bigtop_bookings").select("slot_id,player_id,status").in("slot_id", ids);
+      bk = data || [];
+    }
+    const cnt = {}, my = {};
+    bk.forEach(b => {
+      if (["booked","present"].includes(b.status)) cnt[b.slot_id] = (cnt[b.slot_id] || 0) + 1;
+      if (b.player_id === fullProfile.id) my[b.slot_id] = b.status;
+    });
+    setSlots(sl || []); setCounts(cnt); setMine(my); setSel(new Set()); setLoading(false);
+  }, [cursor, fullProfile.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function canCancel(s) {
+    // fino alle 22:00 del giorno prima
+    const d = new Date(s.date + "T22:00:00");
+    d.setDate(d.getDate() - 1);
+    return new Date() <= d;
+  }
+  function bookable(s) {
+    return s.date >= localToday() && !mine[s.id] && (counts[s.id] || 0) < s.max_participants;
+  }
+  function toggle(sid) {
+    setSel(prev => { const n = new Set(prev); n.has(sid) ? n.delete(sid) : n.add(sid); return n; });
+  }
+
+  async function book() {
+    if (sel.size === 0) return;
+    setBusy(true); setMsg("");
+    const { data: r, error } = await sb.rpc("bigtop_book", { p_player_id: fullProfile.id, p_slot_ids: [...sel] });
+    setBusy(false);
+    if (error || r?.error) { setMsg("❌ " + (error?.message || r.error)); return; }
+    const errs = (r.errors || []).length;
+    setMsg(r.booked > 0 ? `🎪 Prenotati ${r.booked} turni!${errs ? ` (${errs} non disponibili)` : ""}` : "⚠️ Nessun turno prenotato (pieni o non disponibili)");
+    playPixel("checkin");
+    load();
+  }
+
+  async function cancel(sid) {
+    if (!confirm("Disdire questa prenotazione?")) return;
+    const { data: r, error } = await sb.rpc("bigtop_cancel", { p_player_id: fullProfile.id, p_slot_id: sid });
+    if (error || r?.error) {
+      setMsg(r?.error === "troppo_tardi" ? "⏰ Troppo tardi per disdire (entro le 22:00 del giorno prima)" : "❌ " + (error?.message || r?.error));
+      return;
+    }
+    setMsg("Prenotazione disdetta 👍");
+    load();
+  }
+
+  async function checkin() {
+    if (code.trim().length < 4) return;
+    setBusy(true); setMsg("");
+    const { data: r, error } = await sb.rpc("bigtop_checkin", { p_player_id: fullProfile.id, p_code: code.trim() });
+    setBusy(false);
+    if (error) { setMsg("❌ Errore di rete, riprova"); return; }
+    if (r?.error) {
+      const M = { invalid_code: "❌ Codice non valido (o non è il giorno del turno)", already: "✅ Check-in già fatto per questo turno!", pieno: "😕 Turno pieno, niente posti walk-in" };
+      setMsg(M[r.error] || "❌ " + r.error);
+      return;
+    }
+    setFullProfile(prev => ({ ...prev, xp: r.new_xp, coin: r.new_coin }));
+    setMsg(`🎪 Check-in BIG TOP ${r.slot}!${r.xp > 0 ? ` +${r.xp} XP` : ""}${r.coin > 0 ? ` +${r.coin} 🪙` : ""}`);
+    setCode("");
+    playPixel("checkin");
+    load();
+  }
+
+  // Raggruppa per data
+  const byDate = {};
+  slots.forEach(s => { (byDate[s.date] = byDate[s.date] || []).push(s); });
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className="pd-tab-title" style={{color:"#ff8c00"}}>🎪 BIG TOP</div>
+
+      {/* Check-in col codice */}
+      <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(255,140,0,.25)",borderRadius:14,padding:12,marginBottom:12}}>
+        <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"#ff8c00",marginBottom:8}}>📍 Check-in BIG TOP — inserisci il codice del turno</div>
+        <div style={{display:"flex",gap:8}}>
+          <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="CODICE"
+            maxLength={8}
+            style={{flex:1,padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid rgba(255,140,0,.3)",borderRadius:10,color:"var(--text)",fontSize:16,fontWeight:900,letterSpacing:4,textAlign:"center"}}/>
+          <button className="btn btn-primary btn-sm" disabled={busy||code.trim().length<4} onClick={checkin}>{busy?"⏳":"Vai"}</button>
+        </div>
+      </div>
+
+      {msg && <div style={{fontSize:13,fontWeight:800,textAlign:"center",padding:"8px 10px",marginBottom:10,background:"rgba(0,0,0,.35)",borderRadius:10}}>{msg}</div>}
+
+      {/* Navigazione mese: solo corrente e successivo */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:12}}>
+        <button className="btn btn-ghost btn-xs" disabled={!isNext} onClick={()=>setCursor(CUR)}>‹</button>
+        <div style={{fontWeight:900,textTransform:"capitalize",minWidth:140,textAlign:"center"}}>{monthName}</div>
+        <button className="btn btn-ghost btn-xs" disabled={isNext} onClick={()=>setCursor(NEXT)}>›</button>
+      </div>
+
+      {loading ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center"}}>⏳ Caricamento…</div> :
+       slots.length === 0 ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center",padding:"18px 0"}}>Nessun turno in programma questo mese 🎪</div> :
+       Object.entries(byDate).map(([date, daySlots]) => (
+        <div key={date} style={{marginBottom:12}}>
+          <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".08em",color:"var(--text3)",marginBottom:6}}>
+            {new Date(date+"T12:00").toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})}
+            {date < localToday() && " · passato"}
+          </div>
+          {daySlots.map(s => {
+            const my = mine[s.id];
+            const free = s.max_participants - (counts[s.id] || 0);
+            const isPast = s.date < localToday();
+            const selectable = bookable(s);
+            return (
+              <div key={s.id}
+                onClick={selectable ? ()=>toggle(s.id) : undefined}
+                style={{
+                  display:"flex",alignItems:"center",gap:10,padding:"10px 12px",marginBottom:6,
+                  background: sel.has(s.id) ? "rgba(255,140,0,.18)" : "rgba(0,0,0,.35)",
+                  border: sel.has(s.id) ? "1.5px solid #ff8c00" : "1px solid var(--border2)",
+                  borderRadius:12, opacity: isPast ? .5 : 1,
+                  cursor: selectable ? "pointer" : "default", transition:"all .15s ease",
+                }}>
+                {selectable && (
+                  <div style={{width:20,height:20,borderRadius:6,border:"2px solid #ff8c00",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#ff8c00",flexShrink:0}}>
+                    {sel.has(s.id) ? "✓" : ""}
+                  </div>
+                )}
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:900,fontSize:15}}>{s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}</div>
+                  <div style={{fontSize:11,color:"var(--text3)"}}>
+                    {my === "present" ? "✅ Presente!" :
+                     my === "booked" ? "📌 Sei prenotato" :
+                     my === "absent" ? "❌ Assente" :
+                     free <= 0 ? "😕 Pieno" :
+                     `${free} ${free === 1 ? "posto libero" : "posti liberi"}`}
+                    {(s.xp_checkin > 0 || s.coin_checkin > 0) && ` · check-in: ${s.xp_checkin>0?`+${s.xp_checkin} XP`:""}${s.coin_checkin>0?` +${s.coin_checkin} 🪙`:""}`}
+                  </div>
+                </div>
+                {my === "booked" && !isPast && canCancel(s) && (
+                  <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={e=>{e.stopPropagation();cancel(s.id);}}>Disdici</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+
+      {sel.size > 0 && (
+        <button className="btn btn-primary" disabled={busy}
+          style={{position:"sticky",bottom:12,width:"100%",fontSize:16,fontWeight:900,boxShadow:"0 4px 20px rgba(255,140,0,.4)"}}
+          onClick={book}>
+          {busy ? "⏳…" : `🎪 Prenota ${sel.size} ${sel.size === 1 ? "turno" : "turni"}`}
+        </button>
+      )}
+
+      <div style={{fontSize:10,color:"var(--text3)",textAlign:"center",marginTop:14,lineHeight:1.6}}>
+        Il BIG TOP è gratis! Prenota i turni che vuoi (anche tutto il mese).<br/>
+        Puoi disdire fino alle 22:00 del giorno prima. Se prenoti e non vieni: −2 🪙
+      </div>
+    </div>
+  );
+}
+
+// ─── BIG TOP 🎪: pannello educatore ─────────────────────────────
+function BigTopEducatorView({ profile }) {
+  const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() + 1 }; });
+  const [slots, setSlots] = useState([]);
+  const [books, setBooks] = useState({});   // slot_id -> array prenotazioni
+  const [expanded, setExpanded] = useState(null);
+  const [editSlot, setEditSlot] = useState(null);
+  const [qrShow, setQrShow] = useState({}); // slot_id -> code
+  const [players, setPlayers] = useState([]);
+  const [bookFor, setBookFor] = useState("");
+  const [squadsList, setSquadsList] = useState([]);
+  const [detailPlayer, setDetailPlayer] = useState(null);
+  const [msgTo, setMsgTo] = useState(null);   // { id, name }
+  const [msgBody, setMsgBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const monthName = new Date(cursor.y, cursor.m - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const from = `${cursor.y}-${String(cursor.m).padStart(2,"0")}-01`;
+    const toD = new Date(cursor.y, cursor.m, 0).getDate();
+    const to = `${cursor.y}-${String(cursor.m).padStart(2,"0")}-${String(toD).padStart(2,"0")}`;
+    const { data: sl } = await sb.from("bigtop_slots").select("*").gte("date", from).lte("date", to).order("date").order("start_time");
+    const ids = (sl || []).map(s => s.id);
+    let bk = [];
+    if (ids.length) {
+      const { data, error } = await sb.from("bigtop_bookings").select("*, profiles!bigtop_bookings_player_id_fkey(display_name, avatar_url, squads(name, color))").in("slot_id", ids);
+      if (error) addToast("❌ Prenotazioni: " + error.message, "error");
+      bk = data || [];
+    }
+    const map = {};
+    bk.forEach(b => { (map[b.slot_id] = map[b.slot_id] || []).push(b); });
+    setSlots(sl || []); setBooks(map); setLoading(false);
+  }, [cursor]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    sb.from("profiles").select("id,display_name").eq("role","player").order("display_name")
+      .then(({ data }) => setPlayers(data || []));
+    sb.from("squads").select("*").then(({ data }) => setSquadsList(data || []));
+  }, []);
+
+  async function sendQuickMsg() {
+    const body = msgBody.trim();
+    if (!body || !msgTo) return;
+    setSending(true);
+    const { data: m, error } = await sb.from("messages")
+      .insert({ sender_id: profile.id, recipient_id: msgTo.id, body, is_broadcast: false })
+      .select("id").single();
+    if (error) { addToast("❌ " + error.message, "error"); setSending(false); return; }
+    await sb.from("notifications").insert({
+      user_id: msgTo.id, type: "new_message",
+      title: `💬 Messaggio da ${profile.display_name}`,
+      body: body.slice(0, 80), message_id: m?.id || null,
+    });
+    sendPush(msgTo.id, `💬 ${profile.display_name}`, body.slice(0, 100)).catch(()=>{});
+    addToast(`✉️ Inviato a ${msgTo.name}`, "ok");
+    setSending(false); setMsgTo(null); setMsgBody("");
+  }
+
+  function taken(sid) { return (books[sid] || []).filter(b => ["booked","present"].includes(b.status)).length; }
+  function isPast(s) { return s.date < localToday(); }
+
+  async function generateMonth() {
+    setBusy(true);
+    const { data: r, error } = await sb.rpc("bigtop_generate_month", { p_year: cursor.y, p_month: cursor.m });
+    setBusy(false);
+    if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
+    addToast(r.created > 0 ? `🎪 Creati ${r.created} turni di ${monthName}` : "Turni già tutti presenti", "ok");
+    load();
+  }
+
+  async function showQr(sid) {
+    if (qrShow[sid]) { setQrShow(q => { const n = { ...q }; delete n[sid]; return n; }); return; }
+    const { data: r, error } = await sb.rpc("bigtop_generate_qr", { p_slot_id: sid });
+    if (error || r?.error || !r?.code) { addToast("❌ QR: " + (error?.message || r?.error || ""), "error"); return; }
+    setQrShow(q => ({ ...q, [sid]: r.code }));
+  }
+
+  async function saveSlot() {
+    const s = editSlot;
+    const { error } = await sb.from("bigtop_slots").update({
+      start_time: s.start_time, end_time: s.end_time,
+      max_participants: Number(s.max_participants) || 10,
+      xp_checkin: Number(s.xp_checkin) || 0, coin_checkin: Number(s.coin_checkin) || 0,
+    }).eq("id", s.id);
+    if (error) { addToast("❌ " + error.message, "error"); return; }
+    setEditSlot(null); addToast("✅ Turno aggiornato", "ok"); load();
+  }
+
+  async function markAbsents(s) {
+    if (!confirm(`Segnare come ASSENTI tutti i prenotati senza check-in del turno ${s.date.split("-").reverse().join("/")} ${s.start_time.slice(0,5)}?\n\nOgnuno riceverà −2 🪙 e una notifica.`)) return;
+    const { data: r, error } = await sb.rpc("bigtop_mark_absents", { p_slot_id: s.id });
+    if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
+    addToast(r.absents > 0 ? `Segnati ${r.absents} assenti (−2 🪙 ciascuno)` : "Nessun assente da segnare", "ok");
+    load();
+  }
+
+  async function cancelSlot(s) {
+    if (!confirm(`Annullare il turno del ${s.date.split("-").reverse().join("/")} ${s.start_time.slice(0,5)}?\n\nGli iscritti riceveranno una notifica.`)) return;
+    const { data: r, error } = await sb.rpc("bigtop_cancel_slot", { p_slot_id: s.id });
+    if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
+    addToast(`Turno annullato (avvisati ${r.notified})`, "ok");
+    load();
+  }
+
+  async function bookForPlayer(sid) {
+    if (!bookFor) { addToast("Scegli un giocatore", "error"); return; }
+    const { data: r, error } = await sb.rpc("bigtop_book", { p_player_id: bookFor, p_slot_ids: [sid] });
+    if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
+    if (r.booked > 0) addToast("✅ Prenotato!", "ok");
+    else addToast("⚠️ " + ((r.errors?.[0]?.why) || "non prenotabile").replace(/_/g, " "), "error");
+    load();
+  }
+
+  const STATUS = { booked: ["📌", "prenotato", "var(--neon-blue)"], present: ["✅", "presente", "#00ff88"], absent: ["❌", "assente", "#ff4d6d"], cancelled: ["🚫", "disdetto", "var(--text3)"] };
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:26,fontWeight:900}}>🎪 BIG TOP</div>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+          <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===1?c.y-1:c.y, m: c.m===1?12:c.m-1 }))}>‹</button>
+          <div style={{fontWeight:800,minWidth:130,textAlign:"center",textTransform:"capitalize"}}>{monthName}</div>
+          <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===12?c.y+1:c.y, m: c.m===12?1:c.m+1 }))}>›</button>
+        </div>
+      </div>
+
+      <button className="btn btn-yellow btn-sm" style={{width:"100%",marginBottom:14}} disabled={busy} onClick={generateMonth}>
+        {busy ? "⏳…" : `➕ Genera turni di ${monthName} (mar/gio 16-17 e 17-18)`}
+      </button>
+
+      {loading ? <div style={{color:"var(--text3)",fontSize:13}}>⏳ Caricamento…</div> :
+       slots.length === 0 ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center",padding:"20px 0"}}>Nessun turno questo mese — premi "Genera turni"</div> :
+      slots.map(s => {
+        const t = taken(s.id);
+        const dead = !!s.cancelled_at;
+        return (
+        <div key={s.id} className="card" style={{marginBottom:10,opacity:dead?.55:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+            <div>
+              <div style={{fontWeight:900,fontSize:15}}>
+                {new Date(s.date+"T12:00").toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})} · {s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}
+                {dead && <span style={{color:"#ff4d6d",fontSize:11,marginLeft:8}}>ANNULLATO</span>}
+              </div>
+              <div style={{fontSize:12,color:"var(--text3)"}}>
+                👥 {t}/{s.max_participants} · {s.xp_checkin>0 && `+${s.xp_checkin} XP `}{s.coin_checkin>0 && `+${s.coin_checkin} 🪙`}{s.xp_checkin===0&&s.coin_checkin===0&&"nessun punto extra"}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:6,marginLeft:"auto",flexWrap:"wrap"}}>
+              {!dead && <button className="btn btn-ghost btn-xs" onClick={()=>showQr(s.id)}>{qrShow[s.id]?"▲ QR":"📍 QR"}</button>}
+              {!dead && <button className="btn btn-ghost btn-xs" style={{color:"#ffcc00"}} onClick={()=>setEditSlot({...s})}>✏️</button>}
+              <button className="btn btn-ghost btn-xs" onClick={()=>setExpanded(expanded===s.id?null:s.id)}>👥</button>
+              {!dead && isPast(s) === false && s.date === localToday() && null}
+              {!dead && s.date <= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={()=>markAbsents(s)}>Assenti</button>}
+              {!dead && s.date >= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={()=>cancelSlot(s)}>🚫</button>}
+            </div>
+          </div>
+
+          {qrShow[s.id] && (
+            <div style={{marginTop:10,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(0,212,255,.2)"}}>
+              <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".08em"}}>QR BIG TOP · {s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}</div>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qrShow[s.id]}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={qrShow[s.id]} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8,cursor:"pointer"}}
+                onClick={()=>navigator.clipboard?.writeText(qrShow[s.id]).then(()=>addToast("📋 Codice copiato!","ok")).catch(()=>{})}>{qrShow[s.id]}</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo il giorno del turno</div>
+            </div>
+          )}
+
+          {expanded === s.id && (
+            <div style={{marginTop:10,borderTop:"1px solid var(--border2)",paddingTop:10}}>
+              {(books[s.id]||[]).length === 0 && <div style={{fontSize:12,color:"var(--text3)"}}>Nessuna prenotazione</div>}
+              {(books[s.id]||[]).map(b => {
+                const [ic, lbl, col] = STATUS[b.status] || ["·", b.status, "var(--text3)"];
+                const pr = b.profiles || {};
+                return (
+                  <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",fontSize:13,borderBottom:"1px solid rgba(255,255,255,.05)"}}>
+                    {pr.avatar_url
+                      ? <img src={pr.avatar_url} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+                      : <div style={{width:30,height:30,borderRadius:"50%",background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>👤</div>}
+                    <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setDetailPlayer(b.player_id)} title="Apri scheda giocatore">
+                      <div style={{fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pr.display_name || "?"}</div>
+                      {pr.squads?.name && <div style={{fontSize:10,fontWeight:800,color:pr.squads.color||"var(--text3)"}}>{pr.squads.name}</div>}
+                    </div>
+                    <span style={{fontSize:11,color:col,fontWeight:800,textTransform:"uppercase"}}>{ic} {lbl}</span>
+                    <button className="btn btn-ghost btn-xs" title="Scrivi al giocatore"
+                      onClick={()=>{ setMsgTo({ id: b.player_id, name: pr.display_name || "?" }); setMsgBody(""); }}>✉️</button>
+                  </div>
+                );
+              })}
+              {!dead && s.date >= localToday() && (
+                <div style={{display:"flex",gap:6,marginTop:8}}>
+                  <select value={bookFor} onChange={e=>setBookFor(e.target.value)}
+                    style={{flex:1,padding:"7px 9px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:13}}>
+                    <option value="">Prenota per un giocatore…</option>
+                    {players.map(p=><option key={p.id} value={p.id}>{p.display_name}</option>)}
+                  </select>
+                  <button className="btn btn-primary btn-xs" onClick={()=>bookForPlayer(s.id)}>➕</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );})}
+
+      {msgTo && (
+        <div className="modal-bg" onClick={()=>setMsgTo(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">✉️ Messaggio a {msgTo.name}</div>
+            <textarea value={msgBody} onChange={e=>setMsgBody(e.target.value)} rows={4}
+              placeholder="Scrivi qui… (es. Ci vediamo domani al BIG TOP alle 16!)"
+              style={{width:"100%",padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:14,resize:"vertical"}}/>
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button className="btn btn-primary" style={{flex:1}} disabled={sending||!msgBody.trim()} onClick={sendQuickMsg}>{sending?"⏳…":"Invia"}</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setMsgTo(null)}>Annulla</button>
+            </div>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:8}}>Arriva nella sua tab Messaggi, con notifica e push.</div>
+          </div>
+        </div>
+      )}
+
+      {detailPlayer && <PlayerDetailPanel playerId={detailPlayer} squads={squadsList} onClose={()=>setDetailPlayer(null)} />}
+
+      {editSlot && (
+        <div className="modal-bg" onClick={()=>setEditSlot(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">✏️ Modifica turno</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div><label className="form-label">Inizio</label><input className="form-input" type="time" value={editSlot.start_time.slice(0,5)} onChange={e=>setEditSlot(s=>({...s,start_time:e.target.value}))}/></div>
+              <div><label className="form-label">Fine</label><input className="form-input" type="time" value={editSlot.end_time.slice(0,5)} onChange={e=>setEditSlot(s=>({...s,end_time:e.target.value}))}/></div>
+              <div><label className="form-label">Max partecipanti</label><input className="form-input" type="number" value={editSlot.max_participants} onChange={e=>setEditSlot(s=>({...s,max_participants:e.target.value}))}/></div>
+              <div/>
+              <div><label className="form-label">XP check-in</label><input className="form-input" type="number" value={editSlot.xp_checkin} onChange={e=>setEditSlot(s=>({...s,xp_checkin:e.target.value}))}/></div>
+              <div><label className="form-label">Coin check-in</label><input className="form-input" type="number" value={editSlot.coin_checkin} onChange={e=>setEditSlot(s=>({...s,coin_checkin:e.target.value}))}/></div>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:16}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={saveSlot}>Salva</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setEditSlot(null)}>Annulla</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
-  ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["sfida","🔥","Sfida"],
+  ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["bigtop","🎪","BIG TOP"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
   ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["notifiche","🔔","Notifiche"], ["admin","⚙️","Admin"],
 ]
@@ -7913,7 +8434,7 @@ const EDUCATOR_GROUPS = [
   { id:"gioco", icon:"🎮", label:"Gioco",
     tabs:["dashboard","giocatori","classifica","squadre","presenze","qr"] },
   { id:"attivita_grp", icon:"⚡", label:"Attività",
-    tabs:["attivita","sfida","badge","streak","prenotazioni"] },
+    tabs:["attivita","bigtop","sfida","badge","streak","prenotazioni"] },
   { id:"comunicazione", icon:"💬", label:"Comunicazione",
     tabs:["messaggi","annunci","bacheca","social_edu"] },
   { id:"gestione", icon:"📊", label:"Gestione",
@@ -8516,6 +9037,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "squadre"      && <SquadsView />}
           {tab === "presenze"     && <AttendanceView {...sharedProps} />}
           {tab === "attivita"     && <ActivitiesView {...sharedProps} />}
+          {tab === "bigtop"       && <BigTopEducatorView profile={profile} />}
           {tab === "sfida"        && <SfidaView {...sharedProps} />}
           {tab === "badge"        && <BadgesView {...sharedProps} />}
           {tab === "streak"       && <StreakConfigView />}
@@ -8697,7 +9219,7 @@ export default function App() {
               }
               if (session) {
                 const { data: p } = await sb.from("profiles")
-                  .select("*, squads(name)").eq("id", session.user.id).single();
+                  .select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single();
                 if (p) {
                   setProfile(p);
                   localStorage.setItem("pug_edu", JSON.stringify(p));
@@ -8710,7 +9232,7 @@ export default function App() {
           // Ascolta solo il logout ESPLICITO
           const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange((event, session) => {
             if (event === "SIGNED_IN" && session) {
-              sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single()
+              sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single()
                 .then(({ data: p }) => {
                   if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
                 });
@@ -8726,7 +9248,7 @@ export default function App() {
     setChecking(false);
     const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        sb.from("profiles").select("*, squads(name)").eq("id", session.user.id).single()
+        sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single()
           .then(({ data: p }) => {
             if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
           });
