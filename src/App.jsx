@@ -7263,7 +7263,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                         return st ? <div style={{width:80,height:80,marginBottom:6}} dangerouslySetInnerHTML={{__html:st.svg}}/> : null;
                       })()}
                       {m.media_data && !m.media_data.startsWith("sticker:") && (
-                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt="" loading="lazy"/>
+                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt=""
+                          onError={e => {
+                            const a = document.createElement("a");
+                            a.href = m.media_data; a.target = "_blank"; a.rel = "noopener";
+                            a.textContent = "📷 Apri foto";
+                            a.style.cssText = "display:inline-block;padding:8px 14px;background:rgba(0,0,0,.4);border:1px solid var(--border2);border-radius:10;color:var(--neon-blue);font-weight:800;font-size:13px;text-decoration:none;margin-bottom:6px";
+                            e.currentTarget.replaceWith(a);
+                          }}/>
                       )}
                       <MsgReactions msgId={m.id} myId={profile.id}/>
                       <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
