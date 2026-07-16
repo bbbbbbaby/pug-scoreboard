@@ -8755,7 +8755,7 @@ function EducatorShell({ profile, onLogout }) {
     const missing = (allPlayers||[]).filter(p => !markedIds.has(p.id)).length;
     const pBook = pendingCount || 0;
     const msgs = msgCount || 0;
-    setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, unreadMessages: msgs, total: pBook + (missing > 0 ? 1 : 0) + msgs });
+    setNotifCounts({ pendingBookings: pBook, missingAttendance: 0, unreadMessages: msgs, total: pBook + msgs });
   }, [profile.id]);
 
   const notifDebounceRef = useRef(null);
@@ -8992,16 +8992,6 @@ function EducatorShell({ profile, onLogout }) {
                   <div className="edu-notif-sub">Clicca per confermare o rifiutare</div>
                 </div>
                 <div className="edu-notif-count">{notifCounts.pendingBookings}</div>
-              </div>
-            )}
-            {notifCounts.missingAttendance > 0 && (
-              <div className="edu-notif-item" onClick={()=>{ setTab("presenze"); setShowNotifPanel(false); }}>
-                <div className="edu-notif-icon">✅</div>
-                <div className="edu-notif-text">
-                  <div className="edu-notif-title">Presenze da segnare oggi</div>
-                  <div className="edu-notif-sub">{notifCounts.missingAttendance} giocatori senza presenza</div>
-                </div>
-                <div className="edu-notif-count">{notifCounts.missingAttendance}</div>
               </div>
             )}
             {notifCounts.unreadMessages > 0 && (
