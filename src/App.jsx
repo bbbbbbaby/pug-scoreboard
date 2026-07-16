@@ -278,18 +278,16 @@ const css = `
 
   :root {
     --azzurro:#A3CFFE; --rosa:#FF6DEC; --giallo:#FDEF26; --verde:#339966; --rosso:#D41323;
-    --neon-blue:#00d4ff; --neon-pink:#ff00cc; --neon-gold:#ffcc00; --neon-green:#00ff88;
-    --nero:#04080f; --bianco:#FFFFFF;
-    --surface:rgba(10,20,40,0.9); --surface2:rgba(15,28,55,0.85); --surface3:rgba(20,38,70,0.8);
-    --border:rgba(0,212,255,0.12); --border2:rgba(0,212,255,0.22);
-    --text:#e8f4ff; --text2:#7da8d0; --text3:#3a6080;
-    --accent:#00d4ff; --accent2:#00ff88;
-    --danger:#ff2244; --warning:#ffcc00;
+    --neon-blue:#A3CFFE; --neon-pink:#FF6DEC; --neon-gold:#FDEF26; --neon-green:#339966;
+    --nero:#101010; --bianco:#FFFFFF;
+    --surface:rgba(18,18,18,0.92); --surface2:rgba(28,28,28,0.9); --surface3:rgba(38,38,38,0.85);
+    --border:rgba(255,255,255,0.14); --border2:rgba(255,255,255,0.24);
+    --text:#f4f4f4; --text2:rgba(255,255,255,.65); --text3:rgba(255,255,255,.4);
+    --accent:#A3CFFE; --accent2:#339966;
+    --danger:#D41323; --warning:#FDEF26;
     --radius:14px; --radius-sm:10px; --radius-lg:20px;
-    --glow-blue:0 0 20px rgba(0,212,255,0.4), 0 0 60px rgba(0,212,255,0.15);
-    --glow-pink:0 0 20px rgba(255,0,204,0.4), 0 0 60px rgba(255,0,204,0.15);
-    --glow-gold:0 0 20px rgba(255,204,0,0.5), 0 0 60px rgba(255,204,0,0.15);
-    --glow-green:0 0 20px rgba(0,255,136,0.4);
+    --glow-blue:0 0 14px rgba(163,207,254,0.25);
+    --glow-pink:0 0 14px rgba(255,109,236,0.25);
   }
 
   /* ═══ GLOBAL GAME BG ═══ */
@@ -304,17 +302,17 @@ const css = `
   body::after {
     content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
     background-image:
-      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(163,207,254,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(163,207,254,0.03) 1px, transparent 1px);
     background-size:40px 40px;
   }
 
   /* ═══ LOGIN ═══ */
   .login-wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; position:relative; z-index:1; }
   .login-card {
-    background:rgba(5,15,35,0.95); border:1px solid rgba(0,212,255,0.3);
+    background:rgba(5,15,35,0.95); border:1px solid rgba(163,207,254,0.3);
     border-radius:20px; padding:36px 28px; width:100%; max-width:420px;
-    box-shadow:0 0 0 1px rgba(0,212,255,0.08), var(--glow-blue), 0 40px 80px rgba(0,0,0,0.8);
+    box-shadow:0 0 0 1px rgba(163,207,254,0.08), var(--glow-blue), 0 40px 80px rgba(0,0,0,0.8);
     backdrop-filter:blur(20px); position:relative; overflow:hidden;
   }
   .login-card::before {
@@ -326,29 +324,29 @@ const css = `
     text-transform:uppercase; letter-spacing:-1px; line-height:0.9;
     background:linear-gradient(135deg, var(--neon-blue) 0%, #fff 40%, var(--rosa) 100%);
     -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-    text-align:center; margin-bottom:8px; filter:drop-shadow(0 0 20px rgba(0,212,255,0.3));
+    text-align:center; margin-bottom:8px; filter:drop-shadow(0 0 20px rgba(163,207,254,0.3));
   }
   .login-sub { font-size:12px; color:var(--text3); text-align:center; margin-bottom:28px; letter-spacing:.15em; text-transform:uppercase; }
-  .login-tabs { display:flex; background:rgba(0,212,255,0.05); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:24px; gap:4px; }
+  .login-tabs { display:flex; background:rgba(163,207,254,0.05); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:24px; gap:4px; }
   .login-tab { flex:1; padding:10px; border-radius:9px; border:none; cursor:pointer; font-family:'Funnel Display'; font-size:13px; font-weight:700; background:transparent; color:var(--text2); transition:all .2s; }
-  .login-tab.active { background:linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.08)); color:var(--neon-blue); border:1px solid rgba(0,212,255,0.3); box-shadow:var(--glow-blue); }
+  .login-tab.active { background:linear-gradient(135deg, rgba(163,207,254,0.2), rgba(163,207,254,0.08)); color:var(--neon-blue); border:1px solid rgba(163,207,254,0.3); box-shadow:var(--glow-blue); }
   .form-group { margin-bottom:16px; }
   .form-input:focus + .form-hint, .form-input:focus ~ .form-hint { color: var(--neon-blue); }
   .form-hint { font-size:11px; color:var(--text3); margin-top:4px; }
   .form-label { font-size:10px; font-weight:700; color:var(--text3); margin-bottom:5px; display:block; text-transform:uppercase; letter-spacing:.15em; }
   .form-input {
-    width:100%; padding:13px 16px; background:rgba(0,212,255,0.04); border:1px solid var(--border2);
+    width:100%; padding:13px 16px; background:rgba(163,207,254,0.04); border:1px solid var(--border2);
     border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display',sans-serif;
     font-size:16px; outline:none; transition:all .2s;
   }
-  .form-input:focus { border-color:var(--neon-blue); background:rgba(0,212,255,0.08); box-shadow:0 0 0 3px rgba(0,212,255,0.1), var(--glow-blue); }
+  .form-input:focus { border-color:var(--neon-blue); background:rgba(163,207,254,0.08); box-shadow:0 0 0 3px rgba(163,207,254,0.1), var(--glow-blue); }
   .pin-input { text-align:center; font-family:'Funnel Display',sans-serif; font-size:40px; font-weight:900; letter-spacing:14px; color:var(--neon-blue); }
   .err-msg { font-size:12px; color:var(--danger); margin-top:10px; text-align:center; font-weight:700; letter-spacing:.05em; }
 
   /* ═══ NICKNAME SEARCH ═══ */
   .nickname-list { max-height:220px; overflow-y:auto; border:1px solid var(--border2); border-radius:var(--radius-sm); margin-top:6px; background:rgba(5,15,35,0.98); }
   .nickname-item { padding:12px 14px; cursor:pointer; font-size:14px; font-weight:600; color:var(--text); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:background .15s; }
-  .nickname-item:hover { background:rgba(0,212,255,0.08); }
+  .nickname-item:hover { background:rgba(163,207,254,0.08); }
   .nickname-item:last-child { border-bottom:none; }
 
   /* ═══ BUTTONS ═══ */
@@ -362,17 +360,17 @@ const css = `
     background:linear-gradient(135deg, #0066cc, #00aaff, #0066cc);
     background-size:200% 100%; color:#fff; width:100%; padding:15px;
     font-size:15px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
-    border:1px solid rgba(0,212,255,0.5); box-shadow:var(--glow-blue), inset 0 1px 0 rgba(255,255,255,0.15);
+    border:1px solid rgba(163,207,254,0.5); box-shadow:var(--glow-blue), inset 0 1px 0 rgba(255,255,255,0.15);
     border-radius:12px;
   }
   .btn-primary:active { transform:scale(.97); opacity:.9; }
-  .btn-ghost { background:rgba(0,212,255,0.06); color:var(--text2); border:1px solid var(--border2); border-radius:10px; }
-  .btn-ghost:active { background:rgba(0,212,255,0.12); }
+  .btn-ghost { background:rgba(163,207,254,0.06); color:var(--text2); border:1px solid var(--border2); border-radius:10px; }
+  .btn-ghost:active { background:rgba(163,207,254,0.12); }
   .btn-danger { background:rgba(255,34,68,.12); color:#ff4466; border:1px solid rgba(255,34,68,.3); }
   .btn-yellow {
-    background:linear-gradient(135deg, #cc9900, #ffcc00, #cc9900);
+    background:linear-gradient(135deg, #cc9900, #FDEF26, #cc9900);
     background-size:200% 100%; color:#101010; font-weight:900;
-    border:1px solid rgba(255,204,0,0.5); box-shadow:var(--glow-gold);
+    border:1px solid rgba(253,239,38,0.5); box-shadow:var(--glow-gold);
     text-transform:uppercase; letter-spacing:.06em;
   }
   .btn-sm { padding:7px 14px; font-size:12px; min-height:36px; }
@@ -385,11 +383,11 @@ const css = `
   .sidebar-logo-box { background:#cc1111; border-radius:9px 12px 9px 14px; padding:5px 11px; display:inline-block; box-shadow:2px 3px 0 rgba(0,0,0,.3); transform:rotate(-1deg); }
   .sidebar-logo-t { font-family:'Funnel Display',sans-serif; font-weight:900; font-size:15px; text-transform:uppercase; color:#111; line-height:1.05; letter-spacing:-.3px; }
   .sidebar-logo-sub { font-family:'Funnel Display',sans-serif; background:#111; color:#ffe600; font-size:8px; font-weight:900; border-radius:4px; padding:2px 7px; text-transform:uppercase; letter-spacing:.07em; margin-top:3px; display:inline-block; }
-  .sidebar-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(255,204,0,.12); border:1px solid rgba(255,204,0,.25); border-radius:99px; padding:3px 10px; font-size:9px; font-weight:800; color:#ffcc00; text-transform:uppercase; letter-spacing:.06em; margin-top:8px; }
+  .sidebar-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(253,239,38,.12); border:1px solid rgba(253,239,38,.25); border-radius:99px; padding:3px 10px; font-size:9px; font-weight:800; color:#FDEF26; text-transform:uppercase; letter-spacing:.06em; margin-top:8px; }
   .nav { flex:1; padding:8px 0; }
   .nav-item { display:flex; align-items:center; gap:10px; padding:9px 18px; cursor:pointer; font-size:13px; font-weight:600; color:rgba(255,255,255,.38); border-left:2px solid transparent; transition:all .12s; min-height:42px; border-radius:0 10px 10px 0; margin:1px 8px 1px 0; }
   .nav-item:hover { background:rgba(255,255,255,.05); color:rgba(255,255,255,.75); }
-  .nav-item.active { background:rgba(255,204,0,.1); color:#ffcc00; border-left-color:#ffcc00; font-weight:700; box-shadow:inset 0 0 20px rgba(255,204,0,.05); }
+  .nav-item.active { background:rgba(253,239,38,.1); color:#FDEF26; border-left-color:#FDEF26; font-weight:700; box-shadow:inset 0 0 20px rgba(253,239,38,.05); }
   .nav-icon { font-size:16px; width:22px; text-align:center; flex-shrink:0; }
   .sidebar-user { padding:14px 18px; border-top:1px solid rgba(255,255,255,.08); }
   .edu-main { margin-left:240px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
@@ -406,7 +404,7 @@ const css = `
   .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; padding-bottom:env(safe-area-inset-bottom,0px); background:#0d0d0d; border-top:1px solid #2a2a2a; z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(24px); }
   .mob-bottom-nav-inner { display:flex; height:60px; }
   .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:rgba(255,255,255,.28); font-family:'Funnel Display'; padding:0; transition:color .15s; }
-  .mob-nav-btn.active { color:#ffcc00; }
+  .mob-nav-btn.active { color:#FDEF26; }
   .mob-nav-btn { transition:color .2s; }
 
   /* ═══ SECTION BANNERS ═══ */
@@ -431,7 +429,7 @@ const css = `
     background:rgba(0,0,20,0.4); border:1px solid rgba(255,255,255,0.1);
     border-radius:var(--radius); padding:14px; position:relative; overflow:hidden;
   }
-  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,204,0,0.3),transparent); }
+  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(253,239,38,0.3),transparent); }
   .stat-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.12em; margin-bottom:4px; font-weight:700; }
   .stat-value { font-family:'Funnel Display',sans-serif; font-size:36px; font-weight:900; color:var(--text); line-height:1; }
 
@@ -442,9 +440,9 @@ const css = `
     border-radius:var(--radius); padding:14px 10px; text-align:center;
     cursor:pointer; position:relative; transition:all .15s;
   }
-  .player-card:hover { border-color:rgba(0,212,255,0.3); transform:translateY(-2px); }
-  .player-card.selected { border-color:var(--neon-blue); background:rgba(0,212,255,0.08); box-shadow:var(--glow-blue); }
-  .avatar-wrap { width:56px; height:56px; border-radius:50%; margin:0 auto 10px; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:26px; border:2px solid rgba(0,212,255,0.25); }
+  .player-card:hover { border-color:rgba(163,207,254,0.3); transform:translateY(-2px); }
+  .player-card.selected { border-color:var(--neon-blue); background:rgba(163,207,254,0.08); box-shadow:var(--glow-blue); }
+  .avatar-wrap { width:56px; height:56px; border-radius:50%; margin:0 auto 10px; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:26px; border:2px solid rgba(163,207,254,0.25); }
   .avatar-wrap img { width:100%; height:100%; object-fit:cover; }
   .p-name { font-size:12px; font-weight:700; color:var(--text); margin-bottom:2px; word-break:break-word; line-height:1.3; }
   .p-level { font-size:10px; color:var(--text3); margin-bottom:3px; }
@@ -452,8 +450,8 @@ const css = `
   .p-coin { font-size:10px; color:var(--neon-gold); margin-top:1px; }
   .squad-pill { font-size:9px; padding:2px 8px; border-radius:99px; display:inline-block; margin-top:5px; font-weight:700; }
   .pts-row { display:flex; gap:4px; justify-content:center; margin-top:8px; }
-  .pts-btn { width:30px; height:30px; border-radius:50%; border:1px solid var(--border2); background:rgba(0,212,255,0.05); cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; color:var(--text2); line-height:1; transition:all .12s; }
-  .pts-btn.add { color:var(--neon-green); border-color:rgba(0,255,136,.3); }
+  .pts-btn { width:30px; height:30px; border-radius:50%; border:1px solid var(--border2); background:rgba(163,207,254,0.05); cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; color:var(--text2); line-height:1; transition:all .12s; }
+  .pts-btn.add { color:var(--neon-green); border-color:rgba(51,153,102,.3); }
   .pts-btn.rem { color:var(--danger); border-color:rgba(255,34,68,.3); }
 
   /* ═══ LEADERBOARD ═══ */
@@ -465,10 +463,10 @@ const css = `
   }
   .lb-row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--border); }
   .lb-rank { font-family:'Funnel Display',sans-serif; font-size:18px; font-weight:900; width:26px; text-align:center; color:var(--text3); flex-shrink:0; }
-  .lb-rank.gold { color:var(--neon-gold); text-shadow:0 0 16px rgba(255,204,0,0.7); }
+  .lb-rank.gold { color:var(--neon-gold); text-shadow:0 0 16px rgba(253,239,38,0.7); }
   .lb-rank.silver { color:#aac8e0; }
   .lb-rank.bronze { color:#d4916a; }
-  .lb-row:nth-child(1) { border-color:rgba(255,204,0,0.25); box-shadow:0 0 20px rgba(255,204,0,0.08); }
+  .lb-row:nth-child(1) { border-color:rgba(253,239,38,0.25); box-shadow:0 0 20px rgba(253,239,38,0.08); }
   .lb-row:nth-child(1)::before { background:linear-gradient(180deg,var(--neon-gold),transparent); }
   .lb-row:nth-child(2) { border-color:rgba(170,200,224,0.2); }
   .lb-row:nth-child(2)::before { background:linear-gradient(180deg,#aac8e0,transparent); }
@@ -481,25 +479,25 @@ const css = `
   .lb-xp { font-family:'Funnel Display',sans-serif; font-size:18px; font-weight:900; color:var(--neon-blue); flex-shrink:0; }
 
   /* ═══ PLAYER DETAIL ═══ */
-  .player-detail { background:rgba(5,15,35,0.95); border:1px solid rgba(0,212,255,0.25); border-radius:var(--radius-lg); padding:20px; margin-top:12px; box-shadow:var(--glow-blue); }
+  .player-detail { background:rgba(5,15,35,0.95); border:1px solid rgba(163,207,254,0.25); border-radius:var(--radius-lg); padding:20px; margin-top:12px; box-shadow:var(--glow-blue); }
   .player-detail-header { display:flex; gap:16px; align-items:center; margin-bottom:16px; }
   .player-detail-av { width:64px; height:64px; border-radius:50%; overflow:hidden; border:2px solid var(--neon-blue); display:flex; align-items:center; justify-content:center; font-size:30px; flex-shrink:0; box-shadow:var(--glow-blue); }
   .player-detail-av img { width:100%; height:100%; object-fit:cover; }
   .detail-tabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
   .detail-tab { padding:6px 14px; border-radius:99px; border:1px solid var(--border2); background:transparent; color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:600; cursor:pointer; min-height:32px; transition:all .15s; }
-  .detail-tab.active { background:rgba(0,212,255,0.15); color:var(--neon-blue); border-color:rgba(0,212,255,0.4); box-shadow:var(--glow-blue); }
+  .detail-tab.active { background:rgba(163,207,254,0.15); color:var(--neon-blue); border-color:rgba(163,207,254,0.4); box-shadow:var(--glow-blue); }
 
   /* ═══ FILTER / CHIPS ═══ */
   .filter-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
-  .search-inp { padding:10px 16px; background:rgba(0,212,255,0.05); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:15px; outline:none; flex:1; min-width:140px; transition:all .15s; }
-  .search-inp:focus { border-color:var(--neon-blue); box-shadow:0 0 0 3px rgba(0,212,255,0.1); }
-  .chip { padding:7px 16px; border-radius:99px; border:1px solid var(--border2); background:rgba(0,212,255,0.04); color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:700; cursor:pointer; min-height:34px; transition:all .15s; letter-spacing:.03em; }
-  .chip.active { background:rgba(0,212,255,0.15); color:var(--neon-blue); border-color:rgba(0,212,255,0.4); box-shadow:0 0 12px rgba(0,212,255,0.2); }
+  .search-inp { padding:10px 16px; background:rgba(163,207,254,0.05); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:15px; outline:none; flex:1; min-width:140px; transition:all .15s; }
+  .search-inp:focus { border-color:var(--neon-blue); box-shadow:0 0 0 3px rgba(163,207,254,0.1); }
+  .chip { padding:7px 16px; border-radius:99px; border:1px solid var(--border2); background:rgba(163,207,254,0.04); color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:700; cursor:pointer; min-height:34px; transition:all .15s; letter-spacing:.03em; }
+  .chip.active { background:rgba(163,207,254,0.15); color:var(--neon-blue); border-color:rgba(163,207,254,0.4); box-shadow:0 0 12px rgba(163,207,254,0.2); }
 
   /* ═══ BATCH ═══ */
-  .batch-panel { background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); border-radius:var(--radius); padding:12px 16px; margin-bottom:14px; }
+  .batch-panel { background:rgba(163,207,254,0.05); border:1px solid rgba(163,207,254,0.2); border-radius:var(--radius); padding:12px 16px; margin-bottom:14px; }
   .batch-info { font-size:13px; color:var(--neon-blue); font-weight:700; margin-bottom:10px; }
-  .batch-inp { width:70px; padding:8px 10px; background:rgba(0,212,255,0.08); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:18px; font-weight:700; outline:none; text-align:center; }
+  .batch-inp { width:70px; padding:8px 10px; background:rgba(163,207,254,0.08); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:18px; font-weight:700; outline:none; text-align:center; }
 
   /* ═══ PRESENZE ═══ */
   .pres-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius); border:1px solid var(--border); }
@@ -512,9 +510,9 @@ const css = `
     --pt-empty-bg:     rgba(255,255,255,.07);
     --pt-empty-color:  rgba(255,255,255,.3);
     --pt-empty-border: 1.5px solid rgba(255,255,255,.18);
-    --pt-done-bg:      rgba(0,255,136,.18);
-    --pt-done-color:   #00ff88;
-    --pt-done-border:  1.5px solid rgba(0,255,136,.4);
+    --pt-done-bg:      rgba(51,153,102,.18);
+    --pt-done-color:   #339966;
+    --pt-done-border:  1.5px solid rgba(51,153,102,.4);
   }
   .light {
     --pt-empty-bg:     #ffffff;
@@ -525,30 +523,30 @@ const css = `
     --pt-done-border:  2px solid #2e7d32;
   }
   .pres-toggle { width:40px; height:40px; border-radius:10px; cursor:pointer; font-size:18px; font-weight:900; transition:all .15s; display:inline-flex; align-items:center; justify-content:center; }
-  .pres-toggle.done  { background:var(--pt-done-bg);  color:var(--pt-done-color);  border:var(--pt-done-border);  box-shadow:0 0 10px rgba(0,255,136,.2); }
+  .pres-toggle.done  { background:var(--pt-done-bg);  color:var(--pt-done-color);  border:var(--pt-done-border);  box-shadow:0 0 10px rgba(51,153,102,.2); }
   .pres-toggle.empty { background:var(--pt-empty-bg); color:var(--pt-empty-color); border:var(--pt-empty-border); box-shadow:none; }
   .light .pres-toggle.done  { box-shadow:0 2px 8px rgba(46,125,50,.2); }
-  .pd-yes { background:rgba(0,255,136,.15); color:var(--neon-green); border:1px solid rgba(0,255,136,.3); }
-  .pd-partial { background:rgba(255,204,0,.12); color:var(--neon-gold); border:1px solid rgba(255,204,0,.25); }
-  .pd-completed { background:rgba(0,255,136,.25); color:#00ff88; border:1px solid rgba(0,255,136,.4); }
+  .pd-yes { background:rgba(51,153,102,.15); color:var(--neon-green); border:1px solid rgba(51,153,102,.3); }
+  .pd-partial { background:rgba(253,239,38,.12); color:var(--neon-gold); border:1px solid rgba(253,239,38,.25); }
+  .pd-completed { background:rgba(51,153,102,.25); color:#339966; border:1px solid rgba(51,153,102,.4); }
   .pd-none { background:rgba(255,255,255,.04); color:var(--text3); border:1px solid var(--border); }
 
   /* ═══ ACTIVITIES ═══ */
   .act-grid { display:grid; grid-template-columns:1fr; gap:10px; }
   .act-card {
-    background:rgba(0,80,40,0.08); border:1px solid rgba(0,255,136,0.15);
+    background:rgba(0,80,40,0.08); border:1px solid rgba(51,153,102,0.15);
     border-radius:var(--radius); padding:16px; position:relative;
     transition:all .15s;
     overflow:hidden; word-break:break-word;
   }
   .act-title, .act-meta { overflow-wrap:anywhere; }
-  .act-card:hover { border-color:rgba(0,255,136,0.3); box-shadow:var(--glow-green); }
+  .act-card:hover { border-color:rgba(51,153,102,0.3); box-shadow:var(--glow-green); }
   .act-title { font-family:'Funnel Display',sans-serif; font-size:22px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:4px; letter-spacing:.02em; }
   .act-meta { font-size:12px; color:var(--text2); margin-bottom:10px; }
   .act-rewards { display:flex; gap:6px; flex-wrap:wrap; }
   .reward-tag { font-size:10px; padding:4px 12px; border-radius:6px; font-weight:700; letter-spacing:.04em; }
-  .xp-tag { background:rgba(0,212,255,0.12); color:var(--neon-blue); border:1px solid rgba(0,212,255,0.2); }
-  .coin-tag { background:rgba(255,204,0,0.1); color:var(--neon-gold); border:1px solid rgba(255,204,0,0.2); }
+  .xp-tag { background:rgba(163,207,254,0.12); color:var(--neon-blue); border:1px solid rgba(163,207,254,0.2); }
+  .coin-tag { background:rgba(253,239,38,0.1); color:var(--neon-gold); border:1px solid rgba(253,239,38,0.2); }
   .delete-btn { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,34,68,.3); background:rgba(255,34,68,.08); color:#ff4466; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all .12s; }
   .delete-btn:hover { background:rgba(255,34,68,.2); }
 
@@ -580,7 +578,7 @@ const css = `
   .sfida-label { font-family:'Funnel Display',sans-serif; font-size:11px; font-weight:900; text-transform:uppercase; color:var(--danger); letter-spacing:.18em; margin-bottom:6px; }
   .sfida-title { font-family:'Funnel Display',sans-serif; font-size:26px; font-weight:900; text-transform:uppercase; color:#fff; margin-bottom:6px; letter-spacing:.02em; text-shadow:0 0 20px rgba(255,34,68,0.3); }
   .sfida-desc { font-size:13px; color:rgba(255,255,255,.6); margin-bottom:12px; line-height:1.5; }
-  .sfida-reward { display:inline-flex; align-items:center; gap:6px; background:rgba(255,204,0,0.12); border:1px solid rgba(255,204,0,0.3); border-radius:8px; padding:6px 14px; font-size:12px; font-weight:800; color:var(--neon-gold); letter-spacing:.04em; }
+  .sfida-reward { display:inline-flex; align-items:center; gap:6px; background:rgba(253,239,38,0.12); border:1px solid rgba(253,239,38,0.3); border-radius:8px; padding:6px 14px; font-size:12px; font-weight:800; color:var(--neon-gold); letter-spacing:.04em; }
 
   /* ═══ DIARIO ═══ */
   .diary-day { margin-bottom:18px; }
@@ -593,7 +591,7 @@ const css = `
   /* ═══ MODAL ═══ */
   .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:100; display:flex; align-items:flex-end; justify-content:center; backdrop-filter:blur(8px); }
   .modal {
-    background:rgba(5,12,30,0.98); border:1px solid rgba(0,212,255,0.25);
+    background:rgba(5,12,30,0.98); border:1px solid rgba(163,207,254,0.25);
     border-radius:20px 20px 0 0; padding:24px 20px;
     padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
     width:100%; max-width:560px; max-height:92vh; overflow-y:auto;
@@ -609,13 +607,13 @@ const css = `
     border-radius:var(--radius-lg); margin-bottom:14px; overflow:hidden;
     position:relative;
     background:linear-gradient(160deg, rgba(0,40,100,0.8) 0%, rgba(4,8,20,0.95) 50%, rgba(60,0,80,0.6) 100%);
-    border:1px solid rgba(0,212,255,0.2);
+    border:1px solid rgba(163,207,254,0.2);
     box-shadow:var(--glow-blue), 0 20px 60px rgba(0,0,0,0.6);
   }
   .profile-hero::before {
     content:''; position:absolute; inset:0;
     background:
-      radial-gradient(ellipse 80% 60% at 50% -20%, rgba(0,212,255,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 60% at 50% -20%, rgba(163,207,254,0.15) 0%, transparent 60%),
       radial-gradient(ellipse 50% 40% at 100% 100%, rgba(255,0,204,0.1) 0%, transparent 50%);
     pointer-events:none;
   }
@@ -627,7 +625,7 @@ const css = `
     position:relative;
     border:2px solid transparent;
     background:linear-gradient(rgba(4,8,20,1),rgba(4,8,20,1)) padding-box, linear-gradient(135deg,var(--neon-blue),var(--neon-pink)) border-box;
-    box-shadow:0 0 0 1px rgba(255,255,255,0.05), 0 0 40px rgba(0,212,255,0.3), 0 0 80px rgba(0,212,255,0.1), 0 16px 40px rgba(0,0,0,0.6);
+    box-shadow:0 0 0 1px rgba(255,255,255,0.05), 0 0 40px rgba(163,207,254,0.3), 0 0 80px rgba(163,207,254,0.1), 0 16px 40px rgba(0,0,0,0.6);
   }
   .profile-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
   .profile-avatar-ring {
@@ -640,12 +638,12 @@ const css = `
   .profile-name {
     font-family:'Funnel Display',sans-serif; font-size:38px; font-weight:900;
     text-transform:uppercase; letter-spacing:1px; color:#fff; margin-bottom:4px;
-    text-shadow:0 0 30px rgba(0,212,255,0.4);
+    text-shadow:0 0 30px rgba(163,207,254,0.4);
   }
   .profile-firstname { font-size:13px; color:rgba(255,255,255,.45); margin-bottom:8px; letter-spacing:.08em; }
   .profile-level {
     font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;
-    background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.25);
+    background:rgba(163,207,254,0.1); border:1px solid rgba(163,207,254,0.25);
     border-radius:99px; padding:5px 16px; color:var(--neon-blue); margin-bottom:14px;
     letter-spacing:.06em; text-transform:uppercase;
   }
@@ -656,33 +654,33 @@ const css = `
   .profile-stat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.35); margin-top:3px; }
   .profile-xp-section { padding:0 20px 22px; position:relative; z-index:1; }
   .xp-bar-wrap { height:8px; background:rgba(255,255,255,.07); border-radius:99px; overflow:hidden; margin:10px 0 4px; }
-  .xp-bar { height:100%; background:linear-gradient(90deg,var(--neon-blue),var(--neon-pink)); border-radius:99px; transition:width .6s cubic-bezier(.4,0,.2,1); box-shadow:0 0 12px rgba(0,212,255,0.5); }
+  .xp-bar { height:100%; background:linear-gradient(90deg,var(--neon-blue),var(--neon-pink)); border-radius:99px; transition:width .6s cubic-bezier(.4,0,.2,1); box-shadow:0 0 12px rgba(163,207,254,0.5); }
   .xp-label { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,.35); font-weight:700; letter-spacing:.06em; }
 
   /* ═══ QR ═══ */
   .qr-code { font-family:'Funnel Display',sans-serif; font-size:52px; font-weight:900; color:var(--neon-blue); letter-spacing:10px; margin:16px 0; text-shadow:var(--glow-blue); }
 
   /* ═══ AVATAR UPLOAD ═══ */
-  .avatar-upload-area { border:2px dashed rgba(0,212,255,0.25); border-radius:var(--radius); padding:20px; text-align:center; cursor:pointer; margin-bottom:12px; transition:all .15s; }
-  .avatar-upload-area:hover { border-color:rgba(0,212,255,0.5); background:rgba(0,212,255,0.04); }
+  .avatar-upload-area { border:2px dashed rgba(163,207,254,0.25); border-radius:var(--radius); padding:20px; text-align:center; cursor:pointer; margin-bottom:12px; transition:all .15s; }
+  .avatar-upload-area:hover { border-color:rgba(163,207,254,0.5); background:rgba(163,207,254,0.04); }
   .avatar-preview { width:80px; height:80px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:block; border:2px solid var(--neon-blue); box-shadow:var(--glow-blue); }
 
   /* ═══ THEME TOGGLE ═══ */
-  .theme-toggle { width:44px; height:24px; border-radius:99px; border:1px solid var(--border2); cursor:pointer; position:relative; transition:background .2s; display:flex; align-items:center; padding:0 3px; background:rgba(0,212,255,0.08); }
+  .theme-toggle { width:44px; height:24px; border-radius:99px; border:1px solid var(--border2); cursor:pointer; position:relative; transition:background .2s; display:flex; align-items:center; padding:0 3px; background:rgba(163,207,254,0.08); }
   .theme-toggle-knob { width:18px; height:18px; border-radius:50%; background:var(--neon-blue); transition:transform .2s; box-shadow:var(--glow-blue); }
 
   /* ═══ MISC ═══ */
   .tag { font-size:11px; padding:3px 10px; border-radius:6px; display:inline-block; font-weight:700; letter-spacing:.04em; }
-  .tag-green { background:rgba(0,255,136,.1); color:var(--neon-green); border:1px solid rgba(0,255,136,.2); }
-  .tag-blue { background:rgba(0,212,255,.1); color:var(--neon-blue); border:1px solid rgba(0,212,255,.2); }
-  .tag-amber { background:rgba(255,204,0,.1); color:var(--neon-gold); border:1px solid rgba(255,204,0,.2); }
+  .tag-green { background:rgba(51,153,102,.1); color:var(--neon-green); border:1px solid rgba(51,153,102,.2); }
+  .tag-blue { background:rgba(163,207,254,.1); color:var(--neon-blue); border:1px solid rgba(163,207,254,.2); }
+  .tag-amber { background:rgba(253,239,38,.1); color:var(--neon-gold); border:1px solid rgba(253,239,38,.2); }
   .tag-red { background:rgba(255,34,68,.1); color:#ff4466; border:1px solid rgba(255,34,68,.2); }
   .tag-gray { background:rgba(255,255,255,.05); color:var(--text2); border:1px solid var(--border); }
   .loading { display:flex; align-items:center; justify-content:center; min-height:160px; color:var(--text2); font-size:14px; gap:8px; }
   .empty { text-align:center; padding:40px 20px; color:var(--text3); font-size:14px; }
-  select { padding:10px 12px; background:rgba(0,212,255,0.05); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:15px; outline:none; width:100%; }
-  textarea { width:100%; padding:10px 14px; background:rgba(0,212,255,0.04); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; resize:vertical; min-height:80px; transition:all .15s; }
-  textarea:focus { border-color:var(--neon-blue); box-shadow:0 0 0 3px rgba(0,212,255,0.08); }
+  select { padding:10px 12px; background:rgba(163,207,254,0.05); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:15px; outline:none; width:100%; }
+  textarea { width:100%; padding:10px 14px; background:rgba(163,207,254,0.04); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; resize:vertical; min-height:80px; transition:all .15s; }
+  textarea:focus { border-color:var(--neon-blue); box-shadow:0 0 0 3px rgba(163,207,254,0.08); }
   .color-swatch-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
   .color-swatch { width:36px; height:36px; border-radius:50%; border:3px solid transparent; cursor:pointer; transition:border-color .12s; }
   .color-swatch.active { border-color:var(--neon-blue); box-shadow:var(--glow-blue); }
@@ -695,19 +693,19 @@ const css = `
   .msg-layout { display:flex; gap:12px; height:440px; }
   .msg-list { width:150px; display:flex; flex-direction:column; gap:4px; overflow-y:auto; flex-shrink:0; }
   .msg-thread { background:rgba(8,18,40,0.9); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; cursor:pointer; transition:all .15s; }
-  .msg-thread.active { border-color:rgba(0,212,255,0.4); background:rgba(0,212,255,0.08); box-shadow:0 0 12px rgba(0,212,255,0.1); }
+  .msg-thread.active { border-color:rgba(163,207,254,0.4); background:rgba(163,207,254,0.08); box-shadow:0 0 12px rgba(163,207,254,0.1); }
   .mt-name { font-size:12px; font-weight:700; color:var(--text); }
   .msg-main { flex:1; display:flex; flex-direction:column; background:rgba(8,18,40,0.9); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; min-width:0; }
-  .msg-hdr { padding:12px 16px; border-bottom:1px solid var(--border); font-weight:700; font-size:14px; color:var(--text); background:rgba(0,212,255,0.04); }
+  .msg-hdr { padding:12px 16px; border-bottom:1px solid var(--border); font-weight:700; font-size:14px; color:var(--text); background:rgba(163,207,254,0.04); }
   .msg-body { flex:1; padding:14px 16px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
   .bubble-wrap { display:flex; gap:8px; }
   .bubble-wrap.mine { flex-direction:row-reverse; }
-  .bubble-av { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; background:rgba(0,212,255,0.1); border:1px solid var(--border2); }
+  .bubble-av { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; background:rgba(163,207,254,0.1); border:1px solid var(--border2); }
   .bubble { max-width:220px; padding:8px 12px; border-radius:12px; font-size:13px; line-height:1.5; }
   .bubble.them { background:rgba(255,255,255,.06); color:var(--text); border:1px solid var(--border); }
-  .bubble.mine { background:rgba(0,212,255,.15); color:var(--neon-blue); border:1px solid rgba(0,212,255,.25); }
-  .msg-inp-row { padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:8px; background:rgba(0,212,255,0.02); }
-  .msg-inp { flex:1; padding:10px 12px; background:rgba(0,212,255,0.06); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; }
+  .bubble.mine { background:rgba(163,207,254,.15); color:var(--neon-blue); border:1px solid rgba(163,207,254,.25); }
+  .msg-inp-row { padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:8px; background:rgba(163,207,254,0.02); }
+  .msg-inp { flex:1; padding:10px 12px; background:rgba(163,207,254,0.06); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:14px; outline:none; }
   .notif-dot { width:8px; height:8px; border-radius:50%; background:var(--neon-pink); animation:pulse2 2s infinite; display:inline-block; margin-left:4px; vertical-align:middle; box-shadow:0 0 8px rgba(255,0,204,0.6); animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
   .notif-item { display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); }
@@ -717,12 +715,12 @@ const css = `
   .notif-time { font-size:11px; color:var(--text3); margin-top:3px; }
 
   /* ═══ PIN DISPLAY ═══ */
-  .pin-display { font-family:'Funnel Display',sans-serif; font-size:28px; font-weight:900; color:var(--neon-blue); letter-spacing:6px; background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.2); border-radius:8px; padding:8px 16px; display:inline-block; box-shadow:var(--glow-blue); }
+  .pin-display { font-family:'Funnel Display',sans-serif; font-size:28px; font-weight:900; color:var(--neon-blue); letter-spacing:6px; background:rgba(163,207,254,0.08); border:1px solid rgba(163,207,254,0.2); border-radius:8px; padding:8px 16px; display:inline-block; box-shadow:var(--glow-blue); }
 
   /* ═══ PLAYER BOTTOM NAV ═══ */
   .player-bottom-nav {
     position:fixed; bottom:0; left:0; right:0;
-    background:rgba(4,8,20,0.97); border-top:1px solid rgba(0,212,255,0.15);
+    background:rgba(4,8,20,0.97); border-top:1px solid rgba(163,207,254,0.15);
     z-index:20; display:flex; padding-bottom:env(safe-area-inset-bottom,0px);
     backdrop-filter:blur(20px);
   }
@@ -778,13 +776,13 @@ const css = `
   .pod-name { font-family:'Funnel Display',sans-serif; font-size:12px; font-weight:900; text-transform:uppercase; color:#fff; letter-spacing:.03em; line-height:1.2; word-break:break-word; }
   .pod-xp { font-size:10px; font-weight:700; margin-top:2px; }
   .pod-base { border-radius:12px 12px 0 0; padding:8px 4px 6px; margin-top:6px; }
-  .pod-1 .pod-av-wrap { width:68px; height:68px; border:3px solid #ffcc00; box-shadow:0 0 24px rgba(255,204,0,.45); }
+  .pod-1 .pod-av-wrap { width:68px; height:68px; border:3px solid #FDEF26; box-shadow:0 0 24px rgba(253,239,38,.45); }
   .pod-2 .pod-av-wrap { width:54px; height:54px; border:2px solid #9090b0; box-shadow:0 0 14px rgba(150,150,200,.35); }
   .pod-3 .pod-av-wrap { width:48px; height:48px; border:2px solid #b87a30; box-shadow:0 0 12px rgba(200,130,50,.3); }
-  .pod-1 .pod-base { background:rgba(255,204,0,.08); border:1px solid rgba(255,204,0,.22); border-bottom:none; min-height:70px; }
+  .pod-1 .pod-base { background:rgba(253,239,38,.08); border:1px solid rgba(253,239,38,.22); border-bottom:none; min-height:70px; }
   .pod-2 .pod-base { background:rgba(140,140,180,.06); border:1px solid rgba(140,140,180,.15); border-bottom:none; min-height:52px; }
   .pod-3 .pod-base { background:rgba(180,120,50,.06); border:1px solid rgba(180,120,50,.14); border-bottom:none; min-height:40px; }
-  .pod-1 .pod-xp { color:#ffcc00; }
+  .pod-1 .pod-xp { color:#FDEF26; }
   .pod-2 .pod-xp { color:#aac8e0; }
   .pod-3 .pod-xp { color:#d4916a; }
 
@@ -792,7 +790,7 @@ const css = `
   .streak-card { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(255,120,0,.25); border-radius:14px; padding:12px 14px; position:relative; z-index:2; }
   .streak-row { display:flex; gap:8px; }
   .streak-item { flex:1; text-align:center; }
-  .streak-val { font-family:'Funnel Display',sans-serif; font-size:26px; font-weight:900; color:#ff8c00; line-height:1; display:block; }
+  .streak-val { font-family:'Funnel Display',sans-serif; font-size:26px; font-weight:900; color:#D41323; line-height:1; display:block; }
   .streak-lbl { font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.35); margin-top:2px; display:block; }
   .month-prog { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.07); }
   .month-prog-lbl { display:flex; justify-content:space-between; font-size:9px; font-weight:900; color:rgba(255,255,255,.3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
@@ -1288,7 +1286,7 @@ const css = `
   .light .empty { color: #6b7e94; }
   .light .loading { color: #6b7e94; }
   /* Sfide always dark bg */
-  .light .pd-sfida { background: #1a2035 !important; border-color: rgba(255,204,0,.3) !important; }
+  .light .pd-sfida { background: #1a2035 !important; border-color: rgba(253,239,38,.3) !important; }
   .light .pd-sfida * { color: rgba(255,255,255,.9) !important; }
   /* Streak card */
   .light .streak-card { background: #fff !important; border: 1px solid rgba(230,81,0,.2) !important; }
@@ -1317,38 +1315,38 @@ const css = `
   .edu-notif-text { flex:1; }
   .edu-notif-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:2px; }
   .edu-notif-sub { font-size:11px; color:rgba(255,255,255,.45); }
-  .edu-notif-count { font-family:'Funnel Display',sans-serif; font-size:22px; font-weight:900; color:#ffcc00; flex-shrink:0; }
+  .edu-notif-count { font-family:'Funnel Display',sans-serif; font-size:22px; font-weight:900; color:#FDEF26; flex-shrink:0; }
   .edu-notif-empty { padding:20px 16px; text-align:center; color:rgba(255,255,255,.35); font-size:13px; }
   /* ═══ AVATAR PICKER ═══ */
   .av-picker-wrap { max-height:340px; overflow-y:auto; scrollbar-width:thin; }
   .av-picker-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
   .av-picker-tab { padding:5px 12px; border-radius:99px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:rgba(255,255,255,.45); font-size:11px; font-weight:700; cursor:pointer; transition:all .15s; }
-  .av-picker-tab.on { background:rgba(255,204,0,.15); color:#ffcc00; border-color:rgba(255,204,0,.35); }
+  .av-picker-tab.on { background:rgba(253,239,38,.15); color:#FDEF26; border-color:rgba(253,239,38,.35); }
   .av-picker-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:6px; }
   .av-picker-item { border-radius:10px; padding:5px; text-align:center; cursor:pointer; border:2px solid transparent; background:rgba(255,255,255,.04); transition:all .15s; }
   .av-picker-item:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.15); }
-  .av-picker-item.sel { border-color:#ffcc00; background:rgba(255,204,0,.1); }
+  .av-picker-item.sel { border-color:#FDEF26; background:rgba(253,239,38,.1); }
   .av-picker-item img { width:52px; height:52px; object-fit:contain; display:block; margin:0 auto 3px; }
   .av-picker-item span { font-size:8px; color:rgba(255,255,255,.45); text-transform:capitalize; line-height:1.2; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .av-picker-item.sel span { color:#ffcc00; }
+  .av-picker-item.sel span { color:#FDEF26; }
   /* ═══ QR SCANNER ═══ */
   .qr-scanner-wrap { position:relative; width:100%; max-width:320px; margin:0 auto; }
   .qr-scanner-video { width:100%; border-radius:14px; display:block; background:#000; }
   .qr-scanner-overlay { position:absolute; inset:0; border-radius:14px; pointer-events:none; }
   .qr-scanner-frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:200px; height:200px; }
-  .qr-scanner-frame::before,.qr-scanner-frame::after { content:''; position:absolute; width:40px; height:40px; border-color:#ffcc00; border-style:solid; }
+  .qr-scanner-frame::before,.qr-scanner-frame::after { content:''; position:absolute; width:40px; height:40px; border-color:#FDEF26; border-style:solid; }
   .qr-scanner-frame::before { top:0; left:0; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
   .qr-scanner-frame::after  { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
-  .qr-scanner-corner-tr { position:absolute; top:0; right:0; width:40px; height:40px; border-top:3px solid #ffcc00; border-right:3px solid #ffcc00; border-radius:0 4px 0 0; }
-  .qr-scanner-corner-bl { position:absolute; bottom:0; left:0; width:40px; height:40px; border-bottom:3px solid #ffcc00; border-left:3px solid #ffcc00; border-radius:0 0 0 4px; }
-  .qr-scanner-line { position:absolute; left:10%; right:10%; height:2px; background:linear-gradient(90deg,transparent,#ffcc00,transparent); animation:scan-line 2s linear infinite; }
+  .qr-scanner-corner-tr { position:absolute; top:0; right:0; width:40px; height:40px; border-top:3px solid #FDEF26; border-right:3px solid #FDEF26; border-radius:0 4px 0 0; }
+  .qr-scanner-corner-bl { position:absolute; bottom:0; left:0; width:40px; height:40px; border-bottom:3px solid #FDEF26; border-left:3px solid #FDEF26; border-radius:0 0 0 4px; }
+  .qr-scanner-line { position:absolute; left:10%; right:10%; height:2px; background:linear-gradient(90deg,transparent,#FDEF26,transparent); animation:scan-line 2s linear infinite; }
   @keyframes scan-line { 0%{top:10%} 100%{top:90%} }
   /* ═══ PRESENTATION MODE ═══ */
   .pres-overlay { position:fixed; inset:0; background:linear-gradient(160deg,#0a0530 0%,#0d1a60 45%,#150838 100%); z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
   .pres-stars { position:absolute; inset:0; pointer-events:none; }
   .pres-star { position:absolute; width:3px; height:3px; border-radius:50%; background:#fff; animation:twinkle 3s infinite; }
   @keyframes twinkle { 0%,100%{opacity:.2;transform:scale(1)} 50%{opacity:1;transform:scale(1.5)} }
-  .pres-title { font-family:'Funnel Display',sans-serif; font-size:clamp(28px,6vw,64px); font-weight:900; text-transform:uppercase; letter-spacing:.1em; background:linear-gradient(135deg,#00d4ff,#fff,#ffcc00); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:clamp(16px,4vh,40px); text-align:center; filter:drop-shadow(0 0 20px rgba(0,212,255,.4)); }
+  .pres-title { font-family:'Funnel Display',sans-serif; font-size:clamp(28px,6vw,64px); font-weight:900; text-transform:uppercase; letter-spacing:.1em; background:linear-gradient(135deg,#A3CFFE,#fff,#FDEF26); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:clamp(16px,4vh,40px); text-align:center; filter:drop-shadow(0 0 20px rgba(163,207,254,.4)); }
   .pres-podium-wrap { display:flex; align-items:flex-end; gap:clamp(10px,3vw,32px); margin-bottom:clamp(16px,4vh,40px); }
   .pres-col { display:flex; flex-direction:column; align-items:center; animation:rise .8s cubic-bezier(.34,1.56,.64,1) both; }
   .pres-col-1 { animation-delay:.1s; }
@@ -1359,18 +1357,18 @@ const css = `
   @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
   .pres-av { border-radius:50%; border:4px solid; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:clamp(6px,1.5vh,12px); }
   .pres-av img, .pres-av span { width:100%; height:100%; object-fit:cover; }
-  .pres-av-1 { width:clamp(80px,14vw,130px); height:clamp(80px,14vw,130px); border-color:#ffcc00; box-shadow:0 0 30px rgba(255,204,0,.6),0 0 80px rgba(255,204,0,.2); animation:glow-gold 2s infinite; }
+  .pres-av-1 { width:clamp(80px,14vw,130px); height:clamp(80px,14vw,130px); border-color:#FDEF26; box-shadow:0 0 30px rgba(253,239,38,.6),0 0 80px rgba(253,239,38,.2); animation:glow-gold 2s infinite; }
   .pres-av-2 { width:clamp(60px,10vw,100px); height:clamp(60px,10vw,100px); border-color:#aac8e0; box-shadow:0 0 20px rgba(170,200,224,.4); }
   .pres-av-3 { width:clamp(50px,8vw,84px); height:clamp(50px,8vw,84px); border-color:#d4916a; box-shadow:0 0 16px rgba(212,145,106,.4); }
-  @keyframes glow-gold { 0%,100%{box-shadow:0 0 30px rgba(255,204,0,.6),0 0 80px rgba(255,204,0,.2)} 50%{box-shadow:0 0 60px rgba(255,204,0,.9),0 0 120px rgba(255,204,0,.4)} }
+  @keyframes glow-gold { 0%,100%{box-shadow:0 0 30px rgba(253,239,38,.6),0 0 80px rgba(253,239,38,.2)} 50%{box-shadow:0 0 60px rgba(253,239,38,.9),0 0 120px rgba(253,239,38,.4)} }
   .pres-pname { font-family:'Funnel Display',sans-serif; font-size:clamp(14px,2.5vw,26px); font-weight:900; text-transform:uppercase; color:#fff; text-align:center; text-shadow:0 0 20px rgba(255,255,255,.3); max-width:clamp(80px,14vw,160px); line-height:1.1; }
   .pres-pxp { font-size:clamp(11px,1.8vw,18px); font-weight:700; text-align:center; margin-top:2px; }
   .pres-base { border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; margin-top:8px; }
-  .pres-base-1 { background:rgba(255,204,0,.15); border:2px solid rgba(255,204,0,.4); width:clamp(80px,14vw,130px); height:clamp(70px,12vh,100px); }
+  .pres-base-1 { background:rgba(253,239,38,.15); border:2px solid rgba(253,239,38,.4); width:clamp(80px,14vw,130px); height:clamp(70px,12vh,100px); }
   .pres-base-2 { background:rgba(170,200,224,.1); border:2px solid rgba(170,200,224,.3); width:clamp(60px,10vw,100px); height:clamp(50px,9vh,76px); }
   .pres-base-3 { background:rgba(212,145,106,.1); border:2px solid rgba(212,145,106,.25); width:clamp(50px,8vw,84px); height:clamp(36px,7vh,56px); }
   .pres-rank { font-family:'Funnel Display',sans-serif; font-size:clamp(20px,4vw,40px); font-weight:900; }
-  .pres-rank-1 { color:#ffcc00; text-shadow:0 0 16px rgba(255,204,0,.8); }
+  .pres-rank-1 { color:#FDEF26; text-shadow:0 0 16px rgba(253,239,38,.8); }
   .pres-rank-2 { color:#aac8e0; }
   .pres-rank-3 { color:#d4916a; }
   .pres-list { display:flex; flex-direction:column; gap:5px; width:100%; max-width:560px; padding:0 16px; max-height:55vh; overflow-y:auto; scrollbar-width:none; }
@@ -1442,11 +1440,11 @@ const css = `
   .pd-av-img { width:240px; height:240px; object-fit:contain; position:relative; z-index:3; filter:drop-shadow(0 12px 28px rgba(0,0,0,.55)) drop-shadow(0 0 50px rgba(100,160,255,.28)); margin-bottom:-14px; }
   .pd-av-emoji { font-size:160px; line-height:1; position:relative; z-index:3; margin-bottom:-14px; filter:drop-shadow(0 12px 28px rgba(0,0,0,.55)); display:block; text-align:center; }
   .pd-name-pill { transform:rotate(-2deg); margin-top:16px; background:#111; color:#fff; font-family:'Funnel Display',sans-serif; font-size:21px; font-weight:900; text-transform:uppercase; letter-spacing:.07em; border-radius:10px 13px 10px 15px; padding:5px 18px; position:relative; z-index:3; margin-bottom:4px; box-shadow:2px 3px 0 rgba(0,0,0,.3); }
-  .pd-lv-pill { display:inline-flex; align-items:center; gap:5px; background:rgba(0,212,255,.1); border:1px solid rgba(0,212,255,.28); border-radius:99px; padding:4px 14px; font-size:10px; font-weight:700; color:var(--neon-blue); letter-spacing:.07em; text-transform:uppercase; position:relative; z-index:3; margin-bottom:12px; }
+  .pd-lv-pill { display:inline-flex; align-items:center; gap:5px; background:rgba(163,207,254,.1); border:1px solid rgba(163,207,254,.28); border-radius:99px; padding:4px 14px; font-size:10px; font-weight:700; color:var(--neon-blue); letter-spacing:.07em; text-transform:uppercase; position:relative; z-index:3; margin-bottom:12px; }
   .pd-card { margin:0 14px 8px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:12px 14px; position:relative; z-index:2; }
   .pd-sg { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:0 14px 8px; position:relative; z-index:2; }
   .pd-sc { background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:11px 6px; text-align:center; }
-  .pd-sv { font-family:'Funnel Display',sans-serif; font-size:24px; font-weight:900; color:#ffcc00; line-height:1; display:block; }
+  .pd-sv { font-family:'Funnel Display',sans-serif; font-size:24px; font-weight:900; color:#FDEF26; line-height:1; display:block; }
   .pd-sl { font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.38); margin-top:2px; display:block; }
   .pd-squad { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:11px 14px; display:flex; align-items:center; gap:10px; position:relative; z-index:2; }
   .pd-sfida { margin:0 14px 8px; background:#111; border-radius:16px; padding:14px 16px; position:relative; z-index:2; overflow:hidden; }
@@ -1456,13 +1454,13 @@ const css = `
   .pd-badge-row::-webkit-scrollbar { display:none; }
   .pd-badge-item { flex-shrink:0; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:10px 8px; text-align:center; min-width:68px; cursor:pointer; transition:all .2s; }
   .pd-badge-item:hover { border-color:rgba(255,0,204,.4); transform:translateY(-2px); }
-  .pd-checkin { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(0,255,136,.2); border-radius:16px; padding:14px; position:relative; z-index:2; }
+  .pd-checkin { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(51,153,102,.2); border-radius:16px; padding:14px; position:relative; z-index:2; }
   .pd-tab-title { font-family:'Funnel Display',sans-serif; font-size:30px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; margin-bottom:14px; position:relative; z-index:2; padding:0 2px; }
   /* override bottom nav for new design */
   .player-bottom-nav { background:#0d0d0d !important; border-top:1px solid #2a2a2a !important; }
   .player-nav-btn { color:rgba(255,255,255,.28) !important; }
-  .player-nav-btn.active { color:#ffcc00 !important; }
-  .player-nav-btn.active::after { background:#ffcc00 !important; box-shadow:0 0 8px rgba(255,204,0,.5) !important; }
+  .player-nav-btn.active { color:#FDEF26 !important; }
+  .player-nav-btn.active::after { background:#FDEF26 !important; box-shadow:0 0 8px rgba(253,239,38,.5) !important; }
 `;
 
 
@@ -1858,10 +1856,10 @@ function ToastContainer() {
 
 function Toast({ msg, type }) {
   const colors = {
-    xp:    { bg:"rgba(0,212,255,.15)",  border:"rgba(0,212,255,.4)",  color:"#00d4ff" },
-    coin:  { bg:"rgba(255,204,0,.15)",  border:"rgba(255,204,0,.4)",  color:"#ffcc00" },
-    badge: { bg:"rgba(255,45,120,.15)", border:"rgba(255,45,120,.4)", color:"#ff2d78" },
-    ok:    { bg:"rgba(0,255,136,.15)",  border:"rgba(0,255,136,.4)",  color:"#00ff88" },
+    xp:    { bg:"rgba(163,207,254,.15)",  border:"rgba(163,207,254,.4)",  color:"#A3CFFE" },
+    coin:  { bg:"rgba(253,239,38,.15)",  border:"rgba(253,239,38,.4)",  color:"#FDEF26" },
+    badge: { bg:"rgba(255,109,236,.15)", border:"rgba(255,109,236,.4)", color:"#FF6DEC" },
+    ok:    { bg:"rgba(51,153,102,.15)",  border:"rgba(51,153,102,.4)",  color:"#339966" },
     error: { bg:"rgba(255,50,50,.15)",  border:"rgba(255,50,50,.4)",  color:"#ff4444" },
   };
   const c = colors[type] || colors.ok;
@@ -1880,7 +1878,7 @@ function Toast({ msg, type }) {
 
 
 // ─── PARTICLE BURST ──────────────────────────────────────
-function ParticleBurst({ x, y, color="#ffcc00", onDone }) {
+function ParticleBurst({ x, y, color="#FDEF26", onDone }) {
   const particles = Array.from({length:12}, (_,i) => ({
     id:i, angle:(360/12)*i,
     dist: 30+Math.random()*30,
@@ -2059,22 +2057,22 @@ function UpdateBanner() {
     <div style={{
       position:'fixed', top:0, left:0, right:0, zIndex:99999,
       background:'linear-gradient(90deg,#0a2a1a,#0d3a22)',
-      borderBottom:'2px solid #00ff88',
+      borderBottom:'2px solid #339966',
       paddingTop:'calc(env(safe-area-inset-top, 0px) + 10px)',
       paddingBottom:'10px',
       paddingLeft:'calc(env(safe-area-inset-left, 0px) + 16px)',
       paddingRight:'calc(env(safe-area-inset-right, 0px) + 16px)',
       display:'flex', alignItems:'center', gap:12,
-      boxShadow:'0 2px 20px rgba(0,255,136,.3)',
+      boxShadow:'0 2px 20px rgba(51,153,102,.3)',
       animation:'slideDown .3s ease',
     }}>
       <span style={{fontSize:20}}>🆕</span>
       <div style={{flex:1}}>
-        <div style={{fontSize:13,fontWeight:700,color:'#00ff88'}}>Nuova versione disponibile</div>
+        <div style={{fontSize:13,fontWeight:700,color:'#339966'}}>Nuova versione disponibile</div>
         <div style={{fontSize:11,color:'rgba(255,255,255,.5)'}}>Aggiorna per avere le ultime novità</div>
       </div>
       <button onClick={applyUpdate} style={{
-        background:'#00ff88', border:'none', borderRadius:99,
+        background:'#339966', border:'none', borderRadius:99,
         padding:'10px 20px', color:'#000', fontSize:14,
         fontWeight:900, cursor:'pointer', flexShrink:0,
         fontFamily:"'Funnel Display',sans-serif", letterSpacing:'.04em',
@@ -2119,11 +2117,11 @@ function OfflineBanner() {
       background: justBack
         ? 'linear-gradient(90deg,#0a2a1a,#0d3a22)'
         : 'linear-gradient(90deg,#2a0a0a,#3a0d0d)',
-      border:`2px solid ${justBack?'#00ff88':'#ff4444'}`,
+      border:`2px solid ${justBack?'#339966':'#ff4444'}`,
       borderRadius:14,
       padding:'12px 16px',
       display:'flex', alignItems:'center', gap:10,
-      boxShadow:`0 4px 20px ${justBack?'rgba(0,255,136,.3)':'rgba(255,68,68,.3)'}`,
+      boxShadow:`0 4px 20px ${justBack?'rgba(51,153,102,.3)':'rgba(255,68,68,.3)'}`,
       animation:'slideUp .3s ease',
     }}>
       <style>{`@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
@@ -2131,7 +2129,7 @@ function OfflineBanner() {
         {justBack ? '✅' : '📵'}
       </span>
       <div>
-        <div style={{fontSize:13,fontWeight:700,color:justBack?'#00ff88':'#ff6666'}}>
+        <div style={{fontSize:13,fontWeight:700,color:justBack?'#339966':'#ff6666'}}>
           {justBack ? 'Connessione ripristinata' : 'Sei offline'}
         </div>
         <div style={{fontSize:11,color:'rgba(255,255,255,.45)'}}>
@@ -2441,7 +2439,7 @@ function PushDiagnostics({ playerId, onClose }) {
     setRunning(false);
   }
 
-  const COLORS = { ok:"#00ff88", fail:"#ff5555", warn:"#ffbb33" };
+  const COLORS = { ok:"#339966", fail:"#ff5555", warn:"#ffbb33" };
   const ICONS = { ok:"✅", fail:"❌", warn:"⚠️" };
 
   return (
@@ -2539,13 +2537,13 @@ function InstallPWAButton() {
   return (
     <div onClick={install} style={{
       display:'flex', alignItems:'center', gap:10,
-      background:'rgba(0,212,255,.08)',
-      border:'1px solid rgba(0,212,255,.25)',
+      background:'rgba(163,207,254,.08)',
+      border:'1px solid rgba(163,207,254,.25)',
       borderRadius:14, padding:'12px 14px', marginBottom:10,
       cursor:'pointer', transition:'all .15s',
     }}
-    onMouseOver={e=>e.currentTarget.style.background='rgba(0,212,255,.15)'}
-    onMouseOut={e=>e.currentTarget.style.background='rgba(0,212,255,.08)'}
+    onMouseOver={e=>e.currentTarget.style.background='rgba(163,207,254,.15)'}
+    onMouseOut={e=>e.currentTarget.style.background='rgba(163,207,254,.08)'}
     >
       <span style={{fontSize:22,flexShrink:0}}>📲</span>
       <div style={{flex:1}}>
@@ -2616,7 +2614,7 @@ function QRCelebration({ xpGained, playerName, onDone }) {
           {playerName}
         </div>
         <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:48,fontWeight:900,
-          color:"#ffcc00",animation:"xpFloat 2s 1s ease-out forwards"}}>
+          color:"#FDEF26",animation:"xpFloat 2s 1s ease-out forwards"}}>
           +{xpGained} ⭐ XP
         </div>
         <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginTop:8}}>Presenza registrata!</div>
@@ -2794,7 +2792,7 @@ function Login({ onLogin }) {
                 <Avatar url={selected.avatar_url} emoji="🌱" size={72}/>
               </div>
               <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:24,fontWeight:900,color:"var(--text)",marginBottom:4}}>{selected.display_name}</div>
-              {selected.squads?.name && <SquadPill name={selected.squads.name}/>}
+              
               <div style={{marginTop:20,marginBottom:6}}>
                 <label className="form-label" style={{textAlign:"left",display:"block"}}>PIN (4 cifre)</label>
                 <input className="form-input pin-input" type="password" inputMode="numeric" maxLength={4}
@@ -2823,16 +2821,16 @@ function Login({ onLogin }) {
                   : filtered.map(p => (
                     <div key={p.id} onClick={()=>{setSelected(p);setPin("");setErr("");}}
                       style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
-                        background:"rgba(255,255,255,.04)",border:"1px solid var(--border)",
+                        background:"#fff",border:"1.5px solid rgba(16,16,16,.3)",
                         borderRadius:12,cursor:"pointer",transition:"all .15s"}}
-                      onMouseOver={e=>{e.currentTarget.style.background="rgba(0,212,255,.08)";e.currentTarget.style.borderColor="rgba(0,212,255,.3)";}}
-                      onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.04)";e.currentTarget.style.borderColor="var(--border)";}}>
+                      onMouseOver={e=>{e.currentTarget.style.background="#FDEF26";e.currentTarget.style.borderColor="#101010";}}
+                      onMouseOut={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.borderColor="rgba(16,16,16,.3)";}}>
                       <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",border:"1.5px solid var(--border2)",flexShrink:0}}>
                         <Avatar url={p.avatar_url} emoji="🌱" size={36}/>
                       </div>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:14,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                        {p.first_name && <div style={{fontSize:11,color:"var(--text3)",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.first_name}</div>}
+                        <div style={{fontSize:14,fontWeight:800,color:"#101010",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                        {p.first_name && <div style={{fontSize:11,color:"rgba(16,16,16,.55)",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.first_name}</div>}
                         {showSquadLogin && p.squads?.name && <SquadPill name={p.squads.name}/>}
                       </div>
                       <span style={{color:"var(--text3)",fontSize:16}}>→</span>
@@ -3166,10 +3164,10 @@ function PlayersView({ sectionColors, setSectionColors }) {
             <div className="form-group"><label className="form-label">Nome reale</label><input className="form-input" value={newPlayer.first_name} onChange={e=>setNewPlayer(p=>({...p,first_name:e.target.value}))} placeholder="es. Marco R."/></div>
             <div className="section-label">Avatar pianta</div>
             {newPlayer.avatar_url && (
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 10px",background:"rgba(253,239,38,.06)",border:"1px solid rgba(253,239,38,.2)",borderRadius:10}}>
                 <img src={newPlayer.avatar_url} style={{width:48,height:48,objectFit:"contain"}} alt="avatar"/>
                 <div>
-                  <div style={{fontSize:12,fontWeight:700,color:"#ffcc00"}}>{newPlayer.avatar_url.split('/').pop().replace('.webp','')}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#FDEF26"}}>{newPlayer.avatar_url.split('/').pop().replace('.webp','')}</div>
                   <button className="btn btn-ghost btn-xs" style={{marginTop:4}} onClick={()=>setNewPlayer(p=>({...p,avatar_url:""}))}>✕ Rimuovi</button>
                 </div>
               </div>
@@ -3191,7 +3189,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
               <div className="form-group"><label className="form-label">Coin inizio</label><input className="form-input" type="number" value={newPlayer.coin} onChange={e=>setNewPlayer(p=>({...p,coin:e.target.value}))}/></div>
             </div>
             {createPlayerErr && <div style={{color:"var(--danger)",fontSize:12,fontWeight:700,marginBottom:8}}>{createPlayerErr}</div>}
-            <div style={{background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10,padding:"8px 12px",fontSize:11,color:"var(--text3)",marginBottom:12}}>💡 Il giocatore potrà cambiare il PIN al primo accesso. Il nickname deve essere unico.</div>
+            <div style={{background:"rgba(253,239,38,.06)",border:"1px solid rgba(253,239,38,.2)",borderRadius:10,padding:"8px 12px",fontSize:11,color:"var(--text3)",marginBottom:12}}>💡 Il giocatore potrà cambiare il PIN al primo accesso. Il nickname deve essere unico.</div>
             <div style={{display:"flex",gap:8}}>
               <button className="btn btn-primary" style={{flex:1}} onClick={createPlayer} disabled={!newPlayer.display_name.trim()}>Crea giocatore</button>
               <button className="btn btn-ghost btn-sm" onClick={()=>setShowCreatePlayer(false)}>Annulla</button>
@@ -3397,8 +3395,8 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
                   ["XP", daily.reduce((s,a)=>s+(a.xp_awarded||0),0), "var(--neon-blue)"],
                   ["QR verificati", daily.filter(a=>a.qr_verified).length, "var(--neon-green)"],
                 ] : [
-                  ["Sessioni Lab", labs.length, "#ffcc00"],
-                  ["XP Lab", labs.reduce((s,a)=>s+(a.xp_awarded||0),0), "#ffcc00"],
+                  ["Sessioni Lab", labs.length, "#FDEF26"],
+                  ["XP Lab", labs.reduce((s,a)=>s+(a.xp_awarded||0),0), "#FDEF26"],
                   ["Lab diversi", [...new Set(labs.map(a=>a.activity_id).filter(Boolean))].length, "var(--rosa)"],
                 ]).map(([l,v,c])=>(
                   <div key={l} style={{background:"rgba(0,0,0,.25)",borderRadius:10,padding:"8px",textAlign:"center"}}>
@@ -3414,11 +3412,11 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
                   const labName = a.activity_id ? (labNames[a.activity_id]||"Lab") : null;
                   const statusIcon = {full:"✅",partial:"🟡",completed:"⭐",none:"❌"}[a.status]||"—";
                   return (
-                    <div key={a.id} style={{display:"flex",gap:8,alignItems:"center",padding:"8px 10px",background:tab==="labpres"?"rgba(255,204,0,.05)":"rgba(0,212,255,.04)",borderRadius:8,borderLeft:`3px solid ${tab==="labpres"?"#ffcc00":"rgba(0,212,255,.3)"}`}}>
+                    <div key={a.id} style={{display:"flex",gap:8,alignItems:"center",padding:"8px 10px",background:tab==="labpres"?"rgba(253,239,38,.05)":"rgba(163,207,254,.04)",borderRadius:8,borderLeft:`3px solid ${tab==="labpres"?"#FDEF26":"rgba(163,207,254,.3)"}`}}>
                       <span style={{fontSize:14}}>{statusIcon}</span>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:12,color:"var(--text)",fontWeight:600}}>{a.date}</div>
-                        {labName && <div style={{fontSize:10,color:"#ffcc00",fontWeight:700}}>⚡ {labName}</div>}
+                        {labName && <div style={{fontSize:10,color:"#FDEF26",fontWeight:700}}>⚡ {labName}</div>}
                         {a.qr_verified && <span style={{fontSize:9,color:"var(--neon-green)"}}>QR verificato ✓</span>}
                       </div>
                       <div style={{textAlign:"right",flexShrink:0}}>
@@ -3508,7 +3506,7 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
   const order = [1, 0, 2];
   const cols = ["pod-2", "pod-1", "pod-3"];
   const crowns = [null, "👑", null];
-  const xpColors = ["#aac8e0", "#ffcc00", "#d4916a"];
+  const xpColors = ["#aac8e0", "#FDEF26", "#d4916a"];
   const sizes = [54, 68, 48];
   const ranks = ["2°", "1°", "3°"];
 
@@ -3524,7 +3522,7 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
       return (
         <div key={p.id} className={`pod-col ${cols[i]}`}>
           {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
-          <div className="pod-av-wrap" style={isMe?{outline:"2px solid var(--neon-blue)",outlineOffset:2}:{}}>
+          <div className="pod-av-wrap" style={{background:["#FFD700","#C0C0C0","#CD7F32"][i],padding:7,boxShadow:"0 4px 12px rgba(0,0,0,.35)",...(isMe?{outline:"3px solid #101010",outlineOffset:2}:{})}}>
             <Avatar url={p.avatar_url} emoji={lv.emoji} size={sizes[i]}/>
           </div>
           <div className="pod-name">{p.display_name}{isMe&&<span style={{color:"var(--azzurro)",fontSize:9,display:"block"}}>TU</span>}</div>
@@ -3916,12 +3914,12 @@ function AttendanceView({ sectionColors, setSectionColors }) {
       {/* Tab switcher */}
       <div style={{display:"flex",gap:6,marginBottom:12}}>
         <button className={`chip ${presTab==="daily"?"active":""}`} onClick={()=>setPresTab("daily")}
-          style={presTab==="daily"?{background:"rgba(0,212,255,.15)",color:"var(--neon-blue)",borderColor:"rgba(0,212,255,.4)"}:{}}>
+          style={presTab==="daily"?{background:"rgba(163,207,254,.15)",color:"var(--neon-blue)",borderColor:"rgba(163,207,254,.4)"}:{}}>
           📍 Giornaliere
         </button>
         <button className={`chip ${presTab==="lab"?"active":""}`} onClick={()=>setPresTab("lab")}
-          style={presTab==="lab"?{background:"rgba(255,204,0,.15)",color:"#ffcc00",borderColor:"rgba(255,204,0,.4)"}:{}}>
-          ⚡ Lab {labAtts.length>0 && <span style={{background:"#ffcc00",color:"#111",borderRadius:99,fontSize:8,fontWeight:900,padding:"1px 5px",marginLeft:4}}>{labAtts.length}</span>}
+          style={presTab==="lab"?{background:"rgba(253,239,38,.15)",color:"#FDEF26",borderColor:"rgba(253,239,38,.4)"}:{}}>
+          ⚡ Lab {labAtts.length>0 && <span style={{background:"#FDEF26",color:"#111",borderRadius:99,fontSize:8,fontWeight:900,padding:"1px 5px",marginLeft:4}}>{labAtts.length}</span>}
         </button>
       </div>
 
@@ -3950,8 +3948,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
             </div>
           </div>
           {editConfig && (
-            <div style={{background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.25)",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#ffcc00",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>⚙️ Valore presenza oggi</div>
+            <div style={{background:"rgba(253,239,38,.06)",border:"1px solid rgba(253,239,38,.25)",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#FDEF26",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>⚙️ Valore presenza oggi</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
                 <div>
                   <label style={{fontSize:10,color:"var(--text3)",fontWeight:700,textTransform:"uppercase",display:"block",marginBottom:4}}>XP presenza</label>
@@ -4050,13 +4048,13 @@ function AttendanceView({ sectionColors, setSectionColors }) {
             <div className="empty">Nessun check-in Lab per oggi.</div>
           ) : (
             Object.entries(labAtts.reduce((acc,a)=>{ (acc[a.actName]=acc[a.actName]||[]).push(a); return acc; },{})).map(([labName,entries])=>(
-              <div key={labName} style={{marginBottom:14,background:"rgba(255,204,0,.04)",border:"1px solid rgba(255,204,0,.2)",borderRadius:14,padding:"12px 14px"}}>
-                <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:"#ffcc00",marginBottom:8}}>
+              <div key={labName} style={{marginBottom:14,background:"rgba(253,239,38,.04)",border:"1px solid rgba(253,239,38,.2)",borderRadius:14,padding:"12px 14px"}}>
+                <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:"#FDEF26",marginBottom:8}}>
                   ⚡ {labName} <span style={{fontSize:13,color:"var(--text3)",fontWeight:400}}>· {entries.length} check-in</span>
                 </div>
                 {entries.map(a=>(
                   <div key={a.id} style={{display:"flex",gap:10,alignItems:"center",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
-                    <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"1.5px solid rgba(255,204,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"1.5px solid rgba(253,239,38,.4)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                       <Avatar url={a.avatar_url} emoji={a.lv?.emoji} size={30}/>
                     </div>
                     <div style={{flex:1,fontSize:13,fontWeight:600,color:"var(--text)"}}>{a.playerName}</div>
@@ -4096,7 +4094,7 @@ function LabQRButton({ actId, actName }) {
         {loading ? "⏳ Generazione…" : show ? "▲ Nascondi QR Lab" : "📍 Genera / Mostra QR Lab oggi"}
       </button>
       {show && code && (
-        <div style={{marginTop:8,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(0,212,255,.2)"}}>
+        <div style={{marginTop:8,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(163,207,254,.2)"}}>
           <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".08em"}}>QR Lab · {actName} · {new Date().toLocaleDateString("it-IT")}</div>
           <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${code}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={code} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
           <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8,cursor:"pointer"}}
@@ -4305,10 +4303,10 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               <button className="delete-btn" onClick={() => deleteActivity(a.id)}>✕</button>
               <div className="act-title">{a.name}</div>
               <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
-              {a.schedule && <div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
+              {a.schedule && <div style={{fontSize:11,color:"#FDEF26",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
               <LabQRButton actId={a.id} actName={a.name}/>
-              <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,color:"#ffcc00"}}
+              <button className="btn btn-ghost btn-xs" style={{width:"100%",marginTop:6,color:"#FDEF26"}}
                 onClick={()=>openEdit(a)}>
                 ✏️ Modifica Lab
               </button>
@@ -4318,7 +4316,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
               </button>
               {a.link && (
                 <a href={a.link} target="_blank" rel="noreferrer"
-                  style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(0,212,255,.06)", border:"1px solid rgba(0,212,255,.18)", borderRadius:8, padding:"4px 10px", marginBottom:8 }}>
+                  style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(163,207,254,.06)", border:"1px solid rgba(163,207,254,.18)", borderRadius:8, padding:"4px 10px", marginBottom:8 }}>
                   🔗 Link / file allegato
                 </a>
               )}
@@ -4327,9 +4325,9 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
                 <span className="reward-tag coin-tag">🪙 {a.coin_cost}</span>
                 {a.max_participants && (
                   <span className="reward-tag" style={{
-                    background: (bookingCounts[a.id]||0) >= a.max_participants ? "rgba(255,34,68,.12)" : "rgba(0,255,136,.08)",
+                    background: (bookingCounts[a.id]||0) >= a.max_participants ? "rgba(255,34,68,.12)" : "rgba(51,153,102,.08)",
                     color: (bookingCounts[a.id]||0) >= a.max_participants ? "#ff4466" : "var(--neon-green)",
-                    border: `1px solid ${(bookingCounts[a.id]||0) >= a.max_participants ? "rgba(255,34,68,.25)" : "rgba(0,255,136,.2)"}`,
+                    border: `1px solid ${(bookingCounts[a.id]||0) >= a.max_participants ? "rgba(255,34,68,.25)" : "rgba(51,153,102,.2)"}`,
                   }}>
                     👥 {bookingCounts[a.id]||0}/{a.max_participants} iscritti
                     {(bookingCounts[a.id]||0) >= a.max_participants ? " · PIENO" : ` · ${a.max_participants-(bookingCounts[a.id]||0)} posti`}
@@ -4357,7 +4355,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
                 return (
                   <div key={p.id} onClick={()=>setSelectedPlayers(prev=>{const n=new Set(prev); n.has(p.id)?n.delete(p.id):n.add(p.id); return n;})}
                     style={{display:"flex",alignItems:"center",gap:8,padding:"8px",borderRadius:8,cursor:"pointer",
-                      background: sel ? "rgba(0,212,255,.12)" : "transparent"}}>
+                      background: sel ? "rgba(163,207,254,.12)" : "transparent"}}>
                     <span style={{fontSize:16}}>{sel?"☑️":"⬜"}</span>
                     {p.avatar_url ? <img src={p.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt=""/> : <span style={{fontSize:18}}>🌱</span>}
                     <div style={{flex:1,minWidth:0}}>
@@ -4424,7 +4422,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
                 return (
                   <div key={p.id} onClick={()=>setSelectedPlayers(prev=>{const n=new Set(prev); n.has(p.id)?n.delete(p.id):n.add(p.id); return n;})}
                     style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:8,cursor:"pointer",
-                      background: sel ? "rgba(0,212,255,.12)" : "transparent"}}>
+                      background: sel ? "rgba(163,207,254,.12)" : "transparent"}}>
                     <span style={{fontSize:14}}>{sel?"☑️":"⬜"}</span>
                     {p.avatar_url ? <img src={p.avatar_url} style={{width:24,height:24,borderRadius:"50%",objectFit:"cover"}} alt=""/> : <span>🌱</span>}
                     <span style={{flex:1,fontSize:13,fontWeight:600}}>{p.display_name}{p.first_name?` · ${p.first_name}`:""}</span>
@@ -4671,7 +4669,7 @@ function SfidaView({ sectionColors, setSectionColors }) {
               </div>
               {s.link && (
                 <a href={s.link} target="_blank" rel="noreferrer"
-                  style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(0,212,255,.08)", border:"1px solid rgba(0,212,255,.2)", borderRadius:8, padding:"4px 10px" }}>
+                  style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, color:"var(--azzurro)", fontWeight:700, textDecoration:"none", background:"rgba(163,207,254,.08)", border:"1px solid rgba(163,207,254,.2)", borderRadius:8, padding:"4px 10px" }}>
                   🔗 Apri link / file
                 </a>
               )}
@@ -4809,7 +4807,7 @@ function AvatarStickerPicker({ onSelect }) {
             style={{cursor:"pointer",borderRadius:12,padding:6,border:"2px solid transparent",
               background:"rgba(255,255,255,.04)",transition:"all .15s",
               display:"flex",flexDirection:"column",alignItems:"center",gap:3}}
-            onMouseOver={e=>{e.currentTarget.style.borderColor="var(--neon-blue)";e.currentTarget.style.background="rgba(0,212,255,.08)";}}
+            onMouseOver={e=>{e.currentTarget.style.borderColor="var(--neon-blue)";e.currentTarget.style.background="rgba(163,207,254,.08)";}}
             onMouseOut={e=>{e.currentTarget.style.borderColor="transparent";e.currentTarget.style.background="rgba(255,255,255,.04)";}}>
             <div style={{width:60,height:60}} dangerouslySetInnerHTML={{__html:s.svg}}/>
             <span style={{fontSize:9,color:"var(--text2)",fontWeight:700,textAlign:"center"}}>{s.label}</span>
@@ -5044,7 +5042,7 @@ function MessagesView({ profile }) {
             </select>
           )}
           {destType==="educators" && (
-            <div style={{fontSize:13,color:"var(--text3)",padding:"8px 12px",background:"rgba(0,212,255,.06)",border:"1px solid rgba(0,212,255,.2)",borderRadius:10,marginBottom:8}}>
+            <div style={{fontSize:13,color:"var(--text3)",padding:"8px 12px",background:"rgba(163,207,254,.06)",border:"1px solid rgba(163,207,254,.2)",borderRadius:10,marginBottom:8}}>
               Il messaggio verrà inviato a tutti gli altri giardinieri ({educators.filter(e=>e.id!==profile.id).length}).
             </div>
           )}
@@ -5064,7 +5062,7 @@ function MessagesView({ profile }) {
                   const sel = selectedPlayers.includes(p.id);
                   return (
                     <div key={p.id} onClick={()=>setSelectedPlayers(prev=>sel?prev.filter(id=>id!==p.id):[...prev,p.id])}
-                      style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:sel?"rgba(0,212,255,.1)":"transparent",borderBottom:"1px solid var(--border)",transition:"background .1s"}}>
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",background:sel?"rgba(163,207,254,.1)":"transparent",borderBottom:"1px solid var(--border)",transition:"background .1s"}}>
                       <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${sel?"var(--neon-blue)":"var(--border2)"}`,background:sel?"var(--neon-blue)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"#000",fontWeight:900}}>
                         {sel?"✓":""}
                       </div>
@@ -5460,7 +5458,7 @@ function AnnouncementsView({ profile }) {
       ) : (
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {announcements.map(a=>(
-            <div key={a.id} className="card" style={{position:"relative",border:a.pinned?"1.5px solid rgba(255,204,0,.4)":""}}>
+            <div key={a.id} className="card" style={{position:"relative",border:a.pinned?"1.5px solid rgba(253,239,38,.4)":""}}>
               {a.pinned&&<div style={{position:"absolute",top:10,right:12,fontSize:14}}>📌</div>}
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                 {a.profiles?.avatar_url
@@ -5500,8 +5498,8 @@ function PlayerAnnouncementsTab() {
       <div className="pd-tab-title">📢 Bacheca Annunci</div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {announcements.map(a=>(
-          <div key={a.id} className="pd-card" style={{padding:14,border:a.pinned?"1.5px solid rgba(255,204,0,.4)":""}}>
-            {a.pinned&&<div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📌 In evidenza</div>}
+          <div key={a.id} className="pd-card" style={{padding:14,border:a.pinned?"1.5px solid rgba(253,239,38,.4)":""}}>
+            {a.pinned&&<div style={{fontSize:11,color:"#FDEF26",fontWeight:700,marginBottom:4}}>📌 In evidenza</div>}
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               {a.profiles?.avatar_url
                 ? <img src={a.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt=""/>
@@ -5526,10 +5524,10 @@ function PlayerAnnouncementsTab() {
 function BachecaView({ profile }) {
   const [notes, setNotes] = useState([]);
   const [body, setBody] = useState("");
-  const [color, setColor] = useState("#ffcc00");
+  const [color, setColor] = useState("#FDEF26");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const COLORS = ["#ffcc00","#ff8787","#8ce99a","#74c0fc","#f783ac","#ffe066","#ffa94d","#e5dbff"];
+  const COLORS = ["#FDEF26","#FF6DEC","#A3CFFE","#339966","#D41323"];
 
   useEffect(() => { load(); }, []);
 
@@ -5619,7 +5617,7 @@ function BachecaView({ profile }) {
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
           {notes.map(n=>(
             <div key={n.id} style={{
-              background:n.color||"#ffcc00",
+              background:n.color||"#FDEF26",
               borderRadius:4,
               padding:"14px 14px 12px",
               position:"relative",
@@ -5632,13 +5630,13 @@ function BachecaView({ profile }) {
             onMouseOut={e=>e.currentTarget.style.transform=`rotate(${rotation(n.id)}deg)`}>
               {/* Puntina effetto */}
               <div style={{position:"absolute",top:-6,left:"50%",transform:"translateX(-50%)",width:12,height:12,borderRadius:"50%",background:"rgba(0,0,0,.3)",boxShadow:"0 2px 4px rgba(0,0,0,.3)"}}/>
-              <div style={{fontSize:13,color:"rgba(0,0,0,.85)",lineHeight:1.55,fontWeight:500,marginBottom:10,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{n.body}</div>
+              <div className="hand" style={{fontSize:17,color:(n.color==="#339966"||n.color==="#D41323")?"#fff":"rgba(0,0,0,.88)",lineHeight:1.45,marginBottom:10,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{n.body}</div>
               <div style={{display:"flex",alignItems:"center",gap:5,borderTop:"1px solid rgba(0,0,0,.1)",paddingTop:8}}>
                 {n.profiles?.avatar_url
                   ? <img src={n.profiles.avatar_url} style={{width:18,height:18,borderRadius:"50%",objectFit:"cover"}} alt=""/>
                   : <span style={{fontSize:12}}>🌱</span>}
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:10,color:"rgba(0,0,0,.7)",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.profiles?.display_name}</div>
+                  <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:10,color:(n.color==="#339966"||n.color==="#D41323")?"rgba(255,255,255,.85)":"rgba(0,0,0,.7)",fontWeight:800,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.profiles?.display_name}</div>
                   {n.created_at && <div style={{fontSize:8.5,color:"rgba(0,0,0,.45)",fontWeight:600}}>{new Date(n.created_at).toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"})} · {new Date(n.created_at).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</div>}
                 </div>
                 {n.educator_id===profile.id && (
@@ -5728,7 +5726,7 @@ function VisibilityView() {
         {sections.map(s => {
           const on = vis[s.key] !== false;
           return (
-            <div key={s.key} className="card-sm" style={{display:"flex",alignItems:"center",gap:14,cursor:"pointer",border:`1px solid ${on?"rgba(0,255,136,.2)":"rgba(255,34,68,.15)"}`,background:on?"rgba(0,255,136,.03)":"rgba(255,34,68,.03)"}}>
+            <div key={s.key} className="card-sm" style={{display:"flex",alignItems:"center",gap:14,cursor:"pointer",border:`1px solid ${on?"rgba(51,153,102,.2)":"rgba(255,34,68,.15)"}`,background:on?"rgba(51,153,102,.03)":"rgba(255,34,68,.03)"}}>
               <div style={{flex:1}} onClick={()=>toggle(s.key)}>
                 <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{s.label}</div>
                 <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{s.desc}</div>
@@ -5745,7 +5743,7 @@ function VisibilityView() {
           {saving ? "⏳ Salvataggio…" : saved ? "✅ Salvato!" : "💾 Salva impostazioni"}
         </button>
       </div>
-      <div style={{background:"rgba(0,212,255,.05)",border:"1px solid rgba(0,212,255,.12)",borderRadius:10,padding:"10px 14px",marginTop:12,fontSize:11,color:"var(--text3)"}}>
+      <div style={{background:"rgba(163,207,254,.05)",border:"1px solid rgba(163,207,254,.12)",borderRadius:10,padding:"10px 14px",marginTop:12,fontSize:11,color:"var(--text3)"}}>
         💡 Le modifiche locali sono immediate. Clicca "Salva" per renderle permanenti e condividerle su tutti i dispositivi.
       </div>
     </div>
@@ -5793,7 +5791,7 @@ function StreakConfigView() {
       <div style={{background:"rgba(255,120,0,.06)",border:"1px solid rgba(255,120,0,.2)",borderRadius:14,padding:"12px 16px",marginBottom:16,fontSize:13,color:"var(--text2)",lineHeight:1.5}}>
         Configura i requisiti per guadagnare il badge mensile. Il badge viene assegnato automaticamente al primo check-in del mese successivo se il giocatore ha raggiunto il minimo di presenze.
       </div>
-      {msg && <div style={{background:"rgba(0,255,136,.08)",border:"1px solid rgba(0,255,136,.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"var(--neon-green)",fontWeight:700}}>{msg}</div>}
+      {msg && <div style={{background:"rgba(51,153,102,.08)",border:"1px solid rgba(51,153,102,.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"var(--neon-green)",fontWeight:700}}>{msg}</div>}
       {loading ? <div className="loading">⏳</div> : (
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {months.map(m => {
@@ -5801,7 +5799,7 @@ function StreakConfigView() {
             const isPast = m.month < now.getMonth() + 1;
             const isCurrent = m.month === now.getMonth() + 1;
             return (
-              <div key={m.month} className="streak-month-card" style={{background:"rgba(8,18,40,0.9)",border:`1px solid ${isCurrent?"rgba(255,140,0,.3)":isPast?"rgba(0,255,136,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
+              <div key={m.month} className="streak-month-card" style={{background:"rgba(8,18,40,0.9)",border:`1px solid ${isCurrent?"rgba(212,19,35,.3)":isPast?"rgba(51,153,102,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:editing?.month===m.month?12:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <span style={{fontSize:20}}>{isPast?"✅":isCurrent?"🔥":"📅"}</span>
@@ -5959,7 +5957,7 @@ function MsgReactions({ msgId, myId }) {
       {EMOJIS.filter(e=>counts[e]||mine===e).map(e=>(
         <button key={e} onClick={()=>react(e)}
           style={{
-            background:mine===e?"rgba(0,212,255,.15)":"rgba(255,255,255,.06)",
+            background:mine===e?"rgba(163,207,254,.15)":"rgba(255,255,255,.06)",
             border:`1px solid ${mine===e?"var(--neon-blue)":"rgba(255,255,255,.1)"}`,
             borderRadius:99,fontSize:12,cursor:"pointer",
             padding:"3px 8px",display:"flex",alignItems:"center",gap:3,
@@ -6030,7 +6028,7 @@ function ProfileReactions({ targetId, myId }) {
               style={{
                 padding:"8px 14px",borderRadius:99,cursor:"pointer",
                 border:`2px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
-                background:isMe?"rgba(0,212,255,.15)":"rgba(255,255,255,.04)",
+                background:isMe?"rgba(163,207,254,.15)":"rgba(255,255,255,.04)",
                 fontSize:20,display:"flex",alignItems:"center",gap:6,
                 transform:isMe?"scale(1.1)":"scale(1)",
                 transition:"all .15s",
@@ -6146,7 +6144,7 @@ function CommunityTab({ players, myId, myProfile }) {
                               <button key={r} onClick={()=>react(pb.id,r)}
                                 style={{padding:"5px 10px",borderRadius:99,
                                   border:`1.5px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
-                                  background:isMe?"rgba(0,212,255,.15)":"rgba(255,255,255,.04)",
+                                  background:isMe?"rgba(163,207,254,.15)":"rgba(255,255,255,.04)",
                                   cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",gap:5,
                                   transform:isMe?"scale(1.1)":"scale(1)",transition:"all .15s",
                                 }}>
@@ -6181,16 +6179,16 @@ function CommunityTab({ players, myId, myProfile }) {
                 </div>
           : others.map((p,i)=>{
               const lv = getLevel(p.xp||0);
-              const rankColors = ["#ffcc00","#c0c0c0","#cd7f32"];
+              const rankColors = ["#FFD700","#C0C0C0","#CD7F32"];
               return (
                 <div key={p.id} onClick={()=>openPlayer(p)}
                   style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
                     background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",borderRadius:14,
                     cursor:"pointer",transition:"all .15s",position:"relative"}}
-                  onMouseOver={e=>{e.currentTarget.style.background="rgba(0,212,255,.06)";e.currentTarget.style.borderColor="rgba(0,212,255,.3)";}}
+                  onMouseOver={e=>{e.currentTarget.style.background="rgba(163,207,254,.06)";e.currentTarget.style.borderColor="rgba(163,207,254,.3)";}}
                   onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="var(--border)";}}>
                   {i<3 && <div style={{position:"absolute",top:8,right:10,fontSize:16}}>{["🥇","🥈","🥉"][i]}</div>}
-                  <div style={{width:46,height:46,borderRadius:"50%",overflow:"hidden",border:`2px solid ${i<3?rankColors[i]:"var(--border2)"}`,flexShrink:0,boxShadow:i===0?"0 0 12px rgba(255,204,0,.4)":"none"}}>
+                  <div style={{width:46,height:46,borderRadius:"50%",overflow:"hidden",border:`2px solid ${i<3?rankColors[i]:"var(--border2)"}`,flexShrink:0,boxShadow:i===0?"0 0 12px rgba(253,239,38,.4)":"none"}}>
                     <Avatar url={p.avatar_url} emoji={lv.emoji} size={46}/>
                   </div>
                   <div style={{flex:1,minWidth:0}}>
@@ -6249,7 +6247,7 @@ function XPHistoryChart({ playerId }) {
             <div style={{
               width:"100%",borderRadius:"3px 3px 0 0",
               height:`${Math.max((d.xp/max)*60,d.xp>0?4:0)}px`,
-              background:d.xp>0?"linear-gradient(180deg,var(--neon-blue),rgba(0,212,255,.4))":"rgba(255,255,255,.06)",
+              background:d.xp>0?"linear-gradient(180deg,var(--neon-blue),rgba(163,207,254,.4))":"rgba(255,255,255,.06)",
               transition:"height .3s ease",
             }}/>
           </div>
@@ -6377,7 +6375,7 @@ function InAppNotifBanner() {
       cursor:"pointer",
     }}>
       <style>{`@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}`}</style>
-      <div style={{width:40,height:40,borderRadius:12,background:"rgba(0,212,255,.15)",border:"1px solid rgba(0,212,255,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
+      <div style={{width:40,height:40,borderRadius:12,background:"rgba(163,207,254,.15)",border:"1px solid rgba(163,207,254,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
         {notif.title.startsWith("💬") ? "💬" : notif.title.startsWith("📢") ? "📢" : "🔔"}
       </div>
       <div style={{flex:1,minWidth:0}}>
@@ -6394,7 +6392,7 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t); }, [onDone]);
   useEffect(() => { try { playPixel("levelup"); } catch(_){} }, []);
   // Foglie e petali che cadono ondeggiando (effetto floreale celebrativo)
-  const leafColors = ["#00ff88","#3ddc84","#7CFC00","#ffcc00","#ff2d78","#aa44ff"];
+  const leafColors = ["#339966","#3ddc84","#7CFC00","#FDEF26","#FF6DEC","#FF6DEC"];
   const particles = Array.from({length:34},(_,i)=>({
     id:i, left:Math.random()*100, delay:Math.random()*1.8, dur:2.6+Math.random()*2.2,
     color:leafColors[i%6], size:10+Math.random()*14, rot:(Math.random()*720-360)+"deg",
@@ -6410,21 +6408,21 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
       `}</style>
       {particles.map(p=>(
         <div key={p.id} style={{position:"absolute",top:-20,left:`${p.left}%`,animation:`leaffall ${p.dur}s ${p.delay}s ease-in infinite`,["--r"]:p.rot,["--s"]:p.scale}}>
-          <div style={{animation:`leafsway ${1.2+Math.random()}s ease-in-out infinite`,fontSize:p.size,filter:"drop-shadow(0 0 4px rgba(0,255,136,.4))"}}>
+          <div style={{animation:`leafsway ${1.2+Math.random()}s ease-in-out infinite`,fontSize:p.size,filter:"drop-shadow(0 0 4px rgba(51,153,102,.4))"}}>
             {p.leaf ? "🍃" : "🌸"}
           </div>
         </div>
       ))}
-      <div style={{background:"linear-gradient(135deg,#0d1428,#1a2540)",border:"2px solid rgba(255,204,0,.5)",borderRadius:28,padding:"40px 48px",textAlign:"center",animation:"lvlpop .6s cubic-bezier(.34,1.56,.64,1) forwards",position:"relative",overflow:"hidden",maxWidth:340,width:"90%",boxShadow:"0 0 60px rgba(255,204,0,.25)"}}>
+      <div style={{background:"linear-gradient(135deg,#0d1428,#1a2540)",border:"2px solid rgba(253,239,38,.5)",borderRadius:28,padding:"40px 48px",textAlign:"center",animation:"lvlpop .6s cubic-bezier(.34,1.56,.64,1) forwards",position:"relative",overflow:"hidden",maxWidth:340,width:"90%",boxShadow:"0 0 60px rgba(253,239,38,.25)"}}>
         <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"linear-gradient(105deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%)",animation:"lvlshine 2.5s .6s ease-in-out infinite"}}/>
         <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".2em",color:"rgba(255,255,255,.4)",marginBottom:8}}>🌿 SEI CRESCIUTO! 🌿</div>
-        <div style={{fontSize:76,lineHeight:1,marginBottom:10,filter:"drop-shadow(0 0 16px rgba(255,204,0,.5))"}}>{newLevel.emoji}</div>
-        <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:34,fontWeight:900,textTransform:"uppercase",background:"linear-gradient(135deg,#ffcc00,#ff8c00)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>{newLevel.name}</div>
-        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:20}}>Hai sbloccato il livello <strong style={{color:"#ffcc00"}}>{newLevel.name}</strong>!</div>
+        <div style={{fontSize:76,lineHeight:1,marginBottom:10,filter:"drop-shadow(0 0 16px rgba(253,239,38,.5))"}}>{newLevel.emoji}</div>
+        <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:34,fontWeight:900,textTransform:"uppercase",background:"linear-gradient(135deg,#FDEF26,#D41323)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>{newLevel.name}</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:20}}>Hai sbloccato il livello <strong style={{color:"#FDEF26"}}>{newLevel.name}</strong>!</div>
         <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:18}}>
           <div style={{textAlign:"center",opacity:.6}}><div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>PRIMA</div><div style={{fontSize:20}}>{oldLevel.emoji}</div><div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{oldLevel.name}</div></div>
-          <div style={{display:"flex",alignItems:"center",fontSize:18,color:"#ffcc00"}}>→</div>
-          <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#ffcc00",marginBottom:4,fontWeight:700}}>ORA</div><div style={{fontSize:24}}>{newLevel.emoji}</div><div style={{fontSize:13,color:"#ffcc00",fontWeight:700}}>{newLevel.name}</div></div>
+          <div style={{display:"flex",alignItems:"center",fontSize:18,color:"#FDEF26"}}>→</div>
+          <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#FDEF26",marginBottom:4,fontWeight:700}}>ORA</div><div style={{fontSize:24}}>{newLevel.emoji}</div><div style={{fontSize:13,color:"#FDEF26",fontWeight:700}}>{newLevel.name}</div></div>
         </div>
         <div style={{fontSize:10,color:"rgba(255,255,255,.2)",animation:"pulse2 2s infinite"}}>Tocca per continuare</div>
       </div>
@@ -6478,9 +6476,9 @@ function AnimatedLevelBar({ xp, lv }) {
     <div>
       {/* Nome livello centrato, % a destra */}
       <div style={{position:'relative',display:'flex',justifyContent:'center',alignItems:'center',gap:8,marginBottom:7}}>
-        <span style={{fontSize:26,lineHeight:1,filter:'drop-shadow(0 0 6px rgba(170,68,255,.6))'}}>{lv.emoji}</span>
+        <span style={{fontSize:26,lineHeight:1,filter:'drop-shadow(0 0 6px rgba(255,109,236,.6))'}}>{lv.emoji}</span>
         <span style={{fontFamily:"'Funnel Display',sans-serif",fontSize:22,fontWeight:900,textTransform:'uppercase',letterSpacing:'.03em',lineHeight:1}}>{lv.name}</span>
-        <div style={{position:'absolute',right:0,fontFamily:"'Funnel Display',sans-serif",fontSize:24,fontWeight:900,lineHeight:.9,color:bump?'#ff2d78':'#aa44ff',transition:'color .3s ease'}}>
+        <div style={{position:'absolute',right:0,fontFamily:"'Funnel Display',sans-serif",fontSize:24,fontWeight:900,lineHeight:.9,color:bump?'#FF6DEC':'#FF6DEC',transition:'color .3s ease'}}>
           {shownPct}<span style={{fontSize:14}}>%</span>
         </div>
       </div>
@@ -6489,13 +6487,13 @@ function AnimatedLevelBar({ xp, lv }) {
       <div style={{
         height:22, background:'rgba(0,0,0,.45)', borderRadius:12, overflow:'hidden', position:'relative',
         border:'2px solid rgba(255,255,255,.12)',
-        boxShadow: bump ? '0 0 22px rgba(255,45,120,.6), inset 0 2px 6px rgba(0,0,0,.5)' : 'inset 0 2px 6px rgba(0,0,0,.5)',
+        boxShadow: bump ? '0 0 22px rgba(255,109,236,.6), inset 0 2px 6px rgba(0,0,0,.5)' : 'inset 0 2px 6px rgba(0,0,0,.5)',
         transform: bump ? 'scale(1.02)' : 'scale(1)', transition:'transform .25s ease, box-shadow .3s ease',
       }}>
         <div style={{
           height:'100%', width:width+'%', borderRadius:9, position:'relative', overflow:'hidden',
-          background:'linear-gradient(90deg,#6644ff,#aa44ff 50%,#ff2d78)',
-          boxShadow:'0 0 16px rgba(170,68,255,.7)',
+          background:'linear-gradient(90deg,#339966,#FDEF26 50%,#FF6DEC)',
+          boxShadow:'0 0 16px rgba(255,109,236,.7)',
           transition:'width 1.1s cubic-bezier(.22,1.5,.4,1)',
         }}>
           {/* Strisce diagonali che scorrono (effetto caricamento da gioco) */}
@@ -6507,7 +6505,7 @@ function AnimatedLevelBar({ xp, lv }) {
 
       {/* Numeri XP grossi sotto la barra */}
       <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:13}}>
-        <span style={{color:'#ffcc00'}}>{xp} XP</span>
+        <span style={{color:'#FDEF26'}}>{xp} XP</span>
         <span style={{color:'rgba(255,255,255,.4)'}}>{nextLv?.xp || 'MAX'} XP</span>
       </div>
 
@@ -6516,7 +6514,7 @@ function AnimatedLevelBar({ xp, lv }) {
           mancano {remaining} xp a {nextLv.name}
         </div>
       ) : (
-        <div style={{fontSize:13,color:'#ffcc00',marginTop:6,fontWeight:900,textAlign:'center'}}>🏆 LIVELLO MASSIMO!</div>
+        <div style={{fontSize:13,color:'#FDEF26',marginTop:6,fontWeight:900,textAlign:'center'}}>🏆 LIVELLO MASSIMO!</div>
       )}
     </div>
   );
@@ -6905,7 +6903,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         <div style={{textAlign:'center'}}>
           <div style={{fontSize:12,color:'rgba(255,255,255,.4)',marginBottom:12}}>Qualcosa non va — riprova</div>
           <button onClick={()=>{ loadingRef.current=false; setLoading(false); load(); }}
-            style={{background:'rgba(0,212,255,.15)',border:'1px solid rgba(0,212,255,.4)',borderRadius:99,padding:'10px 24px',color:'#00d4ff',fontSize:14,fontWeight:700,cursor:'pointer'}}>
+            style={{background:'rgba(163,207,254,.15)',border:'1px solid rgba(163,207,254,.4)',borderRadius:99,padding:'10px 24px',color:'#A3CFFE',fontSize:14,fontWeight:700,cursor:'pointer'}}>
             🔄 Ricarica
           </button>
         </div>
@@ -6967,7 +6965,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           {visConfig.squadre !== false && fullProfile?.squads?.name && (
-            <div style={{background:'#111',color:'#ffcc00',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
+            <div style={{background:'#111',color:'#FDEF26',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
           )}
           <button onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,padding:'5px 9px',cursor:'pointer',fontSize:14,lineHeight:1}} title="Cambia tema">
             {playerTheme==="dark"?"☀️":"🌙"}
@@ -7012,7 +7010,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             {/* Profile card: thumbnail + nome editabile + XP */}
             <div className="pd-card">
               <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
-                <div style={{width:52,height:52,borderRadius:10,border:'2px solid rgba(255,204,0,.6)',overflow:'hidden',flexShrink:0,background:'rgba(0,0,0,.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{width:52,height:52,borderRadius:10,border:'2px solid rgba(253,239,38,.6)',overflow:'hidden',flexShrink:0,background:'rgba(0,0,0,.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
                   <Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={52}/>
                 </div>
                 <div style={{flex:1}}>
@@ -7080,7 +7078,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             {/* Streak */}
             {visConfig.streak !== false && ((fullProfile.current_streak||0) > 0 || (fullProfile.longest_streak||0) > 0) && (
               <div className="streak-card">
-                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(255,140,0,.7)',marginBottom:8}}>🔥 Streak presenze</div>
+                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(212,19,35,.7)',marginBottom:8}}>🔥 Streak presenze</div>
                 <div className="streak-row">
                   <div className="streak-item"><span className="streak-val">{fullProfile.current_streak||0}</span><span className="streak-lbl"><span className="flame-pulse">🔥</span> Giorni attuali</span></div>
                   <div className="streak-item"><span className="streak-val">{fullProfile.longest_streak||0}</span><span className="streak-lbl">Record</span></div>
@@ -7215,9 +7213,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
         {tab === "attivita" && (
           <div style={{ marginTop: 8 }}>
-            <div className="pd-tab-title" style={{color:"#00ff88"}}>⚡ Lab</div>
+            <div className="pd-tab-title" style={{color:"#339966"}}>⚡ Lab</div>
             {/* Lab QR check-in */}
-            <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(0,255,136,.2)",borderRadius:14,padding:12,marginBottom:12,position:"relative",zIndex:2}}>
+            <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(51,153,102,.2)",borderRadius:14,padding:12,marginBottom:12,position:"relative",zIndex:2}}>
               <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"var(--neon-green)",marginBottom:8}}>📍 Check-in Lab — scansiona il QR della sessione</div>
               {showCamera ? (
                 <QRScanner onScan={code=>{setShowCamera(false);doCheckin(code);}} onClose={()=>setShowCamera(false)}/>
@@ -7237,7 +7235,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
                   <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
-                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,color:"var(--azzurro)",fontWeight:700,textDecoration:"none",background:"rgba(0,212,255,.1)",border:"1px solid rgba(0,212,255,.25)",borderRadius:8,padding:"4px 10px"}}>🔗 Apri link</a>}
+                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,color:"var(--azzurro)",fontWeight:700,textDecoration:"none",background:"rgba(163,207,254,.1)",border:"1px solid rgba(163,207,254,.25)",borderRadius:8,padding:"4px 10px"}}>🔗 Apri link</a>}
                 </div>
               </div>
             ))}
@@ -7247,7 +7245,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
                   <div className="act-title">{a.name}</div>
                   <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
-                  {a.schedule && <div style={{fontSize:11,color:"#ffcc00",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
+                  {a.schedule && <div style={{fontSize:11,color:"#FDEF26",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
                   {a.educator_id && <div style={{ fontSize: 12, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab guidato</div>}
                   {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--azzurro)", display: "block", marginBottom: 8 }}>🔗 Scopri di più</a>}
                   <div className="act-rewards" style={{ marginBottom: 10 }}>
@@ -7358,7 +7356,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             <NotificheTab profile={profile} />
             <div style={{height:1,background:"var(--border)",margin:"20px 0 14px"}}/>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-            <div className="pd-tab-title" style={{color:"#ffcc00",marginBottom:0}}>🔔 Notifiche</div>
+            <div className="pd-tab-title" style={{color:"#FDEF26",marginBottom:0}}>🔔 Notifiche</div>
             {notifications.length > 0 && (
               <button onClick={async()=>{
                 await sb.from("notifications").delete().eq("user_id",profile.id);
@@ -7495,7 +7493,7 @@ function DashboardView() {
         {[
           ["Giocatori attivi", stats.active.length, "🌿", "var(--neon-green)"],
           ["XP totali", stats.totalXP.toLocaleString(), "⭐", "var(--neon-blue)"],
-          ["Presenti oggi", stats.todayAtt.length, "✅", "#ffcc00"],
+          ["Presenti oggi", stats.todayAtt.length, "✅", "#FDEF26"],
           ["Badge questo mese", stats.badges.length, "🎖️", "var(--rosa)"],
           ["Lab attivi", stats.labs.length, "⚡", "var(--verde)"],
           ["Prenotazioni mese", stats.bookings.length, "📋", "var(--azzurro)"],
@@ -7519,7 +7517,7 @@ function DashboardView() {
             return (
               <div key={d.date} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                 <div style={{fontSize:10,color:"var(--neon-blue)",fontWeight:700}}>{count||""}</div>
-                <div style={{width:"100%",background:isToday?"var(--neon-blue)":"rgba(0,212,255,.25)",borderRadius:"4px 4px 0 0",height:Math.max(4,pct*0.7)+"px",transition:"height .4s",minHeight:4}}/>
+                <div style={{width:"100%",background:isToday?"var(--neon-blue)":"rgba(163,207,254,.25)",borderRadius:"4px 4px 0 0",height:Math.max(4,pct*0.7)+"px",transition:"height .4s",minHeight:4}}/>
                 <div style={{fontSize:9,color:isToday?"var(--neon-blue)":"var(--text3)",fontWeight:isToday?700:400,textTransform:"capitalize"}}>{d.label}</div>
               </div>
             );
@@ -7535,7 +7533,7 @@ function DashboardView() {
             const maxXp = stats.top5[0]?.xp||1;
             return (
               <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-                <div style={{fontSize:12,fontWeight:900,color:["#ffcc00","#aac8e0","#d4916a"][i]||"var(--text3)",width:18,textAlign:"center"}}>{i+1}</div>
+                <div style={{fontSize:12,fontWeight:900,color:["#FDEF26","#aac8e0","#d4916a"][i]||"var(--text3)",width:18,textAlign:"center"}}>{i+1}</div>
                 <div style={{flex:1}}>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--text)",marginBottom:2}}>{p.display_name||"—"}</div>
                   <div style={{height:4,background:"rgba(255,255,255,.06)",borderRadius:99,overflow:"hidden"}}>
@@ -7571,7 +7569,7 @@ function DashboardView() {
           <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid var(--border)"}}>
             <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:8}}>Prenotazioni mese</div>
             <div style={{display:"flex",gap:8}}>
-              {[["confirmed","✅","var(--verde)"],["pending","⏳","#ffcc00"],["rejected","❌","var(--danger)"]].map(([status,icon,color])=>{
+              {[["confirmed","✅","var(--verde)"],["pending","⏳","#FDEF26"],["rejected","❌","var(--danger)"]].map(([status,icon,color])=>{
                 const c = stats.bookings.filter(b=>b.status===status).length;
                 return <div key={status} style={{flex:1,textAlign:"center",padding:"6px 4px",background:"rgba(255,255,255,.03)",borderRadius:8}}>
                   <div style={{fontSize:14}}>{icon}</div>
@@ -7664,10 +7662,10 @@ function PuliziaView() {
 
   return (
     <div>
-      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#ff8c00",marginBottom:4}}>🧹 Pulizia account</div>
+      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#D41323",marginBottom:4}}>🧹 Pulizia account</div>
       <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Seleziona un giocatore per vedere e gestire notifiche e prenotazioni</div>
 
-      {msg && <div style={{background:"rgba(0,255,136,.08)",border:"1px solid rgba(0,255,136,.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
+      {msg && <div style={{background:"rgba(51,153,102,.08)",border:"1px solid rgba(51,153,102,.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
 
       {/* Player selector */}
       <div style={{marginBottom:16}}>
@@ -7691,7 +7689,7 @@ function PuliziaView() {
         <div>
           {/* Player header */}
           <div style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
-            <div style={{width:44,height:44,borderRadius:"50%",border:"2px solid rgba(255,140,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+            <div style={{width:44,height:44,borderRadius:"50%",border:"2px solid rgba(212,19,35,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
               {selected.id==="__all__" ? "🌍" : selected.avatar_url ? <img src={selected.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt=""/> : getLevel(selected.xp||0).emoji}
             </div>
             <div style={{flex:1}}>
@@ -7714,7 +7712,7 @@ function PuliziaView() {
                   <div key={n.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
                     <span style={{fontSize:16,flexShrink:0}}>{typeIcon[n.type]||"🔔"}</span>
                     <div style={{flex:1,minWidth:0}}>
-                      {selected?.id==="__all__" && n._playerName && <div style={{fontSize:10,color:"#ffcc00",fontWeight:700,marginBottom:1}}>{n._playerName}</div>}
+                      {selected?.id==="__all__" && n._playerName && <div style={{fontSize:10,color:"#FDEF26",fontWeight:700,marginBottom:1}}>{n._playerName}</div>}
                       <div style={{fontSize:12,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.title}</div>
                       {n.body&&<div style={{fontSize:10,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.body}</div>}
                       <div style={{fontSize:9,color:"var(--text3)"}}>{new Date(n.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
@@ -7738,7 +7736,7 @@ function PuliziaView() {
                   <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"rgba(255,255,255,.03)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
                     <span style={{fontSize:14,flexShrink:0}}>{statusTag[b.status]||"?"}</span>
                     <div style={{flex:1,minWidth:0}}>
-                      {selected?.id==="__all__" && b._playerName && <div style={{fontSize:10,color:"#ffcc00",fontWeight:700,marginBottom:1}}>{b._playerName}</div>}
+                      {selected?.id==="__all__" && b._playerName && <div style={{fontSize:10,color:"#FDEF26",fontWeight:700,marginBottom:1}}>{b._playerName}</div>}
                       <div style={{fontSize:12,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.activities?.name||"Lab eliminato"}</div>
                       <div style={{fontSize:10,color:"var(--text3)"}}>🪙 {b.coin_held||0} · {new Date(b.created_at).toLocaleDateString("it-IT")}</div>
                     </div>
@@ -7851,11 +7849,11 @@ function AdminAccountCard({ profile }) {
   }
 
   return (
-    <div className="card-sm" style={{marginBottom:16,border:"1px solid rgba(255,204,0,.35)"}}>
+    <div className="card-sm" style={{marginBottom:16,border:"1px solid rgba(253,239,38,.35)"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
         <div style={{fontSize:22}}>👑</div>
         <div style={{flex:1}}>
-          <div style={{fontWeight:800,color:"#ffcc00"}}>Account Admin</div>
+          <div style={{fontWeight:800,color:"#FDEF26"}}>Account Admin</div>
           <div style={{fontSize:12,color:"var(--text3)"}}>Cambia nome o email per cedere l'account · {curEmail || "…"}</div>
         </div>
         <div style={{fontSize:14,color:"var(--text3)"}}>{open ? "▲" : "▼"}</div>
@@ -7863,7 +7861,7 @@ function AdminAccountCard({ profile }) {
 
       {open && (
         <div style={{marginTop:14}}>
-          {msg && <div style={{background:"rgba(0,255,136,.1)",border:"1px solid rgba(0,255,136,.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
+          {msg && <div style={{background:"rgba(51,153,102,.1)",border:"1px solid rgba(51,153,102,.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
           {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
 
           <div className="form-group">
@@ -7954,10 +7952,10 @@ function AdminView({ profile }) {
           </div>
         </div>
       )}
-      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#ffcc00",marginBottom:16}}>⚙️ Gestione Giardinieri</div>
+      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"#FDEF26",marginBottom:16}}>⚙️ Gestione Giardinieri</div>
 
       <AdminAccountCard profile={profile} />
-      {msg && <div style={{background:"rgba(0,255,136,.1)",border:"1px solid rgba(0,255,136,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
+      {msg && <div style={{background:"rgba(51,153,102,.1)",border:"1px solid rgba(51,153,102,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
       {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
 
       <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
@@ -7970,7 +7968,7 @@ function AdminView({ profile }) {
           {educators.length === 0 && <div className="empty">Nessun giardiniere ancora.</div>}
           {educators.map(e => (
             <div key={e.id} className="card-sm" style={{display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.3)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
+              <div style={{width:40,height:40,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(253,239,38,.3)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
                 {e.avatar_url ? <img src={e.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/> : "🌱"}
               </div>
               <div style={{flex:1}}>
@@ -8006,9 +8004,9 @@ function AdminView({ profile }) {
           <div className="modal" onClick={e=>e.stopPropagation()}>
             <div className="modal-title">🖼️ Cambia avatar giardiniere</div>
             {editAvatar.avatar_url && (
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px",background:"rgba(253,239,38,.06)",border:"1px solid rgba(253,239,38,.2)",borderRadius:10}}>
                 <img src={editAvatar.avatar_url} style={{width:52,height:52,objectFit:"contain",borderRadius:8}} alt=""/>
-                <div style={{fontSize:12,color:"#ffcc00",flex:1}}>{editAvatar.avatar_url.split("/").pop().replace(".webp","")}</div>
+                <div style={{fontSize:12,color:"#FDEF26",flex:1}}>{editAvatar.avatar_url.split("/").pop().replace(".webp","")}</div>
                 <button className="btn btn-ghost btn-xs" onClick={()=>setEditAvatar(p=>({...p,avatar_url:""}))}>✕</button>
               </div>
             )}
@@ -8019,7 +8017,7 @@ function AdminView({ profile }) {
             <InlineAvatarUpload playerId={editAvatar.id} onUploaded={url=>{setEditAvatar(p=>({...p,avatar_url:url}));saveAvatar(editAvatar.id,url);}}/>
             <div style={{display:"flex",gap:8,marginTop:12}}>
               <button className="btn btn-primary" style={{flex:1}} onClick={()=>saveAvatar(editAvatar.id,editAvatar.avatar_url)}>Salva avatar</button>
-              <button className="btn btn-ghost btn-sm" style={{color:"rgba(255,204,0,.8)",borderColor:"rgba(255,204,0,.3)"}} onClick={()=>{setEditAvatar(null);setResetTarget(editAvatar);}}>🔑 Password</button>
+              <button className="btn btn-ghost btn-sm" style={{color:"rgba(253,239,38,.8)",borderColor:"rgba(253,239,38,.3)"}} onClick={()=>{setEditAvatar(null);setResetTarget(editAvatar);}}>🔑 Password</button>
               <button className="btn btn-ghost btn-sm" onClick={()=>setEditAvatar(null)}>Annulla</button>
             </div>
           </div>
@@ -8028,17 +8026,17 @@ function AdminView({ profile }) {
 
       {/* Form crea */}
       {showCreate && (
-        <div className="card" style={{border:"1px solid rgba(255,204,0,.25)"}}>
-          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:22,fontWeight:900,color:"#ffcc00",marginBottom:14}}>Nuovo giardiniere</div>
+        <div className="card" style={{border:"1px solid rgba(253,239,38,.25)"}}>
+          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:22,fontWeight:900,color:"#FDEF26",marginBottom:14}}>Nuovo giardiniere</div>
           <div className="form-group"><label className="form-label">Nome visualizzato *</label><input className="form-input" value={form.display_name} onChange={e=>setForm(f=>({...f,display_name:e.target.value}))} placeholder="es. Massi"/></div>
           <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="giardiniere@email.com"/></div>
           <div className="form-group"><label className="form-label">Password * (min 6 caratteri)</label><input className="form-input" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="es. pug2026!"/></div>
           <div className="form-group">
             <label className="form-label">Avatar</label>
             {form.avatar_url && (
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(255,204,0,.06)",border:"1px solid rgba(255,204,0,.2)",borderRadius:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(253,239,38,.06)",border:"1px solid rgba(253,239,38,.2)",borderRadius:10}}>
                 <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt=""/>
-                <div style={{flex:1,fontSize:12,color:"#ffcc00"}}>{form.avatar_url.split("/").pop().replace(".webp","")}</div>
+                <div style={{flex:1,fontSize:12,color:"#FDEF26"}}>{form.avatar_url.split("/").pop().replace(".webp","")}</div>
                 <button className="btn btn-ghost btn-xs" onClick={()=>setForm(f=>({...f,avatar_url:""}))}>✕</button>
               </div>
             )}
@@ -8158,15 +8156,15 @@ function BigTopPlayerView({ fullProfile, setFullProfile }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      <div className="pd-tab-title" style={{color:"#ff8c00"}}>🎪 BIG TOP</div>
+      <div className="pd-tab-title" style={{color:"#D41323"}}>🎪 BIG TOP</div>
 
       {/* Check-in col codice */}
-      <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(255,140,0,.25)",borderRadius:14,padding:12,marginBottom:12}}>
-        <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"#ff8c00",marginBottom:8}}>📍 Check-in BIG TOP — inserisci il codice del turno</div>
+      <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(212,19,35,.25)",borderRadius:14,padding:12,marginBottom:12}}>
+        <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"#D41323",marginBottom:8}}>📍 Check-in BIG TOP — inserisci il codice del turno</div>
         <div style={{display:"flex",gap:8}}>
           <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="CODICE"
             maxLength={8}
-            style={{flex:1,padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid rgba(255,140,0,.3)",borderRadius:10,color:"var(--text)",fontSize:16,fontWeight:900,letterSpacing:4,textAlign:"center"}}/>
+            style={{flex:1,padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid rgba(212,19,35,.3)",borderRadius:10,color:"var(--text)",fontSize:16,fontWeight:900,letterSpacing:4,textAlign:"center"}}/>
           <button className="btn btn-primary btn-sm" disabled={busy||code.trim().length<4} onClick={checkin}>{busy?"⏳":"Vai"}</button>
         </div>
       </div>
@@ -8198,13 +8196,13 @@ function BigTopPlayerView({ fullProfile, setFullProfile }) {
                 onClick={selectable ? ()=>toggle(s.id) : undefined}
                 style={{
                   display:"flex",alignItems:"center",gap:10,padding:"10px 12px",marginBottom:6,
-                  background: sel.has(s.id) ? "rgba(255,140,0,.18)" : "rgba(0,0,0,.35)",
-                  border: sel.has(s.id) ? "1.5px solid #ff8c00" : "1px solid var(--border2)",
+                  background: sel.has(s.id) ? "rgba(212,19,35,.18)" : "rgba(0,0,0,.35)",
+                  border: sel.has(s.id) ? "1.5px solid #D41323" : "1px solid var(--border2)",
                   borderRadius:12, opacity: isPast ? .5 : 1,
                   cursor: selectable ? "pointer" : "default", transition:"all .15s ease",
                 }}>
                 {selectable && (
-                  <div style={{width:20,height:20,borderRadius:6,border:"2px solid #ff8c00",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#ff8c00",flexShrink:0}}>
+                  <div style={{width:20,height:20,borderRadius:6,border:"2px solid #D41323",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#D41323",flexShrink:0}}>
                     {sel.has(s.id) ? "✓" : ""}
                   </div>
                 )}
@@ -8220,7 +8218,7 @@ function BigTopPlayerView({ fullProfile, setFullProfile }) {
                   </div>
                 </div>
                 {my === "booked" && !isPast && canCancel(s) && (
-                  <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={e=>{e.stopPropagation();cancel(s.id);}}>Disdici</button>
+                  <button className="btn btn-ghost btn-xs" style={{color:"#D41323"}} onClick={e=>{e.stopPropagation();cancel(s.id);}}>Disdici</button>
                 )}
               </div>
             );
@@ -8230,7 +8228,7 @@ function BigTopPlayerView({ fullProfile, setFullProfile }) {
 
       {sel.size > 0 && (
         <button className="btn btn-primary" disabled={busy}
-          style={{position:"sticky",bottom:12,width:"100%",fontSize:16,fontWeight:900,boxShadow:"0 4px 20px rgba(255,140,0,.4)"}}
+          style={{position:"sticky",bottom:12,width:"100%",fontSize:16,fontWeight:900,boxShadow:"0 4px 20px rgba(212,19,35,.4)"}}
           onClick={book}>
           {busy ? "⏳…" : `🎪 Prenota ${sel.size} ${sel.size === 1 ? "turno" : "turni"}`}
         </button>
@@ -8362,7 +8360,7 @@ function BigTopEducatorView({ profile }) {
     load();
   }
 
-  const STATUS = { booked: ["📌", "prenotato", "var(--neon-blue)"], present: ["✅", "presente", "#00ff88"], absent: ["❌", "assente", "#ff4d6d"], cancelled: ["🚫", "disdetto", "var(--text3)"] };
+  const STATUS = { booked: ["📌", "prenotato", "var(--neon-blue)"], present: ["✅", "presente", "#339966"], absent: ["❌", "assente", "#D41323"], cancelled: ["🚫", "disdetto", "var(--text3)"] };
 
   return (
     <div>
@@ -8389,7 +8387,7 @@ function BigTopEducatorView({ profile }) {
             <div>
               <div style={{fontWeight:900,fontSize:15}}>
                 {new Date(s.date+"T12:00").toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})} · {s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}
-                {dead && <span style={{color:"#ff4d6d",fontSize:11,marginLeft:8}}>ANNULLATO</span>}
+                {dead && <span style={{color:"#D41323",fontSize:11,marginLeft:8}}>ANNULLATO</span>}
               </div>
               <div style={{fontSize:12,color:"var(--text3)"}}>
                 👥 {t}/{s.max_participants} · {s.xp_checkin>0 && `+${s.xp_checkin} XP `}{s.coin_checkin>0 && `+${s.coin_checkin} 🪙`}{s.xp_checkin===0&&s.coin_checkin===0&&"nessun punto extra"}
@@ -8397,16 +8395,16 @@ function BigTopEducatorView({ profile }) {
             </div>
             <div style={{display:"flex",gap:6,marginLeft:"auto",flexWrap:"wrap"}}>
               {!dead && <button className="btn btn-ghost btn-xs" onClick={()=>showQr(s.id)}>{qrShow[s.id]?"▲ QR":"📍 QR"}</button>}
-              {!dead && <button className="btn btn-ghost btn-xs" style={{color:"#ffcc00"}} onClick={()=>setEditSlot({...s})}>✏️</button>}
+              {!dead && <button className="btn btn-ghost btn-xs" style={{color:"#FDEF26"}} onClick={()=>setEditSlot({...s})}>✏️</button>}
               <button className="btn btn-ghost btn-xs" onClick={()=>setExpanded(expanded===s.id?null:s.id)}>👥</button>
               {!dead && isPast(s) === false && s.date === localToday() && null}
-              {!dead && s.date <= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={()=>markAbsents(s)}>Assenti</button>}
-              {!dead && s.date >= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#ff4d6d"}} onClick={()=>cancelSlot(s)}>🚫</button>}
+              {!dead && s.date <= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#D41323"}} onClick={()=>markAbsents(s)}>Assenti</button>}
+              {!dead && s.date >= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#D41323"}} onClick={()=>cancelSlot(s)}>🚫</button>}
             </div>
           </div>
 
           {qrShow[s.id] && (
-            <div style={{marginTop:10,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(0,212,255,.2)"}}>
+            <div style={{marginTop:10,background:"rgba(0,0,0,.5)",borderRadius:12,padding:12,textAlign:"center",border:"1px solid rgba(163,207,254,.2)"}}>
               <div style={{fontSize:10,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:".08em"}}>QR BIG TOP · {s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}</div>
               <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qrShow[s.id]}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={qrShow[s.id]} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
               <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8,cursor:"pointer"}}
@@ -8576,7 +8574,7 @@ function ExportView() {
   const exports = [
     { id:"players", label:"👥 Giocatori", desc:"Nickname, nome, squadra, XP, Coin, streak, livello", fn: exportPlayers, color:"var(--azzurro)" },
     { id:"att",     label:"📅 Presenze complete", desc:"Tutte le presenze: data, tipo, lab, XP, QR verificato", fn: exportAttendances, color:"var(--neon-green)" },
-    { id:"labs",    label:"⚡ Riepilogo Lab", desc:"Lab attivi con prenotazioni e check-in totali", fn: exportLabs, color:"#ffcc00" },
+    { id:"labs",    label:"⚡ Riepilogo Lab", desc:"Lab attivi con prenotazioni e check-in totali", fn: exportLabs, color:"#FDEF26" },
     { id:"hist",    label:"📜 Storico azioni", desc:"Tutte le azioni: badge, punti, messaggi, prenotazioni", fn: exportHistory, color:"var(--rosa)" },
   ];
 
@@ -8658,11 +8656,11 @@ function PresentationMode({ onClose, settings }) {
 
   const order = [1,0,2];
   const medals = ["🥈","🥇","🥉"];
-  const medalColors = ["#aac8e0","#ffcc00","#d4916a"];
+  const medalColors = ["#aac8e0","#FDEF26","#d4916a"];
 
   if (loading) return (
     <div className="pres-overlay">
-      <div style={{color:"#00d4ff",fontFamily:"'Funnel Display',sans-serif",fontSize:32,fontWeight:900}}>⏳ Caricamento…</div>
+      <div style={{color:"#A3CFFE",fontFamily:"'Funnel Display',sans-serif",fontSize:32,fontWeight:900}}>⏳ Caricamento…</div>
     </div>
   );
 
@@ -8676,8 +8674,8 @@ function PresentationMode({ onClose, settings }) {
 
       {/* Phase dots */}
       <div style={{position:"absolute",bottom:14,left:"50%",transform:"translateX(-50%)",display:"flex",gap:8,zIndex:5}}>
-        <button onClick={()=>setPhase("podio")} style={{width:10,height:10,borderRadius:"50%",background:phase==="podio"?"#ffcc00":"rgba(255,255,255,.2)",border:"none",cursor:"pointer"}}/>
-        <button onClick={()=>setPhase("lista")} style={{width:10,height:10,borderRadius:"50%",background:phase==="lista"?"#ffcc00":"rgba(255,255,255,.2)",border:"none",cursor:"pointer"}}/>
+        <button onClick={()=>setPhase("podio")} style={{width:10,height:10,borderRadius:"50%",background:phase==="podio"?"#FDEF26":"rgba(255,255,255,.2)",border:"none",cursor:"pointer"}}/>
+        <button onClick={()=>setPhase("lista")} style={{width:10,height:10,borderRadius:"50%",background:phase==="lista"?"#FDEF26":"rgba(255,255,255,.2)",border:"none",cursor:"pointer"}}/>
       </div>
 
       {/* ── PODIO ── */}
@@ -8730,11 +8728,11 @@ function PresentationMode({ onClose, settings }) {
               const lv = getLevel(p.xp||0);
               const rank = (i % players.length) + 1;
               const isTop = rank <= 3;
-              const colors = ["#ffcc00","#aac8e0","#d4916a"];
+              const colors = ["#FDEF26","#aac8e0","#d4916a"];
               return (
                 <div key={i} style={{
                   display:"flex",alignItems:"center",gap:12,
-                  background:isTop?"rgba(255,204,0,.07)":"rgba(255,255,255,.04)",
+                  background:isTop?"rgba(253,239,38,.07)":"rgba(255,255,255,.04)",
                   borderRadius:10,padding:"10px 14px",marginBottom:6,
                   borderLeft:isTop?`3px solid ${colors[rank-1]}`:"3px solid transparent",
                 }}>
@@ -8758,26 +8756,26 @@ function PresentationMode({ onClose, settings }) {
 }
 
 const EduTabColors = {
-  dashboard:    { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
-  export:       { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
-  pulizia:      { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
-  bacheca:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
-  annunci:      { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
-  social_edu:   { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
-  visibilita:   { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
-  admin:        { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
+  dashboard:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)",   bg:"rgba(163,207,254,.03)" },
+  export:       { accent:"#339966", border:"rgba(51,153,102,.3)",   bg:"rgba(51,153,102,.03)" },
+  pulizia:      { accent:"#D41323", border:"rgba(212,19,35,.3)",   bg:"rgba(212,19,35,.03)" },
+  bacheca:      { accent:"#FDEF26", border:"rgba(253,239,38,.3)",   bg:"rgba(253,239,38,.03)" },
+  annunci:      { accent:"#FDEF26", border:"rgba(253,239,38,.3)",   bg:"rgba(253,239,38,.03)" },
+  social_edu:   { accent:"#339966", border:"rgba(51,153,102,.3)",   bg:"rgba(51,153,102,.03)" },
+  visibilita:   { accent:"#A3CFFE", border:"rgba(163,207,254,.3)",   bg:"rgba(163,207,254,.03)" },
+  admin:        { accent:"#FDEF26", border:"rgba(253,239,38,.3)",   bg:"rgba(253,239,38,.03)" },
   giocatori:    { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
-  classifica:   { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
-  squadre:      { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
-  presenze:     { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
-  attivita:     { accent:"#00ff88", border:"rgba(0,255,136,.3)",   bg:"rgba(0,255,136,.03)" },
+  classifica:   { accent:"#FDEF26", border:"rgba(253,239,38,.3)",   bg:"rgba(253,239,38,.03)" },
+  squadre:      { accent:"#A3CFFE", border:"rgba(163,207,254,.3)",   bg:"rgba(163,207,254,.03)" },
+  presenze:     { accent:"#339966", border:"rgba(51,153,102,.3)",   bg:"rgba(51,153,102,.03)" },
+  attivita:     { accent:"#339966", border:"rgba(51,153,102,.3)",   bg:"rgba(51,153,102,.03)" },
   sfida:        { accent:"#ff2244", border:"rgba(255,34,68,.3)",   bg:"rgba(255,34,68,.03)" },
   badge:        { accent:"#ff00cc", border:"rgba(255,0,204,.3)",   bg:"rgba(255,0,204,.03)" },
-  streak:       { accent:"#ff8c00", border:"rgba(255,140,0,.3)",   bg:"rgba(255,140,0,.03)" },
-  prenotazioni: { accent:"#ffcc00", border:"rgba(255,204,0,.3)",   bg:"rgba(255,204,0,.03)" },
-  messaggi:     { accent:"#aa44ff", border:"rgba(170,68,255,.3)",  bg:"rgba(170,68,255,.03)" },
+  streak:       { accent:"#D41323", border:"rgba(212,19,35,.3)",   bg:"rgba(212,19,35,.03)" },
+  prenotazioni: { accent:"#FDEF26", border:"rgba(253,239,38,.3)",   bg:"rgba(253,239,38,.03)" },
+  messaggi:     { accent:"#FF6DEC", border:"rgba(255,109,236,.3)",  bg:"rgba(255,109,236,.03)" },
   diario:       { accent:"#A3CFFE", border:"rgba(163,207,254,.3)", bg:"rgba(163,207,254,.03)" },
-  qr:           { accent:"#00d4ff", border:"rgba(0,212,255,.3)",   bg:"rgba(0,212,255,.03)" },
+  qr:           { accent:"#A3CFFE", border:"rgba(163,207,254,.3)",   bg:"rgba(163,207,254,.03)" },
 };
 
 function EducatorShell({ profile, onLogout }) {
@@ -8906,7 +8904,7 @@ function EducatorShell({ profile, onLogout }) {
                   onClick={() => setOpenGroup(isOpen ? null : group.id)}
                   style={{
                     fontWeight:800,
-                    background: hasActiveTab && !isOpen ? "rgba(0,212,255,.08)" : undefined,
+                    background: hasActiveTab && !isOpen ? "rgba(163,207,254,.08)" : undefined,
                   }}>
                   <span className="nav-icon">{group.icon}</span>
                   <span style={{flex:1}}>{group.label}</span>
@@ -8933,7 +8931,7 @@ function EducatorShell({ profile, onLogout }) {
         </nav>
         <div className="sidebar-user">
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,cursor:"pointer",padding:"8px 10px",background:"rgba(255,255,255,.04)",borderRadius:10,border:"1px solid rgba(255,255,255,.07)"}} onClick={() => setShowAvatarModal(true)}>
-            <div style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <div style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(253,239,38,.5)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <Avatar url={avatarUrl} emoji={lv.emoji} size={34}/>
             </div>
             <div style={{flex:1,minWidth:0}}>
@@ -8944,14 +8942,14 @@ function EducatorShell({ profile, onLogout }) {
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,padding:"6px 10px",background:"rgba(255,255,255,.04)",borderRadius:10,border:"1px solid rgba(255,255,255,.07)"}}>
             <span style={{fontSize:13}}>{theme==="dark"?"🌙":"☀️"}</span>
             <span style={{fontSize:11,color:"rgba(255,255,255,.4)",flex:1}}>{theme==="dark"?"Scuro":"Chiaro"}</span>
-            <button className="theme-toggle" style={{background:theme==="light"?"rgba(255,204,0,.3)":"rgba(255,255,255,.1)",flexShrink:0}} onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>
+            <button className="theme-toggle" style={{background:theme==="light"?"rgba(253,239,38,.3)":"rgba(255,255,255,.1)",flexShrink:0}} onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>
               <div className="theme-toggle-knob" style={{background:theme==="light"?"#c08800":"rgba(255,255,255,.6)",transform:theme==="light"?"translateX(20px)":"translateX(0)"}}/>
             </button>
           </div>
           <InstallPWAButton/>
           <div style={{display:"flex",gap:6,marginTop:6}}>
             <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
-            <button className="btn btn-ghost btn-sm" style={{color:"rgba(255,204,0,.7)",border:"1px solid rgba(255,204,0,.2)",padding:"6px 10px"}} onClick={()=>setShowChangePwd(true)} title="Cambia password">🔑</button>
+            <button className="btn btn-ghost btn-sm" style={{color:"rgba(253,239,38,.7)",border:"1px solid rgba(253,239,38,.2)",padding:"6px 10px"}} onClick={()=>setShowChangePwd(true)} title="Cambia password">🔑</button>
           </div>
         </div>
       </div>
@@ -8966,11 +8964,11 @@ function EducatorShell({ profile, onLogout }) {
         </div>
         <span className="mob-header-title" style={{flex:1,marginLeft:8}}>{cur?.[2]}</span>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(255,204,0,.15)",border:"1px solid rgba(255,204,0,.3)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#ffcc00",lineHeight:1}} title="Presentazione">🎮</button>
+          <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(253,239,38,.15)",border:"1px solid rgba(253,239,38,.3)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#FDEF26",lineHeight:1}} title="Presentazione">🎮</button>
           <button onClick={()=>setTheme(t=>t==="dark"?"light":"dark")} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,lineHeight:1}} title="Tema">
             {theme==="dark"?"☀️":"🌙"}
           </button>
-          <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,204,0,.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={() => setShowAvatarModal(true)}>
+          <div style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(253,239,38,.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={() => setShowAvatarModal(true)}>
             <Avatar url={avatarUrl} emoji={lv.emoji} size={30}/>
           </div>
         </div>
@@ -9006,7 +9004,7 @@ function EducatorShell({ profile, onLogout }) {
               <div key={group.id} style={{marginBottom:4}}>
                 <div className="nav-item"
                   onClick={() => setOpenGroup(isOpen ? null : group.id)}
-                  style={{fontWeight:800, background: hasActiveTab && !isOpen ? "rgba(0,212,255,.08)" : undefined}}>
+                  style={{fontWeight:800, background: hasActiveTab && !isOpen ? "rgba(163,207,254,.08)" : undefined}}>
                   <span className="nav-icon">{group.icon}</span>
                   <span style={{flex:1}}>{group.label}</span>
                   {groupBadge > 0 && !isOpen && <span className="nav-badge">{groupBadge}</span>}
@@ -9041,7 +9039,7 @@ function EducatorShell({ profile, onLogout }) {
           <div/>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
-            <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(255,204,0,.1)",border:"1px solid rgba(255,204,0,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#ffcc00",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
+            <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(253,239,38,.1)",border:"1px solid rgba(253,239,38,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#FDEF26",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
             <div className="edu-notif-bell" onClick={()=>setShowNotifPanel(p=>!p)}>
               🔔
               {notifCounts.total > 0 && <div className="edu-notif-badge">{notifCounts.total}</div>}
@@ -9182,7 +9180,7 @@ function EducatorShell({ profile, onLogout }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Il tuo avatar</div>
             <AvatarUpload playerId={profile.id} currentUrl={avatarUrl} onUploaded={url => setAvatarUrl(url)} />
-            <button className="btn btn-ghost btn-sm" style={{width:"100%",marginTop:10,color:"rgba(255,204,0,.8)",borderColor:"rgba(255,204,0,.3)"}}
+            <button className="btn btn-ghost btn-sm" style={{width:"100%",marginTop:10,color:"rgba(253,239,38,.8)",borderColor:"rgba(253,239,38,.3)"}}
               onClick={()=>{setShowAvatarModal(false);setShowChangePwd(true);}}>
               🔑 Cambia password
             </button>
