@@ -205,11 +205,21 @@ const SQUAD_STYLE = {
 };
 
 const DEFAULT_SECTION_COLORS = {
-  classifica: { color: "#A3CFFE", image: null },
-  badge:      { color: "#FF6DEC", image: null },
-  presenze:   { color: "#FDEF26", image: null },
-  attivita:   { color: "#339966", image: null },
-  sfida:      { color: "#D41323", image: null },
+  classifica:   { color: "#FDEF26", image: null },
+  badge:        { color: "#FF6DEC", image: null },
+  presenze:     { color: "#FDEF26", image: null },
+  attivita:     { color: "#339966", image: null },
+  sfida:        { color: "#A3CFFE", image: null },
+  bigtop:       { color: "#D41323", image: null },
+  messaggi:     { color: "#FF6DEC", image: null },
+  dashboard:    { color: "#A3CFFE", image: null },
+  giocatori:    { color: "#A3CFFE", image: null },
+  qr:           { color: "#A3CFFE", image: null },
+  streak:       { color: "#D41323", image: null },
+  prenotazioni: { color: "#339966", image: null },
+  vista:        { color: "#A3CFFE", image: null },
+  admin:        { color: "#FDEF26", image: null },
+  pulizia:      { color: "#FF6DEC", image: null },
 };
 
 // ─── CSS ──────────────────────────────────────────────────
@@ -1470,7 +1480,7 @@ function SquadPill({ name }) {
 }
 
 function SectionBanner({ sectionKey, title, sub, sectionColors, onEdit }) {
-  const cfg = sectionColors?.[sectionKey] || DEFAULT_SECTION_COLORS[sectionKey] || { color: "#252525", image: null };
+  const cfg = sectionColors?.[sectionKey] || DEFAULT_SECTION_COLORS[sectionKey] || { color: "#A3CFFE", image: null };
   return (
     <div className="section-banner" style={{ background: cfg.image ? undefined : cfg.color }}>
       {cfg.image && <div className="section-banner-bg" style={{ backgroundImage: `url(${cfg.image})` }} />}
@@ -9016,12 +9026,10 @@ function EducatorShell({ profile, onLogout }) {
       </div>
 
       {/* Main */}
-      <div className="edu-main">
+      <div className="edu-main" style={{background: theme === "light" ? ((sectionColors?.[tab] || DEFAULT_SECTION_COLORS[tab])?.color || "#A3CFFE") : "#0a0a0a", transition:"background .4s ease"}}>
+        <div className="bg-doodles" dangerouslySetInnerHTML={{__html: DOODLE_SVG}}/>
         <div className="topbar" style={{borderBottom:`1px solid ${EduTabColors[tab]?.border||"rgba(255,255,255,.08)"}`}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:6,height:28,borderRadius:3,background:EduTabColors[tab]?.accent||"rgba(255,255,255,.2)",flexShrink:0}}/>
-            <div className="topbar-title">{cur?.[1]} {cur?.[2]}</div>
-          </div>
+          <div/>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
             <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(255,204,0,.1)",border:"1px solid rgba(255,204,0,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#ffcc00",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
@@ -9063,7 +9071,10 @@ function EducatorShell({ profile, onLogout }) {
             </div>
           </div>
         )}
-        <div className="content edu-content-wrap" style={{background:EduTabColors[tab]?.bg||"transparent"}}>
+        <div className="content edu-content-wrap">
+          {!["classifica","presenze","attivita","badge","sfida"].includes(tab) && (
+            <SectionBanner sectionKey={tab} title={`${cur?.[1]||""} ${cur?.[2]||""}`} sectionColors={sectionColors}/>
+          )}
           {tab === "dashboard"   && <DashboardView />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
