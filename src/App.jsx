@@ -229,9 +229,8 @@ const css = `
   .light .logo-b { display:block; }
   .light .logo-w { display:none; }
 
-  .bg-doodles { position:absolute; inset:0; z-index:0; pointer-events:none; color:#fff; opacity:.20; overflow:hidden; }
+  .bg-doodles { position:absolute; inset:0; z-index:-1; pointer-events:none; color:#fff; opacity:.20; overflow:hidden; }
   .light .bg-doodles { color:#101010; opacity:.16; }
-  .player-wrap > *:not(.bg-doodles) { position:relative; z-index:1; }
 
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
@@ -6878,12 +6877,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   // Day: un colore pieno della palette per ogni tab (dal Camerino).
   // Night: nero pieno con doodles bianchi, uguale ovunque.
   const TAB_BG = {
-    profilo:    'var(--azzurro)',
-    classifica: 'var(--giallo)',
-    attivita:   'var(--verde)',
-    bigtop:     'var(--rosso)',
-    messaggi:   'var(--rosa)',
-    notifiche:  'var(--azzurro)',
+    profilo:    '#A3CFFE',
+    classifica: '#FDEF26',
+    attivita:   '#339966',
+    bigtop:     '#D41323',
+    messaggi:   '#FF6DEC',
+    notifiche:  '#A3CFFE',
   };
   const NIGHT_BG = '#000';
 
