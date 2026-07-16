@@ -7263,7 +7263,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                         return st ? <div style={{width:80,height:80,marginBottom:6}} dangerouslySetInnerHTML={{__html:st.svg}}/> : null;
                       })()}
                       {m.media_data && !m.media_data.startsWith("sticker:") && (
-                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt="" loading="lazy"/>
+                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt=""
+                          onError={e => {
+                            const a = document.createElement("a");
+                            a.href = m.media_data; a.target = "_blank"; a.rel = "noopener";
+                            a.textContent = "📷 Apri foto";
+                            a.style.cssText = "display:inline-block;padding:8px 14px;background:rgba(0,0,0,.4);border:1px solid var(--border2);border-radius:10;color:var(--neon-blue);font-weight:800;font-size:13px;text-decoration:none;margin-bottom:6px";
+                            e.currentTarget.replaceWith(a);
+                          }}/>
                       )}
                       <MsgReactions msgId={m.id} myId={profile.id}/>
                       <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
@@ -8174,7 +8181,7 @@ function BigTopPlayerView({ fullProfile, setFullProfile }) {
 }
 
 // ─── BIG TOP 🎪: pannello educatore ─────────────────────────────
-function BigTopEducatorView() {
+function BigTopEducatorView({ profile }) {
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() + 1 }; });
   const [slots, setSlots] = useState([]);
   const [books, setBooks] = useState({});   // slot_id -> array prenotazioni
@@ -8183,6 +8190,11 @@ function BigTopEducatorView() {
   const [qrShow, setQrShow] = useState({}); // slot_id -> code
   const [players, setPlayers] = useState([]);
   const [bookFor, setBookFor] = useState("");
+  const [squadsList, setSquadsList] = useState([]);
+  const [detailPlayer, setDetailPlayer] = useState(null);
+  const [msgTo, setMsgTo] = useState(null);   // { id, name }
+  const [msgBody, setMsgBody] = useState("");
+  const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -8197,7 +8209,7 @@ function BigTopEducatorView() {
     const ids = (sl || []).map(s => s.id);
     let bk = [];
     if (ids.length) {
-      const { data, error } = await sb.from("bigtop_bookings").select("*, profiles!bigtop_bookings_player_id_fkey(display_name, avatar_url)").in("slot_id", ids);
+      const { data, error } = await sb.from("bigtop_bookings").select("*, profiles!bigtop_bookings_player_id_fkey(display_name, avatar_url, squads(name, color))").in("slot_id", ids);
       if (error) addToast("❌ Prenotazioni: " + error.message, "error");
       bk = data || [];
     }
@@ -8210,7 +8222,26 @@ function BigTopEducatorView() {
   useEffect(() => {
     sb.from("profiles").select("id,display_name").eq("role","player").order("display_name")
       .then(({ data }) => setPlayers(data || []));
+    sb.from("squads").select("*").then(({ data }) => setSquadsList(data || []));
   }, []);
+
+  async function sendQuickMsg() {
+    const body = msgBody.trim();
+    if (!body || !msgTo) return;
+    setSending(true);
+    const { data: m, error } = await sb.from("messages")
+      .insert({ sender_id: profile.id, recipient_id: msgTo.id, body, is_broadcast: false })
+      .select("id").single();
+    if (error) { addToast("❌ " + error.message, "error"); setSending(false); return; }
+    await sb.from("notifications").insert({
+      user_id: msgTo.id, type: "new_message",
+      title: `💬 Messaggio da ${profile.display_name}`,
+      body: body.slice(0, 80), message_id: m?.id || null,
+    });
+    sendPush(msgTo.id, `💬 ${profile.display_name}`, body.slice(0, 100)).catch(()=>{});
+    addToast(`✉️ Inviato a ${msgTo.name}`, "ok");
+    setSending(false); setMsgTo(null); setMsgBody("");
+  }
 
   function taken(sid) { return (books[sid] || []).filter(b => ["booked","present"].includes(b.status)).length; }
   function isPast(s) { return s.date < localToday(); }
@@ -8326,11 +8357,19 @@ function BigTopEducatorView() {
               {(books[s.id]||[]).length === 0 && <div style={{fontSize:12,color:"var(--text3)"}}>Nessuna prenotazione</div>}
               {(books[s.id]||[]).map(b => {
                 const [ic, lbl, col] = STATUS[b.status] || ["·", b.status, "var(--text3)"];
+                const pr = b.profiles || {};
                 return (
-                  <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",fontSize:13}}>
-                    <span>{ic}</span>
-                    <span style={{fontWeight:700}}>{b.profiles?.display_name || "?"}</span>
-                    <span style={{marginLeft:"auto",fontSize:11,color:col,fontWeight:800,textTransform:"uppercase"}}>{lbl}</span>
+                  <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",fontSize:13,borderBottom:"1px solid rgba(255,255,255,.05)"}}>
+                    {pr.avatar_url
+                      ? <img src={pr.avatar_url} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>
+                      : <div style={{width:30,height:30,borderRadius:"50%",background:"var(--surface2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>👤</div>}
+                    <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setDetailPlayer(b.player_id)} title="Apri scheda giocatore">
+                      <div style={{fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pr.display_name || "?"}</div>
+                      {pr.squads?.name && <div style={{fontSize:10,fontWeight:800,color:pr.squads.color||"var(--text3)"}}>{pr.squads.name}</div>}
+                    </div>
+                    <span style={{fontSize:11,color:col,fontWeight:800,textTransform:"uppercase"}}>{ic} {lbl}</span>
+                    <button className="btn btn-ghost btn-xs" title="Scrivi al giocatore"
+                      onClick={()=>{ setMsgTo({ id: b.player_id, name: pr.display_name || "?" }); setMsgBody(""); }}>✉️</button>
                   </div>
                 );
               })}
@@ -8348,6 +8387,24 @@ function BigTopEducatorView() {
           )}
         </div>
       );})}
+
+      {msgTo && (
+        <div className="modal-bg" onClick={()=>setMsgTo(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">✉️ Messaggio a {msgTo.name}</div>
+            <textarea value={msgBody} onChange={e=>setMsgBody(e.target.value)} rows={4}
+              placeholder="Scrivi qui… (es. Ci vediamo domani al BIG TOP alle 16!)"
+              style={{width:"100%",padding:"10px 12px",background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:14,resize:"vertical"}}/>
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button className="btn btn-primary" style={{flex:1}} disabled={sending||!msgBody.trim()} onClick={sendQuickMsg}>{sending?"⏳…":"Invia"}</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setMsgTo(null)}>Annulla</button>
+            </div>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:8}}>Arriva nella sua tab Messaggi, con notifica e push.</div>
+          </div>
+        </div>
+      )}
+
+      {detailPlayer && <PlayerDetailPanel playerId={detailPlayer} squads={squadsList} onClose={()=>setDetailPlayer(null)} />}
 
       {editSlot && (
         <div className="modal-bg" onClick={()=>setEditSlot(null)}>
@@ -8705,7 +8762,7 @@ function EducatorShell({ profile, onLogout }) {
     const missing = (allPlayers||[]).filter(p => !markedIds.has(p.id)).length;
     const pBook = pendingCount || 0;
     const msgs = msgCount || 0;
-    setNotifCounts({ pendingBookings: pBook, missingAttendance: missing, unreadMessages: msgs, total: pBook + (missing > 0 ? 1 : 0) + msgs });
+    setNotifCounts({ pendingBookings: pBook, missingAttendance: 0, unreadMessages: msgs, total: pBook + msgs });
   }, [profile.id]);
 
   const notifDebounceRef = useRef(null);
@@ -8944,16 +9001,6 @@ function EducatorShell({ profile, onLogout }) {
                 <div className="edu-notif-count">{notifCounts.pendingBookings}</div>
               </div>
             )}
-            {notifCounts.missingAttendance > 0 && (
-              <div className="edu-notif-item" onClick={()=>{ setTab("presenze"); setShowNotifPanel(false); }}>
-                <div className="edu-notif-icon">✅</div>
-                <div className="edu-notif-text">
-                  <div className="edu-notif-title">Presenze da segnare oggi</div>
-                  <div className="edu-notif-sub">{notifCounts.missingAttendance} giocatori senza presenza</div>
-                </div>
-                <div className="edu-notif-count">{notifCounts.missingAttendance}</div>
-              </div>
-            )}
             {notifCounts.unreadMessages > 0 && (
               <div className="edu-notif-item" onClick={()=>{ setTab("messaggi"); setShowNotifPanel(false); }}>
                 <div className="edu-notif-icon">💬</div>
@@ -8987,7 +9034,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "squadre"      && <SquadsView />}
           {tab === "presenze"     && <AttendanceView {...sharedProps} />}
           {tab === "attivita"     && <ActivitiesView {...sharedProps} />}
-          {tab === "bigtop"       && <BigTopEducatorView />}
+          {tab === "bigtop"       && <BigTopEducatorView profile={profile} />}
           {tab === "sfida"        && <SfidaView {...sharedProps} />}
           {tab === "badge"        && <BadgesView {...sharedProps} />}
           {tab === "streak"       && <StreakConfigView />}
