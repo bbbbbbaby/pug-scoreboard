@@ -277,7 +277,7 @@ const css = `
 
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   html,body { height:100%; }
-  body { font-family:'Funnel Display',sans-serif; background:#04080f; color:#e8f4ff; min-height:100vh; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  body { font-family:'Funnel Display',sans-serif; background:#0a0a0a; color:#e8f4ff; min-height:100vh; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
 
   :root {
     --azzurro:#A3CFFE; --rosa:#FF6DEC; --giallo:#FDEF26; --verde:#339966; --rosso:#D41323;
@@ -300,7 +300,7 @@ const css = `
       radial-gradient(ellipse 80% 50% at 20% -10%, rgba(255,255,255,0) 0%, transparent 60%),
       radial-gradient(ellipse 60% 40% at 90% 110%, rgba(255,255,255,0) 0%, transparent 55%),
       radial-gradient(ellipse 50% 60% at 50% 50%, rgba(0,0,0,0) 0%, transparent 70%),
-      #04080f;
+      #0a0a0a;
   }
   body::after {
     content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
@@ -313,7 +313,7 @@ const css = `
   /* ═══ LOGIN ═══ */
   .login-wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; position:relative; z-index:1; }
   .login-card {
-    background:rgba(5,15,35,0.95); border:1px solid rgba(163,207,254,0.3);
+    background:rgba(16,16,16,0.95); border:1px solid rgba(163,207,254,0.3);
     border-radius:20px; padding:36px 28px; width:100%; max-width:420px;
     box-shadow:0 0 0 1px rgba(163,207,254,0.08), var(--glow-blue), 0 40px 80px rgba(0,0,0,0.8);
     backdrop-filter:blur(20px); position:relative; overflow:hidden;
@@ -325,7 +325,7 @@ const css = `
   .login-title {
     font-family:'Funnel Display',sans-serif; font-weight:900; font-size:56px;
     text-transform:uppercase; letter-spacing:-1px; line-height:0.9;
-    background:linear-gradient(135deg, var(--neon-blue) 0%, #fff 40%, var(--rosa) 100%);
+    background:var(--azzurro) 100%);
     -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
     text-align:center; margin-bottom:8px; filter:drop-shadow(0 0 20px rgba(163,207,254,0.3));
   }
@@ -347,7 +347,7 @@ const css = `
   .err-msg { font-size:12px; color:var(--danger); margin-top:10px; text-align:center; font-weight:700; letter-spacing:.05em; }
 
   /* ═══ NICKNAME SEARCH ═══ */
-  .nickname-list { max-height:220px; overflow-y:auto; border:1px solid var(--border2); border-radius:var(--radius-sm); margin-top:6px; background:rgba(5,15,35,0.98); }
+  .nickname-list { max-height:220px; overflow-y:auto; border:1px solid var(--border2); border-radius:var(--radius-sm); margin-top:6px; background:rgba(16,16,16,0.98); }
   .nickname-item { padding:12px 14px; cursor:pointer; font-size:14px; font-weight:600; color:var(--text); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; transition:background .15s; }
   .nickname-item:hover { background:rgba(163,207,254,0.08); }
   .nickname-item:last-child { border-bottom:none; }
@@ -421,14 +421,14 @@ const css = `
 
   /* ═══ GAME CARDS ═══ */
   .card {
-    background:rgba(0,0,20,0.45); border:1px solid rgba(255,255,255,0.09);
+    background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.09);
     border-radius:var(--radius); padding:16px 20px;
     backdrop-filter:blur(10px); position:relative;
   }
-  .card-sm { background:rgba(0,0,20,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:12px 14px; }
+  .card-sm { background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:12px 14px; }
   .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
   .stat-card {
-    background:rgba(0,0,20,0.4); border:1px solid rgba(255,255,255,0.1);
+    background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1);
     border-radius:var(--radius); padding:14px; position:relative; overflow:hidden;
   }
   .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:rgba(253,239,38,.4); }
@@ -481,7 +481,7 @@ const css = `
   .lb-xp { font-family:'Funnel Display',sans-serif; font-size:18px; font-weight:900; color:var(--neon-blue); flex-shrink:0; }
 
   /* ═══ PLAYER DETAIL ═══ */
-  .player-detail { background:rgba(5,15,35,0.95); border:1px solid rgba(163,207,254,0.25); border-radius:var(--radius-lg); padding:20px; margin-top:12px; box-shadow:var(--glow-blue); }
+  .player-detail { background:rgba(16,16,16,0.95); border:1px solid rgba(163,207,254,0.25); border-radius:var(--radius-lg); padding:20px; margin-top:12px; box-shadow:var(--glow-blue); }
   .player-detail-header { display:flex; gap:16px; align-items:center; margin-bottom:16px; }
   .player-detail-av { width:64px; height:64px; border-radius:50%; overflow:hidden; border:2px solid var(--neon-blue); display:flex; align-items:center; justify-content:center; font-size:30px; flex-shrink:0; box-shadow:var(--glow-blue); }
   .player-detail-av img { width:100%; height:100%; object-fit:cover; }
@@ -493,8 +493,8 @@ const css = `
   .filter-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
   .search-inp { padding:10px 16px; background:rgba(163,207,254,0.05); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:15px; outline:none; flex:1; min-width:140px; transition:all .15s; }
   .search-inp:focus { border-color:var(--neon-blue); box-shadow:0 0 0 3px rgba(163,207,254,0.1); }
-  .chip { padding:7px 16px; border-radius:99px; border:1px solid var(--border2); background:rgba(163,207,254,0.04); color:var(--text2); font-family:'Funnel Display'; font-size:12px; font-weight:700; cursor:pointer; min-height:34px; transition:all .15s; letter-spacing:.03em; }
-  .chip.active { background:rgba(255,255,255,0); color:var(--neon-blue); border-color:rgba(163,207,254,0.4); box-shadow:0 0 12px rgba(163,207,254,0.2); }
+  .chip { padding:7px 16px; border-radius:99px; border:1.5px solid rgba(16,16,16,.35) !important; background:#ffffff !important; color:#101010 !important; font-family:'Funnel Display'; font-size:12px; font-weight:700; cursor:pointer; min-height:34px; transition:all .15s; letter-spacing:.03em; }
+  .chip.active { background:#101010 !important; color:#ffffff !important; border-color:#101010 !important; box-shadow:none; }
 
   /* ═══ BATCH ═══ */
   .batch-panel { background:rgba(163,207,254,0.05); border:1px solid rgba(163,207,254,0.2); border-radius:var(--radius); padding:12px 16px; margin-bottom:14px; }
@@ -504,7 +504,7 @@ const css = `
   /* ═══ PRESENZE ═══ */
   .pres-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius); border:1px solid var(--border); }
   .pres-table { width:100%; border-collapse:collapse; font-size:13px; min-width:420px; }
-  .pres-table th { padding:10px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--text3); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.1em; background:rgba(4,8,20,0.95); }
+  .pres-table th { padding:10px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--text3); border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.1em; background:rgba(10,10,10,0.95); }
   .pres-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text); }
   .pres-dot { width:32px; height:32px; border-radius:8px; border:none; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; transition:all .12s; }
   /* Toggle presenza: variabili per light/dark */
@@ -517,6 +517,10 @@ const css = `
     --pt-done-border:  1.5px solid rgba(51,153,102,.4);
   }
   .light {
+    --surface:#ffffff; --surface2:#ffffff; --surface3:#f4f4f4;
+    --border:rgba(16,16,16,.2); --border2:rgba(16,16,16,.35);
+    --text:#101010; --text2:rgba(16,16,16,.62); --text3:rgba(16,16,16,.45);
+    --glow-blue:none; --glow-pink:none;
     --pt-empty-bg:     #ffffff;
     --pt-empty-color:  #9e9e9e;
     --pt-empty-border: 2px solid #9e9e9e;
@@ -722,7 +726,7 @@ const css = `
   /* ═══ PLAYER BOTTOM NAV ═══ */
   .player-bottom-nav {
     position:fixed; bottom:0; left:0; right:0;
-    background:rgba(4,8,20,0.97); border-top:1px solid rgba(255,255,255,0);
+    background:rgba(10,10,10,0.97); border-top:1px solid rgba(255,255,255,0);
     z-index:20; display:flex; padding-bottom:env(safe-area-inset-bottom,0px);
     backdrop-filter:blur(20px);
   }
@@ -813,7 +817,7 @@ const css = `
     --giallo:     #f9a825;
     --verde:      #388e3c;
     --rosso:      #c62828;
-    --text:       #0d1117;
+    --text:       #101010;
     --text2:      #3a4a5c;
     --text3:      #6b7e94;
     --surface:    rgba(255,255,255,0.95);
@@ -837,7 +841,7 @@ const css = `
   /* ─ Step 2: Base page ─ */
   .light body {
     background: #eef2fb;
-    color: #0d1117;
+    color: #101010;
   }
   .light body::before {
     background:
@@ -887,20 +891,20 @@ const css = `
   .light .sidebar-user { border-top: 1px solid rgba(255,255,255,.08); }
 
   .light .topbar {
-    background: rgba(13,20,40,.9);
+    background: rgba(18,18,18,.9);
     border-bottom: 1px solid rgba(255,255,255,.08);
     backdrop-filter: blur(20px);
   }
   .light .topbar-title { color: rgba(255,255,255,.9); }
 
   .light .mob-header {
-    background: rgba(13,20,40,.92);
+    background: rgba(18,18,18,.92);
     border-bottom: 1px solid rgba(255,255,255,.08);
   }
   .light .mob-header-title { color: rgba(255,255,255,.9); }
   .light .mob-drawer { background:#ffffff; } .light .mob-drawer * { color:#101010 !important; }
   .light .mob-bottom-nav {
-    background: rgba(13,20,40,.95);
+    background: rgba(18,18,18,.95);
     border-top: 1px solid rgba(255,255,255,.08);
   }
   .light .mob-nav-btn { color: rgba(255,255,255,.3); }
@@ -913,12 +917,12 @@ const css = `
     background: #ffffff;
     border: 1px solid rgba(0,0,0,.08);
     box-shadow: 0 2px 16px rgba(0,0,0,.06);
-    color: #0d1117;
+    color: #101010;
   }
   .light .card-sm {
     background: #ffffff;
     border: 1px solid rgba(0,0,0,.07);
-    color: #0d1117;
+    color: #101010;
   }
   .light .stat-card {
     background: #ffffff;
@@ -929,13 +933,13 @@ const css = `
     background:rgba(16,16,16,.15);
   }
   .light .stat-label { color: #6b7e94; }
-  .light .stat-value { color: #0d1117; }
+  .light .stat-value { color: #101010; }
 
   /* ─ Step 5: Forms & Inputs ─ */
   .light .form-input {
     background: #ffffff;
     border: 1.5px solid rgba(0,0,0,.18);
-    color: #0d1117;
+    color: #101010;
     font-weight: 500;
   }
   .light .form-input:focus {
@@ -943,33 +947,32 @@ const css = `
     box-shadow: 0 0 0 3px rgba(16,16,16,.1);
     background: #ffffff;
   }
-  .light .form-label { color: #3a4a5c; font-weight: 700; }
+  .light .form-label { color:#101010; font-weight: 700; }
   .light select {
     background: #ffffff;
     border: 1.5px solid rgba(0,0,0,.15);
-    color: #0d1117;
+    color: #101010;
   }
   .light textarea {
     background: #ffffff;
     border: 1.5px solid rgba(0,0,0,.15);
-    color: #0d1117;
+    color: #101010;
   }
   .light .search-inp {
     background: #ffffff;
     border: 1.5px solid rgba(0,0,0,.15);
-    color: #0d1117;
+    color: #101010;
   }
   .light .search-inp:focus { border-color: #101010; box-shadow: 0 0 0 3px rgba(16,16,16,.1); }
 
   /* ─ Step 6: Buttons ─ */
   .light .btn-primary {
-    background:#101010;
-    border-color: rgba(16,16,16,.6);
-    box-shadow: 0 2px 8px rgba(16,16,16,.3);
+    background:#FDEF26 !important; color:#101010 !important;
+    border:2px solid #101010 !important; box-shadow:none !important;
   }
   .light .btn-ghost {
     background: rgba(0,0,0,.05);
-    color: #3a4a5c;
+    color:#101010;
     border: 1.5px solid rgba(0,0,0,.15);
   }
   .light .btn-ghost:hover { background: rgba(0,0,0,.09); }
@@ -989,7 +992,7 @@ const css = `
   .light .chip {
     background: #ffffff;
     border: 1.5px solid rgba(0,0,0,.15);
-    color: #3a4a5c;
+    color:#101010;
     font-weight: 700;
   }
   .light .chip.active {
@@ -1016,12 +1019,12 @@ const css = `
   }
   .light .pres-table th {
     background: #f5f7ff;
-    color: #3a4a5c;
+    color:#101010;
     border-bottom: 2px solid rgba(0,0,0,.08);
     font-weight: 800;
   }
   .light .pres-table td {
-    color: #0d1117;
+    color: #101010;
     border-bottom: 1px solid rgba(0,0,0,.05);
     background: #ffffff;
   }
@@ -1052,7 +1055,7 @@ const css = `
   .light .lb-rank.gold { color: #D41323; text-shadow: none; }
   .light .lb-rank.silver { color: #546e7a; }
   .light .lb-rank.bronze { color: #6d4c41; }
-  .light .lb-name  { color: #0d1117; font-weight: 700; }
+  .light .lb-name  { color: #101010; font-weight: 700; }
   .light .lb-level { color: #6b7e94; }
   .light .lb-xp    { color: #101010; }
   .light .lb-av    { background: #f5f7ff; border-color: rgba(0,0,0,.1); }
@@ -1065,7 +1068,7 @@ const css = `
   }
   .light .player-card:hover { border-color: rgba(16,16,16,.3); box-shadow: 0 4px 16px rgba(16,16,16,.1); }
   .light .player-card.selected { border-color: #101010; background: rgba(16,16,16,.04); box-shadow: var(--glow-blue); }
-  .light .p-name  { color: #0d1117; }
+  .light .p-name  { color: #101010; }
   .light .p-level { color: #6b7e94; }
   .light .p-xp    { color: #101010; }
   .light .p-coin  { color: #D41323; }
@@ -1078,8 +1081,8 @@ const css = `
     box-shadow: 0 2px 8px rgba(46,125,50,.06);
   }
   .light .act-card:hover { border-color: rgba(46,125,50,.5); box-shadow: 0 4px 16px rgba(46,125,50,.1); }
-  .light .act-title { color: #0d1117; }
-  .light .act-meta  { color: #3a4a5c; }
+  .light .act-title { color: #101010; }
+  .light .act-meta  { color:#101010; }
 
   /* ─ Step 13: Badges ─ */
   .light .badge-card {
@@ -1088,7 +1091,7 @@ const css = `
     box-shadow: 0 2px 8px rgba(212,19,35,.05);
   }
   .light .badge-card:hover { border-color: rgba(212,19,35,.45); }
-  .light .badge-name { color: #0d1117; }
+  .light .badge-name { color: #101010; }
   .light .badge-pts  { color: #D41323; }
 
   /* ─ Step 14: Sfida ─ */
@@ -1097,8 +1100,8 @@ const css = `
     border: 1.5px solid rgba(198,40,40,.25);
   }
   .light .sfida-label  { color: #c62828; }
-  .light .sfida-title  { color: #0d1117; text-shadow: none; }
-  .light .sfida-desc   { color: #3a4a5c; }
+  .light .sfida-title  { color: #101010; text-shadow: none; }
+  .light .sfida-desc   { color:#101010; }
   .light .sfida-reward { background: rgba(230,81,0,.08); border-color: rgba(230,81,0,.25); color: #D41323; }
 
   /* ─ Step 15: Modal ─ */
@@ -1108,12 +1111,12 @@ const css = `
     box-shadow: 0 -16px 48px rgba(0,0,0,.12);
   }
   .light .modal::before { background:#101010; }
-  .light .modal-title  { color: #0d1117; }
-  .light .section-label { color: #3a4a5c; }
+  .light .modal-title  { color: #101010; }
+  .light .section-label { color:#101010; }
   .light .modal-bg { background: rgba(0,0,0,.45); }
 
   /* ─ Step 16: Section banner ─ */
-  .light .section-banner-title { color: #0d1117 !important; }
+  .light .section-banner-title { color: #101010 !important; }
   .light .section-banner-sub   { color: rgba(0,0,0,.5) !important; }
 
   /* ─ Step 17: Misc ─ */
@@ -1123,21 +1126,21 @@ const css = `
   .light .batch-info  { color: #101010; }
   .light .filter-bar .chip { background: #ffffff; }
   .light .squad-row  { background: #ffffff; border: 1.5px solid rgba(0,0,0,.08); }
-  .light .squad-name { color: #0d1117; }
+  .light .squad-name { color: #101010; }
   .light .diary-entry { background: #ffffff; border: 1px solid rgba(0,0,0,.07); }
   .light .diary-date  { color: #101010; }
-  .light .diary-text  { color: #0d1117; }
+  .light .diary-text  { color: #101010; }
   .light .notif-item  { border-bottom: 1px solid rgba(0,0,0,.06); }
-  .light .notif-title { color: #0d1117; }
-  .light .notif-body  { color: #3a4a5c; }
+  .light .notif-title { color: #101010; }
+  .light .notif-body  { color:#101010; }
   .light .notif-time  { color: #6b7e94; }
   .light .notif-dot   { background: #c2185b; }
   .light .player-detail { background: #ffffff; border: 1.5px solid rgba(16,16,16,.2); }
-  .light .detail-tab { background: #f5f7ff; border: 1px solid rgba(0,0,0,.1); color: #3a4a5c; }
+  .light .detail-tab { background: #f5f7ff; border: 1px solid rgba(0,0,0,.1); color:#101010; }
   .light .detail-tab.active { background: #101010; color: #ffffff; border-color: #101010; }
   .light .color-swatch.active { border-color: #101010; box-shadow: var(--glow-blue); }
   .light .section-banner { box-shadow: none; }
-  .light .podium-wrap .pod-name { color: #0d1117; }
+  .light .podium-wrap .pod-name { color: #101010; }
   .light .lb-list .lb-row { background: #ffffff; }
 
   /* ─ Step 18: StreakConfig month cards ─ */
@@ -1146,7 +1149,7 @@ const css = `
     border-color: rgba(0,0,0,.08) !important;
     box-shadow: 0 2px 8px rgba(0,0,0,.04);
   }
-  .light .streak-month-card * { color: #0d1117 !important; }
+  .light .streak-month-card * { color: #101010 !important; }
   .light .streak-month-card div[style*="color:"var(--text3)""] { color: #6b7e94 !important; }
 
   /* ─ Step 19: Avatar picker ─ */
@@ -1175,7 +1178,7 @@ const css = `
     background: #ffffff !important;
     border-bottom: 2px solid #101010 !important;
   }
-  .light .pd-name-pill { background: #0d1428 !important; color: #e0eeff !important; }
+  .light .pd-name-pill { background: #141414 !important; color: #e0eeff !important; }
   .light .pd-lv-pill {
     background: rgba(16,16,16,.1);
     border-color: rgba(16,16,16,.3);
@@ -1184,9 +1187,9 @@ const css = `
   .light .pd-card {
     background: rgba(255,255,255,.85) !important;
     border: 1px solid rgba(0,0,0,.08) !important;
-    color: #0d1117;
+    color: #101010;
   }
-  .light .pd-card * { color: #0d1117; }
+  .light .pd-card * { color: #101010; }
   .light .pd-sg .pd-sc {
     background: rgba(255,255,255,.9) !important;
     border: 1px solid rgba(0,0,0,.07) !important;
@@ -1197,17 +1200,17 @@ const css = `
     background: rgba(255,255,255,.85) !important;
     border: 1px solid rgba(0,0,0,.08) !important;
   }
-  .light .pd-sfida { background: #0d1428 !important; }
+  .light .pd-sfida { background: #141414 !important; }
   .light .pd-checkin {
     background: rgba(255,255,255,.85) !important;
     border: 1px solid rgba(46,125,50,.25) !important;
   }
-  .light .pd-tab-title { color: #0d1117 !important; }
+  .light .pd-tab-title { color: #101010 !important; }
   .light .pd-badge-item {
     background: rgba(255,255,255,.9) !important;
     border: 1px solid rgba(0,0,0,.07) !important;
   }
-  .light .pd-badge-item div { color: #0d1117 !important; }
+  .light .pd-badge-item div { color: #101010 !important; }
   .light .streak-card {
     background: rgba(255,255,255,.85) !important;
     border: 1px solid rgba(230,81,0,.25) !important;
@@ -1253,7 +1256,7 @@ const css = `
     box-shadow: none;
   }
   .light .nickname-list { background: #ffffff; border-color: rgba(0,0,0,.1); }
-  .light .nickname-item { color: #0d1117; border-bottom-color: rgba(0,0,0,.06); }
+  .light .nickname-item { color: #101010; border-bottom-color: rgba(0,0,0,.06); }
   .light .nickname-item:hover { background: rgba(16,16,16,.04); }
   .light .err-msg { color: #c62828; }
   .light .pin-display { background: rgba(16,16,16,.06); border-color: rgba(16,16,16,.2); color: #101010; }
@@ -1268,24 +1271,24 @@ const css = `
     border: 1px solid rgba(0,0,0,.1);
     box-shadow: 0 8px 32px rgba(0,0,0,.12);
   }
-  .light .edu-notif-header { color: #0d1117; border-bottom-color: rgba(0,0,0,.08); }
+  .light .edu-notif-header { color: #101010; border-bottom-color: rgba(0,0,0,.08); }
   .light .edu-notif-item:hover { background: rgba(0,0,0,.03); }
-  .light .edu-notif-title { color: #0d1117; }
+  .light .edu-notif-title { color: #101010; }
   .light .edu-notif-sub   { color: #6b7e94; }
   .light .edu-notif-count { color: #101010; }
   .light .edu-notif-empty { color: #6b7e94; }
 
   /* ─ Light mode global fixes ─ */
   .light * { box-sizing: border-box; }
-  .light .pd-card { background: rgba(255,255,255,.88) !important; color: #0d1117 !important; }
-  .light .pd-card * { color: #0d1117 !important; }
-  .light .pd-tab-title { color: #0d1117 !important; }
-  .light .search-inp { background:#fff; border:1.5px solid rgba(0,0,0,.18); color:#0d1117; }
+  .light .pd-card { background: rgba(255,255,255,.88) !important; color: #101010 !important; }
+  .light .pd-card * { color: #101010 !important; }
+  .light .pd-tab-title { color: #101010 !important; }
+  .light .search-inp { background:#fff; border:1.5px solid rgba(0,0,0,.18); color:#101010; }
   .light .search-inp::placeholder { color:#9e9e9e; }
   .light .form-input::placeholder { color:#9e9e9e; }
-  .light textarea { background:#fff; color:#0d1117; border:1.5px solid rgba(0,0,0,.15); }
+  .light textarea { background:#fff; color:#101010; border:1.5px solid rgba(0,0,0,.15); }
   .light textarea::placeholder { color:#9e9e9e; }
-  .light select option { background:#ffffff; color:#0d1117; }
+  .light select option { background:#ffffff; color:#101010; }
   .light .empty { color: #6b7e94; }
   .light .loading { color: #6b7e94; }
   /* Sfide always dark bg */
@@ -2059,7 +2062,7 @@ function UpdateBanner() {
   return (
     <div style={{
       position:'fixed', top:0, left:0, right:0, zIndex:99999,
-      background:'linear-gradient(90deg,#0a2a1a,#0d3a22)',
+      background:'#0e2e1c',
       borderBottom:'2px solid #339966',
       paddingTop:'calc(env(safe-area-inset-top, 0px) + 10px)',
       paddingBottom:'10px',
@@ -2118,8 +2121,8 @@ function OfflineBanner() {
     <div style={{
       position:'fixed', bottom:'calc(env(safe-area-inset-bottom, 0px) + 80px)', left:12, right:12, zIndex:9998,
       background: justBack
-        ? 'linear-gradient(90deg,#0a2a1a,#0d3a22)'
-        : 'linear-gradient(90deg,#2a0a0a,#3a0d0d)',
+        ? '#0e2e1c'
+        : '#2e0d0d',
       border:`2px solid ${justBack?'#339966':'#ff4444'}`,
       borderRadius:14,
       padding:'12px 16px',
@@ -3510,7 +3513,7 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
   const cols = ["pod-2", "pod-1", "pod-3"];
   const crowns = [null, "👑", null];
   const xpColors = ["#aac8e0", "#FDEF26", "#d4916a"];
-  const sizes = [54, 68, 48];
+  const sizes = [66, 86, 60];
   const ranks = ["2°", "1°", "3°"];
 
   function renderGroup(group, i) {
@@ -3525,7 +3528,7 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
       return (
         <div key={p.id} className={`pod-col ${cols[i]}`}>
           {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
-          <div className="pod-av-wrap" style={{background:["#FFD700","#C0C0C0","#CD7F32"][i],padding:7,boxShadow:"0 4px 12px rgba(0,0,0,.35)",...(isMe?{outline:"3px solid #101010",outlineOffset:2}:{})}}>
+          <div className="pod-av-wrap" style={{background:["#FFD700","#C0C0C0","#CD7F32"][i],padding:9,border:"3px solid #101010",boxShadow:"0 4px 12px rgba(0,0,0,.35)",...(isMe?{outline:"3px solid #101010",outlineOffset:2}:{})}}>
             <Avatar url={p.avatar_url} emoji={lv.emoji} size={sizes[i]}/>
           </div>
           <div className="pod-name">{p.display_name}{isMe&&<span style={{color:"var(--azzurro)",fontSize:9,display:"block"}}>TU</span>}</div>
@@ -5632,7 +5635,7 @@ function BachecaView({ profile }) {
             onMouseOver={e=>e.currentTarget.style.transform="rotate(0deg) scale(1.02)"}
             onMouseOut={e=>e.currentTarget.style.transform=`rotate(${rotation(n.id)}deg)`}>
               {/* Puntina effetto */}
-              <div style={{position:"absolute",top:-6,left:"50%",transform:"translateX(-50%)",width:12,height:12,borderRadius:"50%",background:"rgba(0,0,0,.3)",boxShadow:"0 2px 4px rgba(0,0,0,.3)"}}/>
+              <div style={{position:"absolute",top:-6,left:"50%",transform:"translateX(-50%)",width:12,height:12,borderRadius:"50%",background:"var(--surface)",boxShadow:"0 2px 4px rgba(0,0,0,.3)"}}/>
               <div className="hand" style={{fontSize:17,color:(n.color==="#339966"||n.color==="#D41323")?"#fff":"rgba(0,0,0,.88)",lineHeight:1.45,marginBottom:10,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{n.body}</div>
               <div style={{display:"flex",alignItems:"center",gap:5,borderTop:"1px solid rgba(0,0,0,.1)",paddingTop:8}}>
                 {n.profiles?.avatar_url
@@ -6250,7 +6253,7 @@ function XPHistoryChart({ playerId }) {
             <div style={{
               width:"100%",borderRadius:"3px 3px 0 0",
               height:`${Math.max((d.xp/max)*60,d.xp>0?4:0)}px`,
-              background:d.xp>0?"linear-gradient(180deg,var(--neon-blue),rgba(163,207,254,.4))":"rgba(255,255,255,.06)",
+              background:d.xp>0?"var(--azzurro))":"rgba(255,255,255,.06)",
               transition:"height .3s ease",
             }}/>
           </div>
@@ -6328,7 +6331,7 @@ function NotificationToggle({ playerId }) {
       {!isGranted && !isDenied && (
         <button onClick={requestPermission} disabled={loading}
           style={{
-            background:"linear-gradient(135deg,var(--neon-blue),var(--azzurro))",
+            background:"var(--azzurro))",
             border:"none",borderRadius:99,padding:"8px 14px",
             color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",
             whiteSpace:"nowrap",flexShrink:0,
@@ -6370,7 +6373,7 @@ function InAppNotifBanner() {
     <div onClick={()=>setNotif(null)} style={{
       position:"fixed",top:0,left:0,right:0,zIndex:9999,
       padding:"max(env(safe-area-inset-top,12px),12px) 16px 14px",
-      background:"rgba(10,20,40,.97)",
+      background:"rgba(18,18,18,.97)",
       borderBottom:"2px solid var(--neon-blue)",
       boxShadow:"0 4px 24px rgba(0,0,0,.5)",
       display:"flex",alignItems:"center",gap:12,
@@ -6416,11 +6419,11 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
           </div>
         </div>
       ))}
-      <div style={{background:"linear-gradient(135deg,#0d1428,#1a2540)",border:"2px solid rgba(253,239,38,.5)",borderRadius:28,padding:"40px 48px",textAlign:"center",animation:"lvlpop .6s cubic-bezier(.34,1.56,.64,1) forwards",position:"relative",overflow:"hidden",maxWidth:340,width:"90%",boxShadow:"0 0 60px rgba(253,239,38,.25)"}}>
+      <div style={{background:"#161616",border:"2px solid rgba(253,239,38,.5)",borderRadius:28,padding:"40px 48px",textAlign:"center",animation:"lvlpop .6s cubic-bezier(.34,1.56,.64,1) forwards",position:"relative",overflow:"hidden",maxWidth:340,width:"90%",boxShadow:"0 0 60px rgba(253,239,38,.25)"}}>
         <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"linear-gradient(105deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%)",animation:"lvlshine 2.5s .6s ease-in-out infinite"}}/>
         <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".2em",color:"rgba(255,255,255,.4)",marginBottom:8}}>🌿 SEI CRESCIUTO! 🌿</div>
         <div style={{fontSize:76,lineHeight:1,marginBottom:10,filter:"drop-shadow(0 0 16px rgba(253,239,38,.5))"}}>{newLevel.emoji}</div>
-        <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:34,fontWeight:900,textTransform:"uppercase",background:"linear-gradient(135deg,#FDEF26,#D41323)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>{newLevel.name}</div>
+        <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:34,fontWeight:900,textTransform:"uppercase",background:"#FDEF26",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>{newLevel.name}</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:20}}>Hai sbloccato il livello <strong style={{color:"#FDEF26"}}>{newLevel.name}</strong>!</div>
         <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:18}}>
           <div style={{textAlign:"center",opacity:.6}}><div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>PRIMA</div><div style={{fontSize:20}}>{oldLevel.emoji}</div><div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{oldLevel.name}</div></div>
@@ -6495,12 +6498,12 @@ function AnimatedLevelBar({ xp, lv }) {
       }}>
         <div style={{
           height:'100%', width:width+'%', borderRadius:9, position:'relative', overflow:'hidden',
-          background:'linear-gradient(90deg,#339966,#FDEF26 50%,#FF6DEC)',
-          boxShadow:'0 0 16px rgba(255,109,236,.7)',
+          background:'#339966',
+          boxShadow:'0 0 12px rgba(51,153,102,.55)',
           transition:'width 1.1s cubic-bezier(.22,1.5,.4,1)',
         }}>
           {/* Strisce diagonali che scorrono (effetto caricamento da gioco) */}
-          <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(45deg,rgba(255,255,255,.18) 0,rgba(255,255,255,.18) 10px,transparent 10px,transparent 20px)',backgroundSize:'28px 28px',animation:'barStripes .7s linear infinite'}}/>
+          <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(45deg,rgba(253,239,38,.4) 0,rgba(255,255,255,.18) 10px,transparent 10px,transparent 20px)',backgroundSize:'28px 28px',animation:'barStripes .7s linear infinite'}}/>
           {/* Riflesso lucido in alto */}
           <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',background:'linear-gradient(180deg,rgba(255,255,255,.35),transparent)',borderRadius:'9px 9px 0 0'}}/>
         </div>
@@ -6878,8 +6881,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   );
 
   if (mustChangePin) return (
-    <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{background:'rgba(0,0,20,.7)',border:'1px solid rgba(255,255,255,.15)',borderRadius:20,padding:'32px 24px',width:'100%',maxWidth:360,backdropFilter:'blur(20px)'}}>
+    <div style={{background:'#000',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+      <div style={{background:'rgba(0,0,0,.7)',border:'1px solid rgba(255,255,255,.15)',borderRadius:20,padding:'32px 24px',width:'100%',maxWidth:360,backdropFilter:'blur(20px)'}}>
         <div style={{textAlign:'center',marginBottom:24}}>
           <div style={{fontSize:48,marginBottom:8}}>🔐</div>
           <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:8}}>Imposta il tuo PIN</div>
@@ -6900,7 +6903,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   );
 
   if (loading) return (
-    <div style={{background:'linear-gradient(160deg,#1e1060 0%,#1a3590 45%,#2a1275 100%)',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+    <div style={{background:'#000',minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
       <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#A3CFFE',letterSpacing:'.08em'}}>🌿 Caricamento…</div>
       {loadStuck && (
         <div style={{textAlign:'center'}}>
@@ -7035,7 +7038,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                     <span style={{fontSize:12,fontWeight:700,color:"var(--neon-blue)"}}>{fullProfile.xp} / {goal} XP ({pct}%)</span>
                   </div>
                   <div style={{height:8,borderRadius:99,background:"rgba(255,255,255,.08)",overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${pct}%`,borderRadius:99,background:pct>=100?"var(--neon-green)":"linear-gradient(90deg,var(--neon-blue),var(--azzurro))",transition:"width .5s ease"}}/>
+                    <div style={{height:"100%",width:`${pct}%`,borderRadius:99,background:pct>=100?"var(--neon-green)":"var(--azzurro))",transition:"width .5s ease"}}/>
                   </div>
                   {pct>=100 && <div style={{fontSize:11,color:"var(--neon-green)",marginTop:4,fontWeight:700}}>🏆 Obiettivo raggiunto!</div>}
                 </div>
@@ -7218,7 +7221,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           <div style={{ marginTop: 8 }}>
             <div className="pd-tab-title" style={{color:"#339966"}}>⚡ Lab</div>
             {/* Lab QR check-in */}
-            <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(51,153,102,.2)",borderRadius:14,padding:12,marginBottom:12,position:"relative",zIndex:2}}>
+            <div style={{background:"var(--surface)",border:"1px solid rgba(51,153,102,.2)",borderRadius:14,padding:12,marginBottom:12,position:"relative",zIndex:2}}>
               <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"var(--neon-green)",marginBottom:8}}>📍 Check-in Lab — scansiona il QR della sessione</div>
               {showCamera ? (
                 <QRScanner onScan={code=>{setShowCamera(false);doCheckin(code);}} onClose={()=>setShowCamera(false)}/>
@@ -7540,7 +7543,7 @@ function DashboardView() {
                 <div style={{flex:1}}>
                   <div style={{fontSize:12,fontWeight:700,color:"var(--text)",marginBottom:2}}>{p.display_name||"—"}</div>
                   <div style={{height:4,background:"rgba(255,255,255,.06)",borderRadius:99,overflow:"hidden"}}>
-                    <div style={{height:"100%",background:"linear-gradient(90deg,var(--neon-blue),var(--neon-pink))",borderRadius:99,width:Math.round((p.xp/maxXp)*100)+"%"}}/>
+                    <div style={{height:"100%",background:"var(--azzurro))",borderRadius:99,width:Math.round((p.xp/maxXp)*100)+"%"}}/>
                   </div>
                 </div>
                 <div style={{fontSize:11,fontWeight:900,color:"var(--neon-blue)"}}>{p.xp}</div>
@@ -8162,7 +8165,7 @@ function BigTopPlayerView({ fullProfile, setFullProfile }) {
       <div className="pd-tab-title" style={{color:"#D41323"}}>🎪 BIG TOP</div>
 
       {/* Check-in col codice */}
-      <div style={{background:"rgba(0,0,0,.4)",border:"1px solid rgba(212,19,35,.25)",borderRadius:14,padding:12,marginBottom:12}}>
+      <div style={{background:"var(--surface)",border:"1px solid rgba(212,19,35,.25)",borderRadius:14,padding:12,marginBottom:12}}>
         <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"#D41323",marginBottom:8}}>📍 Check-in BIG TOP — inserisci il codice del turno</div>
         <div style={{display:"flex",gap:8}}>
           <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="CODICE"
@@ -8172,7 +8175,7 @@ function BigTopPlayerView({ fullProfile, setFullProfile }) {
         </div>
       </div>
 
-      {msg && <div style={{fontSize:13,fontWeight:800,textAlign:"center",padding:"8px 10px",marginBottom:10,background:"rgba(0,0,0,.35)",borderRadius:10}}>{msg}</div>}
+      {msg && <div style={{fontSize:13,fontWeight:800,textAlign:"center",padding:"8px 10px",marginBottom:10,background:"var(--surface)",borderRadius:10}}>{msg}</div>}
 
       {/* Navigazione mese: solo corrente e successivo */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:12}}>
@@ -8583,16 +8586,15 @@ function ExportView() {
 
   return (
     <div>
-      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:8}}>📤 Export dati</div>
       <div style={{fontSize:13,color:"var(--text3)",marginBottom:20}}>I file vengono scaricati in formato CSV, compatibile con Excel, Google Fogli e Numbers.</div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {exports.map(ex=>(
-          <div key={ex.id} style={{background:"rgba(0,0,0,.3)",border:`1px solid rgba(255,255,255,.08)`,borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
+          <div key={ex.id} style={{background:"var(--surface)",border:"1.5px solid var(--border2)",borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
             <div style={{flex:1}}>
-              <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:ex.color,marginBottom:3}}>{ex.label}</div>
+              <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:"var(--text)",marginBottom:3}}>{ex.label}</div>
               <div style={{fontSize:12,color:"var(--text3)"}}>{ex.desc}</div>
             </div>
-            <button className="btn btn-ghost btn-sm" style={{flexShrink:0,borderColor:ex.color,color:ex.color,minWidth:100}} onClick={ex.fn} disabled={loading===ex.id}>
+            <button className="btn btn-ghost btn-sm" style={{flexShrink:0,minWidth:100}} onClick={ex.fn} disabled={loading===ex.id}>
               {loading===ex.id ? "⏳ Export…" : "⬇️ Scarica"}
             </button>
           </div>
@@ -9333,7 +9335,7 @@ export default function App() {
       <style>{css}</style>
       {!isOnline && <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#c62828",color:"#fff",textAlign:"center",padding:"8px",fontSize:13,fontWeight:700}}>📵 Nessuna connessione</div>}
       <div style={{position:"relative"}}>
-        <div style={{position:"fixed",top:0,left:0,right:0,height:3,zIndex:9999,background:"linear-gradient(90deg,var(--neon-blue),var(--neon-pink),var(--neon-blue))",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}}/>
+        <div style={{position:"fixed",top:0,left:0,right:0,height:3,zIndex:9999,background:"var(--azzurro),var(--neon-blue))",backgroundSize:"200% 100%",animation:"shimmer 1.5s linear infinite"}}/>
         <Login onLogin={setProfile} />
       </div>
     </>
