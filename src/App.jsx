@@ -7069,20 +7069,24 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       <ToastContainer/>
       <InAppNotifBanner/>
       {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
-      {/* Top bar */}
-      <div className="pd-topbar" style={{paddingTop:"max(10px, calc(env(safe-area-inset-top, 0px) + 8px))"}}>
-        <div>
-          <div className="pd-logo-img logo-b"/>
-          <div className="pd-logo-img logo-w"/>
+      {/* Top bar — Camerino18 */}
+      <div className="topbar" style={{
+        position:"fixed", top:0, left:0, right:0, zIndex:20,
+        background: playerTheme === "light" ? (TAB_BG[tab]||TAB_BG.profilo) : NIGHT_BG,
+        transition:"background 0.5s ease",
+        paddingTop:"env(safe-area-inset-top, 0px)",
+        height:"calc(58px + env(safe-area-inset-top, 0px))",
+      }}>
+        <div style={{display:"flex"}}>
+          <div className="logo-img logo-b"/>
+          <div className="logo-img logo-w"/>
         </div>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          {visConfig.squadre !== false && fullProfile?.squads?.name && (
-            <div style={{background:'#111',color:'#FDEF26',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
-          )}
-          <button onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,padding:'5px 9px',cursor:'pointer',fontSize:14,lineHeight:1}} title="Cambia tema">
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {visConfig.coin !== false && <div className="coinbox">🪙 {fullProfile?.coin ?? 0}</div>}
+          <button className="icon-btn" onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} title="Cambia tema">
             {playerTheme==="dark"?"☀️":"🌙"}
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
+          <button className="icon-btn" onClick={onLogout} title="Esci">🚪</button>
         </div>
       </div>
 
@@ -7512,14 +7516,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         </div>
       )}
 
-      {/* Bottom nav */}
-      <div className="player-bottom-nav">
+      {/* Bottom nav — Camerino18 */}
+      <div className="bnav" style={{
+        position:"fixed", bottom:0, left:0, right:0,
+        paddingBottom:"calc(12px + env(safe-area-inset-bottom, 0px))",
+      }}>
         {BOTTOM_TABS.map(([id, icon, label]) => (
-          <button key={id} className={`player-nav-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
-            <span className="player-nav-icon">{icon}</span>
-            {id === "notifiche" && unread > 0 && <span style={{ position: "absolute", top: 8, right: "calc(50% - 16px)", background: "var(--neon-pink)", color: "#fff", borderRadius: 99, fontSize: 8, fontWeight: 800, padding: "1px 4px", boxShadow: "0 0 8px rgba(255,0,204,0.6)" }}>{unread}</span>}
-            {id === "messaggi" && unreadMsgs > 0 && <span style={{ position: "absolute", top: 8, right: "calc(50% - 16px)", background: "var(--neon-green)", color: "#000", borderRadius: 99, fontSize: 8, fontWeight: 800, padding: "1px 4px" }}>{unreadMsgs}</span>}
-            <span className="player-nav-label">{label}</span>
+          <button key={id} className={`nav-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
+            <span className="nic">{icon}</span>
+            <span className="nlb">{label}</span>
+            {id === "notifiche" && unread > 0 && <span className="nbadge">{unread}</span>}
+            {id === "messaggi" && unreadMsgs > 0 && <span className="nbadge">{unreadMsgs}</span>}
           </button>
         ))}
       </div>
