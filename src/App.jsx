@@ -362,12 +362,8 @@ const css = `
     font-family:'Funnel Display',sans-serif; font-size:14px; font-weight:700;
     transition:all .15s; white-space:nowrap; min-height:44px; letter-spacing:.03em; position:relative;
   }
-  .btn-primary {
-    background:#FDEF26; color:#101010; width:100%; padding:15px;
-    font-size:15px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
-    border:2px solid #101010; box-shadow:var(--glow-blue), inset 0 1px 0 rgba(255,255,255,0.15);
-    border-radius:12px;
-  }
+  .btn-primary { background:#101010; color:#FDEF26; border:none; border-radius:9px; font-weight:800; text-transform:uppercase; box-shadow:2px 2px 0 rgba(0,0,0,.3); }
+  body:not(.light) .btn-primary { background:#FDEF26; color:#101010; }
   .btn-primary:active { transform:scale(.97); opacity:.9; }
   .btn-ghost { background:rgba(163,207,254,0.06); color:var(--text2); border:1px solid var(--border2); border-radius:10px; }
   .btn-ghost:active { background:rgba(163,207,254,0.12); }
@@ -418,22 +414,17 @@ const css = `
   .section-banner-bg { position:absolute; inset:0; background-size:cover; background-position:center; }
   .section-banner-overlay { position:absolute; inset:0; background:rgba(0,0,0,.45); }
   .section-banner-content { position:relative; z-index:1; flex:1; }
-  .section-banner-title { font-family:'Funnel Display',sans-serif; font-weight:900; font-size:36px; text-transform:uppercase; color:#fff !important; letter-spacing:.02em; line-height:1; text-shadow:none; }
+  .section-banner-title { font-family:'Funnel Display',sans-serif; font-weight:800; font-size:26px; text-transform:uppercase; color:#fff !important; letter-spacing:.02em; line-height:1; text-shadow:none; }
   .light .section-banner-title { color:#101010 !important; }
   .section-banner-sub { font-size:12px; color:rgba(255,255,255,.65); margin-top:2px; }
 
   /* ═══ GAME CARDS ═══ */
-  .card {
-    background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.09);
-    border-radius:var(--radius); padding:16px 20px;
-    backdrop-filter:blur(10px); position:relative;
-  }
+  .card { background:#ffffff; border:3px solid #101010; border-radius:16px 20px 14px 22px; box-shadow:4px 4px 0 #101010; padding:16px; margin-bottom:12px; position:relative; z-index:2; }
+  body:not(.light) .card { background:#17181c; border-color:#33353c; box-shadow:4px 4px 0 #000; color:#f0f0f0; }
   .card-sm { background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-sm); padding:12px 14px; }
   .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
-  .stat-card {
-    background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1);
-    border-radius:var(--radius); padding:14px; position:relative; overflow:hidden;
-  }
+  .stat-card { background:#ffffff; border:3px solid #101010; border-radius:16px 20px 14px 22px; box-shadow:4px 4px 0 #101010; border-radius:15px 18px 13px 17px; padding:14px; position:relative; z-index:2; }
+  body:not(.light) .stat-card { background:#17181c; border-color:#33353c; box-shadow:4px 4px 0 #000; color:#f0f0f0; }
   .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:rgba(253,239,38,.4); }
   .stat-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.12em; margin-bottom:4px; font-weight:700; }
   .stat-value { font-family:'Funnel Display',sans-serif; font-size:36px; font-weight:900; color:var(--text); line-height:1; }
@@ -496,8 +487,10 @@ const css = `
   .filter-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
   .search-inp { padding:10px 16px; background:rgba(163,207,254,0.05); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-family:'Funnel Display'; font-size:15px; outline:none; flex:1; min-width:140px; transition:all .15s; }
   .search-inp:focus { border-color:var(--neon-blue); box-shadow:0 0 0 3px rgba(163,207,254,0.1); }
-  .chip { padding:7px 16px; border-radius:99px; border:1.5px solid rgba(16,16,16,.35) !important; background:#ffffff !important; color:#101010 !important; font-family:'Funnel Display'; font-size:12px; font-weight:700; cursor:pointer; min-height:34px; transition:all .15s; letter-spacing:.03em; }
-  .chip.active { background:#101010 !important; color:#ffffff !important; border-color:#101010 !important; box-shadow:none; }
+  .chip { font-weight:800; font-size:12px; text-transform:uppercase; background:#ffffff !important; border:2.5px solid #101010 !important; border-radius:99px; padding:7px 13px 5px; color:#101010 !important; box-shadow:2px 2px 0 #101010; cursor:pointer; }
+  body:not(.light) .chip { background:#17181c !important; border-color:#000 !important; color:#ccc !important; box-shadow:2px 2px 0 #000; }
+  .chip.active { background:#101010 !important; color:#FDEF26 !important; border-color:#101010 !important; box-shadow:2px 2px 0 rgba(0,0,0,.35); }
+  body:not(.light) .chip.active { background:#FDEF26 !important; color:#101010 !important; }
 
   /* ═══ BATCH ═══ */
   .batch-panel { background:rgba(163,207,254,0.05); border:1px solid rgba(163,207,254,0.2); border-radius:var(--radius); padding:12px 16px; margin-bottom:14px; }
@@ -599,14 +592,8 @@ const css = `
 
   /* ═══ MODAL ═══ */
   .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:100; display:flex; align-items:flex-end; justify-content:center; backdrop-filter:blur(8px); }
-  .modal {
-    background:rgba(14,14,14,0.98); border:1px solid rgba(163,207,254,0.25);
-    border-radius:20px 20px 0 0; padding:24px 20px;
-    padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
-    width:100%; max-width:560px; max-height:92vh; overflow-y:auto;
-    box-shadow:0 -20px 60px rgba(0,0,0,0.8), var(--glow-blue);
-    position:relative;
-  }
+  .modal { background:#ffffff; border:3px solid #101010; border-radius:18px 22px 16px 24px; box-shadow:6px 6px 0 #101010; padding:22px; width:100%; max-width:460px; max-height:88vh; overflow-y:auto; color:#101010; }
+  body:not(.light) .modal { background:#17181c; border-color:#33353c; box-shadow:6px 6px 0 #000; color:#f0f0f0; }
   .modal::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--azzurro); border-radius:20px 20px 0 0; }
   .modal-title { font-family:'Funnel Display',sans-serif; font-size:30px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:18px; letter-spacing:.04em; }
   .section-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.15em; margin:16px 0 8px; }
@@ -861,11 +848,11 @@ const css = `
   /* ─ Step 3: Educator layout ─ */
   .light .edu-layout { background: #eef2fb; }
 
-  .light .topbar { background:#ffffff !important; border-bottom:2px solid #101010 !important; }
-  .light .mob-header { background:#ffffff !important; border-bottom:2px solid #101010 !important; }
+  .light .topbar { background:#ffffff !important; border-bottom:3px solid #101010 !important; }
+  .light .mob-header { background:#ffffff !important; border-bottom:3px solid #101010 !important; }
   .light .mob-header * { color:#101010; }
-  .light .mob-bottom-nav { background:#ffffff !important; border-top:2px solid #101010 !important; }
-  .light .mob-bottom-nav * { color:#101010 !important; }
+  .light .mob-bottom-nav { background:#101010 !important; border-top:none !important; }
+  .light .mob-bottom-nav * { color:rgba(255,255,255,.55) !important; }
   .light .topbar * { color:#101010; }
   .light .sidebar {
     background: #ffffff;
@@ -969,10 +956,7 @@ const css = `
   .light .search-inp:focus { border-color: #101010; box-shadow: 0 0 0 3px rgba(16,16,16,.1); }
 
   /* ─ Step 6: Buttons ─ */
-  .light .btn-primary {
-    background:#FDEF26 !important; color:#101010 !important;
-    border:2px solid #101010 !important; box-shadow:none !important;
-  }
+  .light .btn-primary { background:#101010 !important; color:#FDEF26 !important; border:none !important; }
   .light .btn-ghost {
     background: rgba(0,0,0,.05);
     color:#101010;
@@ -1187,11 +1171,8 @@ const css = `
     border-color: rgba(16,16,16,.3);
     color: #101010;
   }
-  .light .pd-card {
-    background: rgba(255,255,255,.85) !important;
-    border: 1px solid rgba(0,0,0,.08) !important;
-    color: #101010;
-  }
+  .light .pd-card { background:#ffffff; border:3px solid #101010; border-radius:16px 20px 14px 22px; box-shadow:4px 4px 0 #101010; padding:16px; margin-bottom:14px; position:relative; z-index:2; }
+  body:not(.light) .pd-card { background:#17181c; border-color:#33353c; box-shadow:4px 4px 0 #000; color:#f0f0f0; }
   .light .pd-card * { color: #101010; }
   .light .pd-sg .pd-sc {
     background: rgba(255,255,255,.9) !important;
@@ -1224,11 +1205,8 @@ const css = `
   .light .month-prog-fill { background: linear-gradient(90deg, #D41323, #D41323); }
   .light .xp-bar-wrap { background: rgba(16,16,16,.08); }
   .light .xp-bar { background:#101010; }
-  .light .player-bottom-nav {
-    background: #ffffff !important;
-    border-top: 2px solid #101010 !important;
-  }
-  .light .player-bottom-nav * { color:#101010 !important; }
+  .light .player-bottom-nav { background:#101010 !important; border-top:none !important; }
+  .light .player-bottom-nav * { color:rgba(255,255,255,.5); }
   .light .player-nav-btn       { color: rgba(255,255,255,.28) !important; }
   .light .player-nav-btn.active { color: #90caff !important; }
   .light .player-nav-btn.active::after { background: #90caff !important; }
@@ -6939,7 +6917,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     messaggi:   '#FF6DEC',
     notifiche:  '#A3CFFE',
   };
-  const NIGHT_BG = '#000';
+  const NIGHT_BG = '#0d0d0d';
 
     return (
     <div className="player-wrap" style={{background: playerTheme === "light" ? (TAB_BG[tab]||TAB_BG.profilo) : NIGHT_BG, transition:'background 0.5s ease'}}>
@@ -9039,7 +9017,7 @@ function EducatorShell({ profile, onLogout }) {
       </div>
 
       {/* Main */}
-      <div className="edu-main" style={{background: theme === "light" ? ((sectionColors?.[tab] || DEFAULT_SECTION_COLORS[tab])?.color || "#A3CFFE") : "#0a0a0a", transition:"background .4s ease"}}>
+      <div className="edu-main" style={{background: theme === "light" ? ((sectionColors?.[tab] || DEFAULT_SECTION_COLORS[tab])?.color || "#A3CFFE") : "#0d0d0d", transition:"background .4s ease"}}>
         <div className="bg-doodles"/>
         <div className="topbar" style={{borderBottom:`1px solid ${EduTabColors[tab]?.border||"rgba(255,255,255,.08)"}`}}>
           <div/>
