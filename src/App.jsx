@@ -1,5 +1,6 @@
 import { sb, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
+import "./pug-theme.css";   // foglio di stile del kit viste (classi pug-*)
 
 // ─── PUSH NOTIFICATIONS ───────────────────────────────
 // URL e chiave derivano dall'ambiente (vedi supabase.js): in produzione
@@ -3604,6 +3605,14 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
   );
 }
 
+function PugDoodles() {
+  return (
+    <div className="pug-doodles" style={{color:"#101010",opacity:0.15}}>
+      <svg viewBox="0 0 390 960" width="100%" height="100%" preserveAspectRatio="xMidYMin slice"><defs><g id="fl" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z"/><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z" transform="rotate(72)"/><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z" transform="rotate(144)"/><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z" transform="rotate(216)"/><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z" transform="rotate(288)"/><circle r="3.1" fill="currentColor" stroke="none"/></g><g id="st"><path d="M0 -13 L3 -3 L13 0 L3 3 L0 13 L-3 3 L-13 0 L-3 -3Z" fill="currentColor"/></g><g id="lf" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M0 0 C7 -4 11 -13 8 -20 C2 -15 -2 -7 0 0Z"/><path d="M2.5 -3 L7 -15"/></g></defs><use href="#st" transform="translate(47,73) scale(1.05) rotate(231)"/><use href="#fl" transform="translate(201,75) scale(1.41) rotate(243)"/><use href="#st" transform="translate(359,77) scale(0.74) rotate(155)"/><use href="#fl" transform="translate(28,163) scale(1.47) rotate(324)"/><use href="#lf" transform="translate(171,196) scale(1.28) rotate(334)"/><use href="#fl" transform="translate(366,197) scale(1.29) rotate(270)"/><use href="#fl" transform="translate(23,281) scale(1.47) rotate(307)"/><use href="#fl" transform="translate(170,307) scale(1.26) rotate(100)"/><use href="#fl" transform="translate(352,292) scale(1.2) rotate(339)"/><use href="#fl" transform="translate(24,427) scale(1.13) rotate(282)"/><use href="#fl" transform="translate(174,414) scale(1.01) rotate(147)"/><use href="#fl" transform="translate(320,402) scale(0.93) rotate(55)"/><use href="#fl" transform="translate(37,542) scale(0.86) rotate(350)"/><use href="#fl" transform="translate(169,531) scale(1.49) rotate(240)"/><use href="#fl" transform="translate(343,543) scale(1.25) rotate(101)"/><use href="#fl" transform="translate(68,681) scale(0.91) rotate(170)"/><use href="#st" transform="translate(169,664) scale(0.75) rotate(126)"/><use href="#fl" transform="translate(364,644) scale(1.18) rotate(249)"/><use href="#fl" transform="translate(30,801) scale(1.16) rotate(97)"/><use href="#fl" transform="translate(215,766) scale(1.12) rotate(202)"/><use href="#fl" transform="translate(345,771) scale(1.46) rotate(303)"/><use href="#fl" transform="translate(38,879) scale(1.13) rotate(308)"/><use href="#fl" transform="translate(210,914) scale(1.54) rotate(109)"/><use href="#fl" transform="translate(347,894) scale(1.28) rotate(151)"/><use href="#st" transform="translate(215,115) scale(0.42) rotate(106)"/><use href="#st" transform="translate(316,691) scale(0.47) rotate(307)"/><use href="#st" transform="translate(206,420) scale(0.59) rotate(65)"/><use href="#st" transform="translate(318,535) scale(0.65) rotate(69)"/><use href="#st" transform="translate(215,227) scale(0.59) rotate(159)"/><use href="#st" transform="translate(134,877) scale(0.58) rotate(97)"/><use href="#st" transform="translate(99,797) scale(0.59) rotate(283)"/></svg>
+    </div>
+  );
+}
+
 function Podium({ ranked, xpData, timeFilter, highlightId }) {
   // Funzione che restituisce la "tripla di confronto" per un giocatore
   // (XP, livello-derivato-da-XP, coin). Due giocatori condividono il podio
@@ -3614,8 +3623,6 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
     return `${xp}|${lv}|${p.coin||0}`;
   };
 
-  // Raggruppa in posizioni: 1ª, 2ª, 3ª. Stesso gruppo = stessa tieKey.
-  // Scorri ranked e crea gruppi consecutivi con stessa key
   if (!ranked || ranked.length === 0) return null;
   const groups = [];
   let current = { key: tieKey(ranked[0]), players: [ranked[0]] };
@@ -3632,69 +3639,68 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
   const top3groups = groups.slice(0, 3);
   if (top3groups.length < 1) return null;
 
-  // Render: 2°, 1°, 3° (layout podio classico)
-  const order = [1, 0, 2];
-  const cols = ["pod-2", "pod-1", "pod-3"];
-  const crowns = [null, "👑", null];
-  const xpColors = ["#aac8e0", "#FDEF26", "#d4916a"];
-  const sizes = [84, 110, 76];
-  const ranks = ["2°", "1°", "3°"];
+  // Render: 2°, 1°, 3° — blocchi del kit (altezze e colori del mockup)
+  const order   = [1, 0, 2];
+  const medals  = ["🥈", "🥇", "🥉"];
+  const heights = [64, 86, 50];
+  const blockBg = ["#A3CFFE", "#FF6DEC", "#339966"];
+  const blockFg = ["#101010", "#101010", "#ffffff"];
 
   function renderGroup(group, i) {
-    if (!group) return <div key={i} className={`pod-col ${cols[i]}`}/>;
+    if (!group) return <div key={"empty-"+i} className="pug-pod"/>;
     const players = group.players;
-    // Se solo uno: render normale
+    const xpShown = timeFilter === "oggi" || timeFilter === "mese"
+      ? (xpData[players[0].id]||0) : players[0].xp;
+    const block = (
+      <div className="block" style={{height:heights[i],background:blockBg[i],color:blockFg[i]}}>
+        <span className="medal">{medals[i]}</span>
+        <span className="xp">{(xpShown||0).toLocaleString("it-IT")}</span>
+      </div>
+    );
+
+    // Un solo giocatore
     if (players.length === 1) {
       const p = players[0];
       const lv = getLevel(p.xp);
-      const xpShown = timeFilter === "oggi" || timeFilter === "mese" ? xpData[p.id]||0 : p.xp;
       const isMe = p.id === highlightId;
       return (
-        <div key={p.id} className={`pod-col ${cols[i]}`}>
-          {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
-          <div className="pod-av-wrap" style={{filter:"drop-shadow(0 5px 10px rgba(0,0,0,.35))",...(isMe?{outline:"3px solid #101010",outlineOffset:3,borderRadius:"50%"}:{})}}>
-            <Avatar url={p.avatar_url} emoji={lv.emoji} size={sizes[i]}/>
-          </div>
-          <div className="pod-name">{p.display_name}{isMe&&<span style={{color:"var(--azzurro)",fontSize:9,display:"block"}}>TU</span>}</div>
-          <div className="pod-xp">{xpShown} XP</div>
-          <div className="pod-base">
-            <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:xpColors[i]}}>{ranks[i]}</div>
-          </div>
+        <div key={p.id} className="pug-pod">
+          <span className="av" style={isMe?{outline:"3px solid #101010",outlineOffset:2,borderRadius:"50%"}:undefined}>
+            {p.avatar_url
+              ? <img src={p.avatar_url} alt="" style={{width:38,height:38,borderRadius:"50%",objectFit:"cover",display:"block",margin:"0 auto"}}/>
+              : lv.emoji}
+          </span>
+          <div className="nm">{p.display_name}{isMe && <span className="pug-me">TU</span>}</div>
+          {block}
         </div>
       );
     }
-    // Pari merito: avatar piccoli affiancati
-    const xpShown = timeFilter === "oggi" || timeFilter === "mese" ? xpData[players[0].id]||0 : players[0].xp;
-    const tieSize = Math.max(24, sizes[i] - 9 * Math.min(players.length - 1, 4));
+
+    // Pari merito: avatar affiancati
+    const label = players.length === 2
+      ? `${players[0].display_name} & ${players[1].display_name}`
+      : players.length <= 5
+        ? `${players.length} a pari merito`
+        : `5 a pari merito (+${players.length-5})`;
     return (
-      <div key={"tie-" + i} className={`pod-col ${cols[i]}`}>
-        {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
-        <div style={{display:"flex",justifyContent:"center",gap:-6,marginBottom:6,flexWrap:"wrap",maxWidth:"100%"}}>
-          {players.slice(0, 5).map(p => {
+      <div key={"tie-"+i} className="pug-pod">
+        <span className="av" style={{display:"flex",justifyContent:"center",gap:2}}>
+          {players.slice(0,4).map(p => {
             const lv = getLevel(p.xp);
             const isMe = p.id === highlightId;
-            return (
-              <div key={p.id} className="pod-av-wrap" style={{marginLeft:-4, ...(isMe?{outline:"2px solid var(--neon-blue)",outlineOffset:1}:{})}}>
-                <Avatar url={p.avatar_url} emoji={lv.emoji} size={tieSize}/>
-              </div>
-            );
+            return p.avatar_url
+              ? <img key={p.id} src={p.avatar_url} alt="" style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",...(isMe?{outline:"2px solid #101010"}:{})}}/>
+              : <span key={p.id} style={{fontSize:26}}>{lv.emoji}</span>;
           })}
-        </div>
-        <div className="pod-name" style={{fontSize:11}}>
-          {players.length === 2 ? `${players[0].display_name} & ${players[1].display_name}` :
-           players.length <= 5 ? `${players.length} a pari merito` :
-           `${players.slice(0,5).length} a pari merito (+${players.length-5})`}
-        </div>
-        <div className="pod-xp">{xpShown} XP</div>
-        <div className="pod-base">
-          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:xpColors[i]}}>{ranks[i]}</div>
-        </div>
+        </span>
+        <div className="nm">{label}</div>
+        {block}
       </div>
     );
   }
 
   return (
-    <div className="podium-wrap">
+    <div className="pug-podium">
       {order.map((pos, i) => renderGroup(top3groups[pos], i))}
     </div>
   );
@@ -6681,6 +6687,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   useEffect(() => {
     document.body.classList.toggle("light", playerTheme === "light");
+    document.body.classList.toggle("night", playerTheme === "dark");  // convenzione pug-theme.css
     localStorage.setItem("pug_theme", playerTheme);
   }, [playerTheme]);
   const [newPin1, setNewPin1] = useState("");
@@ -7046,52 +7053,38 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const NIGHT_BG = '#0d0d0d';
 
     return (
-    <div className="player-wrap" style={{background: playerTheme === "light" ? (TAB_BG[tab]||TAB_BG.profilo) : NIGHT_BG, transition:'background 0.5s ease'}}>
-      <div className="bg-doodles"/>
+    <div className="pug-screen" style={{background: playerTheme === "light" ? (TAB_BG[tab]||TAB_BG.profilo) : NIGHT_BG, transition:'background 0.5s ease'}}>
+      <PugDoodles/>
       {/* Toast notification */}
       {toast && (
         <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:100,background:"rgba(0,0,0,.9)",border:`1px solid ${toast.color}`,borderRadius:12,padding:"10px 20px",fontSize:14,fontWeight:700,color:toast.color,boxShadow:`0 0 20px ${toast.color}44`,whiteSpace:"nowrap",backdropFilter:"blur(10px)"}}>
           {toast.msg}
         </div>
       )}
-      {/* Floral background */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.07,overflow:'hidden'}}>
-        <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{animation:"float2 15s ease-in-out infinite"}} style={{width:'100%',height:'100%'}}>
-          <defs>
-            <g id="fl"><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="4" fill="white"/></g>
-            <g id="lf"><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(20)"/><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(-20)"/></g>
-          </defs>
-          <use href="#fl" transform="translate(40,60) scale(1.2)"/><use href="#lf" transform="translate(90,130)"/><use href="#fl" transform="translate(320,80) scale(.9)"/><use href="#lf" transform="translate(280,170) scale(1.1)"/><use href="#fl" transform="translate(55,260) scale(.8)"/><use href="#lf" transform="translate(340,310)"/><use href="#fl" transform="translate(170,360) scale(1.3)"/><use href="#lf" transform="translate(45,430) scale(1.2)"/><use href="#fl" transform="translate(305,450) scale(.9)"/><use href="#lf" transform="translate(200,510)"/><use href="#fl" transform="translate(75,570) scale(1.1)"/><use href="#lf" transform="translate(335,595) scale(.8)"/><use href="#fl" transform="translate(185,640) scale(.9)"/><use href="#lf" transform="translate(115,690) scale(1.2)"/>
-        </svg>
-      </div>
-
       {/* Toast notifications */}
       <ToastContainer/>
       <InAppNotifBanner/>
       {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
-      {/* Top bar — Camerino18 */}
-      <div className="topbar" style={{
-        position:"fixed", top:0, left:0, right:0, zIndex:20,
-        background: playerTheme === "light" ? (TAB_BG[tab]||TAB_BG.profilo) : NIGHT_BG,
-        transition:"background 0.5s ease",
+      {/* Top bar — kit viste */}
+      <div className="pug-topbar" style={{
         paddingTop:"env(safe-area-inset-top, 0px)",
         height:"calc(58px + env(safe-area-inset-top, 0px))",
       }}>
         <div style={{display:"flex"}}>
-          <div className="logo-img logo-b"/>
-          <div className="logo-img logo-w"/>
+          <div className="pug-logo pug-logo-b"/>
+          <div className="pug-logo pug-logo-w"/>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {visConfig.coin !== false && <div className="coinbox">🪙 {fullProfile?.coin ?? 0}</div>}
-          <button className="icon-btn" onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} title="Cambia tema">
+          {visConfig.coin !== false && <div className="pug-coin">🪙 {fullProfile?.coin ?? 0}</div>}
+          <button className="pug-iconbtn" onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} title="Cambia tema">
             {playerTheme==="dark"?"☀️":"🌙"}
           </button>
-          <button className="icon-btn" onClick={onLogout} title="Esci">🚪</button>
+          <button className="pug-iconbtn" onClick={onLogout} title="Esci">🚪</button>
         </div>
       </div>
 
       {/* Scrollable content */}
-      <div className="pd-scroll"
+      <div className="pug-scroll"
         onTouchStart={e=>{window._swipeX0=e.touches[0].clientX; window._swipeY0=e.touches[0].clientY;}}
         onScroll={e=>{
           if(e.target.scrollTop === 0 && window._pulling) { window._pulling=false; load(); addToast("🔄 Aggiornamento…","ok"); }
@@ -7289,36 +7282,37 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {/* ── CLASSIFICA ── */}
         {tab === "classifica" && (
           <div>
-            <div className="pd-tab-title" style={{color:"#A3CFFE"}}>🏆 Classifica</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-              <button className={`chip ${lbTimeFilter === "generale" ? "active" : ""}`} onClick={() => setLbTimeFilter("generale")}>🏆 Generale</button>
-              <button className={`chip ${lbTimeFilter === "oggi" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, background: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, color: lbTimeFilter === "oggi" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("oggi")}>⚡ Top 3 Oggi</button>
-              <button className={`chip ${lbTimeFilter === "mese" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "mese" ? "var(--rosa)" : undefined, background: lbTimeFilter === "mese" ? "var(--rosa)" : undefined, color: lbTimeFilter === "mese" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("mese")}>📅 Top 10 Mese</button>
+            <div className="pug-title">🏆 Classifica</div>
+            <div className="pug-chiprow">
+              {[["generale","🏆 Generale"],["oggi","⚡ Top 3 Oggi"],["mese","📅 Top 10 Mese"]].map(([v,l])=>(
+                <button key={v} className={`pug-chip ${lbTimeFilter===v?"on":""}`} onClick={()=>setLbTimeFilter(v)}>{l}</button>
+              ))}
             </div>
+
             <Podium ranked={lbRanked} xpData={lbTimeFilter==="oggi"?xpToday:lbTimeFilter==="mese"?xpMonth:{}} timeFilter={lbTimeFilter} highlightId={profile.id}/>
-            <div className="lb-list">
-              {lbRanked.slice(lbRanked.length>=3?3:0).map((p, i) => {
-                const plv = getLevel(p.xp);
-                const realIdx = (lbRanked.length>=3?3:0)+i;
-                const xpShown = lbTimeFilter === "oggi" ? xpToday[p.id] || 0 : lbTimeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
-                const isMe = p.id === profile.id;
-                return (
-                  <div key={p.id} className="lb-row" style={{ border: isMe ? "1.5px solid var(--azzurro)" : undefined, background: isMe ? "rgba(163,207,254,.06)" : undefined }}>
-                    <span className="lb-rank">{(realIdx+1)+"°"}</span>
-                    <div className="lb-av"><Avatar url={p.avatar_url} emoji={plv.emoji} size={38} /></div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="lb-name">{p.display_name}{isMe && <span style={{ fontSize: 10, color: "var(--azzurro)", marginLeft: 6, fontWeight: 700 }}>TU</span>}</div>
-                      <div className="lb-level">{plv.emoji} {plv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <span className="lb-xp">{xpShown}</span>
-                      <div style={{ fontSize: 9, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>XP</div>
-                    </div>
+
+            {lbRanked.slice(lbRanked.length>=3?3:0).map((p, i) => {
+              const plv = getLevel(p.xp);
+              const realIdx = (lbRanked.length>=3?3:0)+i;
+              const xpShown = lbTimeFilter === "oggi" ? xpToday[p.id] || 0 : lbTimeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
+              const isMe = p.id === profile.id;
+              return (
+                <div key={p.id} className="pug-lbrow" style={isMe?{background:"#FF6DEC"}:undefined}>
+                  <div className="rank">{(realIdx+1)+"°"}</div>
+                  <div className="av">
+                    {p.avatar_url
+                      ? <img src={p.avatar_url} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",display:"block",margin:"0 auto"}}/>
+                      : plv.emoji}
                   </div>
-                );
-              })}
-              {lbRanked.length === 0 && <div className="empty">Nessun dato.</div>}
-            </div>
+                  <div style={{minWidth:0}}>
+                    <div className="nm">{p.display_name}{isMe && <span className="pug-me">TU</span>}</div>
+                    <div className="sub">{plv.emoji} {plv.name}{visConfig.squadre !== false && p.squads?.name ? ` · 🛡️ ${p.squads.name}` : ""}</div>
+                  </div>
+                  <div className="xp">{(xpShown||0).toLocaleString("it-IT")}<small>XP</small></div>
+                </div>
+              );
+            })}
+            {lbRanked.length === 0 && <div className="pug-card" style={{textAlign:"center"}}>Nessun dato.</div>}
           </div>
         )}
 
@@ -7516,17 +7510,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         </div>
       )}
 
-      {/* Bottom nav — Camerino18 */}
-      <div className="bnav" style={{
-        position:"fixed", bottom:0, left:0, right:0,
-        paddingBottom:"calc(12px + env(safe-area-inset-bottom, 0px))",
-      }}>
+      {/* Bottom nav — kit viste */}
+      <div className="pug-nav" style={{paddingBottom:"calc(12px + env(safe-area-inset-bottom, 0px))"}}>
         {BOTTOM_TABS.map(([id, icon, label]) => (
-          <button key={id} className={`nav-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
-            <span className="nic">{icon}</span>
-            <span className="nlb">{label}</span>
-            {id === "notifiche" && unread > 0 && <span className="nbadge">{unread}</span>}
-            {id === "messaggi" && unreadMsgs > 0 && <span className="nbadge">{unreadMsgs}</span>}
+          <button key={id} className={`pug-navbtn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
+            <span className="ic">{icon}</span>
+            <span className="lb">{label}</span>
+            {id === "notifiche" && unread > 0 && <span className="bdg">{unread}</span>}
+            {id === "messaggi" && unreadMsgs > 0 && <span className="bdg">{unreadMsgs}</span>}
           </button>
         ))}
       </div>
