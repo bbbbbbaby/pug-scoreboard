@@ -5620,30 +5620,35 @@ function PlayerAnnouncementsTab() {
       .then(({ data }) => { setAnnouncements(data||[]); setLoading(false); })
       .catch(()=>setLoading(false));
   }, []);
+
+  // Data relativa in stile Camerino ("oggi" / "ieri" / "12 lug")
+  function relDay(iso) {
+    const d = new Date(iso);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const day = new Date(d); day.setHours(0,0,0,0);
+    const diff = Math.round((today - day) / 86400000);
+    if (diff <= 0) return "oggi";
+    if (diff === 1) return "ieri";
+    return d.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+  }
+
   if (loading) return <div className="loading">⏳</div>;
   if (announcements.length===0) return <div className="empty" style={{padding:24}}>Nessun annuncio.</div>;
   return (
     <div>
-      <div className="pd-tab-title">📢 Bacheca Annunci</div>
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        {announcements.map(a=>(
-          <div key={a.id} className="pd-card" style={{padding:14,border:a.pinned?"1.5px solid rgba(253,239,38,.4)":""}}>
-            {a.pinned&&<div style={{fontSize:11,color:"#FDEF26",fontWeight:700,marginBottom:4}}>📌 In evidenza</div>}
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-              {a.profiles?.avatar_url
-                ? <img src={a.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover"}} alt=""/>
-                : <span style={{fontSize:18}}>🌱</span>}
-              <div>
-                <div style={{fontSize:11,fontWeight:700,color:"var(--text)"}}>{a.profiles?.display_name||"Giardiniere"}</div>
-                <div style={{fontSize:9,color:"var(--text3)"}}>{new Date(a.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"long"})}</div>
-              </div>
-            </div>
-            <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:18,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:6}}>{a.title}</div>
-            {a.body&&<div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{a.body}</div>}
-            {a.image_data&&<img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt=""/>}
+      {announcements.map(a=>(
+        <div key={a.id} className="ann">
+          <div className="ahead" style={{background:a.pinned?"#FDEF26":"#A3CFFE",color:"#101010"}}>
+            <span>{a.pinned?"📌":"📢"} {a.profiles?.display_name||"Dal centro"}</span>
+            <span>{relDay(a.created_at)}</span>
           </div>
-        ))}
-      </div>
+          <div className="abody">
+            {a.title && <div style={{fontWeight:800,textTransform:"uppercase",fontSize:14,marginBottom:a.body?4:0}}>{a.title}</div>}
+            {a.body && <div style={{whiteSpace:"pre-wrap"}}>{a.body}</div>}
+            {a.image_data && <img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt=""/>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -6014,16 +6019,10 @@ function SocialTab({ players, myId, myProfile }) {
 
   return (
     <div>
-      {/* Toggle */}
-      <div style={{display:"flex",background:"rgba(255,255,255,.06)",borderRadius:12,padding:4,marginBottom:14,gap:4}}>
+      <div className="section-title" style={{marginTop:6}}>Social</div>
+      <div className="chiprow">
         {[["annunci","📢 Annunci"],["community","👥 Community"]].map(([v,l])=>(
-          <button key={v} onClick={()=>setView(v)} style={{
-            flex:1,padding:"10px 0",borderRadius:9,border:"none",cursor:"pointer",
-            fontFamily:"'Funnel Display',sans-serif",fontWeight:900,fontSize:15,
-            textTransform:"uppercase",letterSpacing:".05em",transition:"all .2s",
-            background:view===v?"rgba(255,255,255,.12)":"transparent",
-            color:view===v?"var(--text)":"var(--text3)",
-          }}>{l}</button>
+          <button key={v} className={`chip ${view===v?"active":""}`} onClick={()=>setView(v)}>{l}</button>
         ))}
       </div>
       {view==="annunci" && <PlayerAnnouncementsTab/>}
@@ -6145,7 +6144,7 @@ function ProfileReactions({ targetId, myId }) {
 
   return (
     <div style={{marginTop:12}}>
-      <div style={{fontSize:10,color:"var(--text3)",marginBottom:8,textTransform:"uppercase",letterSpacing:".1em",fontWeight:700}}>
+      <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".1em",opacity:.6,marginBottom:8}}>
         {total > 0 ? `${total} reaction` : "Manda una reaction!"}
       </div>
       <div style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap"}}>
@@ -6153,18 +6152,10 @@ function ProfileReactions({ targetId, myId }) {
           const count = counts[r]||0;
           const isMe = mine===r;
           return (
-            <button key={r} onClick={()=>react(r)}
-              style={{
-                padding:"8px 14px",borderRadius:99,cursor:"pointer",
-                border:`2px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
-                background:isMe?"rgba(163,207,254,.15)":"rgba(255,255,255,.04)",
-                fontSize:20,display:"flex",alignItems:"center",gap:6,
-                transform:isMe?"scale(1.1)":"scale(1)",
-                transition:"all .15s",
-                boxShadow:isMe?"var(--glow-blue)":"none",
-              }}>
+            <button key={r} onClick={()=>react(r)} className={`chip ${isMe?"active":""}`}
+              style={{fontSize:18,padding:"6px 12px",display:"flex",alignItems:"center",gap:5}}>
               {r}
-              {count>0 && <span style={{fontSize:12,fontWeight:700,color:isMe?"var(--neon-blue)":"var(--text3)"}}>{count}</span>}
+              {count>0 && <span style={{fontSize:11,fontWeight:800}}>{count}</span>}
             </button>
           );
         })}
@@ -6229,65 +6220,59 @@ function CommunityTab({ players, myId, myProfile }) {
     const lv = getLevel(selected.xp||0);
     return (
       <div>
-        <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.06)",border:"1px solid var(--border)",borderRadius:99,padding:"6px 14px",cursor:"pointer",color:"var(--text2)",fontSize:13,marginBottom:14,fontWeight:700}}>
-          ← Torna alla community
-        </button>
+        <div className="chiprow">
+          <button className="chip" onClick={()=>setSelected(null)}>← Torna alla community</button>
+        </div>
 
-        {/* Player hero */}
-        <div style={{background:"linear-gradient(160deg,rgba(255,255,255,.04),rgba(255,255,255,.02))",border:"1px solid var(--border)",borderRadius:20,padding:20,marginBottom:14,textAlign:"center"}}>
-          <div style={{width:80,height:80,borderRadius:"50%",overflow:"hidden",border:"3px solid var(--neon-blue)",margin:"0 auto 10px",boxShadow:"var(--glow-blue)"}}>
-            <Avatar url={selected.avatar_url} emoji={lv.emoji} size={80}/>
+        {/* Scheda giocatore */}
+        <div className="card" style={{textAlign:"center"}}>
+          <div style={{width:84,height:84,borderRadius:"50%",overflow:"hidden",border:"3px solid #101010",margin:"0 auto 10px",boxShadow:"3px 3px 0 rgba(0,0,0,.28)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <Avatar url={selected.avatar_url} emoji={lv.emoji} size={84}/>
           </div>
-          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:26,fontWeight:900,color:"var(--text)",textTransform:"uppercase"}}>{selected.display_name}</div>
-          <div style={{fontSize:13,color:"var(--text3)",marginBottom:10}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
-          {selected.squads?.name && <div style={{display:"inline-block",background:"rgba(255,255,255,.06)",borderRadius:99,padding:"3px 12px",fontSize:11,color:"var(--text2)",fontWeight:700,marginBottom:10}}>🛡️ {selected.squads.name}</div>}
+          <div style={{fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:26,textTransform:"uppercase",lineHeight:1}}>{selected.display_name}</div>
+          <div className="psb" style={{marginTop:4}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
+          {selected.squads?.name && (
+            <div style={{marginTop:8}}>
+              <span className="me-badge" style={{marginLeft:0}}>🛡️ {selected.squads.name}</span>
+            </div>
+          )}
           {/* Profile reactions */}
           <ProfileReactions targetId={selected.id} myId={myId}/>
         </div>
 
         {loadingProfile ? <div className="loading">⏳</div> : (
-          <div>
-            <div style={{fontSize:13,fontWeight:700,color:"var(--text2)",marginBottom:8,textTransform:"uppercase",letterSpacing:".05em"}}>🎖️ Badge — reagisci!</div>
+          <div className="card">
+            <div className="tape" style={{background:"#FF6DEC",color:"#101010"}}>🎖️ Badge — reagisci!</div>
             {playerBadges.length===0
               ? <div className="empty">Nessun badge ancora.</div>
-              : <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {playerBadges.map(pb=>{
-                    const rxns = reactions[pb.id]||{};
-                    const myR = myReactions[pb.id];
-                    const total = Object.values(rxns).reduce((a,b)=>a+b,0);
-                    return (
-                      <div key={pb.id} style={{background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",borderRadius:14,padding:"12px 14px"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                          <span style={{fontSize:32}}>{pb.badges?.icon||"🎖️"}</span>
-                          <div>
-                            <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{pb.badges?.name}</div>
-                            <div style={{fontSize:10,color:"var(--text3)"}}>{new Date(pb.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}</div>
-                          </div>
-                          {total > 0 && <div style={{marginLeft:"auto",fontSize:11,color:"var(--text3)"}}>{total} reaction</div>}
-                        </div>
-                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                          {REACT_TYPES.map(r=>{
-                            const count = rxns[r]||0;
-                            const isMe = myR===r;
-                            return (
-                              <button key={r} onClick={()=>react(pb.id,r)}
-                                style={{padding:"5px 10px",borderRadius:99,
-                                  border:`1.5px solid ${isMe?"var(--neon-blue)":"var(--border)"}`,
-                                  background:isMe?"rgba(163,207,254,.15)":"rgba(255,255,255,.04)",
-                                  cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",gap:5,
-                                  transform:isMe?"scale(1.1)":"scale(1)",transition:"all .15s",
-                                }}>
-                                {r}
-                                {count>0&&<span style={{fontSize:11,fontWeight:700,color:isMe?"var(--neon-blue)":"var(--text3)"}}>{count}</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
+              : playerBadges.map(pb=>{
+                  const rxns = reactions[pb.id]||{};
+                  const myR = myReactions[pb.id];
+                  const total = Object.values(rxns).reduce((a,b)=>a+b,0);
+                  return (
+                    <div key={pb.id} className="prow" style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px",flexWrap:"wrap"}}>
+                      <span className="pav">{pb.badges?.icon||"🎖️"}</span>
+                      <div>
+                        <div className="pnm">{pb.badges?.name}</div>
+                        <div className="psb">{new Date(pb.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}</div>
                       </div>
-                    );
-                  })}
-                </div>
-            }
+                      {total > 0 && <span className="psb" style={{marginLeft:"auto"}}>{total} reaction</span>}
+                      <div style={{width:"100%",display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                        {REACT_TYPES.map(r=>{
+                          const count = rxns[r]||0;
+                          const isMe = myR===r;
+                          return (
+                            <button key={r} onClick={()=>react(pb.id,r)} className={`chip ${isMe?"active":""}`}
+                              style={{fontSize:16,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
+                              {r}
+                              {count>0&&<span style={{fontSize:11,fontWeight:800}}>{count}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
           </div>
         )}
       </div>
@@ -6296,35 +6281,32 @@ function CommunityTab({ players, myId, myProfile }) {
 
   return (
     <div>
-      <div className="pd-tab-title">👥 Community</div>
-      <input className="search-inp" placeholder="🔍 Cerca giocatore…" value={search}
-        onChange={e=>setSearch(e.target.value)} style={{marginBottom:12}}/>
-      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      <div className="card">
+        <div className="tape" style={{background:"#D41323",color:"#fff"}}>👥 Community</div>
+        <div className="msgbar" style={{margin:"0 0 10px"}}>
+          <input placeholder="🔍 Cerca giocatore…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        </div>
         {others.length===0
-          ? <div className="empty" style={{padding:32,textAlign:"center"}}>
-                  <div style={{fontSize:36,marginBottom:8}}>🌱</div>
-                  <div style={{fontWeight:700,marginBottom:4}}>Nessun giocatore</div>
-                  <div style={{fontSize:12}}>Prova a cambiare la ricerca</div>
-                </div>
+          ? <div className="empty" style={{padding:24,textAlign:"center"}}>
+              <div style={{fontSize:36,marginBottom:8}}>🌱</div>
+              <div style={{fontWeight:700,marginBottom:4}}>Nessun giocatore</div>
+              <div style={{fontSize:12}}>Prova a cambiare la ricerca</div>
+            </div>
           : others.map((p,i)=>{
               const lv = getLevel(p.xp||0);
-              const rankColors = ["#FFD700","#C0C0C0","#CD7F32"];
               return (
-                <div key={p.id} onClick={()=>openPlayer(p)}
-                  style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
-                    background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",borderRadius:14,
-                    cursor:"pointer",transition:"all .15s",position:"relative"}}
-                  onMouseOver={e=>{e.currentTarget.style.background="rgba(163,207,254,.06)";e.currentTarget.style.borderColor="rgba(163,207,254,.3)";}}
-                  onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,.03)";e.currentTarget.style.borderColor="var(--border)";}}>
-                  {i<3 && <div style={{position:"absolute",top:8,right:10,fontSize:16}}>{["🥇","🥈","🥉"][i]}</div>}
-                  <div style={{width:46,height:46,borderRadius:"50%",overflow:"hidden",border:`2px solid ${i<3?rankColors[i]:"var(--border2)"}`,flexShrink:0,boxShadow:i===0?"0 0 12px rgba(253,239,38,.4)":"none"}}>
-                    <Avatar url={p.avatar_url} emoji={lv.emoji} size={46}/>
+                <div key={p.id} className="prow" onClick={()=>openPlayer(p)}
+                  style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px",cursor:"pointer"}}>
+                  <span className="pav">
+                    {p.avatar_url
+                      ? <img src={p.avatar_url} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
+                      : lv.emoji}
+                  </span>
+                  <div style={{minWidth:0}}>
+                    <div className="pnm" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                    <div className="psb">{lv.emoji} {lv.name} · ⭐ {p.xp||0} XP</div>
                   </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:700,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                    <div style={{fontSize:11,color:"var(--text3)"}}>{lv.emoji} {lv.name} · ⭐ {p.xp} XP</div>
-                  </div>
-                  <div style={{fontSize:12,color:"var(--text3)",flexShrink:0}}>→</div>
+                  <span style={{marginLeft:"auto",fontSize:18,flexShrink:0}}>{i<3?["🥇","🥈","🥉"][i]:"→"}</span>
                 </div>
               );
           })
@@ -7054,6 +7036,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   // Night: nero pieno con doodles bianchi, uguale ovunque.
   const TAB_BG = {
     profilo:    '#A3CFFE',
+    social:     '#FF6DEC',
     classifica: '#FDEF26',
     attivita:   '#339966',
     bigtop:     '#D41323',
