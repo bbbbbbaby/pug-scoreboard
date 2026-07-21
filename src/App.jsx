@@ -5639,16 +5639,16 @@ function PlayerAnnouncementsTab() {
   }
 
   if (loading) return <div className="loading">⏳</div>;
-  if (announcements.length===0) return <div className="empty" style={{padding:24}}>Nessun annuncio.</div>;
+  if (announcements.length===0) return <div className="pug-card" style={{padding:24}}>Nessun annuncio.</div>;
   return (
     <div>
       {announcements.map(a=>(
-        <div key={a.id} className="ann">
-          <div className="ahead" style={{background:a.pinned?"#FDEF26":"#A3CFFE",color:"#101010"}}>
+        <div key={a.id} className="pug-ann">
+          <div className="head" style={{background:a.pinned?"#FDEF26":"#A3CFFE",color:"#101010"}}>
             <span>{a.pinned?"📌":"📢"} {a.profiles?.display_name||"Dal centro"}</span>
             <span>{relDay(a.created_at)}</span>
           </div>
-          <div className="abody">
+          <div className="body">
             {a.title && <div style={{fontWeight:800,textTransform:"uppercase",fontSize:14,marginBottom:a.body?4:0}}>{a.title}</div>}
             {a.body && <div style={{whiteSpace:"pre-wrap"}}>{a.body}</div>}
             {a.image_data && <img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt=""/>}
@@ -6025,10 +6025,10 @@ function SocialTab({ players, myId, myProfile }) {
 
   return (
     <div>
-      <div className="section-title" style={{marginTop:6}}>Social</div>
-      <div className="chiprow">
+      <div className="pug-title" style={{marginTop:6}}>Social</div>
+      <div className="pug-chiprow">
         {[["annunci","📢 Annunci"],["community","👥 Community"]].map(([v,l])=>(
-          <button key={v} className={`chip ${view===v?"active":""}`} onClick={()=>setView(v)}>{l}</button>
+          <button key={v} className={`pug-chip ${view===v?"on":""}`} onClick={()=>setView(v)}>{l}</button>
         ))}
       </div>
       {view==="annunci" && <PlayerAnnouncementsTab/>}
@@ -6158,7 +6158,7 @@ function ProfileReactions({ targetId, myId }) {
           const count = counts[r]||0;
           const isMe = mine===r;
           return (
-            <button key={r} onClick={()=>react(r)} className={`chip ${isMe?"active":""}`}
+            <button key={r} onClick={()=>react(r)} className={`pug-chip ${isMe?"on":""}`}
               style={{fontSize:18,padding:"6px 12px",display:"flex",alignItems:"center",gap:5}}>
               {r}
               {count>0 && <span style={{fontSize:11,fontWeight:800}}>{count}</span>}
@@ -6226,20 +6226,20 @@ function CommunityTab({ players, myId, myProfile }) {
     const lv = getLevel(selected.xp||0);
     return (
       <div>
-        <div className="chiprow">
+        <div className="pug-chiprow">
           <button className="chip" onClick={()=>setSelected(null)}>← Torna alla community</button>
         </div>
 
         {/* Scheda giocatore */}
-        <div className="card" style={{textAlign:"center"}}>
+        <div className="pug-card" style={{textAlign:"center"}}>
           <div style={{width:84,height:84,borderRadius:"50%",overflow:"hidden",border:"3px solid #101010",margin:"0 auto 10px",boxShadow:"3px 3px 0 rgba(0,0,0,.28)",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <Avatar url={selected.avatar_url} emoji={lv.emoji} size={84}/>
           </div>
           <div style={{fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:26,textTransform:"uppercase",lineHeight:1}}>{selected.display_name}</div>
-          <div className="psb" style={{marginTop:4}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
+          <div className="sub" style={{marginTop:4}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
           {selected.squads?.name && (
             <div style={{marginTop:8}}>
-              <span className="me-badge" style={{marginLeft:0}}>🛡️ {selected.squads.name}</span>
+              <span className="pug-me" style={{marginLeft:0}}>🛡️ {selected.squads.name}</span>
             </div>
           )}
           {/* Profile reactions */}
@@ -6247,28 +6247,28 @@ function CommunityTab({ players, myId, myProfile }) {
         </div>
 
         {loadingProfile ? <div className="loading">⏳</div> : (
-          <div className="card">
-            <div className="tape" style={{background:"#FF6DEC",color:"#101010"}}>🎖️ Badge — reagisci!</div>
+          <div className="pug-card">
+            <div className="pug-tape" style={{background:"#FF6DEC",color:"#101010"}}>🎖️ Badge — reagisci!</div>
             {playerBadges.length===0
-              ? <div className="empty">Nessun badge ancora.</div>
+              ? <div className="pug-card">Nessun badge ancora.</div>
               : playerBadges.map(pb=>{
                   const rxns = reactions[pb.id]||{};
                   const myR = myReactions[pb.id];
                   const total = Object.values(rxns).reduce((a,b)=>a+b,0);
                   return (
-                    <div key={pb.id} className="prow" style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px",flexWrap:"wrap"}}>
-                      <span className="pav">{pb.badges?.icon||"🎖️"}</span>
+                    <div key={pb.id} className="pug-listrow" style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px",flexWrap:"wrap"}}>
+                      <span className="av">{pb.badges?.icon||"🎖️"}</span>
                       <div>
-                        <div className="pnm">{pb.badges?.name}</div>
-                        <div className="psb">{new Date(pb.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}</div>
+                        <div className="nm">{pb.badges?.name}</div>
+                        <div className="sub">{new Date(pb.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}</div>
                       </div>
-                      {total > 0 && <span className="psb" style={{marginLeft:"auto"}}>{total} reaction</span>}
+                      {total > 0 && <span className="sub" style={{marginLeft:"auto"}}>{total} reaction</span>}
                       <div style={{width:"100%",display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
                         {REACT_TYPES.map(r=>{
                           const count = rxns[r]||0;
                           const isMe = myR===r;
                           return (
-                            <button key={r} onClick={()=>react(pb.id,r)} className={`chip ${isMe?"active":""}`}
+                            <button key={r} onClick={()=>react(pb.id,r)} className={`pug-chip ${isMe?"on":""}`}
                               style={{fontSize:16,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
                               {r}
                               {count>0&&<span style={{fontSize:11,fontWeight:800}}>{count}</span>}
@@ -6287,13 +6287,13 @@ function CommunityTab({ players, myId, myProfile }) {
 
   return (
     <div>
-      <div className="card">
-        <div className="tape" style={{background:"#D41323",color:"#fff"}}>👥 Community</div>
-        <div className="msgbar" style={{margin:"0 0 10px"}}>
+      <div className="pug-card">
+        <div className="pug-tape" style={{background:"#D41323",color:"#fff"}}>👥 Community</div>
+        <div className="pug-msgbar" style={{margin:"0 0 10px"}}>
           <input placeholder="🔍 Cerca giocatore…" value={search} onChange={e=>setSearch(e.target.value)}/>
         </div>
         {others.length===0
-          ? <div className="empty" style={{padding:24,textAlign:"center"}}>
+          ? <div className="pug-card" style={{padding:24,textAlign:"center"}}>
               <div style={{fontSize:36,marginBottom:8}}>🌱</div>
               <div style={{fontWeight:700,marginBottom:4}}>Nessun giocatore</div>
               <div style={{fontSize:12}}>Prova a cambiare la ricerca</div>
@@ -6301,16 +6301,16 @@ function CommunityTab({ players, myId, myProfile }) {
           : others.map((p,i)=>{
               const lv = getLevel(p.xp||0);
               return (
-                <div key={p.id} className="prow" onClick={()=>openPlayer(p)}
+                <div key={p.id} className="pug-listrow" onClick={()=>openPlayer(p)}
                   style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px",cursor:"pointer"}}>
-                  <span className="pav">
+                  <span className="av">
                     {p.avatar_url
                       ? <img src={p.avatar_url} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
                       : lv.emoji}
                   </span>
                   <div style={{minWidth:0}}>
-                    <div className="pnm" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                    <div className="psb">{lv.emoji} {lv.name} · ⭐ {p.xp||0} XP</div>
+                    <div className="nm" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                    <div className="sub">{lv.emoji} {lv.name} · ⭐ {p.xp||0} XP</div>
                   </div>
                   <span style={{marginLeft:"auto",fontSize:18,flexShrink:0}}>{i<3?["🥇","🥈","🥉"][i]:"→"}</span>
                 </div>
@@ -6682,6 +6682,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [newFirstName, setNewFirstName] = useState("");
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
   const [selectedBadge, setSelectedBadge] = useState(null);
+  const [posterOn, setPosterOn] = useState(false);
+  const [stemBloom, setStemBloom] = useState(false);
   const [mustChangePin, setMustChangePin] = useState(profile._mustChangePin === true || profile.pin === "1234");
   const [playerTheme, setPlayerTheme] = useState(() => localStorage.getItem("pug_theme") || "dark");
 
@@ -6743,7 +6745,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const curXP = p.xp||0;
     if (prevXP > 0 && curXP > prevXP) {
       const oldLv = getLevel(prevXP); const newLv = getLevel(curXP);
-      if (newLv.name !== oldLv.name) setLevelUpData({ oldLevel:oldLv, newLevel:newLv });
+      if (newLv.name !== oldLv.name) {
+        setLevelUpData({ oldLevel:oldLv, newLevel:newLv });
+        setStemBloom(true);
+        setTimeout(()=>setStemBloom(false), 4600);  // lo stelo fiorisce e torna
+      }
     }
     localStorage.setItem("pug_xp_"+p.id, String(curXP));
     const acts = (a || []).filter(x => !(x.description || "").startsWith("SFIDA"));
@@ -7103,143 +7109,160 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         }}>
 
         {/* ── PROFILO ── */}
-        {tab === "profilo" && fullProfile && (
+        {tab === "profilo" && fullProfile && (() => {
+          const xp = fullProfile.xp || 0;
+          const nextLv = LEVELS.find(l => l.xp > xp);
+          const stemPct = nextLv ? Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100) : 100;
+          const remaining = nextLv ? nextLv.xp - xp : 0;
+          const squadName = visConfig.squadre !== false ? fullProfile.squads?.name : null;
+          const squadStyle = squadName ? (SQUAD_STYLE[squadName] || { bg:"#339966", text:"#fff" }) : null;
+          return (
           <div>
-            {/* Avatar Hero */}
-            <div className="pd-av-zone">
-              <div className="pd-av-glow"/>
-              {fullProfile.avatar_url
-                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}}/>
-                : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
-              }
-              <div className="pd-name-pill">{fullProfile.display_name}</div>
-
+            {/* ── HERO: stanza-habitat ── */}
+            <div className="pug-hero">
+              <div className="pug-roomzone">
+                <div className="pug-room" id="room">
+                  <div className={`pug-poster ${posterOn?"on":""}`}
+                    style={posterOn?{backgroundImage:`url("data:image/svg+xml,${encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='160' height='120'><rect width='160' height='120' fill='#FF6DEC'/><text x='80' y='72' font-family='sans-serif' font-size='46' text-anchor='middle'>🌱</text></svg>")}")`}:undefined}/>
+                  <div className="pug-frame" onClick={()=>{setPosterOn(v=>!v); addToast(posterOn?"🖼️ Poster rimosso":"🖼️ Poster appeso!","ok");}} title="Poster"><span className="g"/></div>
+                  <div className="pug-petshadow"/>
+                  {fullProfile.avatar_url
+                    ? <img className="pug-pet" src={fullProfile.avatar_url} onClick={()=>{playPixel("msg"); addToast("🍎 Ciao!","ok"); if(navigator.vibrate)navigator.vibrate(20);}} alt="avatar"/>
+                    : <div className="pug-pet" onClick={()=>addToast("🍎 Ciao!","ok")} style={{fontSize:80,textAlign:"center",lineHeight:"112px",cursor:"pointer"}}>{lv.emoji}</div>}
+                  {/* hotspot sugli oggetti reali della stanza */}
+                  <div className="pug-hot hot-bowl" onClick={()=>{document.querySelector(".pug-scroll")?.scrollTo({top:9999,behavior:"smooth"}); addToast("📍 Fai check-in per crescere!","ok");}} title="Nutri (check-in)"><span className="g"/></div>
+                  <div className="pug-hot hot-shelf" onClick={()=>addToast("🎁 I regali arrivano presto!","ok")} title="Regala"><span className="g"/></div>
+                  <div className="pug-hot hot-cab" onClick={()=>addToast("🛋️ Negozio arredi in arrivo","ok")} title="Arreda"><span className="g"/></div>
+                  <div className="pug-hot hot-door" onClick={()=>setTab("classifica")} title="Visita gli amici"><span className="g"/></div>
+                </div>
+                {squadName && <div className="pug-squadtab" style={{background:squadStyle.bg,color:squadStyle.text||"#fff"}}>Squadra {squadName}</div>}
+              </div>
+              <div className="pug-name">{fullProfile.display_name}</div>
+              <div className="pug-realname" onClick={()=>{setNewFirstName(fullProfile.first_name||"");setEditingFirstName(true);}} style={{cursor:"pointer"}}>
+                {fullProfile.first_name || "scrivi il tuo nome"} <span style={{fontSize:13,opacity:.5}}>✏️</span>
+              </div>
+              {editingFirstName && (
+                <div style={{display:"flex",gap:8,marginTop:10,width:"100%",maxWidth:300}}>
+                  <input className="pug-msgbar" style={{flex:1}} value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} placeholder="Il tuo nome…" maxLength={30} autoFocus/>
+                  <button className="pug-btn" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
+                  <button className="pug-iconbtn" onClick={()=>setEditingFirstName(false)}>✕</button>
+                </div>
+              )}
             </div>
 
-            {/* Profile card: thumbnail + nome editabile + XP */}
-            <div className="pd-card">
-              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
-                <div style={{width:52,height:52,borderRadius:10,border:'2px solid rgba(253,239,38,.6)',overflow:'hidden',flexShrink:0,background:'rgba(0,0,0,.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                  <Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={52}/>
+            {/* ── BARRA LIVELLO: stelo che fiorisce ── */}
+            <div className="pug-card">
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:6}}>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:26}}>{lv.emoji}</span>
+                  <span style={{fontWeight:800,fontSize:17,textTransform:"uppercase"}}>{lv.name} · LV.{lv.id}</span>
                 </div>
-                <div style={{flex:1}}>
-                  <div className="hand pd-first-hand" style={{fontSize:26,lineHeight:1.1,marginBottom:3,cursor:'pointer'}}
-                    onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>
-                    {fullProfile.first_name || 'scrivi il tuo nome'} <span style={{fontSize:15,opacity:.65}}>✏️</span>
-                  </div>
-                  {visConfig.squadre !== false && fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
+                <div style={{fontWeight:800,fontSize:36,lineHeight:.85}}>{stemPct}<small style={{fontSize:17}}>%</small></div>
+              </div>
+              <div className="pug-lvltrack">
+                <div className={`pug-lvlgrow ${stemBloom?"bloomed":""}`} style={{width:stemBloom?"100%":stemPct+"%"}}>
+                  <span className="pug-lvltip">🌱</span>
+                  <span className="pug-lvlbloom">🌸</span>
                 </div>
               </div>
-              {/* Goal XP personale */}
+              <div className="pug-lvlrem">
+                {nextLv
+                  ? <><span>Ti mancano <b>{remaining} XP</b></span><span className="goal">{nextLv.emoji} {nextLv.name}</span></>
+                  : <span>🏆 Livello massimo raggiunto!</span>}
+              </div>
+            </div>
+
+            {/* ── OBIETTIVO XP (se impostato dall'educatore) ── */}
             {(() => {
               const goal = fullProfile.xp_goal || 0;
-              const pct = goal > 0 ? Math.min(100, Math.round((fullProfile.xp/goal)*100)) : 0;
-              return goal > 0 ? (
-                <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                    <span style={{fontSize:12,fontWeight:700,color:"var(--text2)"}}>🎯 Obiettivo XP</span>
-                    <span style={{fontSize:12,fontWeight:700,color:"var(--neon-blue)"}}>{fullProfile.xp} / {goal} XP ({pct}%)</span>
+              if (goal <= 0) return null;
+              const pct = Math.min(100, Math.round((xp/goal)*100));
+              return (
+                <div className="pug-card">
+                  <div className="pug-tape" style={{background:"#A3CFFE",color:"#101010"}}>🎯 Obiettivo XP</div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontWeight:800,fontSize:13}}>
+                    <span>{xp} / {goal} XP</span><span>{pct}%</span>
                   </div>
-                  <div style={{height:8,borderRadius:99,background:"rgba(255,255,255,.08)",overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${pct}%`,borderRadius:99,background:pct>=100?"var(--neon-green)":"var(--azzurro))",transition:"width .5s ease"}}/>
-                  </div>
-                  {pct>=100 && <div style={{fontSize:11,color:"var(--neon-green)",marginTop:4,fontWeight:700}}>🏆 Obiettivo raggiunto!</div>}
+                  <div className="pug-vbar"><div className="pug-vfill" style={{width:pct+"%",background:pct>=100?"#339966":"#A3CFFE"}}/></div>
+                  {pct>=100 && <div style={{fontSize:11,color:"#339966",marginTop:6,fontWeight:800}}>🏆 Obiettivo raggiunto!</div>}
                 </div>
-              ) : null;
+              );
             })()}
-            {editingFirstName ? (
-                <div style={{display:'flex',gap:8,marginBottom:8}}>
-                  <input className="form-input" value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} placeholder="Il tuo nome…" style={{flex:1}} maxLength={30} autoFocus/>
-                  <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>setEditingFirstName(false)}>✕</button>
-                </div>
-              ) : null}
-              <AnimatedLevelBar xp={fullProfile.xp||0} lv={lv} />
-            </div>
 
-            {/* Stats grid 1: XP, Coin, Badge */}
+            {/* ── STATISTICHE ── */}
             {(() => {
               const stats = [
-                visConfig.xp !== false ? ['⭐',fullProfile.xp,'XP'] : null,
-                visConfig.coin !== false ? ['🪙',fullProfile.coin,'Coin'] : null,
-                visConfig.badge !== false ? ['🎖️',badges.length,'Badge'] : null,
+                visConfig.xp !== false ? ["⭐",fullProfile.xp,"XP"] : null,
+                visConfig.coin !== false ? ["🪙",fullProfile.coin,"Coin"] : null,
+                visConfig.badge !== false ? ["🎖️",badges.length,"Badge"] : null,
+                ["🌿",activities.filter(a=>!a.description?.includes("SFIDA")).length,"Lab"],
+                ["✅",bookings.filter(b=>b.status==="confirmed").length,"Confermati"],
+                ["🏆",(players.findIndex(p=>p.id===profile.id)+1)||"-","Rank"],
               ].filter(Boolean);
-              return stats.length > 0 ? (
-                <div className="pd-sg" style={{gridTemplateColumns:`repeat(${stats.length},1fr)`}}>
+              return (
+                <div className="pug-statgrid" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>
                   {stats.map(([ic,v,l])=>(
-                    <div key={l} className="pd-sc">
-                      <span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span>
-                      <CountUpStat val={typeof v==="number"?v:fullProfile.xp}/>
-                      <span className="pd-sl">{l}</span>
-                    </div>
+                    <div key={l} className="pug-stat"><span className="i">{ic}</span><span className="v">{v}</span><span className="l">{l}</span></div>
                   ))}
                 </div>
-              ) : null;
+              );
             })()}
 
-            {/* Stats grid 2: Lab, Conf., Rank */}
-            <div className="pd-sg">
-              {[['🌿',activities.filter(a=>!a.description?.includes('SFIDA')).length,'Lab'],['✅',bookings.filter(b=>b.status==='confirmed').length,'Confermati'],['🏆',(players.findIndex(p=>p.id===profile.id)+1)||'-','Rank']].map(([ic,v,l])=>(
-                <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
-              ))}
-            </div>
-
-            {/* Streak */}
+            {/* ── STREAK PRESENZE ── */}
             {visConfig.streak !== false && ((fullProfile.current_streak||0) > 0 || (fullProfile.longest_streak||0) > 0) && (
-              <div className="streak-card">
-                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(212,19,35,.7)',marginBottom:8}}>🔥 Streak presenze</div>
-                <div className="streak-row">
-                  <div className="streak-item"><span className="streak-val">{fullProfile.current_streak||0}</span><span className="streak-lbl"><span className="flame-pulse">🔥</span> Giorni attuali</span></div>
-                  <div className="streak-item"><span className="streak-val">{fullProfile.longest_streak||0}</span><span className="streak-lbl">Record</span></div>
-                  <div className="streak-item"><span className="streak-val">{(() => { const now=new Date(); return new Date(now.getFullYear(),now.getMonth()+1,0).getDate(); })()}</span><span className="streak-lbl">Giorni mese</span></div>
+              <div className="pug-card">
+                <div className="pug-tape" style={{background:"#D41323",color:"#fff"}}>🔥 Streak presenze</div>
+                <div className="pug-statgrid" style={{margin:0}}>
+                  <div className="pug-stat"><span className="v">{fullProfile.current_streak||0}</span><span className="l">🔥 Attuali</span></div>
+                  <div className="pug-stat"><span className="v">{fullProfile.longest_streak||0}</span><span className="l">Record</span></div>
+                  <div className="pug-stat"><span className="v">{(() => { const now=new Date(); return new Date(now.getFullYear(),now.getMonth()+1,0).getDate(); })()}</span><span className="l">Giorni mese</span></div>
                 </div>
                 {monthPresences !== null && monthTarget !== null && (
-                  <div className="month-prog">
-                    <div className="month-prog-lbl"><span>🗓️ {MONTH_NAMES[new Date().getMonth()]}</span><span>{monthPresences}/{monthTarget} giorni</span></div>
-                    <div className="month-prog-bg"><div className="month-prog-fill" style={{width:Math.min(100,Math.round((monthPresences/Math.max(1,monthTarget))*100))+'%'}}/></div>
+                  <div style={{marginTop:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontWeight:800,fontSize:12,marginBottom:5}}>
+                      <span>🗓️ {MONTH_NAMES[new Date().getMonth()]}</span><span>{monthPresences}/{monthTarget} giorni</span>
+                    </div>
+                    <div className="pug-vbar"><div className="pug-vfill" style={{width:Math.min(100,Math.round((monthPresences/Math.max(1,monthTarget))*100))+"%",background:"#D41323"}}/></div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Squadra */}
-            {(() => {
-              const showSquad = visConfig.squadre !== false;
-              if (!showSquad) return null;
-              if (!fullProfile.squads?.name) return (
-                <div className="pd-squad" style={{opacity:.5}}>
-                  <div style={{width:36,height:36,borderRadius:8,background:'rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔒</div>
+            {/* ── SQUADRA ── */}
+            {visConfig.squadre !== false && (
+              fullProfile.squads?.name ? (
+                <div className="pug-card" style={{display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{width:44,height:44,borderRadius:10,border:"3px solid #101010",background:(SQUAD_STYLE[fullProfile.squads.name]?.bg)||"#339966",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🛡️</div>
                   <div>
-                    <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadre</div>
-                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>🚧 Coming soon</div>
+                    <div style={{fontWeight:800,fontSize:18,textTransform:"uppercase",lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
+                    <div style={{fontSize:11,fontWeight:700,opacity:.55,textTransform:"uppercase",marginTop:2}}>Membro</div>
                   </div>
                 </div>
-              );
-              return (
-                <div className="pd-squad">
-                  <div style={{width:36,height:36,borderRadius:8,background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>⚡</div>
+              ) : (
+                <div className="pug-card" style={{display:"flex",alignItems:"center",gap:12,opacity:.6}}>
+                  <div style={{width:44,height:44,borderRadius:10,border:"3px solid #101010",background:"#eee",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔒</div>
                   <div>
-                    <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
-                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>
+                    <div style={{fontWeight:800,fontSize:18,textTransform:"uppercase",lineHeight:1}}>Squadre</div>
+                    <div style={{fontSize:11,fontWeight:700,opacity:.6,textTransform:"uppercase",marginTop:2}}>🚧 Presto disponibili</div>
                   </div>
                 </div>
-              );
-            })()}
-
-            {/* Sfide */}
-            {visConfig.sfida !== false && (
-              <SfidePanel activities={activities}/>
+              )
             )}
-            
-            {/* Badge */}
+
+            {/* ── SFIDE ── */}
+            {visConfig.sfida !== false && <SfidePanel activities={activities}/>}
+
+            {/* ── BADGE ── */}
             {visConfig.badge !== false && badges.length > 0 && (
-              <div className="pd-badges">
-                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',textAlign:'center',marginBottom:6}}>— Badge —</div>
-                <div className="pd-badge-row">
+              <div className="pug-card">
+                <div className="pug-tape" style={{background:"#FF6DEC",color:"#101010"}}>🎖️ Badge</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:10,justifyContent:"center"}}>
                   {badges.map(pb=>(
-                    <div key={pb.id} className="pd-badge-item" onClick={()=>setSelectedBadge(pb)}>
-                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt=""/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
-                      <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.65)',lineHeight:1.3}}>{pb.badges?.name}</div>
+                    <div key={pb.id} onClick={()=>setSelectedBadge(pb)} style={{width:76,textAlign:"center",cursor:"pointer"}}>
+                      {pb.badges?.image_url
+                        ? <img src={pb.badges.image_url} style={{width:44,height:44,borderRadius:"50%",objectFit:"cover",border:"3px solid #101010",display:"block",margin:"0 auto 5px"}} alt=""/>
+                        : <div style={{fontSize:34,marginBottom:3}}>🎖️</div>}
+                      <div style={{fontSize:10,fontWeight:700,lineHeight:1.2}}>{pb.badges?.name}</div>
                     </div>
                   ))}
                 </div>
@@ -7248,36 +7271,43 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
             <InstallPWAButton/>
 
-            {/* Check-in */}
-            <div className="pd-checkin">
-              <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'var(--neon-green)',marginBottom:8}}>📍 Check-in · Giornaliero o Lab</div>
+            {/* ── CHECK-IN ── */}
+            <div className="pug-card">
+              <div className="pug-tape" style={{background:"#339966",color:"#fff"}}>📍 Check-in · Giornaliero o Lab</div>
               {showCamera ? (
                 <QRScanner onScan={code=>{setShowCamera(false);doCheckin(code);}} onClose={()=>setShowCamera(false)}/>
               ) : (
                 <>
-                  <input className="form-input" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{textAlign:'center',fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,letterSpacing:8,marginBottom:8}} maxLength={6}/>
-                  <div style={{display:'flex',gap:8,marginBottom:0}}>
-                    <button className="btn btn-primary" style={{flex:1}} onClick={()=>doCheckin()}>✓ Conferma</button>
-                    <button className="btn btn-ghost btn-sm" style={{flexShrink:0,fontSize:18}} onClick={()=>setShowCamera(true)} title="Scansiona con camera">📷</button>
+                  <input className="pug-msgbar" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="ABC123"
+                    style={{textAlign:"center",fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:800,letterSpacing:8,marginBottom:10}} maxLength={6}/>
+                  <div style={{display:"flex",gap:8}}>
+                    <button className="pug-btn" style={{flex:1}} onClick={()=>doCheckin()}>✓ Conferma</button>
+                    <button className="pug-iconbtn" onClick={()=>setShowCamera(true)} title="Scansiona con camera">📷</button>
                   </div>
                 </>
               )}
-              {qrMsg&&<div style={{marginTop:10,fontSize:14,fontWeight:700,color:qrMsg.includes('✅')?'var(--verde)':'var(--danger)',textAlign:'center'}}>{qrMsg}</div>}
+              {qrMsg && <div style={{marginTop:10,fontSize:14,fontWeight:800,color:qrMsg.includes("✅")?"#339966":"#D41323",textAlign:"center"}}>{qrMsg}</div>}
             </div>
 
-            {/* Prenotazioni */}
-            {bookings.length>0&&(
-              <div style={{padding:'0 0 8px'}}>
-                <div style={{fontSize:10,fontWeight:900,textTransform:'uppercase',letterSpacing:'.08em',color:'rgba(255,255,255,.3)',marginBottom:8,paddingLeft:2}}>Prenotazioni</div>
+            {/* ── PRENOTAZIONI ── */}
+            {bookings.length>0 && (
+              <div className="pug-card">
+                <div className="pug-tape" style={{background:"#FDEF26",color:"#101010"}}>🎫 Prenotazioni</div>
                 {bookings.slice(0,5).map(b=>{
-                  const s={pending:['tag-amber','In attesa'],confirmed:['tag-green','Confermata'],rejected:['tag-red','Rifiutata']};
-                  const[cls,label]=s[b.status]||['tag-gray',b.status];
-                  return <div key={b.id} className="card-sm" style={{marginBottom:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{fontSize:13,fontWeight:600}}>{b.activities?.name}</span><span className={`tag ${cls}`}>{label}</span></div>;
+                  const map={pending:["#FDEF26","#101010","In attesa"],confirmed:["#339966","#fff","Confermata"],rejected:["#D41323","#fff","Rifiutata"]};
+                  const [bg,fg,label]=map[b.status]||["#eee","#101010",b.status];
+                  return (
+                    <div key={b.id} className="pug-row" style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px"}}>
+                      <span style={{fontSize:13,fontWeight:700}}>{b.activities?.name}</span>
+                      <span style={{marginLeft:"auto",background:bg,color:fg,fontWeight:800,fontSize:11,borderRadius:8,padding:"3px 9px",textTransform:"uppercase"}}>{label}</span>
+                    </div>
+                  );
                 })}
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* ── CLASSIFICA ── */}
         {tab === "classifica" && (
@@ -7322,135 +7352,113 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
 
         {tab === "attivita" && (
-          <div style={{ marginTop: 8 }}>
-            <div className="pd-tab-title" style={{color:"#339966"}}>⚡ Lab</div>
-            {/* Lab QR check-in */}
-            <div style={{background:"var(--surface)",border:"1px solid rgba(51,153,102,.2)",borderRadius:14,padding:12,marginBottom:12,position:"relative",zIndex:2}}>
-              <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"var(--neon-green)",marginBottom:8}}>📍 Check-in Lab — scansiona il QR della sessione</div>
+          <div>
+            <div className="pug-title" style={{color:"#fff"}}>⚡ Lab</div>
+
+            {/* Check-in QR della sessione */}
+            <div className="pug-card">
+              <div className="pug-tape" style={{background:"#FDEF26",color:"#101010"}}>📍 Check-in Lab</div>
               {showCamera ? (
                 <QRScanner onScan={code=>{setShowCamera(false);doCheckin(code);}} onClose={()=>setShowCamera(false)}/>
               ) : (
-                <div style={{display:"flex",gap:8}}>
-                  <input className="form-input" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="Codice Lab" style={{flex:1,textAlign:"center",fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,letterSpacing:5}} maxLength={6}/>
-                  <button className="btn btn-primary" style={{flexShrink:0}} onClick={()=>doCheckin()}>✓</button>
-                  <button className="btn btn-ghost btn-sm" style={{flexShrink:0,fontSize:18}} onClick={()=>setShowCamera(true)}>📷</button>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <input className="pug-code" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="CODICE" maxLength={6}/>
+                  <button className="pug-btn" onClick={()=>doCheckin()}>✓</button>
+                  <button className="pug-btn" onClick={()=>setShowCamera(true)}>📷</button>
                 </div>
               )}
-              {qrMsg && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:qrMsg.includes("✅")?"var(--verde)":"var(--danger)",textAlign:"center"}}>{qrMsg}</div>}
+              {qrMsg && <div style={{marginTop:8,fontSize:13,fontWeight:800,textAlign:"center"}}>{qrMsg}</div>}
             </div>
+
+            {/* Sfide */}
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
-              <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
-                <div className="sfida-label">⚡ Sfide</div>
-                <div className="sfida-title">{s.name}</div>
-                <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
-                  <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
-                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,color:"var(--azzurro)",fontWeight:700,textDecoration:"none",background:"rgba(163,207,254,.1)",border:"1px solid rgba(163,207,254,.25)",borderRadius:8,padding:"4px 10px"}}>🔗 Apri link</a>}
+              <div key={s.id} className="pug-card">
+                <div className="pug-tape" style={{background:"#FF6DEC",color:"#101010"}}>⚡ Sfida</div>
+                <div style={{fontWeight:800,fontSize:18,textTransform:"uppercase",lineHeight:1.1}}>{s.name}</div>
+                <div style={{fontSize:13,fontWeight:600,opacity:.8,marginTop:4}}>{s.description?.replace("SFIDA · ", "")}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:10}}>
+                  <span className="pug-chip">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" className="pug-chip" style={{textDecoration:"none"}}>🔗 Apri link</a>}
                 </div>
               </div>
             ))}
+
+            {/* Lab prenotabili */}
             {activities.filter(a => !a.description?.includes("SFIDA")).map(a => {
               const booked = bookings.find(b => b.activities?.name === a.name || b.activity_id === a.id);
+              const pieni = a.max_participants && (actBookingCounts[a.id]||0) >= a.max_participants;
               return (
-                <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
-                  <div className="act-title">{a.name}</div>
-                  <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
-                  {a.schedule && <div style={{fontSize:11,color:"#FDEF26",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
-                  {a.educator_id && <div style={{ fontSize: 12, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab guidato</div>}
-                  {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--azzurro)", display: "block", marginBottom: 8 }}>🔗 Scopri di più</a>}
-                  <div className="act-rewards" style={{ marginBottom: 10 }}>
-                    <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
-                    <span className="reward-tag coin-tag">🪙 {a.coin_cost} costo</span>
+                <div key={a.id} className="pug-card">
+                  <div style={{fontWeight:800,fontSize:18,textTransform:"uppercase",lineHeight:1.1}}>{a.name}</div>
+                  <div style={{fontSize:12,fontWeight:600,opacity:.75,marginTop:3}}>{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
+                  {a.schedule && <div style={{fontSize:12,fontWeight:800,marginTop:4}}>📅 {a.schedule}</div>}
+                  {a.educator_id && <div style={{fontSize:12,fontWeight:800,color:"#339966",marginTop:4}}>🌱 Lab guidato</div>}
+                  {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{fontSize:12,fontWeight:800,display:"block",marginTop:4}}>🔗 Scopri di più</a>}
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",margin:"10px 0"}}>
+                    <span className="pug-chip">Fino a {a.xp_completed} XP</span>
+                    <span className="pug-chip">🪙 {a.coin_cost} costo</span>
+                    {a.max_participants && (
+                      <span className="pug-chip" style={pieni?{background:"#D41323",color:"#fff"}:undefined}>
+                        👥 {actBookingCounts[a.id]||0}/{a.max_participants}{pieni ? " · pieno" : ""}
+                      </span>
+                    )}
                   </div>
-                  {a.max_participants && (
-                    <div style={{
-                      fontSize:11, fontWeight:800, marginBottom:8,
-                      color: (actBookingCounts[a.id]||0) >= a.max_participants ? "#ff4466" : "var(--neon-green)",
-                    }}>
-                      👥 {actBookingCounts[a.id]||0}/{a.max_participants} iscritti
-                      {(actBookingCounts[a.id]||0) >= a.max_participants
-                        ? " · PIENO"
-                        : ` · ${a.max_participants-(actBookingCounts[a.id]||0)} posti rimasti`}
-                    </div>
-                  )}
                   {booked && booked.status !== "cancelled" ? (
                     <div>
-                      <div className={`tag ${booked.status === "confirmed" ? "tag-green" : booked.status === "rejected" ? "tag-red" : "tag-amber"}`} style={{marginBottom:booked.status==="confirmed"?6:0}}>
+                      <span className="pug-chip on" style={{
+                        background: booked.status==="confirmed" ? "#339966" : booked.status==="rejected" ? "#D41323" : "#FDEF26",
+                        color: booked.status==="rejected" ? "#fff" : booked.status==="confirmed" ? "#fff" : "#101010",
+                      }}>
                         {booked.status === "confirmed" ? "✅ Iscritto" : booked.status === "rejected" ? "❌ Rifiutata" : "⏳ In attesa"}
-                      </div>
+                      </span>
                       {booked.status === "confirmed" && (
-                        <button className="btn btn-ghost btn-xs" style={{width:"100%",fontSize:11}} onClick={()=>setShowCamera(true)}>
-                          📷 Scansiona QR Lab · check-in sessione
+                        <button className="pug-btn" style={{width:"100%",marginTop:9}} onClick={()=>setShowCamera(true)}>
+                          📷 Scansiona QR · check-in
                         </button>
                       )}
                     </div>
                   ) : (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ width: "100%" }}
+                    <button className="pug-btn" style={{width:"100%",opacity:(a.coin_cost > (fullProfile?.coin || 0) || pieni)?.45:1}}
                       onClick={() => bookActivity(a.id, a.coin_cost)}
-                      disabled={a.coin_cost > (fullProfile?.coin || 0) || (a.max_participants && (actBookingCounts[a.id]||0) >= a.max_participants)}
-                    >
-                      {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti"
-                        : (a.max_participants && (actBookingCounts[a.id]||0) >= a.max_participants) ? "🚫 Lab pieno"
-                        : "Prenota"}
+                      disabled={a.coin_cost > (fullProfile?.coin || 0) || pieni}>
+                      {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti" : pieni ? "🚫 Lab pieno" : "Prenota"}
                     </button>
                   )}
                 </div>
               );
             })}
-            {activities.length === 0 && <div className="empty">Nessuna lab attiva.</div>}
+            {activities.length === 0 && <div className="pug-card" style={{textAlign:"center"}}>Nessuna lab attiva.</div>}
           </div>
         )}
 
         {/* ── MESSAGGI ── */}
         {tab === "messaggi" && (
           <div>
-            <div className="pd-tab-title" style={{color:"#FF6DEC"}}>💬 Messaggi</div>
+            <div className="pug-title">💬 Messaggi</div>
             {(() => {
               const now = new Date().toISOString();
               const visibleMsgs = messages.filter(m => !m.cancelled_at && (!m.expires_at || m.expires_at > now));
-              return visibleMsgs.length === 0 ? <div className="empty">Nessun messaggio ricevuto.</div> : (
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {visibleMsgs.map(m => (
-                    <div key={m.id} className="card-sm">
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          {m.profiles?.avatar_url
-                            ? <img src={m.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
-                            : <span style={{fontSize:18,flexShrink:0}}>🌱</span>}
-                          <div>
-                            <div style={{fontSize:12,fontWeight:700,color:"var(--verde)",lineHeight:1}}>{m.profiles?.display_name||"Giardiniere"}</div>
-                            <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>
-                              {m.is_broadcast?"📢 a tutti":m.squad_id?"🛡️ alla squadra":"👤 a te"}
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                          {m.expires_at && <span style={{fontSize:9,color:"var(--text3)"}}>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
-                          <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
-                        </div>
-                      </div>
-                      {m.media_data && m.media_data.startsWith("sticker:") && (() => {
-                        const st = ANIMATED_STICKERS.find(s=>s.id===m.media_data.split(":")[1]);
-                        return st ? <div style={{width:80,height:80,marginBottom:6}} dangerouslySetInnerHTML={{__html:st.svg}}/> : null;
-                      })()}
-                      {m.media_data && !m.media_data.startsWith("sticker:") && (
-                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt=""
-                          onError={e => {
-                            const a = document.createElement("a");
-                            a.href = m.media_data; a.target = "_blank"; a.rel = "noopener";
-                            a.textContent = "📷 Apri foto";
-                            a.style.cssText = "display:inline-block;padding:8px 14px;background:rgba(0,0,0,.4);border:1px solid var(--border2);border-radius:10;color:var(--neon-blue);font-weight:800;font-size:13px;text-decoration:none;margin-bottom:6px";
-                            e.currentTarget.replaceWith(a);
-                          }}/>
-                      )}
-                      <MsgReactions msgId={m.id} myId={profile.id}/>
-                      <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
-                    </div>
-                  ))}
+              if (visibleMsgs.length === 0) return <div className="pug-card" style={{textAlign:"center"}}>Nessun messaggio ricevuto.</div>;
+              return visibleMsgs.map(m => (
+                <div key={m.id} className="pug-msg">
+                  <div className="who">
+                    {m.profiles?.display_name||"Giardiniere"} · {m.is_broadcast?"📢 a tutti":m.squad_id?"🛡️ alla squadra":"👤 a te"}
+                  </div>
+                  {m.media_data && m.media_data.startsWith("sticker:") && (() => {
+                    const st = ANIMATED_STICKERS.find(s=>s.id===m.media_data.split(":")[1]);
+                    return st ? <div style={{width:80,height:80,marginBottom:6}} dangerouslySetInnerHTML={{__html:st.svg}}/> : null;
+                  })()}
+                  {m.media_data && !m.media_data.startsWith("sticker:") && (
+                    <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:10,margin:"4px 0 6px",display:"block",border:"2.5px solid #101010"}} alt=""/>
+                  )}
+                  <div style={{lineHeight:1.5}}>{m.body}</div>
+                  <div style={{fontSize:10,fontWeight:800,opacity:.5,marginTop:5,display:"flex",gap:8}}>
+                    <span>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
+                    {m.expires_at && <span>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
+                  </div>
+                  <MsgReactions msgId={m.id} myId={profile.id}/>
                 </div>
-              );
+              ));
             })()}
           </div>
         )}
@@ -7462,33 +7470,35 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           </div>
         )}
         {tab === "notifiche" && (
-          <div style={{ marginTop: 8 }}>
-            <NotificheTab profile={profile} />
-            <div style={{height:1,background:"var(--border)",margin:"20px 0 14px"}}/>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-            <div className="pd-tab-title" style={{color:"#FDEF26",marginBottom:0}}>🔔 Notifiche</div>
-            {notifications.length > 0 && (
-              <button onClick={async()=>{
-                await sb.from("notifications").delete().eq("user_id",profile.id);
-                setNotifications([]);
-              }} style={{background:"rgba(255,34,68,.12)",border:"1px solid rgba(255,34,68,.3)",borderRadius:8,padding:"6px 12px",color:"#ff4466",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                🗑️ Cancella tutte
-              </button>
-            )}
-          </div>
-            {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
-              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬" };
-              return (
-                <div key={n.id} className="notif-item">
-                  <div className="notif-icon">{icons[n.type] || "🔔"}</div>
-                  <div style={{ flex: 1 }}>
-                    <div className="notif-title">{n.title}{!n.read_at && <span className="notif-dot" />}</div>
-                    <div className="notif-body">{n.body}</div>
-                    <div className="notif-time">{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
-                  </div>
-                </div>
-              );
-            })}
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"0 14px"}}>
+              <div className="pug-title" style={{margin:"14px 0 4px"}}>🔔 Notifiche</div>
+              {notifications.length > 0 && (
+                <button className="pug-btn" onClick={async()=>{
+                  await sb.from("notifications").delete().eq("user_id",profile.id);
+                  setNotifications([]);
+                }}>🗑️ Svuota</button>
+              )}
+            </div>
+
+            {notifications.length === 0
+              ? <div className="pug-card" style={{textAlign:"center"}}>Nessuna notifica.</div>
+              : notifications.map(n => {
+                  const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬" };
+                  return (
+                    <div key={n.id} className="pug-notif">
+                      <div className="i">{icons[n.type] || "🔔"}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div className="t">{n.title}{!n.read_at && <span className="pug-dot"/>}</div>
+                        <div className="b">{n.body}</div>
+                        <div className="d">{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+            {/* Diagnostica push (strumento tecnico, invariato) */}
+            <div className="pug-card"><NotificheTab profile={profile} /></div>
           </div>
         )}
       </div>{/* end pd-scroll */}
