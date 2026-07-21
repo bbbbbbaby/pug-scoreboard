@@ -1591,7 +1591,6 @@ const css = `
   .nav-btn .nic{font-size:19px} .nav-btn .nlb{font-size:8px;font-weight:800;text-transform:uppercase}
   .nav-btn.active{color:var(--giallo)} .nav-btn.active::after{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:24px;height:4px;border-radius:99px;background:var(--giallo)}
   .nav-btn .nbadge{position:absolute;top:-4px;right:22%;background:var(--rosso);color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:1px 5px}
-
 `;
 
 
@@ -7053,8 +7052,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     classifica: '#FDEF26',
     attivita:   '#339966',
     bigtop:     '#D41323',
-    messaggi:   '#FF6DEC',
-    notifiche:  '#A3CFFE',
+    messaggi:   '#A3CFFE',
+    notifiche:  '#FDEF26',
   };
   const NIGHT_BG = '#0d0d0d';
 
@@ -8981,14 +8980,9 @@ function EducatorShell({ profile, onLogout }) {
   const sharedProps = { sectionColors, setSectionColors };
 
   return (
-    <div className="edu-layout">
-      {/* Floral background */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.05,overflow:'hidden',maxWidth:'100vw'}}>
-        <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%',animation:'float1 18s ease-in-out infinite'}}>
-          <defs><g id="ef"><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="5" fill="white"/></g></defs>
-          <use href="#ef" transform="translate(80,80) scale(1.4)"/><use href="#ef" transform="translate(350,60) scale(1.1)"/><use href="#ef" transform="translate(700,90) scale(1.3)"/><use href="#ef" transform="translate(1050,70) scale(1)"/><use href="#ef" transform="translate(200,300) scale(.9)"/><use href="#ef" transform="translate(550,280) scale(1.2)"/><use href="#ef" transform="translate(900,310) scale(1)"/><use href="#ef" transform="translate(100,550) scale(1.1)"/><use href="#ef" transform="translate(450,520) scale(.8)"/><use href="#ef" transform="translate(800,560) scale(1.3)"/><use href="#ef" transform="translate(250,780) scale(1)"/><use href="#ef" transform="translate(650,760) scale(1.2)"/><use href="#ef" transform="translate(1000,790) scale(.9)"/>
-        </svg>
-      </div>
+    <div className={`edu-layout pug-edu ${theme === "light" ? "" : "night"}`}>
+      {/* Sfondo doodle del kit (come lato ragazzo) */}
+      <PugDoodles/>
 
       {/* Sidebar desktop */}
       <div className="sidebar">

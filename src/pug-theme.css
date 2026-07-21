@@ -233,3 +233,47 @@ body.night .pug-nav{background:#000;border-top:2px solid #222}
   background:var(--nero);color:#fff;font-weight:800;font-size:12px;padding:9px 16px;border-radius:99px;
   opacity:0;transition:all .25s;white-space:nowrap;pointer-events:none}
 .pug-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ═══════════════════════════════════════════════════════════
+   KIT SHELL EDUCATORE — sfondo doodle + palette + tipografia
+   Applica il look del kit al guscio educatore (vale per tutte le viste)
+   ═══════════════════════════════════════════════════════════ */
+.pug-edu.edu-layout{background:#A3CFFE !important}
+.pug-edu.night.edu-layout{background:#0d0d0d !important}
+.pug-edu > .pug-doodles{position:fixed !important;inset:0;z-index:0 !important;color:#101010 !important;opacity:.13 !important}
+.pug-edu.night > .pug-doodles{color:#fff !important;opacity:.14 !important}
+/* barra laterale in stile kit: bianca, bordo nero, ombra dura */
+.pug-edu .sidebar{background:#fff !important;border-right:3px solid #101010 !important;backdrop-filter:none !important;box-shadow:4px 0 0 rgba(0,0,0,.12)}
+.pug-edu .sidebar-logo{border-bottom:3px solid #101010 !important}
+.pug-edu .sidebar-badge{background:#FDEF26 !important;border:2.5px solid #101010 !important;color:#101010 !important}
+.pug-edu .nav-item{color:#101010 !important;font-weight:800;border-left:none;border-radius:11px;margin:2px 8px}
+.pug-edu .nav-item:hover{background:rgba(16,16,16,.06) !important;color:#101010 !important}
+.pug-edu .nav-item.active{background:#101010 !important;color:#FDEF26 !important;box-shadow:2px 2px 0 rgba(0,0,0,.25)}
+.pug-edu .sidebar-user{border-top:3px solid #101010 !important}
+.pug-edu .sidebar-user *{color:#101010 !important}
+.pug-edu .sidebar-user > div{background:rgba(16,16,16,.05) !important;border:2px solid #101010 !important}
+.pug-edu .nav-badge{background:var(--rosso);color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:1px 6px}
+/* topbar in stile kit */
+.pug-edu .topbar{background:#fff !important;border-bottom:3px solid #101010 !important;backdrop-filter:none !important}
+.pug-edu .topbar-title{color:#101010 !important}
+.pug-edu .topbar *{color:#101010}
+/* area contenuti: trasparente sul fondo azzurro, il colore della sezione lo dà edu-main via JS */
+.pug-edu .content,.pug-edu .edu-content-wrap{background:transparent !important}
+/* header/drawer/nav mobile educatore in stile kit */
+.pug-edu .mob-header{background:#fff !important;border-bottom:3px solid #101010 !important;backdrop-filter:none !important}
+.pug-edu .mob-header *{color:#101010 !important}
+.pug-edu .mob-drawer{background:#fff !important;border-right:3px solid #101010 !important;backdrop-filter:none !important}
+.pug-edu .mob-bottom-nav{background:#fff !important;border-top:3px solid #101010 !important;backdrop-filter:none !important}
+.pug-edu .mob-nav-btn{color:rgba(16,16,16,.4)}
+.pug-edu .mob-nav-btn.active{color:#101010}
+.pug-edu .mob-nav-btn.active .mob-nav-ic,.pug-edu .mob-nav-btn.active{color:#101010}
+/* — notte: superfici nere, testo chiaro, come il kit notturno — */
+.pug-edu.night .sidebar,.pug-edu.night .topbar,.pug-edu.night .mob-header,.pug-edu.night .mob-drawer,.pug-edu.night .mob-bottom-nav{background:#111 !important;border-color:#333 !important;box-shadow:none}
+.pug-edu.night .sidebar *,.pug-edu.night .topbar *,.pug-edu.night .topbar-title,.pug-edu.night .mob-header *,.pug-edu.night .sidebar-user *{color:#f0f0f0 !important}
+.pug-edu.night .nav-item{color:#ccc !important}
+.pug-edu.night .nav-item.active{background:var(--giallo) !important;color:#000 !important}
+.pug-edu.night .nav-item.active *{color:#000 !important}
+.pug-edu.night .sidebar-badge{background:var(--giallo) !important;color:#000 !important}
+.pug-edu.night .sidebar-user > div{background:rgba(255,255,255,.05) !important;border-color:#333 !important}
+.pug-edu.night .mob-nav-btn{color:rgba(255,255,255,.4)}
+.pug-edu.night .mob-nav-btn.active{color:var(--giallo)}
