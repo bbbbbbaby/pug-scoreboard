@@ -169,18 +169,18 @@ async function sendPushToAll(playerIds, title, body) {
 // ─── LIVELLI ──────────────────────────────────────────────
 const LEVELS = [
   {id:1,name:"Seme",emoji:"🌱",xp:0},{id:2,name:"Germoglio",emoji:"🌿",xp:50},
-  {id:3,name:"Foglia",emoji:"🍃",xp:100},{id:4,name:"Fiore",emoji:"🌸",xp:150},
-  {id:5,name:"Frutto",emoji:"🍎",xp:200},{id:6,name:"Radice",emoji:"🪴",xp:250},
-  {id:7,name:"Stelo",emoji:"🌾",xp:300},{id:8,name:"Tronco",emoji:"🪵",xp:350},
-  {id:9,name:"Albero",emoji:"🌳",xp:400},{id:10,name:"Bosco",emoji:"🌲",xp:450},
-  {id:11,name:"Micelio",emoji:"🍄",xp:610},{id:12,name:"Creatura Selvatica",emoji:"🦊",xp:730},
-  {id:13,name:"Guardiano Notturno",emoji:"🌙",xp:860},{id:14,name:"Fauno del Blocco",emoji:"🔥",xp:1000},
-  {id:15,name:"Dryad Kid",emoji:"🧚",xp:1150},{id:16,name:"Spirito Verde",emoji:"🌀",xp:1350},
-  {id:17,name:"Folletto Hyper",emoji:"⚡",xp:1560},{id:18,name:"Custode Segreto",emoji:"👁️",xp:1780},
-  {id:19,name:"Campione della Chioma",emoji:"🏆",xp:2010},{id:20,name:"Re/Regina delle Fronde",emoji:"👑",xp:2250},
-  {id:21,name:"Foresta Mistica",emoji:"🌌",xp:2550},{id:22,name:"Creatura Leggendaria",emoji:"🐉",xp:2860},
-  {id:23,name:"Mythic Verde",emoji:"💎",xp:3180},{id:24,name:"Boss della Radura",emoji:"🔥",xp:3510},
-  {id:25,name:"Garden Boss",emoji:"👑🌿",xp:4000},
+  {id:3,name:"Foglia",emoji:"🍃",xp:110},{id:4,name:"Fiore",emoji:"🌸",xp:180},
+  {id:5,name:"Frutto",emoji:"🍎",xp:260},{id:6,name:"Radice",emoji:"🪴",xp:350},
+  {id:7,name:"Stelo",emoji:"🌾",xp:450},{id:8,name:"Tronco",emoji:"🪵",xp:560},
+  {id:9,name:"Albero",emoji:"🌳",xp:680},{id:10,name:"Bosco",emoji:"🌲",xp:810},
+  {id:11,name:"Micelio",emoji:"🍄",xp:970},{id:12,name:"Creatura Selvatica",emoji:"🦊",xp:1160},
+  {id:13,name:"Guardiano Notturno",emoji:"🌙",xp:1380},{id:14,name:"Fauno del Blocco",emoji:"🔥",xp:1630},
+  {id:15,name:"Driade del Barrio",emoji:"🧚",xp:1910},{id:16,name:"Spirito del Verde",emoji:"🌀",xp:2230},
+  {id:17,name:"Folletto Hyper",emoji:"⚡",xp:2590},{id:18,name:"Custode Segreto",emoji:"👁️",xp:2990},
+  {id:19,name:"Campione della Chioma",emoji:"🏆",xp:3430},{id:20,name:"Re/Regina delle Fronde",emoji:"👑",xp:3910},
+  {id:21,name:"Foresta Mistica",emoji:"🌌",xp:4570},{id:22,name:"Garden Boss",emoji:"🐉",xp:5310},
+  {id:23,name:"Saggio Botanico",emoji:"💎",xp:6130},{id:24,name:"Boss della Radura",emoji:"🔥",xp:7030},
+  {id:25,name:"Creatura Leggendaria",emoji:"👑🌿",xp:8000},
 ];
 
 const MONTH_NAMES = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
