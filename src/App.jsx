@@ -1,6 +1,5 @@
 import { sb, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
-import "./pug-theme.css";   // foglio di stile del kit viste (classi pug-*)
 
 // ─── PUSH NOTIFICATIONS ───────────────────────────────
 // URL e chiave derivano dall'ambiente (vedi supabase.js): in produzione
@@ -169,18 +168,18 @@ async function sendPushToAll(playerIds, title, body) {
 // ─── LIVELLI ──────────────────────────────────────────────
 const LEVELS = [
   {id:1,name:"Seme",emoji:"🌱",xp:0},{id:2,name:"Germoglio",emoji:"🌿",xp:50},
-  {id:3,name:"Foglia",emoji:"🍃",xp:110},{id:4,name:"Fiore",emoji:"🌸",xp:180},
-  {id:5,name:"Frutto",emoji:"🍎",xp:260},{id:6,name:"Radice",emoji:"🪴",xp:350},
-  {id:7,name:"Stelo",emoji:"🌾",xp:450},{id:8,name:"Tronco",emoji:"🪵",xp:560},
-  {id:9,name:"Albero",emoji:"🌳",xp:680},{id:10,name:"Bosco",emoji:"🌲",xp:810},
-  {id:11,name:"Micelio",emoji:"🍄",xp:970},{id:12,name:"Creatura Selvatica",emoji:"🦊",xp:1160},
-  {id:13,name:"Guardiano Notturno",emoji:"🌙",xp:1380},{id:14,name:"Fauno del Blocco",emoji:"🔥",xp:1630},
-  {id:15,name:"Driade del Barrio",emoji:"🧚",xp:1910},{id:16,name:"Spirito del Verde",emoji:"🌀",xp:2230},
-  {id:17,name:"Folletto Hyper",emoji:"⚡",xp:2590},{id:18,name:"Custode Segreto",emoji:"👁️",xp:2990},
-  {id:19,name:"Campione della Chioma",emoji:"🏆",xp:3430},{id:20,name:"Re/Regina delle Fronde",emoji:"👑",xp:3910},
-  {id:21,name:"Foresta Mistica",emoji:"🌌",xp:4570},{id:22,name:"Garden Boss",emoji:"🐉",xp:5310},
-  {id:23,name:"Saggio Botanico",emoji:"💎",xp:6130},{id:24,name:"Boss della Radura",emoji:"🔥",xp:7030},
-  {id:25,name:"Creatura Leggendaria",emoji:"👑🌿",xp:8000},
+  {id:3,name:"Foglia",emoji:"🍃",xp:100},{id:4,name:"Fiore",emoji:"🌸",xp:150},
+  {id:5,name:"Frutto",emoji:"🍎",xp:200},{id:6,name:"Radice",emoji:"🪴",xp:250},
+  {id:7,name:"Stelo",emoji:"🌾",xp:300},{id:8,name:"Tronco",emoji:"🪵",xp:350},
+  {id:9,name:"Albero",emoji:"🌳",xp:400},{id:10,name:"Bosco",emoji:"🌲",xp:450},
+  {id:11,name:"Micelio",emoji:"🍄",xp:610},{id:12,name:"Creatura Selvatica",emoji:"🦊",xp:730},
+  {id:13,name:"Guardiano Notturno",emoji:"🌙",xp:860},{id:14,name:"Fauno del Blocco",emoji:"🔥",xp:1000},
+  {id:15,name:"Dryad Kid",emoji:"🧚",xp:1150},{id:16,name:"Spirito Verde",emoji:"🌀",xp:1350},
+  {id:17,name:"Folletto Hyper",emoji:"⚡",xp:1560},{id:18,name:"Custode Segreto",emoji:"👁️",xp:1780},
+  {id:19,name:"Campione della Chioma",emoji:"🏆",xp:2010},{id:20,name:"Re/Regina delle Fronde",emoji:"👑",xp:2250},
+  {id:21,name:"Foresta Mistica",emoji:"🌌",xp:2550},{id:22,name:"Creatura Leggendaria",emoji:"🐉",xp:2860},
+  {id:23,name:"Mythic Verde",emoji:"💎",xp:3180},{id:24,name:"Boss della Radura",emoji:"🔥",xp:3510},
+  {id:25,name:"Garden Boss",emoji:"👑🌿",xp:4000},
 ];
 
 const MONTH_NAMES = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
@@ -387,8 +386,8 @@ const css = `
   .sidebar-logo-sub { font-family:'Funnel Display',sans-serif; background:#111; color:#ffe600; font-size:8px; font-weight:900; border-radius:4px; padding:2px 7px; text-transform:uppercase; letter-spacing:.07em; margin-top:3px; display:inline-block; }
   .sidebar-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(253,239,38,.12); border:1px solid rgba(253,239,38,.25); border-radius:99px; padding:3px 10px; font-size:9px; font-weight:800; color:#FDEF26; text-transform:uppercase; letter-spacing:.06em; margin-top:8px; }
   .nav { flex:1; padding:8px 0; }
-  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 18px; cursor:pointer; font-size:13px; font-weight:600; color:rgba(255,255,255,.38); border-left:2px solid transparent; transition:all .12s; min-height:42px; border-radius:0 10px 10px 0; margin:1px 8px 1px 0; }
-  .nav-item:hover { background:rgba(255,255,255,.05); color:rgba(255,255,255,.75); }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 18px; cursor:pointer; font-size:13px; font-weight:600; color:rgba(255,255,255,.38); border-left:2px solid transparent; transition:all .12s; min-height:42px; border-radius:0 10px 10px 0; margin:1px 8px 1px 0; }  /* pug-ok: testo su fondo nero */
+  .nav-item:hover { background:rgba(255,255,255,.05); color:rgba(255,255,255,.75); }  /* pug-ok: testo su fondo nero */
   .nav-item.active { background:rgba(253,239,38,.1); color:#FDEF26; border-left-color:#FDEF26; font-weight:700; box-shadow:inset 0 0 20px rgba(253,239,38,.05); }
   .nav-icon { font-size:16px; width:22px; text-align:center; flex-shrink:0; }
   .sidebar-user { padding:14px 18px; border-top:1px solid rgba(255,255,255,.08); }
@@ -405,7 +404,7 @@ const css = `
   .mob-drawer.open { transform:translateX(0); }
   .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; padding-bottom:env(safe-area-inset-bottom,0px); background:#0d0d0d; border-top:1px solid #2a2a2a; z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(24px); }
   .mob-bottom-nav-inner { display:flex; height:60px; }
-  .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:rgba(255,255,255,.28); font-family:'Funnel Display'; padding:0; transition:color .15s; }
+  .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:rgba(255,255,255,.28); font-family:'Funnel Display'; padding:0; transition:color .15s; }  /* pug-ok: testo su fondo nero */
   .mob-nav-btn.active { color:#FDEF26; }
   .mob-nav-btn { transition:color .2s; }
 
@@ -417,7 +416,7 @@ const css = `
   .section-banner-content { position:relative; z-index:1; flex:1; }
   .section-banner-title { font-family:'Funnel Display',sans-serif; font-weight:800; font-size:26px; text-transform:uppercase; color:#fff !important; letter-spacing:.02em; line-height:1; text-shadow:none; }
   .light .section-banner-title { color:#101010 !important; }
-  .section-banner-sub { font-size:12px; color:rgba(255,255,255,.65); margin-top:2px; }
+  .section-banner-sub { font-size:12px; color:var(--text2); margin-top:2px; }
 
   /* ═══ GAME CARDS ═══ */
   .card { background:#ffffff; border:3px solid #101010; border-radius:16px 20px 14px 22px; box-shadow:4px 4px 0 #101010; padding:16px; margin-bottom:12px; position:relative; z-index:2; }
@@ -580,7 +579,7 @@ const css = `
   }
   .sfida-label { font-family:'Funnel Display',sans-serif; font-size:11px; font-weight:900; text-transform:uppercase; color:var(--danger); letter-spacing:.18em; margin-bottom:6px; }
   .sfida-title { font-family:'Funnel Display',sans-serif; font-size:26px; font-weight:900; text-transform:uppercase; color:#fff; margin-bottom:6px; letter-spacing:.02em; text-shadow:0 0 20px rgba(255,34,68,0.3); }
-  .sfida-desc { font-size:13px; color:rgba(255,255,255,.6); margin-bottom:12px; line-height:1.5; }
+  .sfida-desc { font-size:13px; color:rgba(255,255,255,.6); margin-bottom:12px; line-height:1.5; }  /* pug-ok: testo su fondo nero */
   .sfida-reward { display:inline-flex; align-items:center; gap:6px; background:rgba(253,239,38,0.12); border:1px solid rgba(253,239,38,0.3); border-radius:8px; padding:6px 14px; font-size:12px; font-weight:800; color:var(--neon-gold); letter-spacing:.04em; }
 
   /* ═══ DIARIO ═══ */
@@ -637,7 +636,7 @@ const css = `
     text-transform:uppercase; letter-spacing:1px; color:#fff; margin-bottom:4px;
     text-shadow:0 0 30px rgba(163,207,254,0.4);
   }
-  .profile-firstname { font-size:13px; color:rgba(255,255,255,.45); margin-bottom:8px; letter-spacing:.08em; }
+  .profile-firstname { font-size:13px; color:rgba(255,255,255,.45); margin-bottom:8px; letter-spacing:.08em; }  /* pug-ok: testo su fondo nero */
   .profile-level {
     font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;
     background:rgba(163,207,254,0.1); border:1px solid rgba(163,207,254,0.25);
@@ -648,11 +647,11 @@ const css = `
   .profile-stat { flex:1; text-align:center; padding:14px 8px; border-right:1px solid rgba(255,255,255,0.06); }
   .profile-stat:last-child { border-right:none; }
   .profile-stat-val { font-family:'Funnel Display',sans-serif; font-size:32px; font-weight:900; line-height:1; }
-  .profile-stat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.35); margin-top:3px; }
+  .profile-stat-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text3); margin-top:3px; }
   .profile-xp-section { padding:0 20px 22px; position:relative; z-index:1; }
   .xp-bar-wrap { height:8px; background:rgba(255,255,255,.07); border-radius:99px; overflow:hidden; margin:10px 0 4px; }
   .xp-bar { height:100%; background:var(--verde); border-radius:99px; transition:width .6s cubic-bezier(.4,0,.2,1); box-shadow:0 0 12px rgba(163,207,254,0.5); }
-  .xp-label { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,.35); font-weight:700; letter-spacing:.06em; }
+  .xp-label { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); font-weight:700; letter-spacing:.06em; }
 
   /* ═══ QR ═══ */
   .qr-code { font-family:'Funnel Display',sans-serif; font-size:52px; font-weight:900; color:var(--neon-blue); letter-spacing:10px; margin:16px 0; text-shadow:var(--glow-blue); }
@@ -788,9 +787,9 @@ const css = `
   .streak-row { display:flex; gap:8px; }
   .streak-item { flex:1; text-align:center; }
   .streak-val { font-family:'Funnel Display',sans-serif; font-size:26px; font-weight:900; color:#D41323; line-height:1; display:block; }
-  .streak-lbl { font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.35); margin-top:2px; display:block; }
+  .streak-lbl { font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--text3); margin-top:2px; display:block; }
   .month-prog { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.07); }
-  .month-prog-lbl { display:flex; justify-content:space-between; font-size:9px; font-weight:900; color:rgba(255,255,255,.3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+  .month-prog-lbl { display:flex; justify-content:space-between; font-size:9px; font-weight:900; color:rgba(255,255,255,.3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }  /* pug-ok: testo su fondo nero */
   .month-prog-bg { height:7px; background:rgba(255,255,255,.07); border-radius:99px; overflow:hidden; }
   .month-prog-fill { height:100%; background:#FDEF26; border-radius:99px; }
 
@@ -853,7 +852,7 @@ const css = `
   .light .mob-header { background:#ffffff !important; border-bottom:3px solid #101010 !important; }
   .light .mob-header * { color:#101010; }
   .light .mob-bottom-nav { background:#101010 !important; border-top:none !important; }
-  .light .mob-bottom-nav * { color:rgba(255,255,255,.55) !important; }
+  .light .mob-bottom-nav * { color:rgba(255,255,255,.55) !important; }  /* pug-ok: testo su fondo nero */
   .light .topbar * { color:#101010; }
   .light .sidebar {
     background: #ffffff;
@@ -871,8 +870,8 @@ const css = `
     border-color: rgba(100,160,255,.3);
     color: #90caff;
   }
-  .light .nav-item { color: rgba(255,255,255,.38); }
-  .light .nav-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.75); }
+  .light .nav-item { color: rgba(255,255,255,.38); }  /* pug-ok: testo su fondo nero */
+  .light .nav-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.75); }  /* pug-ok: testo su fondo nero */
   .light .nav-item.active {
     background: rgba(100,160,255,.12);
     color: #90caff;
@@ -886,19 +885,19 @@ const css = `
     border-bottom: 1px solid rgba(255,255,255,.08);
     backdrop-filter: blur(20px);
   }
-  .light .topbar-title { color: rgba(255,255,255,.9); }
+  .light .topbar-title { color: rgba(255,255,255,.9); }  /* pug-ok: testo su fondo nero */
 
   .light .mob-header {
     background: rgba(18,18,18,.92);
     border-bottom: 1px solid rgba(255,255,255,.08);
   }
-  .light .mob-header-title { color: rgba(255,255,255,.9); }
+  .light .mob-header-title { color: rgba(255,255,255,.9); }  /* pug-ok: testo su fondo nero */
   .light .mob-drawer { background:#ffffff; } .light .mob-drawer * { color:#101010 !important; }
   .light .mob-bottom-nav {
     background: rgba(18,18,18,.95);
     border-top: 1px solid rgba(255,255,255,.08);
   }
-  .light .mob-nav-btn { color: rgba(255,255,255,.3); }
+  .light .mob-nav-btn { color: rgba(255,255,255,.3); }  /* pug-ok: testo su fondo nero */
   .light .mob-nav-btn.active { color: #90caff; }
   .light .content { background: transparent; }
   .light .edu-content-wrap { background: transparent; }
@@ -1207,8 +1206,8 @@ const css = `
   .light .xp-bar-wrap { background: rgba(16,16,16,.08); }
   .light .xp-bar { background:#101010; }
   .light .player-bottom-nav { background:#101010 !important; border-top:none !important; }
-  .light .player-bottom-nav * { color:rgba(255,255,255,.5); }
-  .light .player-nav-btn       { color: rgba(255,255,255,.28) !important; }
+  .light .player-bottom-nav * { color:rgba(255,255,255,.5); }  /* pug-ok: testo su fondo nero */
+  .light .player-nav-btn       { color: rgba(255,255,255,.28) !important; }  /* pug-ok: testo su fondo nero */
   .light .player-nav-btn.active { color: #90caff !important; }
   .light .player-nav-btn.active::after { background: #90caff !important; }
 
@@ -1275,7 +1274,7 @@ const css = `
   .light .loading { color: #6b7e94; }
   /* Sfide always dark bg */
   .light .pd-sfida { background: #1a2035 !important; border-color: rgba(253,239,38,.3) !important; }
-  .light .pd-sfida * { color: rgba(255,255,255,.9) !important; }
+  .light .pd-sfida * { color: rgba(255,255,255,.9) !important; }  /* pug-ok: testo su pd-sfida blu notte */
   /* Streak card */
   .light .streak-card { background: #fff !important; border: 1px solid rgba(230,81,0,.2) !important; }
   .light .streak-card .streak-val { color: #D41323 !important; }
@@ -1302,20 +1301,20 @@ const css = `
   .edu-notif-icon { font-size:22px; flex-shrink:0; }
   .edu-notif-text { flex:1; }
   .edu-notif-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:2px; }
-  .edu-notif-sub { font-size:11px; color:rgba(255,255,255,.45); }
+  .edu-notif-sub { font-size:11px; color:var(--text3); }
   .edu-notif-count { font-family:'Funnel Display',sans-serif; font-size:22px; font-weight:900; color:#FDEF26; flex-shrink:0; }
-  .edu-notif-empty { padding:20px 16px; text-align:center; color:rgba(255,255,255,.35); font-size:13px; }
+  .edu-notif-empty { padding:20px 16px; text-align:center; color:var(--text3); font-size:13px; }
   /* ═══ AVATAR PICKER ═══ */
   .av-picker-wrap { max-height:340px; overflow-y:auto; scrollbar-width:thin; }
   .av-picker-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
-  .av-picker-tab { padding:5px 12px; border-radius:99px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:rgba(255,255,255,.45); font-size:11px; font-weight:700; cursor:pointer; transition:all .15s; }
+  .av-picker-tab { padding:5px 12px; border-radius:99px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:var(--text3); font-size:11px; font-weight:700; cursor:pointer; transition:all .15s; }
   .av-picker-tab.on { background:rgba(253,239,38,.15); color:#FDEF26; border-color:rgba(253,239,38,.35); }
   .av-picker-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:6px; }
   .av-picker-item { border-radius:10px; padding:5px; text-align:center; cursor:pointer; border:2px solid transparent; background:rgba(255,255,255,.04); transition:all .15s; }
   .av-picker-item:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.15); }
   .av-picker-item.sel { border-color:#FDEF26; background:rgba(253,239,38,.1); }
   .av-picker-item img { width:52px; height:52px; object-fit:contain; display:block; margin:0 auto 3px; }
-  .av-picker-item span { font-size:8px; color:rgba(255,255,255,.45); text-transform:capitalize; line-height:1.2; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .av-picker-item span { font-size:8px; color:var(--text3); text-transform:capitalize; line-height:1.2; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .av-picker-item.sel span { color:#FDEF26; }
   /* ═══ QR SCANNER ═══ */
   .qr-scanner-wrap { position:relative; width:100%; max-width:320px; margin:0 auto; }
@@ -1363,7 +1362,7 @@ const css = `
   .pres-list::-webkit-scrollbar { display:none; }
   .pres-list-row { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.05); border-radius:10px; padding:10px 14px; animation:fade-in .5s both; }
   @keyframes fade-in { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
-  .pres-close { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px 14px; color:rgba(255,255,255,.5); font-size:13px; cursor:pointer; font-weight:700; letter-spacing:.05em; z-index:10; }
+  .pres-close { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:8px 14px; color:rgba(255,255,255,.5); font-size:13px; cursor:pointer; font-weight:700; letter-spacing:.05em; z-index:10; }  /* pug-ok: testo su fondo nero */
   .pres-close:hover { background:rgba(255,255,255,.15); color:#fff; }
   @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
@@ -1433,10 +1432,10 @@ const css = `
   .pd-sg { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:0 14px 8px; position:relative; z-index:2; }
   .pd-sc { background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:11px 6px; text-align:center; }
   .pd-sv { font-family:'Funnel Display',sans-serif; font-size:24px; font-weight:900; color:#FDEF26; line-height:1; display:block; }
-  .pd-sl { font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.38); margin-top:2px; display:block; }
+  .pd-sl { font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--text3); margin-top:2px; display:block; }
   .pd-squad { margin:0 14px 8px; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:11px 14px; display:flex; align-items:center; gap:10px; position:relative; z-index:2; }
   .pd-sfida { margin:0 14px 8px; background:#111; border-radius:16px; padding:14px 16px; position:relative; z-index:2; overflow:hidden; }
-  .pd-sfida::after { content:'★'; position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:44px; color:rgba(255,220,0,.1); line-height:1; }
+  .pd-sfida::after { content:'★'; position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:44px; color:rgba(255,220,0,.1); line-height:1; }  /* pug-ok: stella decorativa su pd-sfida blu notte */
   .pd-badges { margin:0 14px 8px; position:relative; z-index:2; }
   .pd-badge-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
   .pd-badge-row::-webkit-scrollbar { display:none; }
@@ -1446,7 +1445,7 @@ const css = `
   .pd-tab-title { font-family:'Funnel Display',sans-serif; font-size:30px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; margin-bottom:14px; position:relative; z-index:2; padding:0 2px; }
   /* override bottom nav for new design */
   .player-bottom-nav { background:#0d0d0d !important; border-top:1px solid #2a2a2a !important; }
-  .player-nav-btn { color:rgba(255,255,255,.28) !important; }
+  .player-nav-btn { color:rgba(255,255,255,.28) !important; }  /* pug-ok: testo su fondo nero */
   .player-nav-btn.active { color:#FDEF26 !important; }
   .player-nav-btn.active::after { background:#FDEF26 !important; box-shadow:0 0 8px rgba(253,239,38,.5) !important; }
 
@@ -1587,10 +1586,11 @@ const css = `
   .toast{position:absolute;left:50%;bottom:88px;transform:translateX(-50%) translateY(10px);z-index:60;background:var(--nero);color:#fff;font-weight:800;font-size:12px;padding:9px 16px;border-radius:99px;opacity:0;transition:all .25s;white-space:nowrap}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .bnav{position:relative;z-index:30;display:flex;background:var(--nero);padding:8px 0 12px} body:not(.light) .bnav{background:#000;border-top:2px solid #222}
-  .nav-btn{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:rgba(255,255,255,.45);font-family:var(--body);position:relative}
+  .nav-btn{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:rgba(255,255,255,.45);font-family:var(--body);position:relative}  /* pug-ok: testo su fondo nero */
   .nav-btn .nic{font-size:19px} .nav-btn .nlb{font-size:8px;font-weight:800;text-transform:uppercase}
   .nav-btn.active{color:var(--giallo)} .nav-btn.active::after{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:24px;height:4px;border-radius:99px;background:var(--giallo)}
   .nav-btn .nbadge{position:absolute;top:-4px;right:22%;background:var(--rosso);color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:1px 5px}
+
 `;
 
 
@@ -3604,14 +3604,6 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
   );
 }
 
-function PugDoodles() {
-  return (
-    <div className="pug-doodles" style={{color:"#101010",opacity:0.15}}>
-      <svg viewBox="0 0 390 960" width="100%" height="100%" preserveAspectRatio="xMidYMin slice"><defs><g id="fl" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z"/><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z" transform="rotate(72)"/><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z" transform="rotate(144)"/><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z" transform="rotate(216)"/><path d="M0 0 C-5 -9 -5 -20 0 -22 C5 -20 5 -9 0 0Z" transform="rotate(288)"/><circle r="3.1" fill="currentColor" stroke="none"/></g><g id="st"><path d="M0 -13 L3 -3 L13 0 L3 3 L0 13 L-3 3 L-13 0 L-3 -3Z" fill="currentColor"/></g><g id="lf" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M0 0 C7 -4 11 -13 8 -20 C2 -15 -2 -7 0 0Z"/><path d="M2.5 -3 L7 -15"/></g></defs><use href="#st" transform="translate(47,73) scale(1.05) rotate(231)"/><use href="#fl" transform="translate(201,75) scale(1.41) rotate(243)"/><use href="#st" transform="translate(359,77) scale(0.74) rotate(155)"/><use href="#fl" transform="translate(28,163) scale(1.47) rotate(324)"/><use href="#lf" transform="translate(171,196) scale(1.28) rotate(334)"/><use href="#fl" transform="translate(366,197) scale(1.29) rotate(270)"/><use href="#fl" transform="translate(23,281) scale(1.47) rotate(307)"/><use href="#fl" transform="translate(170,307) scale(1.26) rotate(100)"/><use href="#fl" transform="translate(352,292) scale(1.2) rotate(339)"/><use href="#fl" transform="translate(24,427) scale(1.13) rotate(282)"/><use href="#fl" transform="translate(174,414) scale(1.01) rotate(147)"/><use href="#fl" transform="translate(320,402) scale(0.93) rotate(55)"/><use href="#fl" transform="translate(37,542) scale(0.86) rotate(350)"/><use href="#fl" transform="translate(169,531) scale(1.49) rotate(240)"/><use href="#fl" transform="translate(343,543) scale(1.25) rotate(101)"/><use href="#fl" transform="translate(68,681) scale(0.91) rotate(170)"/><use href="#st" transform="translate(169,664) scale(0.75) rotate(126)"/><use href="#fl" transform="translate(364,644) scale(1.18) rotate(249)"/><use href="#fl" transform="translate(30,801) scale(1.16) rotate(97)"/><use href="#fl" transform="translate(215,766) scale(1.12) rotate(202)"/><use href="#fl" transform="translate(345,771) scale(1.46) rotate(303)"/><use href="#fl" transform="translate(38,879) scale(1.13) rotate(308)"/><use href="#fl" transform="translate(210,914) scale(1.54) rotate(109)"/><use href="#fl" transform="translate(347,894) scale(1.28) rotate(151)"/><use href="#st" transform="translate(215,115) scale(0.42) rotate(106)"/><use href="#st" transform="translate(316,691) scale(0.47) rotate(307)"/><use href="#st" transform="translate(206,420) scale(0.59) rotate(65)"/><use href="#st" transform="translate(318,535) scale(0.65) rotate(69)"/><use href="#st" transform="translate(215,227) scale(0.59) rotate(159)"/><use href="#st" transform="translate(134,877) scale(0.58) rotate(97)"/><use href="#st" transform="translate(99,797) scale(0.59) rotate(283)"/></svg>
-    </div>
-  );
-}
-
 function Podium({ ranked, xpData, timeFilter, highlightId }) {
   // Funzione che restituisce la "tripla di confronto" per un giocatore
   // (XP, livello-derivato-da-XP, coin). Due giocatori condividono il podio
@@ -3622,6 +3614,8 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
     return `${xp}|${lv}|${p.coin||0}`;
   };
 
+  // Raggruppa in posizioni: 1ª, 2ª, 3ª. Stesso gruppo = stessa tieKey.
+  // Scorri ranked e crea gruppi consecutivi con stessa key
   if (!ranked || ranked.length === 0) return null;
   const groups = [];
   let current = { key: tieKey(ranked[0]), players: [ranked[0]] };
@@ -3638,68 +3632,69 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
   const top3groups = groups.slice(0, 3);
   if (top3groups.length < 1) return null;
 
-  // Render: 2°, 1°, 3° — blocchi del kit (altezze e colori del mockup)
-  const order   = [1, 0, 2];
-  const medals  = ["🥈", "🥇", "🥉"];
-  const heights = [64, 86, 50];
-  const blockBg = ["#A3CFFE", "#FF6DEC", "#339966"];
-  const blockFg = ["#101010", "#101010", "#ffffff"];
+  // Render: 2°, 1°, 3° (layout podio classico)
+  const order = [1, 0, 2];
+  const cols = ["pod-2", "pod-1", "pod-3"];
+  const crowns = [null, "👑", null];
+  const xpColors = ["#aac8e0", "#FDEF26", "#d4916a"];
+  const sizes = [84, 110, 76];
+  const ranks = ["2°", "1°", "3°"];
 
   function renderGroup(group, i) {
-    if (!group) return <div key={"empty-"+i} className="pug-pod"/>;
+    if (!group) return <div key={i} className={`pod-col ${cols[i]}`}/>;
     const players = group.players;
-    const xpShown = timeFilter === "oggi" || timeFilter === "mese"
-      ? (xpData[players[0].id]||0) : players[0].xp;
-    const block = (
-      <div className="block" style={{height:heights[i],background:blockBg[i],color:blockFg[i]}}>
-        <span className="medal">{medals[i]}</span>
-        <span className="xp">{(xpShown||0).toLocaleString("it-IT")}</span>
-      </div>
-    );
-
-    // Un solo giocatore
+    // Se solo uno: render normale
     if (players.length === 1) {
       const p = players[0];
       const lv = getLevel(p.xp);
+      const xpShown = timeFilter === "oggi" || timeFilter === "mese" ? xpData[p.id]||0 : p.xp;
       const isMe = p.id === highlightId;
       return (
-        <div key={p.id} className="pug-pod">
-          <span className="av" style={isMe?{outline:"3px solid #101010",outlineOffset:2,borderRadius:"50%"}:undefined}>
-            {p.avatar_url
-              ? <img src={p.avatar_url} alt="" style={{width:38,height:38,borderRadius:"50%",objectFit:"cover",display:"block",margin:"0 auto"}}/>
-              : lv.emoji}
-          </span>
-          <div className="nm">{p.display_name}{isMe && <span className="pug-me">TU</span>}</div>
-          {block}
+        <div key={p.id} className={`pod-col ${cols[i]}`}>
+          {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
+          <div className="pod-av-wrap" style={{filter:"drop-shadow(0 5px 10px rgba(0,0,0,.35))",...(isMe?{outline:"3px solid #101010",outlineOffset:3,borderRadius:"50%"}:{})}}>
+            <Avatar url={p.avatar_url} emoji={lv.emoji} size={sizes[i]}/>
+          </div>
+          <div className="pod-name">{p.display_name}{isMe&&<span style={{color:"var(--azzurro)",fontSize:9,display:"block"}}>TU</span>}</div>
+          <div className="pod-xp">{xpShown} XP</div>
+          <div className="pod-base">
+            <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:xpColors[i]}}>{ranks[i]}</div>
+          </div>
         </div>
       );
     }
-
-    // Pari merito: avatar affiancati
-    const label = players.length === 2
-      ? `${players[0].display_name} & ${players[1].display_name}`
-      : players.length <= 5
-        ? `${players.length} a pari merito`
-        : `5 a pari merito (+${players.length-5})`;
+    // Pari merito: avatar piccoli affiancati
+    const xpShown = timeFilter === "oggi" || timeFilter === "mese" ? xpData[players[0].id]||0 : players[0].xp;
+    const tieSize = Math.max(24, sizes[i] - 9 * Math.min(players.length - 1, 4));
     return (
-      <div key={"tie-"+i} className="pug-pod">
-        <span className="av" style={{display:"flex",justifyContent:"center",gap:2}}>
-          {players.slice(0,4).map(p => {
+      <div key={"tie-" + i} className={`pod-col ${cols[i]}`}>
+        {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
+        <div style={{display:"flex",justifyContent:"center",gap:-6,marginBottom:6,flexWrap:"wrap",maxWidth:"100%"}}>
+          {players.slice(0, 5).map(p => {
             const lv = getLevel(p.xp);
             const isMe = p.id === highlightId;
-            return p.avatar_url
-              ? <img key={p.id} src={p.avatar_url} alt="" style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",...(isMe?{outline:"2px solid #101010"}:{})}}/>
-              : <span key={p.id} style={{fontSize:26}}>{lv.emoji}</span>;
+            return (
+              <div key={p.id} className="pod-av-wrap" style={{marginLeft:-4, ...(isMe?{outline:"2px solid var(--neon-blue)",outlineOffset:1}:{})}}>
+                <Avatar url={p.avatar_url} emoji={lv.emoji} size={tieSize}/>
+              </div>
+            );
           })}
-        </span>
-        <div className="nm">{label}</div>
-        {block}
+        </div>
+        <div className="pod-name" style={{fontSize:11}}>
+          {players.length === 2 ? `${players[0].display_name} & ${players[1].display_name}` :
+           players.length <= 5 ? `${players.length} a pari merito` :
+           `${players.slice(0,5).length} a pari merito (+${players.length-5})`}
+        </div>
+        <div className="pod-xp">{xpShown} XP</div>
+        <div className="pod-base">
+          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:xpColors[i]}}>{ranks[i]}</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="pug-podium">
+    <div className="podium-wrap">
       {order.map((pos, i) => renderGroup(top3groups[pos], i))}
     </div>
   );
@@ -5638,16 +5633,16 @@ function PlayerAnnouncementsTab() {
   }
 
   if (loading) return <div className="loading">⏳</div>;
-  if (announcements.length===0) return <div className="pug-card" style={{padding:24}}>Nessun annuncio.</div>;
+  if (announcements.length===0) return <div className="empty" style={{padding:24}}>Nessun annuncio.</div>;
   return (
     <div>
       {announcements.map(a=>(
-        <div key={a.id} className="pug-ann">
-          <div className="head" style={{background:a.pinned?"#FDEF26":"#A3CFFE",color:"#101010"}}>
+        <div key={a.id} className="ann">
+          <div className="ahead" style={{background:a.pinned?"#FDEF26":"#A3CFFE",color:"#101010"}}>
             <span>{a.pinned?"📌":"📢"} {a.profiles?.display_name||"Dal centro"}</span>
             <span>{relDay(a.created_at)}</span>
           </div>
-          <div className="body">
+          <div className="abody">
             {a.title && <div style={{fontWeight:800,textTransform:"uppercase",fontSize:14,marginBottom:a.body?4:0}}>{a.title}</div>}
             {a.body && <div style={{whiteSpace:"pre-wrap"}}>{a.body}</div>}
             {a.image_data && <img src={a.image_data} style={{width:"100%",borderRadius:10,marginTop:8,maxHeight:260,objectFit:"cover"}} alt=""/>}
@@ -6024,10 +6019,10 @@ function SocialTab({ players, myId, myProfile }) {
 
   return (
     <div>
-      <div className="pug-title" style={{marginTop:6}}>Social</div>
-      <div className="pug-chiprow">
+      <div className="section-title" style={{marginTop:6}}>Social</div>
+      <div className="chiprow">
         {[["annunci","📢 Annunci"],["community","👥 Community"]].map(([v,l])=>(
-          <button key={v} className={`pug-chip ${view===v?"on":""}`} onClick={()=>setView(v)}>{l}</button>
+          <button key={v} className={`chip ${view===v?"active":""}`} onClick={()=>setView(v)}>{l}</button>
         ))}
       </div>
       {view==="annunci" && <PlayerAnnouncementsTab/>}
@@ -6157,7 +6152,7 @@ function ProfileReactions({ targetId, myId }) {
           const count = counts[r]||0;
           const isMe = mine===r;
           return (
-            <button key={r} onClick={()=>react(r)} className={`pug-chip ${isMe?"on":""}`}
+            <button key={r} onClick={()=>react(r)} className={`chip ${isMe?"active":""}`}
               style={{fontSize:18,padding:"6px 12px",display:"flex",alignItems:"center",gap:5}}>
               {r}
               {count>0 && <span style={{fontSize:11,fontWeight:800}}>{count}</span>}
@@ -6225,20 +6220,20 @@ function CommunityTab({ players, myId, myProfile }) {
     const lv = getLevel(selected.xp||0);
     return (
       <div>
-        <div className="pug-chiprow">
+        <div className="chiprow">
           <button className="chip" onClick={()=>setSelected(null)}>← Torna alla community</button>
         </div>
 
         {/* Scheda giocatore */}
-        <div className="pug-card" style={{textAlign:"center"}}>
+        <div className="card" style={{textAlign:"center"}}>
           <div style={{width:84,height:84,borderRadius:"50%",overflow:"hidden",border:"3px solid #101010",margin:"0 auto 10px",boxShadow:"3px 3px 0 rgba(0,0,0,.28)",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <Avatar url={selected.avatar_url} emoji={lv.emoji} size={84}/>
           </div>
           <div style={{fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:26,textTransform:"uppercase",lineHeight:1}}>{selected.display_name}</div>
-          <div className="sub" style={{marginTop:4}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
+          <div className="psb" style={{marginTop:4}}>{lv.emoji} {lv.name} · ⭐ {selected.xp} XP</div>
           {selected.squads?.name && (
             <div style={{marginTop:8}}>
-              <span className="pug-me" style={{marginLeft:0}}>🛡️ {selected.squads.name}</span>
+              <span className="me-badge" style={{marginLeft:0}}>🛡️ {selected.squads.name}</span>
             </div>
           )}
           {/* Profile reactions */}
@@ -6246,28 +6241,28 @@ function CommunityTab({ players, myId, myProfile }) {
         </div>
 
         {loadingProfile ? <div className="loading">⏳</div> : (
-          <div className="pug-card">
-            <div className="pug-tape" style={{background:"#FF6DEC",color:"#101010"}}>🎖️ Badge — reagisci!</div>
+          <div className="card">
+            <div className="tape" style={{background:"#FF6DEC",color:"#101010"}}>🎖️ Badge — reagisci!</div>
             {playerBadges.length===0
-              ? <div className="pug-card">Nessun badge ancora.</div>
+              ? <div className="empty">Nessun badge ancora.</div>
               : playerBadges.map(pb=>{
                   const rxns = reactions[pb.id]||{};
                   const myR = myReactions[pb.id];
                   const total = Object.values(rxns).reduce((a,b)=>a+b,0);
                   return (
-                    <div key={pb.id} className="pug-listrow" style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px",flexWrap:"wrap"}}>
-                      <span className="av">{pb.badges?.icon||"🎖️"}</span>
+                    <div key={pb.id} className="prow" style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px",flexWrap:"wrap"}}>
+                      <span className="pav">{pb.badges?.icon||"🎖️"}</span>
                       <div>
-                        <div className="nm">{pb.badges?.name}</div>
-                        <div className="sub">{new Date(pb.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}</div>
+                        <div className="pnm">{pb.badges?.name}</div>
+                        <div className="psb">{new Date(pb.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}</div>
                       </div>
-                      {total > 0 && <span className="sub" style={{marginLeft:"auto"}}>{total} reaction</span>}
+                      {total > 0 && <span className="psb" style={{marginLeft:"auto"}}>{total} reaction</span>}
                       <div style={{width:"100%",display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
                         {REACT_TYPES.map(r=>{
                           const count = rxns[r]||0;
                           const isMe = myR===r;
                           return (
-                            <button key={r} onClick={()=>react(pb.id,r)} className={`pug-chip ${isMe?"on":""}`}
+                            <button key={r} onClick={()=>react(pb.id,r)} className={`chip ${isMe?"active":""}`}
                               style={{fontSize:16,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
                               {r}
                               {count>0&&<span style={{fontSize:11,fontWeight:800}}>{count}</span>}
@@ -6286,13 +6281,13 @@ function CommunityTab({ players, myId, myProfile }) {
 
   return (
     <div>
-      <div className="pug-card">
-        <div className="pug-tape" style={{background:"#D41323",color:"#fff"}}>👥 Community</div>
-        <div className="pug-msgbar" style={{margin:"0 0 10px"}}>
+      <div className="card">
+        <div className="tape" style={{background:"#D41323",color:"#fff"}}>👥 Community</div>
+        <div className="msgbar" style={{margin:"0 0 10px"}}>
           <input placeholder="🔍 Cerca giocatore…" value={search} onChange={e=>setSearch(e.target.value)}/>
         </div>
         {others.length===0
-          ? <div className="pug-card" style={{padding:24,textAlign:"center"}}>
+          ? <div className="empty" style={{padding:24,textAlign:"center"}}>
               <div style={{fontSize:36,marginBottom:8}}>🌱</div>
               <div style={{fontWeight:700,marginBottom:4}}>Nessun giocatore</div>
               <div style={{fontSize:12}}>Prova a cambiare la ricerca</div>
@@ -6300,16 +6295,16 @@ function CommunityTab({ players, myId, myProfile }) {
           : others.map((p,i)=>{
               const lv = getLevel(p.xp||0);
               return (
-                <div key={p.id} className="pug-listrow" onClick={()=>openPlayer(p)}
+                <div key={p.id} className="prow" onClick={()=>openPlayer(p)}
                   style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px",cursor:"pointer"}}>
-                  <span className="av">
+                  <span className="pav">
                     {p.avatar_url
                       ? <img src={p.avatar_url} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",display:"block"}}/>
                       : lv.emoji}
                   </span>
                   <div style={{minWidth:0}}>
-                    <div className="nm" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
-                    <div className="sub">{lv.emoji} {lv.name} · ⭐ {p.xp||0} XP</div>
+                    <div className="pnm" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
+                    <div className="psb">{lv.emoji} {lv.name} · ⭐ {p.xp||0} XP</div>
                   </div>
                   <span style={{marginLeft:"auto",fontSize:18,flexShrink:0}}>{i<3?["🥇","🥈","🥉"][i]:"→"}</span>
                 </div>
@@ -6681,14 +6676,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [newFirstName, setNewFirstName] = useState("");
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
   const [selectedBadge, setSelectedBadge] = useState(null);
-  const [posterOn, setPosterOn] = useState(false);
-  const [stemBloom, setStemBloom] = useState(false);
   const [mustChangePin, setMustChangePin] = useState(profile._mustChangePin === true || profile.pin === "1234");
   const [playerTheme, setPlayerTheme] = useState(() => localStorage.getItem("pug_theme") || "dark");
 
   useEffect(() => {
     document.body.classList.toggle("light", playerTheme === "light");
-    document.body.classList.toggle("night", playerTheme === "dark");  // convenzione pug-theme.css
     localStorage.setItem("pug_theme", playerTheme);
   }, [playerTheme]);
   const [newPin1, setNewPin1] = useState("");
@@ -6744,11 +6736,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const curXP = p.xp||0;
     if (prevXP > 0 && curXP > prevXP) {
       const oldLv = getLevel(prevXP); const newLv = getLevel(curXP);
-      if (newLv.name !== oldLv.name) {
-        setLevelUpData({ oldLevel:oldLv, newLevel:newLv });
-        setStemBloom(true);
-        setTimeout(()=>setStemBloom(false), 4600);  // lo stelo fiorisce e torna
-      }
+      if (newLv.name !== oldLv.name) setLevelUpData({ oldLevel:oldLv, newLevel:newLv });
     }
     localStorage.setItem("pug_xp_"+p.id, String(curXP));
     const acts = (a || []).filter(x => !(x.description || "").startsWith("SFIDA"));
@@ -7052,44 +7040,54 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     classifica: '#FDEF26',
     attivita:   '#339966',
     bigtop:     '#D41323',
-    messaggi:   '#A3CFFE',
-    notifiche:  '#FDEF26',
+    messaggi:   '#FF6DEC',
+    notifiche:  '#A3CFFE',
   };
   const NIGHT_BG = '#0d0d0d';
 
     return (
-    <div className="pug-screen" style={{background: playerTheme === "light" ? (TAB_BG[tab]||TAB_BG.profilo) : NIGHT_BG, transition:'background 0.5s ease'}}>
-      <PugDoodles/>
+    <div className="player-wrap" style={{background: playerTheme === "light" ? (TAB_BG[tab]||TAB_BG.profilo) : NIGHT_BG, transition:'background 0.5s ease'}}>
+      <div className="bg-doodles"/>
       {/* Toast notification */}
       {toast && (
         <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",zIndex:100,background:"rgba(0,0,0,.9)",border:`1px solid ${toast.color}`,borderRadius:12,padding:"10px 20px",fontSize:14,fontWeight:700,color:toast.color,boxShadow:`0 0 20px ${toast.color}44`,whiteSpace:"nowrap",backdropFilter:"blur(10px)"}}>
           {toast.msg}
         </div>
       )}
+      {/* Floral background */}
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.07,overflow:'hidden'}}>
+        <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{animation:"float2 15s ease-in-out infinite"}} style={{width:'100%',height:'100%'}}>
+          <defs>
+            <g id="fl"><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="4" fill="white"/></g>
+            <g id="lf"><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(20)"/><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(-20)"/></g>
+          </defs>
+          <use href="#fl" transform="translate(40,60) scale(1.2)"/><use href="#lf" transform="translate(90,130)"/><use href="#fl" transform="translate(320,80) scale(.9)"/><use href="#lf" transform="translate(280,170) scale(1.1)"/><use href="#fl" transform="translate(55,260) scale(.8)"/><use href="#lf" transform="translate(340,310)"/><use href="#fl" transform="translate(170,360) scale(1.3)"/><use href="#lf" transform="translate(45,430) scale(1.2)"/><use href="#fl" transform="translate(305,450) scale(.9)"/><use href="#lf" transform="translate(200,510)"/><use href="#fl" transform="translate(75,570) scale(1.1)"/><use href="#lf" transform="translate(335,595) scale(.8)"/><use href="#fl" transform="translate(185,640) scale(.9)"/><use href="#lf" transform="translate(115,690) scale(1.2)"/>
+        </svg>
+      </div>
+
       {/* Toast notifications */}
       <ToastContainer/>
       <InAppNotifBanner/>
       {qrCelebration && <QRCelebration xpGained={qrCelebration.xpGained} playerName={qrCelebration.playerName} onDone={()=>setQrCelebration(null)}/>}
-      {/* Top bar — kit viste */}
-      <div className="pug-topbar" style={{
-        paddingTop:"env(safe-area-inset-top, 0px)",
-        height:"calc(58px + env(safe-area-inset-top, 0px))",
-      }}>
-        <div style={{display:"flex"}}>
-          <div className="pug-logo pug-logo-b"/>
-          <div className="pug-logo pug-logo-w"/>
+      {/* Top bar */}
+      <div className="pd-topbar" style={{paddingTop:"max(10px, calc(env(safe-area-inset-top, 0px) + 8px))"}}>
+        <div>
+          <div className="pd-logo-img logo-b"/>
+          <div className="pd-logo-img logo-w"/>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {visConfig.coin !== false && <div className="pug-coin">🪙 {fullProfile?.coin ?? 0}</div>}
-          <button className="pug-iconbtn" onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} title="Cambia tema">
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          {visConfig.squadre !== false && fullProfile?.squads?.name && (
+            <div style={{background:'#111',color:'#FDEF26',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
+          )}
+          <button onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,padding:'5px 9px',cursor:'pointer',fontSize:14,lineHeight:1}} title="Cambia tema">
             {playerTheme==="dark"?"☀️":"🌙"}
           </button>
-          <button className="pug-iconbtn" onClick={onLogout} title="Esci">🚪</button>
+          <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
 
       {/* Scrollable content */}
-      <div className="pug-scroll"
+      <div className="pd-scroll"
         onTouchStart={e=>{window._swipeX0=e.touches[0].clientX; window._swipeY0=e.touches[0].clientY;}}
         onScroll={e=>{
           if(e.target.scrollTop === 0 && window._pulling) { window._pulling=false; load(); addToast("🔄 Aggiornamento…","ok"); }
@@ -7108,160 +7106,143 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         }}>
 
         {/* ── PROFILO ── */}
-        {tab === "profilo" && fullProfile && (() => {
-          const xp = fullProfile.xp || 0;
-          const nextLv = LEVELS.find(l => l.xp > xp);
-          const stemPct = nextLv ? Math.round(((xp - lv.xp) / (nextLv.xp - lv.xp)) * 100) : 100;
-          const remaining = nextLv ? nextLv.xp - xp : 0;
-          const squadName = visConfig.squadre !== false ? fullProfile.squads?.name : null;
-          const squadStyle = squadName ? (SQUAD_STYLE[squadName] || { bg:"#339966", text:"#fff" }) : null;
-          return (
+        {tab === "profilo" && fullProfile && (
           <div>
-            {/* ── HERO: stanza-habitat ── */}
-            <div className="pug-hero">
-              <div className="pug-roomzone">
-                <div className="pug-room" id="room">
-                  <div className={`pug-poster ${posterOn?"on":""}`}
-                    style={posterOn?{backgroundImage:`url("data:image/svg+xml,${encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='160' height='120'><rect width='160' height='120' fill='#FF6DEC'/><text x='80' y='72' font-family='sans-serif' font-size='46' text-anchor='middle'>🌱</text></svg>")}")`}:undefined}/>
-                  <div className="pug-frame" onClick={()=>{setPosterOn(v=>!v); addToast(posterOn?"🖼️ Poster rimosso":"🖼️ Poster appeso!","ok");}} title="Poster"><span className="g"/></div>
-                  <div className="pug-petshadow"/>
-                  {fullProfile.avatar_url
-                    ? <img className="pug-pet" src={fullProfile.avatar_url} onClick={()=>{playPixel("msg"); addToast("🍎 Ciao!","ok"); if(navigator.vibrate)navigator.vibrate(20);}} alt="avatar"/>
-                    : <div className="pug-pet" onClick={()=>addToast("🍎 Ciao!","ok")} style={{fontSize:80,textAlign:"center",lineHeight:"112px",cursor:"pointer"}}>{lv.emoji}</div>}
-                  {/* hotspot sugli oggetti reali della stanza */}
-                  <div className="pug-hot hot-bowl" onClick={()=>{document.querySelector(".pug-scroll")?.scrollTo({top:9999,behavior:"smooth"}); addToast("📍 Fai check-in per crescere!","ok");}} title="Nutri (check-in)"><span className="g"/></div>
-                  <div className="pug-hot hot-shelf" onClick={()=>addToast("🎁 I regali arrivano presto!","ok")} title="Regala"><span className="g"/></div>
-                  <div className="pug-hot hot-cab" onClick={()=>addToast("🛋️ Negozio arredi in arrivo","ok")} title="Arreda"><span className="g"/></div>
-                  <div className="pug-hot hot-door" onClick={()=>setTab("classifica")} title="Visita gli amici"><span className="g"/></div>
-                </div>
-                {squadName && <div className="pug-squadtab" style={{background:squadStyle.bg,color:squadStyle.text||"#fff"}}>Squadra {squadName}</div>}
-              </div>
-              <div className="pug-name">{fullProfile.display_name}</div>
-              <div className="pug-realname" onClick={()=>{setNewFirstName(fullProfile.first_name||"");setEditingFirstName(true);}} style={{cursor:"pointer"}}>
-                {fullProfile.first_name || "scrivi il tuo nome"} <span style={{fontSize:13,opacity:.5}}>✏️</span>
-              </div>
-              {editingFirstName && (
-                <div style={{display:"flex",gap:8,marginTop:10,width:"100%",maxWidth:300}}>
-                  <input className="pug-msgbar" style={{flex:1}} value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} placeholder="Il tuo nome…" maxLength={30} autoFocus/>
-                  <button className="pug-btn" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
-                  <button className="pug-iconbtn" onClick={()=>setEditingFirstName(false)}>✕</button>
-                </div>
-              )}
+            {/* Avatar Hero */}
+            <div className="pd-av-zone">
+              <div className="pd-av-glow"/>
+              {fullProfile.avatar_url
+                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}}/>
+                : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
+              }
+              <div className="pd-name-pill">{fullProfile.display_name}</div>
+
             </div>
 
-            {/* ── BARRA LIVELLO: stelo che fiorisce ── */}
-            <div className="pug-card">
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:6}}>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{fontSize:26}}>{lv.emoji}</span>
-                  <span style={{fontWeight:800,fontSize:17,textTransform:"uppercase"}}>{lv.name} · LV.{lv.id}</span>
+            {/* Profile card: thumbnail + nome editabile + XP */}
+            <div className="pd-card">
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+                <div style={{width:52,height:52,borderRadius:10,border:'2px solid rgba(253,239,38,.6)',overflow:'hidden',flexShrink:0,background:'rgba(0,0,0,.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={52}/>
                 </div>
-                <div style={{fontWeight:800,fontSize:36,lineHeight:.85}}>{stemPct}<small style={{fontSize:17}}>%</small></div>
-              </div>
-              <div className="pug-lvltrack">
-                <div className={`pug-lvlgrow ${stemBloom?"bloomed":""}`} style={{width:stemBloom?"100%":stemPct+"%"}}>
-                  <span className="pug-lvltip">🌱</span>
-                  <span className="pug-lvlbloom">🌸</span>
+                <div style={{flex:1}}>
+                  <div className="hand pd-first-hand" style={{fontSize:26,lineHeight:1.1,marginBottom:3,cursor:'pointer'}}
+                    onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>
+                    {fullProfile.first_name || 'scrivi il tuo nome'} <span style={{fontSize:15,opacity:.65}}>✏️</span>
+                  </div>
+                  {visConfig.squadre !== false && fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
                 </div>
               </div>
-              <div className="pug-lvlrem">
-                {nextLv
-                  ? <><span>Ti mancano <b>{remaining} XP</b></span><span className="goal">{nextLv.emoji} {nextLv.name}</span></>
-                  : <span>🏆 Livello massimo raggiunto!</span>}
-              </div>
-            </div>
-
-            {/* ── OBIETTIVO XP (se impostato dall'educatore) ── */}
+              {/* Goal XP personale */}
             {(() => {
               const goal = fullProfile.xp_goal || 0;
-              if (goal <= 0) return null;
-              const pct = Math.min(100, Math.round((xp/goal)*100));
-              return (
-                <div className="pug-card">
-                  <div className="pug-tape" style={{background:"#A3CFFE",color:"#101010"}}>🎯 Obiettivo XP</div>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontWeight:800,fontSize:13}}>
-                    <span>{xp} / {goal} XP</span><span>{pct}%</span>
+              const pct = goal > 0 ? Math.min(100, Math.round((fullProfile.xp/goal)*100)) : 0;
+              return goal > 0 ? (
+                <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                    <span style={{fontSize:12,fontWeight:700,color:"var(--text2)"}}>🎯 Obiettivo XP</span>
+                    <span style={{fontSize:12,fontWeight:700,color:"var(--neon-blue)"}}>{fullProfile.xp} / {goal} XP ({pct}%)</span>
                   </div>
-                  <div className="pug-vbar"><div className="pug-vfill" style={{width:pct+"%",background:pct>=100?"#339966":"#A3CFFE"}}/></div>
-                  {pct>=100 && <div style={{fontSize:11,color:"#339966",marginTop:6,fontWeight:800}}>🏆 Obiettivo raggiunto!</div>}
+                  <div style={{height:8,borderRadius:99,background:"rgba(255,255,255,.08)",overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,borderRadius:99,background:pct>=100?"var(--neon-green)":"var(--azzurro))",transition:"width .5s ease"}}/>
+                  </div>
+                  {pct>=100 && <div style={{fontSize:11,color:"var(--neon-green)",marginTop:4,fontWeight:700}}>🏆 Obiettivo raggiunto!</div>}
                 </div>
-              );
+              ) : null;
             })()}
+            {editingFirstName ? (
+                <div style={{display:'flex',gap:8,marginBottom:8}}>
+                  <input className="form-input" value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} placeholder="Il tuo nome…" style={{flex:1}} maxLength={30} autoFocus/>
+                  <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setEditingFirstName(false)}>✕</button>
+                </div>
+              ) : null}
+              <AnimatedLevelBar xp={fullProfile.xp||0} lv={lv} />
+            </div>
 
-            {/* ── STATISTICHE ── */}
+            {/* Stats grid 1: XP, Coin, Badge */}
             {(() => {
               const stats = [
-                visConfig.xp !== false ? ["⭐",fullProfile.xp,"XP"] : null,
-                visConfig.coin !== false ? ["🪙",fullProfile.coin,"Coin"] : null,
-                visConfig.badge !== false ? ["🎖️",badges.length,"Badge"] : null,
-                ["🌿",activities.filter(a=>!a.description?.includes("SFIDA")).length,"Lab"],
-                ["✅",bookings.filter(b=>b.status==="confirmed").length,"Confermati"],
-                ["🏆",(players.findIndex(p=>p.id===profile.id)+1)||"-","Rank"],
+                visConfig.xp !== false ? ['⭐',fullProfile.xp,'XP'] : null,
+                visConfig.coin !== false ? ['🪙',fullProfile.coin,'Coin'] : null,
+                visConfig.badge !== false ? ['🎖️',badges.length,'Badge'] : null,
               ].filter(Boolean);
-              return (
-                <div className="pug-statgrid" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>
+              return stats.length > 0 ? (
+                <div className="pd-sg" style={{gridTemplateColumns:`repeat(${stats.length},1fr)`}}>
                   {stats.map(([ic,v,l])=>(
-                    <div key={l} className="pug-stat"><span className="i">{ic}</span><span className="v">{v}</span><span className="l">{l}</span></div>
+                    <div key={l} className="pd-sc">
+                      <span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span>
+                      <CountUpStat val={typeof v==="number"?v:fullProfile.xp}/>
+                      <span className="pd-sl">{l}</span>
+                    </div>
                   ))}
                 </div>
-              );
+              ) : null;
             })()}
 
-            {/* ── STREAK PRESENZE ── */}
+            {/* Stats grid 2: Lab, Conf., Rank */}
+            <div className="pd-sg">
+              {[['🌿',activities.filter(a=>!a.description?.includes('SFIDA')).length,'Lab'],['✅',bookings.filter(b=>b.status==='confirmed').length,'Confermati'],['🏆',(players.findIndex(p=>p.id===profile.id)+1)||'-','Rank']].map(([ic,v,l])=>(
+                <div key={l} className="pd-sc"><span style={{fontSize:18,display:'block',marginBottom:3}}>{ic}</span><span className="pd-sv">{v}</span><span className="pd-sl">{l}</span></div>
+              ))}
+            </div>
+
+            {/* Streak */}
             {visConfig.streak !== false && ((fullProfile.current_streak||0) > 0 || (fullProfile.longest_streak||0) > 0) && (
-              <div className="pug-card">
-                <div className="pug-tape" style={{background:"#D41323",color:"#fff"}}>🔥 Streak presenze</div>
-                <div className="pug-statgrid" style={{margin:0}}>
-                  <div className="pug-stat"><span className="v">{fullProfile.current_streak||0}</span><span className="l">🔥 Attuali</span></div>
-                  <div className="pug-stat"><span className="v">{fullProfile.longest_streak||0}</span><span className="l">Record</span></div>
-                  <div className="pug-stat"><span className="v">{(() => { const now=new Date(); return new Date(now.getFullYear(),now.getMonth()+1,0).getDate(); })()}</span><span className="l">Giorni mese</span></div>
+              <div className="streak-card">
+                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.12em',color:'rgba(212,19,35,.7)',marginBottom:8}}>🔥 Streak presenze</div>
+                <div className="streak-row">
+                  <div className="streak-item"><span className="streak-val">{fullProfile.current_streak||0}</span><span className="streak-lbl"><span className="flame-pulse">🔥</span> Giorni attuali</span></div>
+                  <div className="streak-item"><span className="streak-val">{fullProfile.longest_streak||0}</span><span className="streak-lbl">Record</span></div>
+                  <div className="streak-item"><span className="streak-val">{(() => { const now=new Date(); return new Date(now.getFullYear(),now.getMonth()+1,0).getDate(); })()}</span><span className="streak-lbl">Giorni mese</span></div>
                 </div>
                 {monthPresences !== null && monthTarget !== null && (
-                  <div style={{marginTop:10}}>
-                    <div style={{display:"flex",justifyContent:"space-between",fontWeight:800,fontSize:12,marginBottom:5}}>
-                      <span>🗓️ {MONTH_NAMES[new Date().getMonth()]}</span><span>{monthPresences}/{monthTarget} giorni</span>
-                    </div>
-                    <div className="pug-vbar"><div className="pug-vfill" style={{width:Math.min(100,Math.round((monthPresences/Math.max(1,monthTarget))*100))+"%",background:"#D41323"}}/></div>
+                  <div className="month-prog">
+                    <div className="month-prog-lbl"><span>🗓️ {MONTH_NAMES[new Date().getMonth()]}</span><span>{monthPresences}/{monthTarget} giorni</span></div>
+                    <div className="month-prog-bg"><div className="month-prog-fill" style={{width:Math.min(100,Math.round((monthPresences/Math.max(1,monthTarget))*100))+'%'}}/></div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* ── SQUADRA ── */}
-            {visConfig.squadre !== false && (
-              fullProfile.squads?.name ? (
-                <div className="pug-card" style={{display:"flex",alignItems:"center",gap:12}}>
-                  <div style={{width:44,height:44,borderRadius:10,border:"3px solid #101010",background:(SQUAD_STYLE[fullProfile.squads.name]?.bg)||"#339966",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🛡️</div>
+            {/* Squadra */}
+            {(() => {
+              const showSquad = visConfig.squadre !== false;
+              if (!showSquad) return null;
+              if (!fullProfile.squads?.name) return (
+                <div className="pd-squad" style={{opacity:.5}}>
+                  <div style={{width:36,height:36,borderRadius:8,background:'rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔒</div>
                   <div>
-                    <div style={{fontWeight:800,fontSize:18,textTransform:"uppercase",lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
-                    <div style={{fontSize:11,fontWeight:700,opacity:.55,textTransform:"uppercase",marginTop:2}}>Membro</div>
+                    <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadre</div>
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>🚧 Coming soon</div>
                   </div>
                 </div>
-              ) : (
-                <div className="pug-card" style={{display:"flex",alignItems:"center",gap:12,opacity:.6}}>
-                  <div style={{width:44,height:44,borderRadius:10,border:"3px solid #101010",background:"#eee",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔒</div>
+              );
+              return (
+                <div className="pd-squad">
+                  <div style={{width:36,height:36,borderRadius:8,background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>⚡</div>
                   <div>
-                    <div style={{fontWeight:800,fontSize:18,textTransform:"uppercase",lineHeight:1}}>Squadre</div>
-                    <div style={{fontSize:11,fontWeight:700,opacity:.6,textTransform:"uppercase",marginTop:2}}>🚧 Presto disponibili</div>
+                    <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>
                   </div>
                 </div>
-              )
+              );
+            })()}
+
+            {/* Sfide */}
+            {visConfig.sfida !== false && (
+              <SfidePanel activities={activities}/>
             )}
-
-            {/* ── SFIDE ── */}
-            {visConfig.sfida !== false && <SfidePanel activities={activities}/>}
-
-            {/* ── BADGE ── */}
+            
+            {/* Badge */}
             {visConfig.badge !== false && badges.length > 0 && (
-              <div className="pug-card">
-                <div className="pug-tape" style={{background:"#FF6DEC",color:"#101010"}}>🎖️ Badge</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:10,justifyContent:"center"}}>
+              <div className="pd-badges">
+                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',textAlign:'center',marginBottom:6}}>— Badge —</div>
+                <div className="pd-badge-row">
                   {badges.map(pb=>(
-                    <div key={pb.id} onClick={()=>setSelectedBadge(pb)} style={{width:76,textAlign:"center",cursor:"pointer"}}>
-                      {pb.badges?.image_url
-                        ? <img src={pb.badges.image_url} style={{width:44,height:44,borderRadius:"50%",objectFit:"cover",border:"3px solid #101010",display:"block",margin:"0 auto 5px"}} alt=""/>
-                        : <div style={{fontSize:34,marginBottom:3}}>🎖️</div>}
-                      <div style={{fontSize:10,fontWeight:700,lineHeight:1.2}}>{pb.badges?.name}</div>
+                    <div key={pb.id} className="pd-badge-item" onClick={()=>setSelectedBadge(pb)}>
+                      {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt=""/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
+                      <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.65)',lineHeight:1.3}}>{pb.badges?.name}</div>
                     </div>
                   ))}
                 </div>
@@ -7270,78 +7251,70 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
             <InstallPWAButton/>
 
-            {/* ── CHECK-IN ── */}
-            <div className="pug-card">
-              <div className="pug-tape" style={{background:"#339966",color:"#fff"}}>📍 Check-in · Giornaliero o Lab</div>
+            {/* Check-in */}
+            <div className="pd-checkin">
+              <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.15em',color:'var(--neon-green)',marginBottom:8}}>📍 Check-in · Giornaliero o Lab</div>
               {showCamera ? (
                 <QRScanner onScan={code=>{setShowCamera(false);doCheckin(code);}} onClose={()=>setShowCamera(false)}/>
               ) : (
                 <>
-                  <input className="pug-msgbar" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="ABC123"
-                    style={{textAlign:"center",fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:800,letterSpacing:8,marginBottom:10}} maxLength={6}/>
-                  <div style={{display:"flex",gap:8}}>
-                    <button className="pug-btn" style={{flex:1}} onClick={()=>doCheckin()}>✓ Conferma</button>
-                    <button className="pug-iconbtn" onClick={()=>setShowCamera(true)} title="Scansiona con camera">📷</button>
+                  <input className="form-input" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="ABC123" style={{textAlign:'center',fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,letterSpacing:8,marginBottom:8}} maxLength={6}/>
+                  <div style={{display:'flex',gap:8,marginBottom:0}}>
+                    <button className="btn btn-primary" style={{flex:1}} onClick={()=>doCheckin()}>✓ Conferma</button>
+                    <button className="btn btn-ghost btn-sm" style={{flexShrink:0,fontSize:18}} onClick={()=>setShowCamera(true)} title="Scansiona con camera">📷</button>
                   </div>
                 </>
               )}
-              {qrMsg && <div style={{marginTop:10,fontSize:14,fontWeight:800,color:qrMsg.includes("✅")?"#339966":"#D41323",textAlign:"center"}}>{qrMsg}</div>}
+              {qrMsg&&<div style={{marginTop:10,fontSize:14,fontWeight:700,color:qrMsg.includes('✅')?'var(--verde)':'var(--danger)',textAlign:'center'}}>{qrMsg}</div>}
             </div>
 
-            {/* ── PRENOTAZIONI ── */}
-            {bookings.length>0 && (
-              <div className="pug-card">
-                <div className="pug-tape" style={{background:"#FDEF26",color:"#101010"}}>🎫 Prenotazioni</div>
+            {/* Prenotazioni */}
+            {bookings.length>0&&(
+              <div style={{padding:'0 0 8px'}}>
+                <div style={{fontSize:10,fontWeight:900,textTransform:'uppercase',letterSpacing:'.08em',color:'rgba(255,255,255,.3)',marginBottom:8,paddingLeft:2}}>Prenotazioni</div>
                 {bookings.slice(0,5).map(b=>{
-                  const map={pending:["#FDEF26","#101010","In attesa"],confirmed:["#339966","#fff","Confermata"],rejected:["#D41323","#fff","Rifiutata"]};
-                  const [bg,fg,label]=map[b.status]||["#eee","#101010",b.status];
-                  return (
-                    <div key={b.id} className="pug-row" style={{margin:"0 0 8px",boxShadow:"none",borderWidth:"2.5px"}}>
-                      <span style={{fontSize:13,fontWeight:700}}>{b.activities?.name}</span>
-                      <span style={{marginLeft:"auto",background:bg,color:fg,fontWeight:800,fontSize:11,borderRadius:8,padding:"3px 9px",textTransform:"uppercase"}}>{label}</span>
-                    </div>
-                  );
+                  const s={pending:['tag-amber','In attesa'],confirmed:['tag-green','Confermata'],rejected:['tag-red','Rifiutata']};
+                  const[cls,label]=s[b.status]||['tag-gray',b.status];
+                  return <div key={b.id} className="card-sm" style={{marginBottom:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}><span style={{fontSize:13,fontWeight:600}}>{b.activities?.name}</span><span className={`tag ${cls}`}>{label}</span></div>;
                 })}
               </div>
             )}
           </div>
-          );
-        })()}
+        )}
 
         {/* ── CLASSIFICA ── */}
         {tab === "classifica" && (
           <div>
-            <div className="pug-title">🏆 Classifica</div>
-            <div className="pug-chiprow">
-              {[["generale","🏆 Generale"],["oggi","⚡ Top 3 Oggi"],["mese","📅 Top 10 Mese"]].map(([v,l])=>(
-                <button key={v} className={`pug-chip ${lbTimeFilter===v?"on":""}`} onClick={()=>setLbTimeFilter(v)}>{l}</button>
-              ))}
+            <div className="pd-tab-title" style={{color:"#A3CFFE"}}>🏆 Classifica</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              <button className={`chip ${lbTimeFilter === "generale" ? "active" : ""}`} onClick={() => setLbTimeFilter("generale")}>🏆 Generale</button>
+              <button className={`chip ${lbTimeFilter === "oggi" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, background: lbTimeFilter === "oggi" ? "var(--giallo)" : undefined, color: lbTimeFilter === "oggi" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("oggi")}>⚡ Top 3 Oggi</button>
+              <button className={`chip ${lbTimeFilter === "mese" ? "active" : ""}`} style={{ borderColor: lbTimeFilter === "mese" ? "var(--rosa)" : undefined, background: lbTimeFilter === "mese" ? "var(--rosa)" : undefined, color: lbTimeFilter === "mese" ? "#101010" : undefined }} onClick={() => setLbTimeFilter("mese")}>📅 Top 10 Mese</button>
             </div>
-
             <Podium ranked={lbRanked} xpData={lbTimeFilter==="oggi"?xpToday:lbTimeFilter==="mese"?xpMonth:{}} timeFilter={lbTimeFilter} highlightId={profile.id}/>
-
-            {lbRanked.slice(lbRanked.length>=3?3:0).map((p, i) => {
-              const plv = getLevel(p.xp);
-              const realIdx = (lbRanked.length>=3?3:0)+i;
-              const xpShown = lbTimeFilter === "oggi" ? xpToday[p.id] || 0 : lbTimeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
-              const isMe = p.id === profile.id;
-              return (
-                <div key={p.id} className="pug-lbrow" style={isMe?{background:"#FF6DEC"}:undefined}>
-                  <div className="rank">{(realIdx+1)+"°"}</div>
-                  <div className="av">
-                    {p.avatar_url
-                      ? <img src={p.avatar_url} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",display:"block",margin:"0 auto"}}/>
-                      : plv.emoji}
+            <div className="lb-list">
+              {lbRanked.slice(lbRanked.length>=3?3:0).map((p, i) => {
+                const plv = getLevel(p.xp);
+                const realIdx = (lbRanked.length>=3?3:0)+i;
+                const xpShown = lbTimeFilter === "oggi" ? xpToday[p.id] || 0 : lbTimeFilter === "mese" ? xpMonth[p.id] || 0 : p.xp;
+                const isMe = p.id === profile.id;
+                return (
+                  <div key={p.id} className="lb-row" style={{ border: isMe ? "1.5px solid var(--azzurro)" : undefined, background: isMe ? "rgba(163,207,254,.06)" : undefined }}>
+                    <span className="lb-rank">{(realIdx+1)+"°"}</span>
+                    <div className="lb-av"><Avatar url={p.avatar_url} emoji={plv.emoji} size={38} /></div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="lb-name">{p.display_name}{isMe && <span style={{ fontSize: 10, color: "var(--azzurro)", marginLeft: 6, fontWeight: 700 }}>TU</span>}</div>
+                      <div className="lb-level">{plv.emoji} {plv.name} {p.squads?.name && <SquadPill name={p.squads.name} />}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <span className="lb-xp">{xpShown}</span>
+                      <div style={{ fontSize: 9, color: "var(--text3)", fontWeight: 700, textTransform: "uppercase" }}>XP</div>
+                    </div>
                   </div>
-                  <div style={{minWidth:0}}>
-                    <div className="nm">{p.display_name}{isMe && <span className="pug-me">TU</span>}</div>
-                    <div className="sub">{plv.emoji} {plv.name}{visConfig.squadre !== false && p.squads?.name ? ` · 🛡️ ${p.squads.name}` : ""}</div>
-                  </div>
-                  <div className="xp">{(xpShown||0).toLocaleString("it-IT")}<small>XP</small></div>
-                </div>
-              );
-            })}
-            {lbRanked.length === 0 && <div className="pug-card" style={{textAlign:"center"}}>Nessun dato.</div>}
+                );
+              })}
+              {lbRanked.length === 0 && <div className="empty">Nessun dato.</div>}
+            </div>
           </div>
         )}
 
@@ -7351,113 +7324,135 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         )}
 
         {tab === "attivita" && (
-          <div>
-            <div className="pug-title" style={{color:"#fff"}}>⚡ Lab</div>
-
-            {/* Check-in QR della sessione */}
-            <div className="pug-card">
-              <div className="pug-tape" style={{background:"#FDEF26",color:"#101010"}}>📍 Check-in Lab</div>
+          <div style={{ marginTop: 8 }}>
+            <div className="pd-tab-title" style={{color:"#339966"}}>⚡ Lab</div>
+            {/* Lab QR check-in */}
+            <div style={{background:"var(--surface)",border:"1px solid rgba(51,153,102,.2)",borderRadius:14,padding:12,marginBottom:12,position:"relative",zIndex:2}}>
+              <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:".12em",color:"var(--neon-green)",marginBottom:8}}>📍 Check-in Lab — scansiona il QR della sessione</div>
               {showCamera ? (
                 <QRScanner onScan={code=>{setShowCamera(false);doCheckin(code);}} onClose={()=>setShowCamera(false)}/>
               ) : (
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <input className="pug-code" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="CODICE" maxLength={6}/>
-                  <button className="pug-btn" onClick={()=>doCheckin()}>✓</button>
-                  <button className="pug-btn" onClick={()=>setShowCamera(true)}>📷</button>
+                <div style={{display:"flex",gap:8}}>
+                  <input className="form-input" value={qrInput} onChange={e=>setQrInput(e.target.value.toUpperCase())} placeholder="Codice Lab" style={{flex:1,textAlign:"center",fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,letterSpacing:5}} maxLength={6}/>
+                  <button className="btn btn-primary" style={{flexShrink:0}} onClick={()=>doCheckin()}>✓</button>
+                  <button className="btn btn-ghost btn-sm" style={{flexShrink:0,fontSize:18}} onClick={()=>setShowCamera(true)}>📷</button>
                 </div>
               )}
-              {qrMsg && <div style={{marginTop:8,fontSize:13,fontWeight:800,textAlign:"center"}}>{qrMsg}</div>}
+              {qrMsg && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:qrMsg.includes("✅")?"var(--verde)":"var(--danger)",textAlign:"center"}}>{qrMsg}</div>}
             </div>
-
-            {/* Sfide */}
             {activities.filter(a => a.description?.includes("SFIDA")).map(s => (
-              <div key={s.id} className="pug-card">
-                <div className="pug-tape" style={{background:"#FF6DEC",color:"#101010"}}>⚡ Sfida</div>
-                <div style={{fontWeight:800,fontSize:18,textTransform:"uppercase",lineHeight:1.1}}>{s.name}</div>
-                <div style={{fontSize:13,fontWeight:600,opacity:.8,marginTop:4}}>{s.description?.replace("SFIDA · ", "")}</div>
-                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:10}}>
-                  <span className="pug-chip">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
-                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" className="pug-chip" style={{textDecoration:"none"}}>🔗 Apri link</a>}
+              <div key={s.id} className="sfida-card" style={{ marginBottom: 14 }}>
+                <div className="sfida-label">⚡ Sfide</div>
+                <div className="sfida-title">{s.name}</div>
+                <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
+                  <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
+                  {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,color:"var(--azzurro)",fontWeight:700,textDecoration:"none",background:"rgba(163,207,254,.1)",border:"1px solid rgba(163,207,254,.25)",borderRadius:8,padding:"4px 10px"}}>🔗 Apri link</a>}
                 </div>
               </div>
             ))}
-
-            {/* Lab prenotabili */}
             {activities.filter(a => !a.description?.includes("SFIDA")).map(a => {
               const booked = bookings.find(b => b.activities?.name === a.name || b.activity_id === a.id);
-              const pieni = a.max_participants && (actBookingCounts[a.id]||0) >= a.max_participants;
               return (
-                <div key={a.id} className="pug-card">
-                  <div style={{fontWeight:800,fontSize:18,textTransform:"uppercase",lineHeight:1.1}}>{a.name}</div>
-                  <div style={{fontSize:12,fontWeight:600,opacity:.75,marginTop:3}}>{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
-                  {a.schedule && <div style={{fontSize:12,fontWeight:800,marginTop:4}}>📅 {a.schedule}</div>}
-                  {a.educator_id && <div style={{fontSize:12,fontWeight:800,color:"#339966",marginTop:4}}>🌱 Lab guidato</div>}
-                  {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{fontSize:12,fontWeight:800,display:"block",marginTop:4}}>🔗 Scopri di più</a>}
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap",margin:"10px 0"}}>
-                    <span className="pug-chip">Fino a {a.xp_completed} XP</span>
-                    <span className="pug-chip">🪙 {a.coin_cost} costo</span>
-                    {a.max_participants && (
-                      <span className="pug-chip" style={pieni?{background:"#D41323",color:"#fff"}:undefined}>
-                        👥 {actBookingCounts[a.id]||0}/{a.max_participants}{pieni ? " · pieno" : ""}
-                      </span>
-                    )}
+                <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
+                  <div className="act-title">{a.name}</div>
+                  <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
+                  {a.schedule && <div style={{fontSize:11,color:"#FDEF26",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
+                  {a.educator_id && <div style={{ fontSize: 12, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab guidato</div>}
+                  {a.link && <a href={a.link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--azzurro)", display: "block", marginBottom: 8 }}>🔗 Scopri di più</a>}
+                  <div className="act-rewards" style={{ marginBottom: 10 }}>
+                    <span className="reward-tag xp-tag">Fino a {a.xp_completed} XP</span>
+                    <span className="reward-tag coin-tag">🪙 {a.coin_cost} costo</span>
                   </div>
+                  {a.max_participants && (
+                    <div style={{
+                      fontSize:11, fontWeight:800, marginBottom:8,
+                      color: (actBookingCounts[a.id]||0) >= a.max_participants ? "#ff4466" : "var(--neon-green)",
+                    }}>
+                      👥 {actBookingCounts[a.id]||0}/{a.max_participants} iscritti
+                      {(actBookingCounts[a.id]||0) >= a.max_participants
+                        ? " · PIENO"
+                        : ` · ${a.max_participants-(actBookingCounts[a.id]||0)} posti rimasti`}
+                    </div>
+                  )}
                   {booked && booked.status !== "cancelled" ? (
                     <div>
-                      <span className="pug-chip on" style={{
-                        background: booked.status==="confirmed" ? "#339966" : booked.status==="rejected" ? "#D41323" : "#FDEF26",
-                        color: booked.status==="rejected" ? "#fff" : booked.status==="confirmed" ? "#fff" : "#101010",
-                      }}>
+                      <div className={`tag ${booked.status === "confirmed" ? "tag-green" : booked.status === "rejected" ? "tag-red" : "tag-amber"}`} style={{marginBottom:booked.status==="confirmed"?6:0}}>
                         {booked.status === "confirmed" ? "✅ Iscritto" : booked.status === "rejected" ? "❌ Rifiutata" : "⏳ In attesa"}
-                      </span>
+                      </div>
                       {booked.status === "confirmed" && (
-                        <button className="pug-btn" style={{width:"100%",marginTop:9}} onClick={()=>setShowCamera(true)}>
-                          📷 Scansiona QR · check-in
+                        <button className="btn btn-ghost btn-xs" style={{width:"100%",fontSize:11}} onClick={()=>setShowCamera(true)}>
+                          📷 Scansiona QR Lab · check-in sessione
                         </button>
                       )}
                     </div>
                   ) : (
-                    <button className="pug-btn" style={{width:"100%",opacity:(a.coin_cost > (fullProfile?.coin || 0) || pieni)?.45:1}}
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ width: "100%" }}
                       onClick={() => bookActivity(a.id, a.coin_cost)}
-                      disabled={a.coin_cost > (fullProfile?.coin || 0) || pieni}>
-                      {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti" : pieni ? "🚫 Lab pieno" : "Prenota"}
+                      disabled={a.coin_cost > (fullProfile?.coin || 0) || (a.max_participants && (actBookingCounts[a.id]||0) >= a.max_participants)}
+                    >
+                      {a.coin_cost > (fullProfile?.coin || 0) ? "🪙 Coin insufficienti"
+                        : (a.max_participants && (actBookingCounts[a.id]||0) >= a.max_participants) ? "🚫 Lab pieno"
+                        : "Prenota"}
                     </button>
                   )}
                 </div>
               );
             })}
-            {activities.length === 0 && <div className="pug-card" style={{textAlign:"center"}}>Nessuna lab attiva.</div>}
+            {activities.length === 0 && <div className="empty">Nessuna lab attiva.</div>}
           </div>
         )}
 
         {/* ── MESSAGGI ── */}
         {tab === "messaggi" && (
           <div>
-            <div className="pug-title">💬 Messaggi</div>
+            <div className="pd-tab-title" style={{color:"#FF6DEC"}}>💬 Messaggi</div>
             {(() => {
               const now = new Date().toISOString();
               const visibleMsgs = messages.filter(m => !m.cancelled_at && (!m.expires_at || m.expires_at > now));
-              if (visibleMsgs.length === 0) return <div className="pug-card" style={{textAlign:"center"}}>Nessun messaggio ricevuto.</div>;
-              return visibleMsgs.map(m => (
-                <div key={m.id} className="pug-msg">
-                  <div className="who">
-                    {m.profiles?.display_name||"Giardiniere"} · {m.is_broadcast?"📢 a tutti":m.squad_id?"🛡️ alla squadra":"👤 a te"}
-                  </div>
-                  {m.media_data && m.media_data.startsWith("sticker:") && (() => {
-                    const st = ANIMATED_STICKERS.find(s=>s.id===m.media_data.split(":")[1]);
-                    return st ? <div style={{width:80,height:80,marginBottom:6}} dangerouslySetInnerHTML={{__html:st.svg}}/> : null;
-                  })()}
-                  {m.media_data && !m.media_data.startsWith("sticker:") && (
-                    <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:10,margin:"4px 0 6px",display:"block",border:"2.5px solid #101010"}} alt=""/>
-                  )}
-                  <div style={{lineHeight:1.5}}>{m.body}</div>
-                  <div style={{fontSize:10,fontWeight:800,opacity:.5,marginTop:5,display:"flex",gap:8}}>
-                    <span>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
-                    {m.expires_at && <span>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
-                  </div>
-                  <MsgReactions msgId={m.id} myId={profile.id}/>
+              return visibleMsgs.length === 0 ? <div className="empty">Nessun messaggio ricevuto.</div> : (
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {visibleMsgs.map(m => (
+                    <div key={m.id} className="card-sm">
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          {m.profiles?.avatar_url
+                            ? <img src={m.profiles.avatar_url} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
+                            : <span style={{fontSize:18,flexShrink:0}}>🌱</span>}
+                          <div>
+                            <div style={{fontSize:12,fontWeight:700,color:"var(--verde)",lineHeight:1}}>{m.profiles?.display_name||"Giardiniere"}</div>
+                            <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>
+                              {m.is_broadcast?"📢 a tutti":m.squad_id?"🛡️ alla squadra":"👤 a te"}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                          {m.expires_at && <span style={{fontSize:9,color:"var(--text3)"}}>⏰ {new Date(m.expires_at).toLocaleDateString("it-IT")}</span>}
+                          <span style={{fontSize:10,color:"var(--text3)"}}>{new Date(m.created_at).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}</span>
+                        </div>
+                      </div>
+                      {m.media_data && m.media_data.startsWith("sticker:") && (() => {
+                        const st = ANIMATED_STICKERS.find(s=>s.id===m.media_data.split(":")[1]);
+                        return st ? <div style={{width:80,height:80,marginBottom:6}} dangerouslySetInnerHTML={{__html:st.svg}}/> : null;
+                      })()}
+                      {m.media_data && !m.media_data.startsWith("sticker:") && (
+                        <img src={m.media_data} style={{maxWidth:"100%",maxHeight:240,borderRadius:12,marginBottom:6,display:"block"}} alt=""
+                          onError={e => {
+                            const a = document.createElement("a");
+                            a.href = m.media_data; a.target = "_blank"; a.rel = "noopener";
+                            a.textContent = "📷 Apri foto";
+                            a.style.cssText = "display:inline-block;padding:8px 14px;background:rgba(0,0,0,.4);border:1px solid var(--border2);border-radius:10;color:var(--neon-blue);font-weight:800;font-size:13px;text-decoration:none;margin-bottom:6px";
+                            e.currentTarget.replaceWith(a);
+                          }}/>
+                      )}
+                      <MsgReactions msgId={m.id} myId={profile.id}/>
+                      <div style={{fontSize:14,color:"var(--text)",lineHeight:1.5}}>{m.body}</div>
+                    </div>
+                  ))}
                 </div>
-              ));
+              );
             })()}
           </div>
         )}
@@ -7469,35 +7464,33 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           </div>
         )}
         {tab === "notifiche" && (
-          <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"0 14px"}}>
-              <div className="pug-title" style={{margin:"14px 0 4px"}}>🔔 Notifiche</div>
-              {notifications.length > 0 && (
-                <button className="pug-btn" onClick={async()=>{
-                  await sb.from("notifications").delete().eq("user_id",profile.id);
-                  setNotifications([]);
-                }}>🗑️ Svuota</button>
-              )}
-            </div>
-
-            {notifications.length === 0
-              ? <div className="pug-card" style={{textAlign:"center"}}>Nessuna notifica.</div>
-              : notifications.map(n => {
-                  const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬" };
-                  return (
-                    <div key={n.id} className="pug-notif">
-                      <div className="i">{icons[n.type] || "🔔"}</div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div className="t">{n.title}{!n.read_at && <span className="pug-dot"/>}</div>
-                        <div className="b">{n.body}</div>
-                        <div className="d">{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-            {/* Diagnostica push (strumento tecnico, invariato) */}
-            <div className="pug-card"><NotificheTab profile={profile} /></div>
+          <div style={{ marginTop: 8 }}>
+            <NotificheTab profile={profile} />
+            <div style={{height:1,background:"var(--border)",margin:"20px 0 14px"}}/>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div className="pd-tab-title" style={{color:"#FDEF26",marginBottom:0}}>🔔 Notifiche</div>
+            {notifications.length > 0 && (
+              <button onClick={async()=>{
+                await sb.from("notifications").delete().eq("user_id",profile.id);
+                setNotifications([]);
+              }} style={{background:"rgba(255,34,68,.12)",border:"1px solid rgba(255,34,68,.3)",borderRadius:8,padding:"6px 12px",color:"#ff4466",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                🗑️ Cancella tutte
+              </button>
+            )}
+          </div>
+            {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
+              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬" };
+              return (
+                <div key={n.id} className="notif-item">
+                  <div className="notif-icon">{icons[n.type] || "🔔"}</div>
+                  <div style={{ flex: 1 }}>
+                    <div className="notif-title">{n.title}{!n.read_at && <span className="notif-dot" />}</div>
+                    <div className="notif-body">{n.body}</div>
+                    <div className="notif-time">{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>{/* end pd-scroll */}
@@ -7519,14 +7512,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         </div>
       )}
 
-      {/* Bottom nav — kit viste */}
-      <div className="pug-nav" style={{paddingBottom:"calc(12px + env(safe-area-inset-bottom, 0px))"}}>
+      {/* Bottom nav */}
+      <div className="player-bottom-nav">
         {BOTTOM_TABS.map(([id, icon, label]) => (
-          <button key={id} className={`pug-navbtn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
-            <span className="ic">{icon}</span>
-            <span className="lb">{label}</span>
-            {id === "notifiche" && unread > 0 && <span className="bdg">{unread}</span>}
-            {id === "messaggi" && unreadMsgs > 0 && <span className="bdg">{unreadMsgs}</span>}
+          <button key={id} className={`player-nav-btn ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
+            <span className="player-nav-icon">{icon}</span>
+            {id === "notifiche" && unread > 0 && <span style={{ position: "absolute", top: 8, right: "calc(50% - 16px)", background: "var(--neon-pink)", color: "#fff", borderRadius: 99, fontSize: 8, fontWeight: 800, padding: "1px 4px", boxShadow: "0 0 8px rgba(255,0,204,0.6)" }}>{unread}</span>}
+            {id === "messaggi" && unreadMsgs > 0 && <span style={{ position: "absolute", top: 8, right: "calc(50% - 16px)", background: "var(--neon-green)", color: "#000", borderRadius: 99, fontSize: 8, fontWeight: 800, padding: "1px 4px" }}>{unreadMsgs}</span>}
+            <span className="player-nav-label">{label}</span>
           </button>
         ))}
       </div>
@@ -8980,9 +8973,14 @@ function EducatorShell({ profile, onLogout }) {
   const sharedProps = { sectionColors, setSectionColors };
 
   return (
-    <div className={`edu-layout pug-edu ${theme === "light" ? "" : "night"}`}>
-      {/* Sfondo doodle del kit (come lato ragazzo) */}
-      <PugDoodles/>
+    <div className="edu-layout">
+      {/* Floral background */}
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.05,overflow:'hidden',maxWidth:'100vw'}}>
+        <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{width:'100%',height:'100%',animation:'float1 18s ease-in-out infinite'}}>
+          <defs><g id="ef"><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-14" rx="6" ry="12" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="5" fill="white"/></g></defs>
+          <use href="#ef" transform="translate(80,80) scale(1.4)"/><use href="#ef" transform="translate(350,60) scale(1.1)"/><use href="#ef" transform="translate(700,90) scale(1.3)"/><use href="#ef" transform="translate(1050,70) scale(1)"/><use href="#ef" transform="translate(200,300) scale(.9)"/><use href="#ef" transform="translate(550,280) scale(1.2)"/><use href="#ef" transform="translate(900,310) scale(1)"/><use href="#ef" transform="translate(100,550) scale(1.1)"/><use href="#ef" transform="translate(450,520) scale(.8)"/><use href="#ef" transform="translate(800,560) scale(1.3)"/><use href="#ef" transform="translate(250,780) scale(1)"/><use href="#ef" transform="translate(650,760) scale(1.2)"/><use href="#ef" transform="translate(1000,790) scale(.9)"/>
+        </svg>
+      </div>
 
       {/* Sidebar desktop */}
       <div className="sidebar">
