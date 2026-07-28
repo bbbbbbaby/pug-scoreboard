@@ -1,5 +1,7 @@
 import { sb, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase.js";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { PugIcon } from "./PugIcon";
+import "./pug-theme.css";
 
 // ─── PUSH NOTIFICATIONS ───────────────────────────────
 // URL e chiave derivano dall'ambiente (vedi supabase.js): in produzione
@@ -1840,8 +1842,8 @@ function QRScanner({ onScan, onClose }) {
           </div>
         </div>
       )}
-      {!window.jsQR && !err && <div style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:8}}>Caricamento libreria QR…</div>}  /* pug-ok: scanner QR */
-      {scanning && !err && <div style={{fontSize:12,color:"rgba(255,255,255,.5)",textAlign:"center",marginTop:10}}>🔍 Punta la camera al codice QR</div>}  /* pug-ok: scanner QR */
+      {!window.jsQR && !err && <div style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:8}}>Caricamento libreria QR…</div>}
+      {scanning && !err && <div style={{fontSize:12,color:"rgba(255,255,255,.5)",textAlign:"center",marginTop:10}}>🔍 Punta la camera al codice QR</div>}
       <button className="btn btn-ghost btn-sm" style={{width:"100%",marginTop:10}} onClick={onClose}>Annulla</button>
     </div>
   );
@@ -2099,12 +2101,12 @@ function SfidePanel({ activities }) {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
             <DurationBadge dur={s.duration||"daily"}/>
             <div style={{display:"flex",gap:6}}>
-              <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>+{s.coin_full||s.coin_partial||10} 🪙</span>  /* pug-ok: card sfida notte */
-              <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>+{s.xp_full||20} ⭐</span>  /* pug-ok: card sfida notte */
+              <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>+{s.coin_full||s.coin_partial||10} 🪙</span>
+              <span style={{fontSize:11,color:"rgba(255,255,255,.5)"}}>+{s.xp_full||20} ⭐</span>
             </div>
           </div>
           <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,textTransform:"uppercase",color:"#fff",lineHeight:1.1,marginBottom:4}}>{s.name}</div>
-          {s.description&&<div style={{fontSize:11,color:"rgba(255,255,255,.55)",lineHeight:1.4}}>{s.description.replace("SFIDA:","").trim()}</div>}  /* pug-ok: card sfida notte */
+          {s.description&&<div style={{fontSize:11,color:"rgba(255,255,255,.55)",lineHeight:1.4}}>{s.description.replace("SFIDA:","").trim()}</div>}
         </div>
       ))}
     </div>
@@ -2139,7 +2141,7 @@ function SfidaCountdown({ duration }) {
     }
     update(); const iv = setInterval(update,1000); return ()=>clearInterval(iv);
   }, [duration]);
-  return <div style={{fontSize:10,color:"rgba(255,255,255,.4)",fontFamily:"monospace",fontWeight:700,marginBottom:4}}>⏱ Scade in {time}</div>;  /* pug-ok: card sfida notte */
+  return <div style={{fontSize:10,color:"rgba(255,255,255,.4)",fontFamily:"monospace",fontWeight:700,marginBottom:4}}>⏱ Scade in {time}</div>;
 }
 
 function CountUpStat({ val }) {
@@ -2201,7 +2203,7 @@ function UpdateBanner() {
       <span style={{fontSize:20}}>🆕</span>
       <div style={{flex:1}}>
         <div style={{fontSize:13,fontWeight:700,color:'#339966'}}>Nuova versione disponibile</div>
-        <div style={{fontSize:11,color:'rgba(255,255,255,.5)'}}>Aggiorna per avere le ultime novità</div>  /* pug-ok: banner stato */
+        <div style={{fontSize:11,color:'rgba(255,255,255,.5)'}}>Aggiorna per avere le ultime novità</div>
       </div>
       <button onClick={applyUpdate} style={{
         background:'#339966', border:'none', borderRadius:99,
@@ -2213,7 +2215,7 @@ function UpdateBanner() {
         {reloading ? '⏳' : 'Aggiorna'}
       </button>
       <button onClick={()=>setPending(null)} style={{
-        background:'none', border:'none', color:'rgba(255,255,255,.4)',  /* pug-ok: schermata PIN */
+        background:'none', border:'none', color:'rgba(255,255,255,.4)',
         cursor:'pointer', fontSize:20, flexShrink:0, padding:'8px 10px',
         minWidth:'40px', minHeight:'40px',
       }}>✕</button>
@@ -2264,7 +2266,7 @@ function OfflineBanner() {
         <div style={{fontSize:13,fontWeight:700,color:justBack?'#339966':'#ff6666'}}>
           {justBack ? 'Connessione ripristinata' : 'Sei offline'}
         </div>
-        <div style={{fontSize:11,color:'rgba(255,255,255,.45)'}}>  /* pug-ok: banner stato */
+        <div style={{fontSize:11,color:'rgba(255,255,255,.45)'}}>
           {justBack ? 'Tutto torna a funzionare normalmente' : "L'app funziona con gli ultimi dati salvati"}
         </div>
       </div>
@@ -2749,7 +2751,7 @@ function QRCelebration({ xpGained, playerName, onDone }) {
           color:"#FDEF26",animation:"xpFloat 2s 1s ease-out forwards"}}>
           +{xpGained} ⭐ XP
         </div>
-        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginTop:8}}>Presenza registrata!</div>  /* pug-ok: schermata PIN */
+        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginTop:8}}>Presenza registrata!</div>
       </div>
     </div>
   );
@@ -4234,7 +4236,7 @@ function LabQRButton({ actId, actName }) {
             title="Tocca per copiare"
           >{code}</div>
           <div style={{fontSize:10,color:"var(--text3)",marginTop:-4}}>Tocca per copiare</div>
-          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo oggi — codice diverso dal check-in giornaliero</div>  /* pug-ok: scanner QR */
+          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo oggi — codice diverso dal check-in giornaliero</div>
         </div>
       )}
     </div>
@@ -4794,7 +4796,7 @@ function SfidaView({ sectionColors, setSectionColors }) {
               <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:s.link?8:0 }}>
                 <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
                 {s.expires_at && (
-                  <span style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700 }}>  /* pug-ok: card sfida (rosso scuro) */
+                  <span style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700 }}>
                     ⏰ Scade: {new Date(s.expires_at).toLocaleDateString("it-IT")}
                   </span>
                 )}
@@ -6493,9 +6495,9 @@ function InAppNotifBanner() {
       </div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:2}}>{notif.title}</div>
-        <div style={{fontSize:12,color:"rgba(255,255,255,.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{notif.body}</div>  /* pug-ok: fondo scuro */
+        <div style={{fontSize:12,color:"rgba(255,255,255,.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{notif.body}</div>
       </div>
-      <div style={{fontSize:11,color:"rgba(255,255,255,.3)",flexShrink:0}}>tocca per chiudere</div>  /* pug-ok: fondo scuro */
+      <div style={{fontSize:11,color:"rgba(255,255,255,.3)",flexShrink:0}}>tocca per chiudere</div>
     </div>
   );
 }
@@ -6528,16 +6530,16 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
       ))}
       <div style={{background:"#161616",border:"2px solid rgba(253,239,38,.5)",borderRadius:28,padding:"40px 48px",textAlign:"center",animation:"lvlpop .6s cubic-bezier(.34,1.56,.64,1) forwards",position:"relative",overflow:"hidden",maxWidth:340,width:"90%",boxShadow:"0 0 60px rgba(253,239,38,.25)"}}>
         <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,background:"linear-gradient(105deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%)",animation:"lvlshine 2.5s .6s ease-in-out infinite"}}/>
-        <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".2em",color:"rgba(255,255,255,.4)",marginBottom:8}}>🌿 SEI CRESCIUTO! 🌿</div>  /* pug-ok: card level-up */
+        <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:".2em",color:"rgba(255,255,255,.4)",marginBottom:8}}>🌿 SEI CRESCIUTO! 🌿</div>
         <div style={{fontSize:76,lineHeight:1,marginBottom:10,filter:"drop-shadow(0 0 16px rgba(253,239,38,.5))"}}>{newLevel.emoji}</div>
         <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:34,fontWeight:900,textTransform:"uppercase",background:"#FDEF26",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>{newLevel.name}</div>
-        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:20}}>Hai sbloccato il livello <strong style={{color:"#FDEF26"}}>{newLevel.name}</strong>!</div>  /* pug-ok: card level-up */
+        <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:20}}>Hai sbloccato il livello <strong style={{color:"#FDEF26"}}>{newLevel.name}</strong>!</div>
         <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:18}}>
-          <div style={{textAlign:"center",opacity:.6}}><div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>PRIMA</div><div style={{fontSize:20}}>{oldLevel.emoji}</div><div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{oldLevel.name}</div></div>  /* pug-ok: card level-up */
+          <div style={{textAlign:"center",opacity:.6}}><div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:4}}>PRIMA</div><div style={{fontSize:20}}>{oldLevel.emoji}</div><div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{oldLevel.name}</div></div>
           <div style={{display:"flex",alignItems:"center",fontSize:18,color:"#FDEF26"}}>→</div>
           <div style={{textAlign:"center"}}><div style={{fontSize:11,color:"#FDEF26",marginBottom:4,fontWeight:700}}>ORA</div><div style={{fontSize:24}}>{newLevel.emoji}</div><div style={{fontSize:13,color:"#FDEF26",fontWeight:700}}>{newLevel.name}</div></div>
         </div>
-        <div style={{fontSize:10,color:"rgba(255,255,255,.2)",animation:"pulse2 2s infinite"}}>Tocca per continuare</div>  /* pug-ok: card level-up */
+        <div style={{fontSize:10,color:"rgba(255,255,255,.2)",animation:"pulse2 2s infinite"}}>Tocca per continuare</div>
       </div>
     </div>
   );
@@ -6619,7 +6621,7 @@ function AnimatedLevelBar({ xp, lv }) {
       {/* Numeri XP grossi sotto la barra */}
       <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:13}}>
         <span style={{color:'#FDEF26'}}>{xp} XP</span>
-        <span style={{color:'rgba(255,255,255,.4)'}}>{nextLv?.xp || 'MAX'} XP</span>  /* pug-ok: overlay scuro */
+        <span style={{color:'rgba(255,255,255,.4)'}}>{nextLv?.xp || 'MAX'} XP</span>
       </div>
 
       {nextLv ? (
@@ -6993,7 +6995,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         <div style={{textAlign:'center',marginBottom:24}}>
           <div style={{fontSize:48,marginBottom:8}}>🔐</div>
           <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:8}}>Imposta il tuo PIN</div>
-          <div style={{fontSize:13,color:'rgba(255,255,255,.5)',lineHeight:1.5}}>Stai usando il PIN predefinito 1234. Scegli un PIN personale per proteggere il tuo account.</div>  /* pug-ok: schermata PIN */
+          <div style={{fontSize:13,color:'rgba(255,255,255,.5)',lineHeight:1.5}}>Stai usando il PIN predefinito 1234. Scegli un PIN personale per proteggere il tuo account.</div>
         </div>
         <div style={{marginBottom:12}}>
           <label className="form-label">Nuovo PIN (4 cifre)</label>
@@ -7014,7 +7016,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#A3CFFE',letterSpacing:'.08em'}}>🌿 Caricamento…</div>
       {loadStuck && (
         <div style={{textAlign:'center'}}>
-          <div style={{fontSize:12,color:'rgba(255,255,255,.4)',marginBottom:12}}>Qualcosa non va — riprova</div>  /* pug-ok: schermata PIN */
+          <div style={{fontSize:12,color:'rgba(255,255,255,.4)',marginBottom:12}}>Qualcosa non va — riprova</div>
           <button onClick={()=>{ loadingRef.current=false; setLoading(false); load(); }}
             style={{background:'rgba(163,207,254,.15)',border:'1px solid rgba(163,207,254,.4)',borderRadius:99,padding:'10px 24px',color:'#A3CFFE',fontSize:14,fontWeight:700,cursor:'pointer'}}>
             🔄 Ricarica
@@ -7079,10 +7081,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           {visConfig.squadre !== false && fullProfile?.squads?.name && (
-            <div style={{background:'#111',color:'#FDEF26',fontSize:10,fontWeight:900,borderRadius:8,padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em'}}>⚡ {fullProfile.squads.name}</div>
+             <div style={{background:'#111',color:'var(--giallo)',fontSize:10,fontWeight:900,borderRadius:'var(--radius-sm)',padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em',display:'inline-flex',alignItems:'center',gap:5}}><PugIcon nome="presenze" dim={11}/> {fullProfile.squads.name}</div>
           )}
           <button onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,padding:'5px 9px',cursor:'pointer',fontSize:14,lineHeight:1}} title="Cambia tema">
-            {playerTheme==="dark"?"☀️":"🌙"}
+            {playerTheme==="dark"?<PugIcon nome="sole" dim={15}/>:<PugIcon nome="luna" dim={15}/>}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
@@ -7130,7 +7132,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div style={{flex:1}}>
                   <div className="hand pd-first-hand" style={{fontSize:26,lineHeight:1.1,marginBottom:3,cursor:'pointer'}}
                     onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>
-                    {fullProfile.first_name || 'scrivi il tuo nome'} <span style={{fontSize:15,opacity:.65}}>✏️</span>
+                    {fullProfile.first_name || 'scrivi il tuo nome'} <PugIcon nome="matita" dim={15} style={{opacity:.65}}/>
                   </div>
                   {visConfig.squadre !== false && fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
                 </div>
@@ -7216,7 +7218,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   <div style={{width:36,height:36,borderRadius:8,background:'rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔒</div>
                   <div>
                     <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadre</div>
-                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>🚧 Coming soon</div>  /* pug-ok: profilo notte */
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>🚧 Coming soon</div>
                   </div>
                 </div>
               );
@@ -7225,7 +7227,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   <div style={{width:36,height:36,borderRadius:8,background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>⚡</div>
                   <div>
                     <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:18,fontWeight:900,color:'#fff',textTransform:'uppercase',letterSpacing:'.04em',lineHeight:1}}>Squadra {fullProfile.squads.name}</div>
-                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>  /* pug-ok: profilo notte */
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.38)',textTransform:'uppercase',letterSpacing:'.08em',marginTop:1}}>Membro</div>
                   </div>
                 </div>
               );
@@ -7239,12 +7241,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             {/* Badge */}
             {visConfig.badge !== false && badges.length > 0 && (
               <div className="pd-badges">
-                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',textAlign:'center',marginBottom:6}}>— Badge —</div>  /* pug-ok: profilo notte */
+                <div style={{fontSize:9,fontWeight:900,textTransform:'uppercase',letterSpacing:'.1em',color:'rgba(255,255,255,.35)',textAlign:'center',marginBottom:6}}>— Badge —</div>
                 <div className="pd-badge-row">
                   {badges.map(pb=>(
                     <div key={pb.id} className="pd-badge-item" onClick={()=>setSelectedBadge(pb)}>
                       {pb.badges?.image_url?<img src={pb.badges.image_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,0,204,.4)',display:'block',margin:'0 auto 5px'}} alt=""/>:<div style={{fontSize:28,marginBottom:5}}>🎖️</div>}
-                      <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.65)',lineHeight:1.3}}>{pb.badges?.name}</div>  /* pug-ok: profilo notte */
+                      <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,.65)',lineHeight:1.3}}>{pb.badges?.name}</div>
                     </div>
                   ))}
                 </div>
@@ -7273,7 +7275,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             {/* Prenotazioni */}
             {bookings.length>0&&(
               <div style={{padding:'0 0 8px'}}>
-                <div style={{fontSize:10,fontWeight:900,textTransform:'uppercase',letterSpacing:'.08em',color:'rgba(255,255,255,.3)',marginBottom:8,paddingLeft:2}}>Prenotazioni</div>  /* pug-ok: scanner QR */
+                <div style={{fontSize:10,fontWeight:900,textTransform:'uppercase',letterSpacing:'.08em',color:'rgba(255,255,255,.3)',marginBottom:8,paddingLeft:2}}>Prenotazioni</div>
                 {bookings.slice(0,5).map(b=>{
                   const s={pending:['tag-amber','In attesa'],confirmed:['tag-green','Confermata'],rejected:['tag-red','Rifiutata']};
                   const[cls,label]=s[b.status]||['tag-gray',b.status];
@@ -8130,7 +8132,7 @@ function AdminView({ profile }) {
             <InlineAvatarUpload playerId={editAvatar.id} onUploaded={url=>{setEditAvatar(p=>({...p,avatar_url:url}));saveAvatar(editAvatar.id,url);}}/>
             <div style={{display:"flex",gap:8,marginTop:12}}>
               <button className="btn btn-primary" style={{flex:1}} onClick={()=>saveAvatar(editAvatar.id,editAvatar.avatar_url)}>Salva avatar</button>
-              <button className="btn btn-ghost btn-sm" style={{color:"rgba(253,239,38,.8)",borderColor:"rgba(253,239,38,.3)"}} onClick={()=>{setEditAvatar(null);setResetTarget(editAvatar);}}>🔑 Password</button>  /* pug-ok: fondo scuro */
+              <button className="btn btn-ghost btn-sm" style={{color:"rgba(253,239,38,.8)",borderColor:"rgba(253,239,38,.3)"}} onClick={()=>{setEditAvatar(null);setResetTarget(editAvatar);}}>🔑 Password</button>
               <button className="btn btn-ghost btn-sm" onClick={()=>setEditAvatar(null)}>Annulla</button>
             </div>
           </div>
@@ -8522,7 +8524,7 @@ function BigTopEducatorView({ profile }) {
               <img src={`https://api.qrserver.com/v1/create-qr-code/?data=${qrShow[s.id]}&size=180x180&bgcolor=ffffff&color=000000&qzone=1`} alt={qrShow[s.id]} style={{width:180,height:180,borderRadius:8,display:"block",margin:"0 auto 8px"}}/>
               <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,color:"var(--neon-blue)",letterSpacing:8,cursor:"pointer"}}
                 onClick={()=>navigator.clipboard?.writeText(qrShow[s.id]).then(()=>addToast("📋 Codice copiato!","ok")).catch(()=>{})}>{qrShow[s.id]}</div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo il giorno del turno</div>  /* pug-ok: scanner QR */
+              <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}}>Valido solo il giorno del turno</div>
             </div>
           )}
 
@@ -9048,27 +9050,27 @@ function EducatorShell({ profile, onLogout }) {
             </div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:12,fontWeight:700,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile.display_name}</div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>🌱 Giardiniere</div>  /* pug-ok: sidebar educatore */
+              <div style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>🌱 Giardiniere</div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,padding:"6px 10px",background:"rgba(255,255,255,.04)",borderRadius:10,border:"1px solid rgba(255,255,255,.07)"}}>
             <span style={{fontSize:13}}>{theme==="dark"?"🌙":"☀️"}</span>
-            <span style={{fontSize:11,color:"rgba(255,255,255,.4)",flex:1}}>{theme==="dark"?"Scuro":"Chiaro"}</span>  /* pug-ok: sidebar educatore */
+            <span style={{fontSize:11,color:"rgba(255,255,255,.4)",flex:1}}>{theme==="dark"?"Scuro":"Chiaro"}</span>
             <button className="theme-toggle" style={{background:theme==="light"?"rgba(253,239,38,.3)":"rgba(255,255,255,.1)",flexShrink:0}} onClick={()=>setTheme(t=>t==="dark"?"light":"dark")}>
               <div className="theme-toggle-knob" style={{background:theme==="light"?"#c08800":"rgba(255,255,255,.6)",transform:theme==="light"?"translateX(20px)":"translateX(0)"}}/>
             </button>
           </div>
           <InstallPWAButton/>
           <div style={{display:"flex",gap:6,marginTop:6}}>
-            <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>  /* pug-ok: sidebar educatore */
-            <button className="btn btn-ghost btn-sm" style={{color:"rgba(253,239,38,.7)",border:"1px solid rgba(253,239,38,.2)",padding:"6px 10px"}} onClick={()=>setShowChangePwd(true)} title="Cambia password">🔑</button>  /* pug-ok: sidebar educatore */
+            <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
+            <button className="btn btn-ghost btn-sm" style={{color:"rgba(253,239,38,.7)",border:"1px solid rgba(253,239,38,.2)",padding:"6px 10px"}} onClick={()=>setShowChangePwd(true)} title="Cambia password">🔑</button>
           </div>
         </div>
       </div>
 
       {/* Header mobile */}
       <div className="mob-header" style={{paddingTop:"env(safe-area-inset-top,0px)"}}>
-        <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>  /* pug-ok: sidebar educatore */
+        <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
         <div style={{transform:"rotate(-1deg)"}}>
           <div style={{background:"var(--rosso)",borderRadius:"7px 10px 7px 11px",padding:"3px 8px",display:"inline-block"}}>
             <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:11,fontWeight:900,color:"#111",lineHeight:1.05,textTransform:"uppercase"}}>PeR·You GaRDeN</div>
@@ -9150,7 +9152,7 @@ function EducatorShell({ profile, onLogout }) {
         <div className="topbar" style={{borderBottom:`1px solid ${EduTabColors[tab]?.border||"rgba(255,255,255,.08)"}`}}>
           <div/>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>  /* pug-ok: header educatore */
+            <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
             <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(253,239,38,.1)",border:"1px solid rgba(253,239,38,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#FDEF26",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
             <div className="edu-notif-bell" onClick={()=>setShowNotifPanel(p=>!p)}>
               🔔
@@ -9292,7 +9294,7 @@ function EducatorShell({ profile, onLogout }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Il tuo avatar</div>
             <AvatarUpload playerId={profile.id} currentUrl={avatarUrl} onUploaded={url => setAvatarUrl(url)} />
-            <button className="btn btn-ghost btn-sm" style={{width:"100%",marginTop:10,color:"rgba(253,239,38,.8)",borderColor:"rgba(253,239,38,.3)"}}  /* pug-ok: fondo scuro */
+            <button className="btn btn-ghost btn-sm" style={{width:"100%",marginTop:10,color:"rgba(253,239,38,.8)",borderColor:"rgba(253,239,38,.3)"}}
               onClick={()=>{setShowAvatarModal(false);setShowChangePwd(true);}}>
               🔑 Cambia password
             </button>
