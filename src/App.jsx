@@ -6681,12 +6681,29 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [lbTimeFilter, setLbTimeFilter] = useState("generale");
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [mustChangePin, setMustChangePin] = useState(profile._mustChangePin === true || profile.pin === "1234");
-  const [playerTheme, setPlayerTheme] = useState(() => localStorage.getItem("pug_theme") || "dark");
+  // Tema a 3 stati: "auto" (segue il sistema) · "light" · "dark".
+  // Default al primo avvio: "auto".
+  const [themeChoice, setThemeChoice] = useState(() => localStorage.getItem("pug_theme") || "auto");
+  const [sysDark, setSysDark] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches : true);
+
+  // se il sistema cambia (giorno→notte del telefono) e siamo in auto, seguiamo
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = e => setSysDark(e.matches);
+    mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
+    return () => { mq.removeEventListener ? mq.removeEventListener("change", onChange) : mq.removeListener(onChange); };
+  }, []);
+
+  // il tema EFFETTIVO: in auto lo decide il sistema
+  const playerTheme = themeChoice === "auto" ? (sysDark ? "dark" : "light") : themeChoice;
 
   useEffect(() => {
     document.body.classList.toggle("light", playerTheme === "light");
-    localStorage.setItem("pug_theme", playerTheme);
-  }, [playerTheme]);
+    localStorage.setItem("pug_theme", themeChoice);
+  }, [playerTheme, themeChoice]);
   const [newPin1, setNewPin1] = useState("");
   const [newPin2, setNewPin2] = useState("");
   const [pinChangeErr, setPinChangeErr] = useState("");
@@ -7083,8 +7100,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           {visConfig.squadre !== false && fullProfile?.squads?.name && (
              <div style={{background:'#111',color:'var(--giallo)',fontSize:10,fontWeight:900,borderRadius:'var(--radius-sm)',padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em',display:'inline-flex',alignItems:'center',gap:5}}><PugIcon nome="presenze" dim={11}/> {fullProfile.squads.name}</div>
           )}
-          <button onClick={()=>setPlayerTheme(t=>t==="dark"?"light":"dark")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:8,padding:'5px 9px',cursor:'pointer',fontSize:14,lineHeight:1}} title="Cambia tema">
-            {playerTheme==="dark"?<PugIcon nome="sole" dim={15}/>:<PugIcon nome="luna" dim={15}/>}
+          <button onClick={()=>setThemeChoice(c=>c==="auto"?"light":c==="light"?"dark":"auto")} style={{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:'var(--r-s)',padding:'5px 9px',cursor:'pointer',lineHeight:1,display:'flex',alignItems:'center',gap:5,color:'#fff'}} title={themeChoice==="auto"?"Tema: automatico":themeChoice==="light"?"Tema: chiaro":"Tema: scuro"}>
+            {themeChoice==="auto"
+              ? <PugIcon nome={sysDark?"luna":"sole"} dim={15} style={{opacity:.9}}/>
+              : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
+            <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
@@ -7113,14 +7133,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         {tab === "profilo" && fullProfile && (
           <div>
             {/* Avatar Hero */}
-            <div className="pd-av-zone">
-              <div className="pd-av-glow"/>
-              {fullProfile.avatar_url
-                ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}}/>
-                : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
-              }
-              <div className="pd-name-pill">{fullProfile.display_name}</div>
-
+            {/* Avatar Hero — markup camerino */}
+            <div className="pug-hero" style={{paddingTop:6}}>
+              <div className="pd-av-zone">
+                <div className="pd-av-glow"/>
+                {fullProfile.avatar_url
+                  ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}}/>
+                  : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
+                }
+              </div>
+              <div className="pug-name">{fullProfile.display_name}</div>
             </div>
 
             {/* Profile card: thumbnail + nome editabile + XP */}
