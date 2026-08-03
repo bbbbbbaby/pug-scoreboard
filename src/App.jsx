@@ -6589,47 +6589,31 @@ function AnimatedLevelBar({ xp, lv }) {
 
   return (
     <div>
-      {/* Nome livello centrato, % a destra */}
-      <div style={{position:'relative',display:'flex',justifyContent:'center',alignItems:'center',gap:8,marginBottom:7}}>
-        <span style={{fontSize:26,lineHeight:1,filter:'drop-shadow(0 0 6px rgba(255,109,236,.6))'}}>{lv.emoji}</span>
-        <span style={{fontFamily:"'Funnel Display',sans-serif",fontSize:22,fontWeight:900,textTransform:'uppercase',letterSpacing:'.03em',lineHeight:1}}>{lv.name}</span>
-        <div style={{position:'absolute',right:0,fontFamily:"'Funnel Display',sans-serif",fontSize:24,fontWeight:900,lineHeight:.9,color:bump?'#FF6DEC':'#FF6DEC',transition:'color .3s ease'}}>
-          {shownPct}<span style={{fontSize:14}}>%</span>
+      {/* header camerino: albero + livello, percentuale grande a destra */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:6}}>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <span style={{fontSize:26,lineHeight:1}}>{lv.emoji}</span>
+          <span style={{fontWeight:800,fontSize:17,textTransform:'uppercase'}}>{lv.name}</span>
+        </div>
+        <div style={{fontWeight:800,fontSize:36,lineHeight:.85}}>{shownPct}<small style={{fontSize:17}}>%</small></div>
+      </div>
+
+      {/* barra camerino: terra + crescita + germoglio/fioritura */}
+      <div className="pug-lvltrack">
+        <div className={"pug-lvlgrow"+(bump?" bloomed":"")} style={{width:width+'%'}}>
+          <span className="pug-lvltip">🌱</span>
+          <span className="pug-lvlbloom">🌸</span>
         </div>
       </div>
 
-      {/* LA BARRA — spessa, bordata, con strisce diagonali animate */}
-      <div style={{
-        height:22, background:'rgba(0,0,0,.45)', borderRadius:12, overflow:'hidden', position:'relative',
-        border:'2px solid rgba(255,255,255,.12)',
-        boxShadow: bump ? '0 0 22px rgba(255,109,236,.6), inset 0 2px 6px rgba(0,0,0,.5)' : 'inset 0 2px 6px rgba(0,0,0,.5)',
-        transform: bump ? 'scale(1.02)' : 'scale(1)', transition:'transform .25s ease, box-shadow .3s ease',
-      }}>
-        <div style={{
-          height:'100%', width:width+'%', borderRadius:9, position:'relative', overflow:'hidden',
-          background:'#339966',
-          boxShadow:'0 0 12px rgba(51,153,102,.55)',
-          transition:'width 1.1s cubic-bezier(.22,1.5,.4,1)',
-        }}>
-          {/* Strisce diagonali che scorrono (effetto caricamento da gioco) */}
-          <div style={{position:'absolute',inset:0,backgroundImage:'repeating-linear-gradient(45deg,rgba(253,239,38,.4) 0,rgba(255,255,255,.18) 10px,transparent 10px,transparent 20px)',backgroundSize:'28px 28px',animation:'barStripes .7s linear infinite'}}/>
-          {/* Riflesso lucido in alto */}
-          <div style={{position:'absolute',top:0,left:0,right:0,height:'45%',background:'linear-gradient(180deg,rgba(255,255,255,.35),transparent)',borderRadius:'9px 9px 0 0'}}/>
-        </div>
-      </div>
-
-      {/* Numeri XP grossi sotto la barra */}
-      <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:13}}>
-        <span style={{color:'#FDEF26'}}>{xp} XP</span>
-        <span style={{color:'rgba(255,255,255,.4)'}}>{nextLv?.xp || 'MAX'} XP</span>
-      </div>
-
+      {/* mancano X XP + prossimo stadio, stile camerino */}
       {nextLv ? (
-        <div className="hand xp-missing-card">
-          mancano {remaining} xp a {nextLv.name}
+        <div className="pug-lvlrem">
+          <span>Ti mancano <b>{remaining} XP</b></span>
+          <span className="goal">{nextLv.emoji} {nextLv.name}</span>
         </div>
       ) : (
-        <div style={{fontSize:13,color:'#FDEF26',marginTop:6,fontWeight:900,textAlign:'center'}}>🏆 LIVELLO MASSIMO!</div>
+        <div className="pug-lvlrem"><span className="goal">🏆 Livello massimo</span></div>
       )}
     </div>
   );
@@ -7143,22 +7127,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 }
               </div>
               <div className="pug-name">{fullProfile.display_name}</div>
+              <div className="pug-realname" style={{cursor:'pointer'}}
+                onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>
+                {fullProfile.first_name || 'scrivi il tuo nome'} <PugIcon nome="matita" dim={14} style={{opacity:.6}}/>
+              </div>
             </div>
 
-            {/* Profile card: thumbnail + nome editabile + XP */}
+            {/* Profile card: nome editabile + XP */}
             <div className="pd-card">
-              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
-                <div style={{width:52,height:52,borderRadius:10,border:'2px solid rgba(253,239,38,.6)',overflow:'hidden',flexShrink:0,background:'rgba(0,0,0,.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                  <Avatar url={fullProfile.avatar_url} emoji={lv.emoji} size={52}/>
-                </div>
-                <div style={{flex:1}}>
-                  <div className="hand pd-first-hand" style={{fontSize:26,lineHeight:1.1,marginBottom:3,cursor:'pointer'}}
-                    onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>
-                    {fullProfile.first_name || 'scrivi il tuo nome'} <PugIcon nome="matita" dim={15} style={{opacity:.65}}/>
-                  </div>
-                  {visConfig.squadre !== false && fullProfile.squads?.name && <SquadPill name={fullProfile.squads.name}/>}
-                </div>
-              </div>
               {/* Goal XP personale */}
             {(() => {
               const goal = fullProfile.xp_goal || 0;
