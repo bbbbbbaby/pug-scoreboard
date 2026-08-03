@@ -7139,6 +7139,26 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               </div>
             </div>
 
+            {/* Come sta la creatura — barre bisogni (display; valori dai campi Supabase, fallback 100) */}
+            <div className="pug-card">
+              <div className="pug-tape" style={{background:'#FDEF26',color:'#101010'}}>🌱 Come sta la creatura</div>
+              {[
+                ['Energia', fullProfile.energia, '#FDEF26', '⚡'],
+                ['Socialità', fullProfile.socialita, '#A3CFFE', '👥'],
+                ['Felicità', fullProfile.felicita, '#FF6DEC', '❤️'],
+              ].map(([nome, val, col, ic]) => {
+                const pct = Math.max(0, Math.min(100, Math.round(Number(val ?? 100))));
+                return (
+                  <div className="pug-vital" key={nome}>
+                    <span className="i">{ic}</span>
+                    <span className="n">{nome}</span>
+                    <div className="pug-vbar"><div className="pug-vfill" style={{width:pct+'%',background:col}}/></div>
+                    <span className="pug-vpct">{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+
             {/* Profile card: nome editabile + XP */}
             <div className="pd-card">
               {/* Goal XP personale */}
