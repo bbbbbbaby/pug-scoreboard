@@ -7119,12 +7119,18 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             {/* Avatar Hero */}
             {/* Avatar Hero — markup camerino */}
             <div className="pug-hero" style={{paddingTop:6}}>
-              <div className="pd-av-zone">
-                <div className="pd-av-glow"/>
-                {fullProfile.avatar_url
-                  ? <img src={fullProfile.avatar_url} className="pd-av-img" alt="avatar" style={{animation:"breathe 3.5s ease-in-out infinite"}}/>
-                  : <span className="pd-av-emoji" style={{animation:"breathe 3.5s ease-in-out infinite",display:"block"}}>{lv.emoji}</span>
-                }
+              {/* Stanza tamagocification — spogliata: solo la porta rimanda al Social */}
+              <div className="pug-roomzone">
+                <div className="pug-room">
+                  <div className="pug-petshadow"/>
+                  {fullProfile.avatar_url
+                    ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura"/>
+                    : <span className="pug-pet" style={{width:112,fontSize:82,textAlign:'center',lineHeight:'112px'}}>{lv.emoji}</span>}
+                  <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{cursor:'pointer'}}><span className="g"/></div>
+                </div>
+                {visConfig.squadre !== false && fullProfile.squads?.name && (
+                  <div className="pug-squadtab" style={{background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',color:'#fff'}}>Squadra {fullProfile.squads.name}</div>
+                )}
               </div>
               <div className="pug-name">{fullProfile.display_name}</div>
               <div className="pug-realname" style={{cursor:'pointer'}}
