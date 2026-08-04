@@ -7075,16 +7075,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           {toast.msg}
         </div>
       )}
-      {/* Floral background */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:0,opacity:.07,overflow:'hidden'}}>
-        <svg viewBox="0 0 380 700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{animation:"float2 15s ease-in-out infinite"}} style={{width:'100%',height:'100%'}}>
-          <defs>
-            <g id="fl"><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(0)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(60)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(120)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(180)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(240)"/><ellipse cx="0" cy="-12" rx="5" ry="10" fill="white" transform="rotate(300)"/><circle cx="0" cy="0" r="4" fill="white"/></g>
-            <g id="lf"><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(20)"/><ellipse cx="0" cy="-14" rx="4" ry="12" fill="white" transform="rotate(-20)"/></g>
-          </defs>
-          <use href="#fl" transform="translate(40,60) scale(1.2)"/><use href="#lf" transform="translate(90,130)"/><use href="#fl" transform="translate(320,80) scale(.9)"/><use href="#lf" transform="translate(280,170) scale(1.1)"/><use href="#fl" transform="translate(55,260) scale(.8)"/><use href="#lf" transform="translate(340,310)"/><use href="#fl" transform="translate(170,360) scale(1.3)"/><use href="#lf" transform="translate(45,430) scale(1.2)"/><use href="#fl" transform="translate(305,450) scale(.9)"/><use href="#lf" transform="translate(200,510)"/><use href="#fl" transform="translate(75,570) scale(1.1)"/><use href="#lf" transform="translate(335,595) scale(.8)"/><use href="#fl" transform="translate(185,640) scale(.9)"/><use href="#lf" transform="translate(115,690) scale(1.2)"/>
-        </svg>
-      </div>
 
       {/* Toast notifications */}
       <ToastContainer/>
