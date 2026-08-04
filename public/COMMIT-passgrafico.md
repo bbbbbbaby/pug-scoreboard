@@ -1,26 +1,19 @@
-# Pass grafico → app vera (lato RAGAZZO) · v2
+# Pass grafico → app vera (lato RAGAZZO) · v3 — tutto incorporato
 
-## Novità di questa versione
-- **Bordino bianco risolto**: le sorgenti avevano una striscia bianca sul lato destro (artefatto dell'export). L'ho ritagliata, ora lo sfondo arriva pulito fino al bordo.
-- **Responsive**: due versioni per ogni sfondo — **telefono** (verticale) di default e **largo** (orizzontale, da browser) sopra i 640px. Le serve una media query, quindi lo sfondo non è più inline.
+## Perché è cambiato l'approccio
+L'app **non usa file esterni**: ogni immagine è già incorporata in base64. Il percorso `/sfondi/` che avevo usato dava 404 nel tuo build (l'immagine non si caricava, restava solo il colore → sembrava "non applicato"). Ho quindi **incorporato gli sfondi e il logo dentro App.jsx**, come è fatto tutto il resto dell'app. Così funzionano sempre, senza file da caricare.
 
 ## Cosa committare
+- **Solo `App.jsx`.** Nient'altro. Niente cartelle, niente `pug-theme.css` (resta invariata).
+- Compila con esbuild senza errori. Solo estetica, meccaniche intatte.
 
-1. **`App.jsx`** — sostituisci quello attuale. Solo estetica, meccaniche intatte (compila con esbuild senza errori).
-2. **`public/sfondi/`** — crea la cartella e mettici questi **13 file**:
-   - Telefono: `sfondo-azzurro-tel.webp`, `sfondo-rosa-tel.webp`, `sfondo-giallo-tel.webp`, `sfondo-verde-tel.webp`, `sfondo-rosso-tel.webp`, `sfondo-notte-tel.webp`
-   - Largo/browser: `sfondo-azzurro-wide.webp`, `sfondo-rosa-wide.webp`, `sfondo-giallo-wide.webp`, `sfondo-verde-wide.webp`, `sfondo-rosso-wide.webp`, `sfondo-notte-wide.webp`
-   - Logo: `logo-riquadro.webp`
-3. **`pug-theme.css` — NON si tocca.**
+App.jsx è più pesante (~1,7 MB) perché ora contiene anche i 12 sfondi (telefono + largo) e il logo. È il prezzo dell'autonomia; in futuro, se attiviamo una cartella statica servita davvero dal deploy, li possiamo tirare fuori e alleggerire.
 
-> `logo-riquadro.png` è solo scorta, non serve committarla.
-> Se il bundler serve la cartella statica con prefisso diverso da `/`, correggi `/sfondi/` in `App.jsx`.
-
-## Cosa è cambiato in App.jsx (lato ragazzo)
-- Il `player-wrap` prende lo sfondo da una classe `bg-<colore>` (o `bg-notte`), con le immagini definite via CSS + media query (telefono/largo). Niente più colore/immagine inline.
-- Vecchio overlay `.bg-doodles` del ragazzo rimosso (i disegni sono nell'immagine). Educatore e login intatti.
-- Logo nel riquadro nero (testo bianco), servito da file.
+## Cosa fa
+- Sfondo reale per tab coi disegni sbiaditi, **responsive**: verticale su telefono, orizzontale (largo) da ≥640px. Notte: nero uguale per tutte.
+- Bordino bianco delle sorgenti ritagliato.
+- Vecchio overlay `.bg-doodles` del ragazzo rimosso; logo nel riquadro nero (testo bianco).
 
 ## Ancora da decidere
-- **Messaggi/Notifiche**: nell'app sono rosa/azzurro (nei camerini azzurro/giallo). Ho tenuto i colori dell'app. Se li vuoi come nei camerini, cambio la mappa `TAB_BG`.
-- **Lato EDUCATORE**: non toccato — lì lo sfondo è personalizzabile dall'educatore (`sectionColors`). Decidiamo insieme se applicarlo come default o solo dove non personalizzato.
+- **Messaggi/Notifiche**: nell'app rosa/azzurro, nei camerini azzurro/giallo. Tenuti i colori dell'app.
+- **Lato educatore**: non toccato (sfondo personalizzabile dall'educatore) — da fare insieme.
