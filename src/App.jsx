@@ -1647,9 +1647,9 @@ body:not(.light) .ann-card{border-color:#33353c!important;background:#17181c!imp
 body:not(.light) .edu-main{background:#0d0d0d url(/public/sfondi/sfondo-notte-wide.webp) top center/cover no-repeat!important}
 .edu-main .bg-doodles{display:none!important}
 /* sfondo agganciato alla finestra (niente zoom estremo su viste lunghe), desktop E mobile */
-.edu-main[class*="ebg-"]{background-attachment:fixed!important;background-position:center!important}
-body:not(.light) .edu-main{background-attachment:fixed!important;background-position:center!important}
-.player-wrap[class*="bg-"]{background-attachment:fixed!important;background-position:center!important}
+.edu-main[class*="ebg-"]{background-attachment:fixed!important;background-position:center top!important}
+body:not(.light) .edu-main{background-attachment:fixed!important;background-position:center top!important}
+.player-wrap[class*="bg-"]{background-attachment:fixed!important;background-position:center top!important}
 @media(max-width:640px){
 .edu-main.ebg-azzurro{background-image:url(/public/sfondi/sfondo-azzurro-tel.webp)!important}
 .edu-main.ebg-rosa{background-image:url(/public/sfondi/sfondo-rosa-tel.webp)!important}
@@ -1680,6 +1680,7 @@ body:not(.light) .player-card,body:not(.light) .squad-row,body:not(.light) .stat
 /* testi secondari più pieni (meno opachi) */
 body:not(.light){--text3:rgba(255,255,255,.78)}
 .mob-header{border-bottom:none!important}
+.mob-header{z-index:40!important}
 .light{--text3:rgba(16,16,16,.82)}
 body:not(.light){--text3:rgba(255,255,255,.82)}
 /* via le righe gialle sopra le stat-card (dashboard/giocatori) */
@@ -8356,7 +8357,6 @@ function AdminView({ profile }) {
           </div>
         </div>
       )}
-      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16}}>⚙️ Gestione Giardinieri</div>
 
       <AdminAccountCard profile={profile} />
       {msg && <div style={{background:"rgba(51,153,102,.1)",border:"1px solid rgba(51,153,102,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
@@ -9402,7 +9402,7 @@ function EducatorShell({ profile, onLogout }) {
           <div className="logo-b" style={{width:120,height:40,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
           <div className="logo-w" style={{width:120,height:40,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
           </div>
-          <div style={{fontFamily:"'Funnel Display',sans-serif",background:"#111",color:"var(--giallo)",fontSize:9,fontWeight:900,borderRadius:4,padding:"2px 8px",textTransform:"uppercase",letterSpacing:".07em",display:"inline-block"}}>🌱 Giardiniere</div>
+          <div style={{display:"inline-block",background:"#FDEF26",color:"#101010",fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:13,padding:"5px 12px",border:"2px solid #101010",borderRadius:8,boxShadow:"2px 2px 0 #101010",transform:"rotate(-1.5deg)"}}>🌱 {profile.display_name||"Giardiniere"}</div>
         </div>
         <nav style={{flex:1,padding:"8px 0",overflowY:"auto"}}>
           {EDUCATOR_GROUPS.map(group => {
