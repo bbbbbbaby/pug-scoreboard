@@ -1646,6 +1646,12 @@ body:not(.light) .ann-card{border-color:#33353c!important;background:#17181c!imp
 .edu-main.ebg-rosso{background:#D41423 url(/public/sfondi/sfondo-rosso-wide.webp) top center/cover no-repeat!important}
 body:not(.light) .edu-main{background:#0d0d0d url(/public/sfondi/sfondo-notte-wide.webp) top center/cover no-repeat!important}
 .edu-main .bg-doodles{display:none!important}
+/* Web: sfondo agganciato alla finestra (niente zoom estremo sulle viste lunghe) */
+@media(min-width:641px){
+.edu-main[class*="ebg-"]{background-attachment:fixed!important}
+body:not(.light) .edu-main{background-attachment:fixed!important}
+.player-wrap[class*="bg-"]{background-attachment:fixed!important}
+}
 @media(max-width:640px){
 .edu-main.ebg-azzurro{background-image:url(/public/sfondi/sfondo-azzurro-tel.webp)!important}
 .edu-main.ebg-rosa{background-image:url(/public/sfondi/sfondo-rosa-tel.webp)!important}
