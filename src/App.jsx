@@ -5162,7 +5162,6 @@ function DiaryView() {
 
   return (
     <div>
-      <div style={{ fontFamily: "'Funnel Display'", fontSize: 32, fontWeight: 900, textTransform: "uppercase", color: "var(--azzurro)", marginBottom: 16 }}>📜 Diario giornate</div>
       <div className="filter-bar">
         <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ padding: 10, background: "var(--surface2)", border: "1.5px solid var(--border2)", borderRadius: 10, color: "var(--text)", fontSize: 14, flex: 1 }} />
         <button className="btn btn-ghost btn-sm" onClick={() => setDateFilter(localToday())}>Oggi</button>
