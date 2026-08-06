@@ -1646,12 +1646,10 @@ body:not(.light) .ann-card{border-color:#33353c!important;background:#17181c!imp
 .edu-main.ebg-rosso{background:#D41423 url(/public/sfondi/sfondo-rosso-wide.webp) top center/cover no-repeat!important}
 body:not(.light) .edu-main{background:#0d0d0d url(/public/sfondi/sfondo-notte-wide.webp) top center/cover no-repeat!important}
 .edu-main .bg-doodles{display:none!important}
-/* Web: sfondo agganciato alla finestra (niente zoom estremo sulle viste lunghe) */
-@media(min-width:641px){
-.edu-main[class*="ebg-"]{background-attachment:fixed!important}
-body:not(.light) .edu-main{background-attachment:fixed!important}
-.player-wrap[class*="bg-"]{background-attachment:fixed!important}
-}
+/* sfondo agganciato alla finestra (niente zoom estremo su viste lunghe), desktop E mobile */
+.edu-main[class*="ebg-"]{background-attachment:fixed!important;background-position:center!important}
+body:not(.light) .edu-main{background-attachment:fixed!important;background-position:center!important}
+.player-wrap[class*="bg-"]{background-attachment:fixed!important;background-position:center!important}
 @media(max-width:640px){
 .edu-main.ebg-azzurro{background-image:url(/public/sfondi/sfondo-azzurro-tel.webp)!important}
 .edu-main.ebg-rosa{background-image:url(/public/sfondi/sfondo-rosa-tel.webp)!important}
@@ -1677,6 +1675,13 @@ body:not(.light) .player-card,body:not(.light) .squad-row,body:not(.light) .stat
 .section-banner-title{display:inline-block!important;width:auto!important;margin:6px auto 8px!important;background:var(--pg,#101010)!important;color:#101010!important;border:3px solid #101010!important;border-radius:12px!important;box-shadow:4px 4px 0 rgba(0,0,0,.45)!important;padding:12px 30px!important;transform:rotate(-1.5deg)!important;font-family:'Funnel Display',sans-serif!important;font-weight:900!important;text-transform:uppercase!important}
 .light .section-banner-title{background:#fff!important;color:#101010!important;border-color:#101010!important;box-shadow:4px 4px 0 #101010!important}
 .section-banner-content{text-align:center!important}
+/* sottotitolo banner (es. "0 attive"): calcato e bianco leggibile */
+.section-banner-sub{color:#fff!important;font-weight:800!important;font-size:13px!important;text-shadow:0 1px 3px rgba(0,0,0,.55)!important;opacity:1!important}
+/* testi secondari più pieni (meno opachi) */
+body:not(.light){--text3:rgba(255,255,255,.78)}
+.mob-header{border-bottom:none!important}
+.light{--text3:rgba(16,16,16,.82)}
+body:not(.light){--text3:rgba(255,255,255,.82)}
 /* via le righe gialle sopra le stat-card (dashboard/giocatori) */
 .stat-card::before{display:none!important}
 /* testi notte più pieni (meno sfumati) */
@@ -5984,7 +5989,6 @@ function BachecaView({ profile }) {
 
   return (
     <div>
-      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:4}}>📌 Bacheca Team</div>
       <div style={{fontSize:12,color:"var(--text3)",marginBottom:14}}>Post-it visibili solo ai giardinieri.</div>
 
       {/* Form aggiunta */}
@@ -6130,7 +6134,6 @@ function VisibilityView() {
   const allVisible = sections.every(s => vis[s.key] !== false);
   return (
     <div>
-      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:4}}>👁️ Visibilità player</div>
       <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Controlla cosa vedono i giocatori nel loro profilo. Le modifiche sono immediate.</div>
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
         <button className="btn btn-ghost btn-sm" onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=true); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>✅ Mostra tutto</button>
@@ -6201,7 +6204,6 @@ function StreakConfigView() {
 
   return (
     <div>
-      <div style={{fontFamily:"'Funnel Display'",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:16}}>🔥 Streak & Badge Mensili</div>
       <div style={{background:"rgba(255,120,0,.06)",border:"1px solid rgba(255,120,0,.2)",borderRadius:14,padding:"12px 16px",marginBottom:16,fontSize:13,color:"var(--text2)",lineHeight:1.5}}>
         Configura i requisiti per guadagnare il badge mensile. Il badge viene assegnato automaticamente al primo check-in del mese successivo se il giocatore ha raggiunto il minimo di presenze.
       </div>
@@ -6269,7 +6271,6 @@ function EducatorSocialView({ profile }) {
 
   return (
     <div>
-      <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:"uppercase",color:"var(--text)",marginBottom:12}}>🌍 Social</div>
       <div style={{display:"flex",background:"rgba(255,255,255,.06)",borderRadius:12,padding:4,marginBottom:16,gap:4}}>
         {[["community","👥 Community"],["annunci","📢 Annunci"]].map(([v,l])=>(
           <button key={v} onClick={()=>setView(v)} style={{
@@ -9375,8 +9376,8 @@ function EducatorShell({ profile, onLogout }) {
       </div>
 
       {/* Header mobile */}
-      <div className="mob-header" style={{paddingTop:"env(safe-area-inset-top,0px)"}}>
-        <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
+      <div className="mob-header" style={{paddingTop:"env(safe-area-inset-top,0px)",background: theme==="light" ? (DEFAULT_SECTION_COLORS[tab]?.color||"#fff") : "#0d0d0d"}}>
+        <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color: theme==="light"?"#101010":"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
         <div style={{transform:"rotate(-1deg)"}}>
           <div className="logo-b" style={{width:104,height:34,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
           <div className="logo-w" style={{width:104,height:34,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
@@ -9398,9 +9399,8 @@ function EducatorShell({ profile, onLogout }) {
       <div className={`mob-drawer ${drawerOpen ? "open" : ""}`}>
         <div style={{padding:"18px 16px 14px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
           <div style={{transform:"rotate(-1deg)",marginBottom:8}}>
-            <div style={{background:"var(--rosso)",borderRadius:"8px 11px 8px 12px",padding:"5px 10px",display:"inline-block"}}>
-              <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:14,fontWeight:900,color:"#111",lineHeight:1.05,textTransform:"uppercase"}}>PeR·You GaRDeN</div>
-            </div>
+          <div className="logo-b" style={{width:120,height:40,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
+          <div className="logo-w" style={{width:120,height:40,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
           </div>
           <div style={{fontFamily:"'Funnel Display',sans-serif",background:"#111",color:"var(--giallo)",fontSize:9,fontWeight:900,borderRadius:4,padding:"2px 8px",textTransform:"uppercase",letterSpacing:".07em",display:"inline-block"}}>🌱 Giardiniere</div>
         </div>
