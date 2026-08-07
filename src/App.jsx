@@ -4570,7 +4570,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
 
   const load = useCallback(async () => {
     const [{ data }, { data: edu }, { data: pls }] = await Promise.all([
-      sb.from("activities").select("id,name,description,link,schedule,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("activities").select("id,name,description,link,schedule,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,image_data").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("profiles").select("id,display_name").eq("role","educator").order("display_name"),
       sb.from("profiles").select("id,display_name,first_name,avatar_url,squad_id,squads(name)").eq("role","player").order("display_name"),
     ]);
@@ -4748,6 +4748,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
             <div key={a.id} className="act-card">
               <button className="delete-btn" onClick={() => deleteActivity(a.id)}>✕</button>
               <div className="act-title">{a.name}</div>
+              {a.image_data && <img src={a.image_data} className="act-img" alt=""/>}
               <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
               {a.schedule && <div style={{fontSize:11,color:"#FDEF26",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
               {a.educator_id && <div style={{ fontSize: 11, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab assegnato</div>}
@@ -4795,7 +4796,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
             </div>
             <input className="form-input" placeholder="🔍 Cerca giocatore…" value={playerSearch}
               onChange={e=>setPlayerSearch(e.target.value)} style={{marginBottom:8}}/>
-            <div style={{maxHeight:300,overflowY:"auto",border:"1px solid var(--border)",borderRadius:10,padding:6,marginBottom:12}}>
+            <div style={{maxHeight:200,overflowY:"auto",border:"1px solid var(--border)",borderRadius:10,padding:6,marginBottom:12}}>
               {players.filter(p => !playerSearch || p.display_name.toLowerCase().includes(playerSearch.toLowerCase()) || (p.first_name||"").toLowerCase().includes(playerSearch.toLowerCase())).map(p => {
                 const sel = selectedPlayers.has(p.id);
                 return (
@@ -4875,7 +4876,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
             <div className="section-label" style={{marginTop:8}}>Iscrivi giocatori (opzionale)</div>
             <input className="form-input" placeholder="🔍 Cerca giocatore…" value={playerSearch}
               onChange={e=>setPlayerSearch(e.target.value)} style={{marginBottom:8}}/>
-            <div style={{maxHeight:180,overflowY:"auto",border:"1px solid var(--border)",borderRadius:10,padding:6,marginBottom:8}}>
+            <div style={{maxHeight:130,overflowY:"auto",border:"1px solid var(--border)",borderRadius:10,padding:6,marginBottom:8}}>
               {players.filter(p => !playerSearch || p.display_name.toLowerCase().includes(playerSearch.toLowerCase()) || (p.first_name||"").toLowerCase().includes(playerSearch.toLowerCase())).map(p => {
                 const sel = selectedPlayers.has(p.id);
                 return (
@@ -7042,7 +7043,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }, { data: myPres }, { data: mConfig }] = await Promise.all([
       sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,current_streak,longest_streak,last_checkin_date,squads(name)").eq("id", profile.id).single(),
       sb.from("player_badges").select("id,assigned_at,xp_awarded,coin_awarded,badges(name,image_url,xp_default,description,link)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
-      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,created_by").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,created_by,image_data").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
       sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").gt("xp", 2).order("xp", { ascending: false }),
@@ -7689,8 +7690,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               const booked = bookings.find(b => b.activities?.name === a.name || b.activity_id === a.id);
               return (
                 <div key={a.id} className="act-card" style={{ marginBottom: 10 }}>
-                  {a.image_data && <img src={a.image_data} className="act-img" alt=""/>}
                   <div className="act-title">{a.name}</div>
+                  {a.image_data && <img src={a.image_data} className="act-img" alt=""/>}
                   <div className="act-meta">{a.description}{a.duration_days ? ` · ${a.duration_days}g` : ""}</div>
                   {a.schedule && <div style={{fontSize:11,color:"#FDEF26",fontWeight:700,marginBottom:4}}>📅 {a.schedule}</div>}
                   {a.educator_id && <div style={{ fontSize: 12, color: "var(--verde)", fontWeight: 700, marginBottom: 6 }}>🌱 Lab guidato</div>}
