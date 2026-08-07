@@ -1646,6 +1646,26 @@ body:not(.light) .ann-card{border-color:#33353c!important;background:#17181c!imp
 .edu-main.ebg-rosso{background:#D41423 url(/public/sfondi/sfondo-rosso-wide.webp) top center/cover no-repeat!important}
 body:not(.light) .edu-main{background:#0d0d0d url(/public/sfondi/sfondo-notte-wide.webp) top center/cover no-repeat!important}
 .edu-main .bg-doodles{display:none!important}
+/* === Sfondo educatore su LAYER FISSO dietro il contenuto (desktop + mobile/iOS, viste lunghe) === */
+.edu-main{position:relative}
+.edu-main[class*="ebg-"]{background:transparent!important}
+body:not(.light) .edu-main{background:transparent!important}
+.edu-main::before{content:"";position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none}
+.edu-main>*{position:relative;z-index:1}
+.edu-main.ebg-azzurro::before{background-color:#A3CFFF;background-image:url(/public/sfondi/sfondo-azzurro-tel.webp)}
+.edu-main.ebg-rosa::before{background-color:#FF6DEC;background-image:url(/public/sfondi/sfondo-rosa-tel.webp)}
+.edu-main.ebg-giallo::before{background-color:#FCEF25;background-image:url(/public/sfondi/sfondo-giallo-tel.webp)}
+.edu-main.ebg-verde::before{background-color:#339967;background-image:url(/public/sfondi/sfondo-verde-tel.webp)}
+.edu-main.ebg-rosso::before{background-color:#D41423;background-image:url(/public/sfondi/sfondo-rosso-tel.webp)}
+body:not(.light) .edu-main::before{background-color:#0d0d0d;background-image:url(/public/sfondi/sfondo-notte-tel.webp)}
+@media(min-width:768px){
+.edu-main.ebg-azzurro::before{background-image:url(/public/sfondi/sfondo-azzurro-wide.webp)}
+.edu-main.ebg-rosa::before{background-image:url(/public/sfondi/sfondo-rosa-wide.webp)}
+.edu-main.ebg-giallo::before{background-image:url(/public/sfondi/sfondo-giallo-wide.webp)}
+.edu-main.ebg-verde::before{background-image:url(/public/sfondi/sfondo-verde-wide.webp)}
+.edu-main.ebg-rosso::before{background-image:url(/public/sfondi/sfondo-rosso-wide.webp)}
+body:not(.light) .edu-main::before{background-image:url(/public/sfondi/sfondo-notte-wide.webp)}
+}
 /* desktop: sfondo agganciato alla finestra (viste lunghe ok). Mobile: scroll + immagine verticale. */
 @media(min-width:768px){
 .edu-main[class*="ebg-"]{background-attachment:fixed!important;background-position:center top!important}
