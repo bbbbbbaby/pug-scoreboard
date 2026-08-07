@@ -1650,7 +1650,7 @@ body:not(.light) .edu-main{background:#0d0d0d url(/public/sfondi/sfondo-notte-wi
 .edu-main[class*="ebg-"]{background-attachment:fixed!important;background-position:center top!important}
 body:not(.light) .edu-main{background-attachment:fixed!important;background-position:center top!important}
 .player-wrap[class*="bg-"]{background-attachment:fixed!important;background-position:center top!important}
-@media(max-width:640px){
+@media(max-width:767px){
 .edu-main.ebg-azzurro{background-image:url(/public/sfondi/sfondo-azzurro-tel.webp)!important}
 .edu-main.ebg-rosa{background-image:url(/public/sfondi/sfondo-rosa-tel.webp)!important}
 .edu-main.ebg-giallo{background-image:url(/public/sfondi/sfondo-giallo-tel.webp)!important}
@@ -9378,10 +9378,6 @@ function EducatorShell({ profile, onLogout }) {
       {/* Header mobile */}
       <div className="mob-header" style={{paddingTop:"env(safe-area-inset-top,0px)",background: theme==="light" ? (DEFAULT_SECTION_COLORS[tab]?.color||"#fff") : "#0d0d0d"}}>
         <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color: theme==="light"?"#101010":"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
-        <div style={{transform:"rotate(-1deg)"}}>
-          <div className="logo-b" style={{width:104,height:34,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
-          <div className="logo-w" style={{width:104,height:34,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
-        </div>
         <span className="mob-header-title" style={{flex:1,marginLeft:8}}>{cur?.[2]}</span>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(253,239,38,.15)",border:"1px solid rgba(253,239,38,.3)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#FDEF26",lineHeight:1}} title="Presentazione">🎮</button>
