@@ -1717,6 +1717,10 @@ body:not(.light){--text3:rgba(255,255,255,.78)}
 /* #5 Big Top player: legenda con fondo a contrasto */
 .btcal-legend{background:rgba(255,255,255,.82)!important;padding:9px 12px!important;border-radius:10px!important}
 .player-wrap.bg-notte .btcal-legend{background:rgba(23,24,28,.82)!important;color:#fff!important}
+/* #4 presenze: toggle dimensione fissa e coerente (regola forte) */
+.pres-table td .pres-toggle{width:42px!important;height:42px!important;aspect-ratio:1!important;padding:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}
+/* #7 login: foglia ferma su mobile */
+@media(max-width:767px){@keyframes leafsway{0%,50%,100%{margin-left:0}}}
 .light{--text3:rgba(16,16,16,.82)}
 body:not(.light){--text3:rgba(255,255,255,.82)}
 /* via le righe gialle sopra le stat-card (dashboard/giocatori) */
@@ -3241,10 +3245,10 @@ function Login({ onLogin }) {
             /* PIN entry */
             <div style={{textAlign:"center"}}>
               <button onClick={()=>{setSelected(null);setPin("");setErr("");}} style={{position:"absolute",top:16,left:16,background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:20}}>←</button>
-              <div style={{width:72,height:72,borderRadius:"50%",overflow:"hidden",border:"3px solid var(--neon-blue)",margin:"0 auto 12px",boxShadow:"var(--glow-blue)"}}>
-                <Avatar url={selected.avatar_url} emoji="🌱" size={72}/>
+              <div style={{width:110,height:110,borderRadius:16,overflow:"hidden",border:"3px solid #101010",margin:"0 auto 12px",boxShadow:"4px 4px 0 #101010"}}>
+                <Avatar url={selected.avatar_url} emoji="🌱" size={110}/>
               </div>
-              <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:24,fontWeight:900,color:"var(--text)",marginBottom:4}}>{selected.display_name}</div>
+              <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:24,fontWeight:900,color:"#101010",marginBottom:4}}>{selected.display_name}</div>
               
               <div style={{marginTop:20,marginBottom:6}}>
                 <label className="form-label" style={{textAlign:"left",display:"block"}}>PIN (4 cifre)</label>
@@ -3270,7 +3274,7 @@ function Login({ onLogin }) {
                 onChange={e=>setSearch(e.target.value)} style={{marginBottom:10}}/>
               <div style={{maxHeight:300,overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
                 {filtered.length===0
-                  ? <div className="empty" style={{padding:16,textAlign:"center"}}>{debouncedSearch.length < 2 ? "✏️ Digita il tuo nome per trovare il profilo" : "Nessun giocatore trovato"}</div>
+                  ? <div className="empty" style={{padding:16,textAlign:"center"}}>{debouncedSearch.length < 2 ? "Digita il tuo nome per trovare il profilo" : "Nessun giocatore trovato"}</div>
                   : filtered.map(p => (
                     <div key={p.id} onClick={()=>{setSelected(p);setPin("");setErr("");}}
                       style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
