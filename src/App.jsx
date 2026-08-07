@@ -538,6 +538,9 @@ const css = `
   .pres-toggle.done  { background:var(--pt-done-bg);  color:var(--pt-done-color);  border:var(--pt-done-border);  box-shadow:0 0 10px rgba(51,153,102,.2); }
   .pres-toggle.empty { background:var(--pt-empty-bg); color:var(--pt-empty-color); border:var(--pt-empty-border); box-shadow:none; }
   .light .pres-toggle.done  { box-shadow:0 2px 8px rgba(46,125,50,.2); }
+/* Presenze: toggle pieno (non translucido) in notte + dimensione fissa (non si riduce) */
+body:not(.light){--pt-empty-bg:#17181c;--pt-empty-color:rgba(255,255,255,.55);--pt-empty-border:2px solid #33353c;--pt-done-bg:#1c2b22;--pt-done-color:#4ade80;--pt-done-border:2px solid #339966}
+.pres-toggle,.pres-toggle.done,.pres-toggle.empty{box-sizing:border-box!important;width:42px!important;height:42px!important;flex-shrink:0!important}
   .pd-yes { background:rgba(51,153,102,.15); color:var(--neon-green); border:1px solid rgba(51,153,102,.3); }
   .pd-partial { background:rgba(253,239,38,.12); color:var(--neon-gold); border:1px solid rgba(253,239,38,.25); }
   .pd-completed { background:rgba(51,153,102,.25); color:#339966; border:1px solid rgba(51,153,102,.4); }
@@ -1703,6 +1706,8 @@ body:not(.light) .player-card,body:not(.light) .squad-row,body:not(.light) .stat
 body:not(.light){--text3:rgba(255,255,255,.78)}
 .mob-header{border-bottom:none!important}
 .mob-header{z-index:40!important}
+/* fix ghosting iOS su scroll (header fisso che sembra doppio) */
+.mob-header{transform:translateZ(0)!important;-webkit-transform:translateZ(0)!important;will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden}
 .light{--text3:rgba(16,16,16,.82)}
 body:not(.light){--text3:rgba(255,255,255,.82)}
 /* via le righe gialle sopra le stat-card (dashboard/giocatori) */
