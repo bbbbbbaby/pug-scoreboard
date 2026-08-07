@@ -1708,6 +1708,15 @@ body:not(.light){--text3:rgba(255,255,255,.78)}
 .mob-header{z-index:40!important}
 /* fix ghosting iOS su scroll (header fisso che sembra doppio) */
 .mob-header{transform:translateZ(0)!important;-webkit-transform:translateZ(0)!important;will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden}
+/* barra doppia: la topbar desktop non deve mai comparire su mobile */
+@media(max-width:767px){.topbar{display:none!important}}
+/* #6 login: avatar quadrato e più grande */
+.avatar-preview{width:112px!important;height:112px!important;border-radius:16px!important;object-fit:cover!important;border:3px solid #101010!important}
+/* #4 presenze: toggle dimensione fissa (non si stringe da segnato) */
+.pres-toggle,.pres-toggle.done,.pres-toggle.empty{min-width:42px!important;min-height:42px!important;width:42px!important;height:42px!important;box-sizing:border-box!important;flex-shrink:0!important}
+/* #5 Big Top player: legenda con fondo a contrasto */
+.btcal-legend{background:rgba(255,255,255,.82)!important;padding:9px 12px!important;border-radius:10px!important}
+.player-wrap.bg-notte .btcal-legend{background:rgba(23,24,28,.82)!important;color:#fff!important}
 .light{--text3:rgba(16,16,16,.82)}
 body:not(.light){--text3:rgba(255,255,255,.82)}
 /* via le righe gialle sopra le stat-card (dashboard/giocatori) */
