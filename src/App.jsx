@@ -3814,7 +3814,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
             {badges.length===0 && <div className="empty" style={{width:"100%"}}>Nessun badge.</div>}
             {badges.map(pb => (
               <div key={pb.id} style={{textAlign:"center",width:72}}>
-                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--rosa)",display:"block",margin:"0 auto 5px"}} alt=""/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
+                {pb.badges?.image_url ? <img src={pb.badges.image_url} style={{width:64,height:64,borderRadius:12,objectFit:"contain",border:"2px solid #101010",display:"block",margin:"0 auto 5px"}} alt=""/> : <div style={{fontSize:36,marginBottom:5}}>🎖️</div>}
                 <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.3}}>{pb.badges?.name}</div>
               </div>
             ))}
@@ -4964,7 +4964,7 @@ function BadgesView({ sectionColors, setSectionColors }) {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Assegna badge</div>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
-              {badges.find(b => b.id === showAssign)?.image_url ? <img src={badges.find(b => b.id === showAssign).image_url} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--rosa)" }} alt="" /> : <span style={{ fontSize: 48 }}>🎖️</span>}
+              {badges.find(b => b.id === showAssign)?.image_url ? <img src={badges.find(b => b.id === showAssign).image_url} style={{ width: 76, height: 76, borderRadius: 12, objectFit: "contain", border: "3px solid #101010" }} alt="" /> : <span style={{ fontSize: 48 }}>🎖️</span>}
               <div style={{ fontFamily: "'Funnel Display'", fontSize: 20, fontWeight: 900, textTransform: "uppercase", color: "var(--text)", marginTop: 6 }}>{badges.find(b => b.id === showAssign)?.name}</div>
             </div>
             <div className="form-group"><label className="form-label">Giocatore</label>
