@@ -570,7 +570,7 @@ const css = `
     cursor:pointer; position:relative; transition:all .2s;
   }
   .badge-card:hover { border-color:rgba(255,0,204,0.4); box-shadow:var(--glow-pink); transform:translateY(-3px) scale(1.02); }
-  .badge-img { width:128px; height:128px; border-radius:50%; object-fit:cover; margin:0 auto 14px; display:block; border:3px solid rgba(255,0,204,0.5); box-shadow:0 0 20px rgba(255,0,204,0.35); }
+  .badge-img { width:120px; height:120px; border-radius:14px; object-fit:contain; margin:0 auto 14px; display:block; border:3px solid rgba(255,0,204,0.5); box-shadow:0 0 20px rgba(255,0,204,0.35); }
   .badge-emoji { font-size:88px; display:block; margin:0 auto 14px; line-height:1; }
   .badge-name { font-size:14px; font-weight:700; color:var(--text); line-height:1.3; }
   .badge-pts { font-size:10px; color:var(--rosa); margin-top:3px; font-weight:700; }
@@ -1937,7 +1937,7 @@ function SectionBanner({ sectionKey, title, sub, sectionColors, onEdit }) {
         <div className="section-banner-title" style={{ "--pg": cfg.color, color: cfg.image ? "#fff" : "#101010" }}>{title}</div>
         {sub && <div className="section-banner-sub" style={{ color: cfg.image ? "rgba(255,255,255,.75)" : "rgba(0,0,0,.5)" }}>{sub}</div>}
       </div>
-      {onEdit && (
+      {false && (
         <button className="btn btn-xs" style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,.35)", color: "#fff", border: "none", fontSize: 11, backdropFilter: "blur(4px)" }} onClick={onEdit}>✏️</button>
       )}
     </div>
@@ -2885,7 +2885,7 @@ function PushDiagnostics({ playerId, onClose }) {
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:380,maxHeight:"85vh",overflowY:"auto"}}>
         <div className="modal-title">🔧 Diagnostica notifiche</div>
-        <div style={{fontSize:12,color:"var(--text3)",marginBottom:16,textAlign:"center"}}>
+        <div style={{fontSize:12.5,fontWeight:600,color:"#101010",background:"rgba(255,255,255,.82)",padding:"8px 12px",borderRadius:10,marginBottom:16,textAlign:"center"}}>
           Premi Avvia e controlla riga per riga dove si ferma.
         </div>
 
@@ -4617,7 +4617,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       xp_partial: a.xp_partial ?? 10, xp_full: a.xp_full ?? 20, xp_completed: a.xp_completed ?? 35,
       coin_partial: a.coin_partial ?? 5, coin_full: a.coin_full ?? 10, coin_completed: a.coin_completed ?? 18,
       coin_cost: a.coin_cost ?? 0, max_participants: a.max_participants ?? "",
-      lab_multiplier: a.lab_multiplier ?? 2,
+      lab_multiplier: a.lab_multiplier ?? 2, image_data: a.image_data || null,
     });
     setSelectedPlayers(new Set());
     setCreateErr("");
@@ -4643,6 +4643,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       max_participants: form.max_participants ? Number(form.max_participants) : null,
       educator_id: form.educator_id || null,
       link: (form.link || "").trim() || null,
+      image_data: form.image_data || null,
     }).eq("id", editingId);
     if (error) { setCreateErr("❌ " + error.message); return; }
     setCreateErr(""); setShowForm(false); setEditingId(null); setOrigAppointments(null);
@@ -4671,6 +4672,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         max_participants: form.max_participants ? Number(form.max_participants) : null,
         educator_id: form.educator_id || null,
         link: (form.link || "").trim() || null,
+        image_data: form.image_data || null,
         is_active: true,
       });
       if (error) {
@@ -4681,7 +4683,7 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
       setShowForm(false);
       setForm({ name:"", description:"", link:"", educator_id:"",
         duration_days:6, xp_partial:10, xp_full:20, xp_completed:35,
-        coin_partial:5, coin_full:10, coin_completed:18, coin_cost:0, max_participants:"", lab_multiplier:2 });
+        coin_partial:5, coin_full:10, coin_completed:18, coin_cost:0, max_participants:"", lab_multiplier:2, image_data:null });
       // Notifica tutti i giocatori del nuovo lab
       sb.from("profiles").select("id").eq("role","player").then(({data})=>{
         (data||[]).forEach(p => sendPush(p.id, "⚡ Nuovo Lab disponibile!", `"${name}" è ora disponibile — prenota ora!`).catch(()=>{}));
@@ -4824,6 +4826,19 @@ function ActivitiesView({ sectionColors, setSectionColors }) {
         <div className="modal-bg" onClick={() => { setShowForm(false); setEditingId(null); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">{editingId ? "✏️ Modifica Lab" : "Nuovo Lab"}</div>
+            <div className="form-group">
+              <label className="form-label">Foto del Lab (opzionale)</label>
+              {form.image_data && (
+                <div style={{position:"relative",marginBottom:8}}>
+                  <img src={form.image_data} style={{width:"100%",maxHeight:200,objectFit:"cover",borderRadius:10,border:"2px solid #101010",display:"block"}} alt=""/>
+                  <button type="button" onClick={()=>setForm(f=>({...f,image_data:null}))} style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,.7)",border:"none",color:"#fff",borderRadius:8,padding:"4px 9px",cursor:"pointer",fontWeight:800}}>✕</button>
+                </div>
+              )}
+              <label className="btn btn-ghost btn-sm" style={{cursor:"pointer",display:"inline-block"}}>
+                📷 {form.image_data ? "Cambia foto" : "Carica foto"}
+                <input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{ const f=e.target.files[0]; if(!f) return; const c=await compressToWebP(f,800,.8); const r=new FileReader(); r.onload=ev=>setForm(fm=>({...fm,image_data:ev.target.result})); r.readAsDataURL(c); }}/>
+              </label>
+            </div>
             <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Descrizione</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
             <div className="form-group"><label className="form-label">Link (opzionale)</label><input className="form-input" type="url" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://…" /></div>
@@ -6157,10 +6172,10 @@ function VisibilityView() {
   const allVisible = sections.every(s => vis[s.key] !== false);
   return (
     <div>
-      <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Controlla cosa vedono i giocatori nel loro profilo. Le modifiche sono immediate.</div>
+      <div style={{fontSize:12.5,fontWeight:600,color:"#101010",background:"rgba(255,255,255,.82)",padding:"8px 12px",borderRadius:10,marginBottom:16}}>Controlla cosa vedono i giocatori nel loro profilo. Le modifiche sono immediate.</div>
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        <button className="btn btn-ghost btn-sm" onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=true); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>✅ Mostra tutto</button>
-        <button className="btn btn-ghost btn-sm" onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=false); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>🙈 Nascondi tutto</button>
+        <button className="btn btn-sm" style={{background:"#fff",color:"#101010",border:"2.5px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:800}} onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=true); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>✅ Mostra tutto</button>
+        <button className="btn btn-sm" style={{background:"#fff",color:"#101010",border:"2.5px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:800}} onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=false); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>🙈 Nascondi tutto</button>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {sections.map(s => {
@@ -6227,7 +6242,7 @@ function StreakConfigView() {
 
   return (
     <div>
-      <div style={{background:"rgba(255,120,0,.06)",border:"1px solid rgba(255,120,0,.2)",borderRadius:14,padding:"12px 16px",marginBottom:16,fontSize:13,color:"var(--text2)",lineHeight:1.5}}>
+      <div style={{background:"rgba(255,255,255,.86)",border:"2px solid #101010",borderRadius:14,padding:"12px 16px",marginBottom:16,fontSize:13,fontWeight:600,color:"#101010",lineHeight:1.5}}>
         Configura i requisiti per guadagnare il badge mensile. Il badge viene assegnato automaticamente al primo check-in del mese successivo se il giocatore ha raggiunto il minimo di presenze.
       </div>
       {msg && <div style={{background:"rgba(51,153,102,.08)",border:"1px solid rgba(51,153,102,.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"var(--neon-green)",fontWeight:700}}>{msg}</div>}
@@ -8090,7 +8105,7 @@ function PuliziaView() {
 
   return (
     <div>
-      <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>Seleziona un giocatore per vedere e gestire notifiche e prenotazioni</div>
+      <div style={{fontSize:12.5,fontWeight:600,color:"#101010",background:"rgba(255,255,255,.82)",padding:"8px 12px",borderRadius:10,marginBottom:16}}>Seleziona un giocatore per vedere e gestire notifiche e prenotazioni</div>
 
       {msg && <div style={{background:"rgba(51,153,102,.08)",border:"1px solid rgba(51,153,102,.2)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
 
