@@ -1721,6 +1721,10 @@ body:not(.light){--text3:rgba(255,255,255,.78)}
 .pres-table td .pres-toggle{width:42px!important;height:42px!important;aspect-ratio:1!important;padding:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}
 /* #7 login: foglia ferma su mobile */
 @media(max-width:767px){@keyframes leafsway{0%,50%,100%{margin-left:0}}}
+/* #10 podio: nome come mini-titolo, niente a-capo (ellissi se lungo) */
+.podium-wrap .pod-name{display:inline-block!important;max-width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;background:#101010!important;color:#fff!important;border:2px solid #101010!important;border-radius:8px!important;padding:3px 10px!important;box-shadow:2px 2px 0 rgba(0,0,0,.4)!important;font-size:11px!important;line-height:1.15!important;margin-top:6px!important}
+.light .podium-wrap .pod-name{background:#fff!important;color:#101010!important;box-shadow:2px 2px 0 #101010!important}
+.podium-wrap .pod-name span{background:transparent!important}
 .light{--text3:rgba(16,16,16,.82)}
 body:not(.light){--text3:rgba(255,255,255,.82)}
 /* via le righe gialle sopra le stat-card (dashboard/giocatori) */
@@ -3997,7 +4001,7 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
       <div key={"tie-" + i} className={`pod-col ${cols[i]}`}>
         {crowns[i] && <span className="pod-crown">{crowns[i]}</span>}
         <div style={{display:"flex",width:"fit-content",maxWidth:"100%",margin:"0 auto 6px",alignItems:"flex-end",gap:0}}>
-          {players.slice(0, 5).map(p => {
+          {players.slice(0, 3).map(p => {
             const lv = getLevel(p.xp);
             const isMe = p.id === highlightId;
             return (
@@ -4009,8 +4013,7 @@ function Podium({ ranked, xpData, timeFilter, highlightId }) {
         </div>
         <div className="pod-name" style={{fontSize:11}}>
           {players.length === 2 ? `${players[0].display_name} & ${players[1].display_name}` :
-           players.length <= 5 ? `${players.length} a pari merito` :
-           `${players.slice(0,5).length} a pari merito (+${players.length-5})`}
+           `${players.length} a pari merito`}
         </div>
         <div className="pod-xp">{xpShown} XP</div>
         <div className="pod-base">
