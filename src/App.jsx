@@ -8776,6 +8776,7 @@ function BigTopEducatorView({ profile }) {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [genDays, setGenDays] = useState([2,4]);
 
   const monthName = new Date(cursor.y, cursor.m - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
 
@@ -8827,7 +8828,7 @@ function BigTopEducatorView({ profile }) {
 
   async function generateMonth() {
     setBusy(true);
-    const { data: r, error } = await sb.rpc("bigtop_generate_month", { p_year: cursor.y, p_month: cursor.m });
+    const { data: r, error } = await sb.rpc("bigtop_generate_month", { p_year: cursor.y, p_month: cursor.m, p_days: genDays });
     setBusy(false);
     if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
     addToast(r.created > 0 ? `🎪 Creati ${r.created} turni di ${monthName}` : "Turni già tutti presenti", "ok");
@@ -8889,8 +8890,13 @@ function BigTopEducatorView({ profile }) {
         </div>
       </div>
 
-      <button className="btn btn-yellow btn-sm" style={{width:"100%",marginBottom:14}} disabled={busy} onClick={generateMonth}>
-        {busy ? "⏳…" : `➕ Genera turni di ${monthName} (mar/gio 16-17 e 17-18)`}
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center",marginBottom:8}}>
+        {[[1,"LUN"],[2,"MAR"],[3,"MER"],[4,"GIO"],[5,"VEN"],[6,"SAB"],[0,"DOM"]].map(([dow,lbl])=>(
+          <button key={dow} type="button" onClick={()=>setGenDays(g=>g.includes(dow)?g.filter(x=>x!==dow):[...g,dow])} className="btn btn-xs" style={{background:genDays.includes(dow)?"#101010":"#fff",color:genDays.includes(dow)?"#FDEF26":"#101010",border:"2px solid #101010",fontWeight:800,padding:"5px 10px"}}>{lbl}</button>
+        ))}
+      </div>
+      <button className="btn btn-yellow btn-sm" style={{width:"100%",marginBottom:14}} disabled={busy || genDays.length===0} onClick={generateMonth}>
+        {busy ? "⏳…" : `➕ Genera turni di ${monthName} (16-17 e 17-18)`}
       </button>
 
       {loading ? <div style={{color:"var(--text3)",fontSize:13}}>⏳ Caricamento…</div> :
