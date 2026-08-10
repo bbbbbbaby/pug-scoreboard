@@ -5789,6 +5789,8 @@ function QrView() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const today = localToday();
+  const [fromTime, setFromTime] = useState("13:00");
+  const [toTime, setToTime] = useState("19:00");
 
   useEffect(() => {
     sb.from("daily_qr").select("*").eq("date", today).maybeSingle()
@@ -5800,8 +5802,10 @@ function QrView() {
     setWorking(true);
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     // Validità fissa: 13:00 – 19:00 della giornata
-    const vf = new Date(); vf.setHours(13, 0, 0, 0);
-    const vu = new Date(); vu.setHours(19, 0, 0, 0);
+    const [fh,fm] = fromTime.split(":").map(Number);
+    const [th,tm] = toTime.split(":").map(Number);
+    const vf = new Date(); vf.setHours(fh||0, fm||0, 0, 0);
+    const vu = new Date(); vu.setHours(th||0, tm||0, 0, 0);
     const { data } = await sb.from("daily_qr").upsert(
       { date: today, code, valid_from: vf.toISOString(), valid_until: vu.toISOString() },
       { onConflict: "date" }
@@ -5831,6 +5835,10 @@ function QrView() {
       <div style={{ padding: "24px 0" }}>
         <div style={{ fontFamily: "'Funnel Display'", fontSize: 13, fontWeight: 900, textTransform: "uppercase", color: "var(--text2)", letterSpacing: ".1em", marginBottom: 4 }}>QR Check-in</div>
         <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 24 }}>{today}</div>
+        <div style={{display:"flex",gap:8,alignItems:"flex-end",justifyContent:"center",marginBottom:20,flexWrap:"wrap"}}>
+          <div style={{textAlign:"left"}}><label className="form-label" style={{fontSize:10,marginBottom:2}}>Dalle</label><input type="time" className="form-input" value={fromTime} onChange={e=>setFromTime(e.target.value)} style={{width:120}}/></div>
+          <div style={{textAlign:"left"}}><label className="form-label" style={{fontSize:10,marginBottom:2}}>Alle</label><input type="time" className="form-input" value={toTime} onChange={e=>setToTime(e.target.value)} style={{width:120}}/></div>
+        </div>
         {loading ? <div className="loading">⏳</div> : qr ? (
           <>
             <div style={{ background: "var(--surface2)", borderRadius: 16, padding: "24px 32px", marginBottom: 16, display: "inline-block", border: "1.5px solid var(--border2)", position:"relative" }}>
@@ -5844,9 +5852,9 @@ function QrView() {
               )}
             </div>
             <div style={{ fontFamily:"'Funnel Display'", fontSize:34, fontWeight:900, color: isWithinWindow ? "var(--neon-blue)" : "var(--text3)", letterSpacing:8, margin:"10px 0 6px", textShadow: isWithinWindow ? "var(--glow-blue)" : "none" }}>{qr.code}</div>
-            <div style={{ fontSize:13, color:"var(--text2)", marginBottom:4 }}>Valido dalle 13:00 alle 19:00</div>
+            <div style={{ fontSize:13, color:"var(--text2)", marginBottom:4 }}>Valido dalle {new Date(qr.valid_from).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})} alle {new Date(qr.valid_until).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}</div>
             <div style={{ fontSize:11, color: isWithinWindow ? "var(--verde)" : "var(--text3)", marginBottom:16, fontWeight:700 }}>
-              {isWithinWindow ? "● Attivo ora" : beforeWindow ? "Si attiva alle 13:00" : "Finestra oraria conclusa"}
+              {isWithinWindow ? "● Attivo ora" : beforeWindow ? `Si attiva alle ${new Date(qr.valid_from).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}` : "Finestra oraria conclusa"}
             </div>
             <div style={{display:"flex",gap:8}}>
               <button className="btn btn-ghost" style={{ flex:1 }} disabled={working} onClick={generateQr}>🔄 Rigenera</button>
@@ -7229,7 +7237,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     if (res?.error === "already") { setQrMsg("Hai già fatto il check-in oggi!"); return; }
     if (res?.error === "no_qr") { setQrMsg("Nessun QR attivo oggi."); return; }
     if (res?.error === "invalid_code") { setQrMsg("❌ Codice non valido."); return; }
-    if (res?.error === "too_early") { setQrMsg("⏰ Il check-in apre alle 13:00."); return; }
+    if (res?.error === "too_early") { setQrMsg("⏰ Il check-in non è ancora aperto."); return; }
     if (res?.error === "too_late") { setQrMsg("⏰ Il check-in è chiuso (orario 13–19)."); return; }
     if (res?.error || !res?.type) { setQrMsg("❌ Errore. Riprova."); return; }
 
