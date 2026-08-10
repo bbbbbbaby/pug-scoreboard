@@ -8777,6 +8777,7 @@ function BigTopEducatorView({ profile }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [genDays, setGenDays] = useState([2,4]);
+  const [genTimes, setGenTimes] = useState([{start:"16:00",end:"17:00"},{start:"17:00",end:"18:00"}]);
 
   const monthName = new Date(cursor.y, cursor.m - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
 
@@ -8828,7 +8829,7 @@ function BigTopEducatorView({ profile }) {
 
   async function generateMonth() {
     setBusy(true);
-    const { data: r, error } = await sb.rpc("bigtop_generate_month", { p_year: cursor.y, p_month: cursor.m, p_days: genDays });
+    const { data: r, error } = await sb.rpc("bigtop_generate_month", { p_year: cursor.y, p_month: cursor.m, p_days: genDays, p_times: genTimes.map(t=>t.start+"-"+t.end) });
     setBusy(false);
     if (error || r?.error) { addToast("❌ " + (error?.message || r.error), "error"); return; }
     addToast(r.created > 0 ? `🎪 Creati ${r.created} turni di ${monthName}` : "Turni già tutti presenti", "ok");
@@ -8882,8 +8883,9 @@ function BigTopEducatorView({ profile }) {
 
   return (
     <div>
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-        <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+      <div style={{textAlign:"center",marginBottom:14}}>
+        <div style={{fontFamily:"'Funnel Display',sans-serif",fontWeight:900,fontSize:22,textTransform:"uppercase",marginBottom:8}}>🎪 Big Top</div>
+        <div style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>
           <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===1?c.y-1:c.y, m: c.m===1?12:c.m-1 }))}>‹</button>
           <div style={{fontWeight:800,minWidth:130,textAlign:"center",textTransform:"capitalize"}}>{monthName}</div>
           <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===12?c.y+1:c.y, m: c.m===12?1:c.m+1 }))}>›</button>
@@ -8895,8 +8897,19 @@ function BigTopEducatorView({ profile }) {
           <button key={dow} type="button" onClick={()=>setGenDays(g=>g.includes(dow)?g.filter(x=>x!==dow):[...g,dow])} className="btn btn-xs" style={{background:genDays.includes(dow)?"#101010":"#fff",color:genDays.includes(dow)?"#FDEF26":"#101010",border:"2px solid #101010",fontWeight:800,padding:"5px 10px"}}>{lbl}</button>
         ))}
       </div>
-      <button className="btn btn-yellow btn-sm" style={{width:"100%",marginBottom:14}} disabled={busy || genDays.length===0} onClick={generateMonth}>
-        {busy ? "⏳…" : `➕ Genera turni di ${monthName} (16-17 e 17-18)`}
+      <div style={{marginBottom:8}}>
+        {genTimes.map((t,i)=>(
+          <div key={i} style={{display:"flex",gap:6,alignItems:"center",justifyContent:"center",marginBottom:6}}>
+            <input type="time" className="form-input" value={t.start} onChange={e=>setGenTimes(g=>g.map((x,j)=>j===i?{...x,start:e.target.value}:x))} style={{width:118}}/>
+            <span style={{fontWeight:800}}>–</span>
+            <input type="time" className="form-input" value={t.end} onChange={e=>setGenTimes(g=>g.map((x,j)=>j===i?{...x,end:e.target.value}:x))} style={{width:118}}/>
+            {genTimes.length>1 && <button type="button" className="btn btn-xs" onClick={()=>setGenTimes(g=>g.filter((_,j)=>j!==i))} style={{border:"2px solid #101010",background:"#fff",color:"#101010",fontWeight:800}}>✕</button>}
+          </div>
+        ))}
+        <div style={{textAlign:"center"}}><button type="button" className="btn btn-xs" onClick={()=>setGenTimes(g=>[...g,{start:"18:00",end:"19:00"}])} style={{border:"2px solid #101010",background:"#fff",color:"#101010",fontWeight:800}}>➕ Aggiungi orario</button></div>
+      </div>
+      <button className="btn btn-yellow btn-sm" style={{width:"100%",marginBottom:14}} disabled={busy || genDays.length===0 || genTimes.length===0} onClick={generateMonth}>
+        {busy ? "⏳…" : `➕ Genera turni di ${monthName}`}
       </button>
 
       {loading ? <div style={{color:"var(--text3)",fontSize:13}}>⏳ Caricamento…</div> :
