@@ -4408,7 +4408,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
             </div>
           </div>
           {editConfig && (
-            <div style={{background:"rgba(253,239,38,.06)",border:"1px solid rgba(253,239,38,.25)",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+            <div style={{background:"var(--surface2)",border:"2px solid var(--border2)",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,color:"#FDEF26",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>⚙️ Valore presenza oggi</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
                 <div>
@@ -4508,7 +4508,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
             <div className="empty">Nessun check-in Lab per oggi.</div>
           ) : (
             Object.entries(labAtts.reduce((acc,a)=>{ (acc[a.actName]=acc[a.actName]||[]).push(a); return acc; },{})).map(([labName,entries])=>(
-              <div key={labName} style={{marginBottom:14,background:"rgba(253,239,38,.04)",border:"1px solid rgba(253,239,38,.2)",borderRadius:14,padding:"12px 14px"}}>
+              <div key={labName} style={{marginBottom:14,background:"var(--surface2)",border:"2px solid var(--border2)",borderRadius:14,padding:"12px 14px"}}>
                 <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:20,fontWeight:900,color:"#FDEF26",marginBottom:8}}>
                   ⚡ {labName} <span style={{fontSize:13,color:"var(--text3)",fontWeight:400}}>· {entries.length} check-in</span>
                 </div>
@@ -5073,12 +5073,12 @@ function BadgesView({ sectionColors, setSectionColors }) {
   );
 }
 
-function SfidaView({ sectionColors, setSectionColors }) {
+function SfidaView({ sectionColors, setSectionColors, profile }) {
   const [sfide, setSfide] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [customizing, setCustomizing] = useState(false);
-  const [form, setForm] = useState({ title:"", description:"", link:"", xp_reward:20, coin_reward:10, expires_at:"" });
+  const [form, setForm] = useState({ title:"", description:"", link:"", xp_reward:20, coin_reward:10, expires_at:"", image_data:null, location:"CHILL" });
 
   const load = useCallback(async () => {
     const now = new Date().toISOString();
@@ -5108,10 +5108,14 @@ function SfidaView({ sectionColors, setSectionColors }) {
       is_active: true,
       expires_at: form.expires_at ? new Date(form.expires_at + "T23:59:59").toISOString() : null,
       link: form.link.trim() || null,
+      image_data: form.image_data || null,
+      location: form.location || null,
+      author_name: profile?.display_name || null,
+      educator_id: profile?.id || null,
     };
     await sb.from("activities").insert(payload);
     setShowForm(false);
-    setForm({ title:"", description:"", link:"", xp_reward:20, coin_reward:10, expires_at:"" });
+    setForm({ title:"", description:"", link:"", xp_reward:20, coin_reward:10, expires_at:"", image_data:null, location:"CHILL" });
     load();
   }
 
@@ -5135,6 +5139,8 @@ function SfidaView({ sectionColors, setSectionColors }) {
               <div className="sfida-label">⚡ Sfida attiva</div>
               <div className="sfida-title">{s.name}</div>
               <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
+                {s.image_data && <img src={s.image_data} style={{width:"100%",maxHeight:200,objectFit:"cover",borderRadius:10,border:"2px solid #101010",margin:"8px 0",display:"block"}} alt=""/>}
+                {(s.location||s.author_name) && <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"6px 0"}}>{s.location && <span style={{background:s.location==="BIG TOP"?"#D41323":"#339966",color:"#fff",fontWeight:800,fontSize:11,padding:"4px 10px",borderRadius:8,border:"2px solid #101010"}}>{s.location==="BIG TOP"?"🎪":"🛋️"} {s.location}</span>}{s.author_name && <span style={{fontSize:11,fontWeight:700,color:"var(--text3)"}}>🌱 {s.author_name}</span>}</div>}
               <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:s.link?8:0 }}>
                 <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
                 {s.expires_at && (
@@ -5173,6 +5179,19 @@ function SfidaView({ sectionColors, setSectionColors }) {
               <label className="form-label">Data scadenza (opzionale)</label>
               <input className="form-input" type="date" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} min={localToday()} />
               <div style={{ fontSize:10, color:"var(--text3)", marginTop:4 }}>Lascia vuoto per sfida senza scadenza</div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Luogo</label>
+              <div style={{display:"flex",gap:8}}>
+                {["CHILL","BIG TOP"].map(loc=>(
+                  <button key={loc} type="button" onClick={()=>setForm(f=>({...f,location:loc}))} className="btn btn-sm" style={{flex:1,background:form.location===loc?"#101010":"#fff",color:form.location===loc?"#FDEF26":"#101010",border:"2.5px solid #101010",fontWeight:800}}>{loc==="CHILL"?"🛋️ CHILL":"🎪 BIG TOP"}</button>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Foto (opzionale)</label>
+              {form.image_data && <div style={{position:"relative",marginBottom:8}}><img src={form.image_data} style={{width:"100%",maxHeight:180,objectFit:"cover",borderRadius:10,border:"2px solid #101010",display:"block"}} alt=""/><button type="button" onClick={()=>setForm(f=>({...f,image_data:null}))} style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,.7)",border:"none",color:"#fff",borderRadius:8,padding:"4px 9px",cursor:"pointer",fontWeight:800}}>✕</button></div>}
+              <label className="btn btn-ghost btn-sm" style={{cursor:"pointer",display:"inline-block"}}>📷 {form.image_data?"Cambia foto":"Carica foto"}<input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{ const f=e.target.files[0]; if(!f) return; const c=await compressToWebP(f,800,.8); const r=new FileReader(); r.onload=ev=>setForm(fm=>({...fm,image_data:ev.target.result})); r.readAsDataURL(c); }}/></label>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={createSfida} disabled={!form.title.trim()}>Pubblica</button>
@@ -6275,7 +6294,7 @@ function StreakConfigView() {
             const isPast = m.month < now.getMonth() + 1;
             const isCurrent = m.month === now.getMonth() + 1;
             return (
-              <div key={m.month} className="streak-month-card" style={{background:"rgba(16,16,16,0.9)",border:`1px solid ${isCurrent?"rgba(212,19,35,.3)":isPast?"rgba(51,153,102,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
+              <div key={m.month} className="streak-month-card" style={{background:"var(--surface)",border:`1px solid ${isCurrent?"rgba(212,19,35,.3)":isPast?"rgba(51,153,102,.15)":"var(--border)"}`,borderRadius:14,padding:"12px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:editing?.month===m.month?12:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <span style={{fontSize:20}}>{isPast?"✅":isCurrent?"🔥":"📅"}</span>
@@ -6331,7 +6350,7 @@ function EducatorSocialView({ profile }) {
 
   return (
     <div>
-      <div style={{display:"flex",background:"rgba(255,255,255,.06)",borderRadius:12,padding:4,marginBottom:16,gap:4}}>
+      <div style={{display:"flex",background:"var(--surface2)",borderRadius:12,padding:4,marginBottom:16,gap:4}}>
         {[["community","👥 Community"],["annunci","📢 Annunci"]].map(([v,l])=>(
           <button key={v} onClick={()=>setView(v)} style={{
             flex:1,padding:"10px 0",borderRadius:9,border:"none",cursor:"pointer",
@@ -7059,7 +7078,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     const [{ data: p }, { data: b }, { data: a }, { data: bk }, { data: n }, { data: pl }, { data: m }, { data: attToday }, { data: attMonth }, { data: myPres }, { data: mConfig }] = await Promise.all([
       sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,current_streak,longest_streak,last_checkin_date,squads(name)").eq("id", profile.id).single(),
       sb.from("player_badges").select("id,assigned_at,xp_awarded,coin_awarded,badges(name,image_url,xp_default,description,link)").eq("player_id", profile.id).order("assigned_at", { ascending: false }),
-      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,created_by,image_data").eq("is_active", true).order("created_at", { ascending: false }),
+      sb.from("activities").select("id,name,description,link,duration_days,xp_partial,xp_full,xp_completed,coin_partial,coin_full,coin_completed,coin_cost,is_active,expires_at,max_participants,educator_id,created_by,image_data,location,author_name").eq("is_active", true).order("created_at", { ascending: false }),
       sb.from("bookings").select("id,status,coin_held,created_at,activities(name)").eq("player_id", profile.id).order("created_at", { ascending: false }),
       sb.from("notifications").select("id,type,title,body,read_at,created_at").eq("user_id", profile.id).neq("type", "log_action").order("created_at", { ascending: false }).limit(20),
       sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)").eq("role","player").gt("xp", 2).order("xp", { ascending: false }),
@@ -7696,6 +7715,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="sfida-label">⚡ Sfide</div>
                 <div className="sfida-title">{s.name}</div>
                 <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
+                {s.image_data && <img src={s.image_data} style={{width:"100%",maxHeight:200,objectFit:"cover",borderRadius:10,border:"2px solid #101010",margin:"8px 0",display:"block"}} alt=""/>}
+                {(s.location||s.author_name) && <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"6px 0"}}>{s.location && <span style={{background:s.location==="BIG TOP"?"#D41323":"#339966",color:"#fff",fontWeight:800,fontSize:11,padding:"4px 10px",borderRadius:8,border:"2px solid #101010"}}>{s.location==="BIG TOP"?"🎪":"🛋️"} {s.location}</span>}{s.author_name && <span style={{fontSize:11,fontWeight:700,color:"var(--text3)"}}>🌱 {s.author_name}</span>}</div>}
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
                   <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
                   {s.link && <a href={s.link} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,color:"var(--azzurro)",fontWeight:700,textDecoration:"none",background:"rgba(163,207,254,.1)",border:"1px solid rgba(163,207,254,.25)",borderRadius:8,padding:"4px 10px"}}>🔗 Apri link</a>}
@@ -9347,7 +9368,7 @@ function EducatorShell({ profile, onLogout }) {
 
   useEffect(() => { document.body.classList.toggle("light", theme === "light"); }, [theme]);
 
-  const sharedProps = { sectionColors, setSectionColors };
+  const sharedProps = { sectionColors, setSectionColors, profile };
 
   return (
     <div className="edu-layout">
