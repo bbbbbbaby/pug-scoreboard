@@ -598,7 +598,7 @@ body:not(.light){--pt-empty-bg:#17181c;--pt-empty-color:rgba(255,255,255,.55);--
   /* ═══ DIARIO ═══ */
   .diary-day { margin-bottom:18px; }
   .diary-date { font-family:'Funnel Display',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; color:var(--neon-blue); margin-bottom:8px; letter-spacing:.05em; }
-  .diary-entry { display:flex; align-items:center; gap:10px; padding:10px 14px; background:rgba(16,16,16,0.9); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:5px; }
+  .diary-entry { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:5px; }
   .diary-icon { font-size:18px; flex-shrink:0; }
   .diary-text { flex:1; font-size:13px; color:var(--text); line-height:1.4; }
   .diary-pts { font-family:'Funnel Display',sans-serif; font-size:18px; font-weight:900; color:var(--neon-blue); flex-shrink:0; }
@@ -1723,6 +1723,7 @@ body:not(.light){--text3:rgba(255,255,255,.78)}
 @media(max-width:767px){@keyframes leafsway{0%,50%,100%{margin-left:0}}}
 /* #5 night: bottoni filtro/ghost nelle barre filtro non translucidi */
 body:not(.light) .filter-bar .btn-ghost{background:var(--surface2)!important;border-color:var(--border)!important;color:var(--text)!important}
+body:not(.light) .pres-table td, body:not(.light) .pres-table th{background:var(--surface)!important}
 /* #10 podio: nome come mini-titolo, niente a-capo (ellissi se lungo) */
 .podium-wrap .pod-name{display:inline-block!important;max-width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;background:#101010!important;color:#fff!important;border:2px solid #101010!important;border-radius:8px!important;padding:3px 10px!important;box-shadow:2px 2px 0 rgba(0,0,0,.4)!important;font-size:11px!important;line-height:1.15!important;margin-top:6px!important}
 .light .podium-wrap .pod-name{background:#fff!important;color:#101010!important;box-shadow:2px 2px 0 #101010!important}
@@ -5141,7 +5142,7 @@ function SfidaView({ sectionColors, setSectionColors, profile }) {
               <div className="sfida-label">⚡ Sfida attiva</div>
               <div className="sfida-title">{s.name}</div>
               <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-                {s.image_data && <img src={s.image_data} style={{width:"100%",height:"auto",maxHeight:360,objectFit:"contain",background:"#fff",borderRadius:10,border:"2px solid #101010",margin:"8px 0",display:"block"}} alt=""/>}
+                {s.image_data && <img src={s.image_data} style={{maxWidth:"100%",maxHeight:400,width:"auto",height:"auto",borderRadius:10,border:"2px solid #101010",margin:"8px auto",display:"block"}} alt=""/>}
                 {(s.location||s.author_name) && <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"6px 0"}}>{s.location && <span style={{background:s.location==="BIG TOP"?"#D41323":"#339966",color:"#fff",fontWeight:800,fontSize:11,padding:"4px 10px",borderRadius:8,border:"2px solid #101010"}}>{s.location==="BIG TOP"?"🎪":"🛋️"} {s.location}</span>}{s.author_name && <span style={{fontSize:11,fontWeight:700,color:"var(--text3)"}}>🌱 {s.author_name}</span>}</div>}
               <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:s.link?8:0 }}>
                 <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
@@ -5247,11 +5248,22 @@ function DiaryView() {
           profiles: h.profiles,
           created_at: h.created_at,
           _icon: info.icon,
+          _pid: h.profiles?.id,
+          _xp: h.xp_gained,
+          _day: (h.created_at||"").slice(0,10),
         };
+      });
+      const _seenPres = new Set();
+      const xpEventsClean = xpEvents.filter(e => {
+        if (!/presenz/i.test(e.title)) return true;
+        if ((e._xp||0) < 0) return false;
+        const k = (e._pid||"") + "|" + e._day;
+        if (_seenPres.has(k)) return false;
+        _seenPres.add(k); return true;
       });
       const allEntries = [
         ...(notifs||[]).filter(n => n.profiles && n.type !== "educator_msg"),
-        ...xpEvents
+        ...xpEventsClean
       ].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
       setEntries(allEntries); setLoading(false);
     }
@@ -7725,7 +7737,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="sfida-label">⚡ Sfide</div>
                 <div className="sfida-title">{s.name}</div>
                 <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-                {s.image_data && <img src={s.image_data} style={{width:"100%",height:"auto",maxHeight:360,objectFit:"contain",background:"#fff",borderRadius:10,border:"2px solid #101010",margin:"8px 0",display:"block"}} alt=""/>}
+                {s.image_data && <img src={s.image_data} style={{maxWidth:"100%",maxHeight:400,width:"auto",height:"auto",borderRadius:10,border:"2px solid #101010",margin:"8px auto",display:"block"}} alt=""/>}
                 {(s.location||s.author_name) && <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"6px 0"}}>{s.location && <span style={{background:s.location==="BIG TOP"?"#D41323":"#339966",color:"#fff",fontWeight:800,fontSize:11,padding:"4px 10px",borderRadius:8,border:"2px solid #101010"}}>{s.location==="BIG TOP"?"🎪":"🛋️"} {s.location}</span>}{s.author_name && <span style={{fontSize:11,fontWeight:700,color:"var(--text3)"}}>🌱 {s.author_name}</span>}</div>}
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
                   <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
