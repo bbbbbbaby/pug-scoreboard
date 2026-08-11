@@ -6231,6 +6231,7 @@ function VisibilityView() {
     { key:"lab",        label:"⚡ Tab Lab",            desc:"Mostra la tab Lab nel menu player" },
     { key:"bigtop",     label:"🎪 Tab BIG TOP",        desc:"Mostra la sezione Circo nel menu player" },
     { key:"messaggi",   label:"💬 Messaggi",           desc:"Mostra la tab messaggi nel menu player" },
+    { key:"creatura",   label:"🌱 Barre creatura",     desc:"Mostra le barre Energia/Socialità/Felicità nel profilo" },
   ];
   const allVisible = sections.every(s => vis[s.key] !== false);
   return (
@@ -6378,8 +6379,8 @@ function EducatorSocialView({ profile }) {
             flex:1,padding:"10px 0",borderRadius:9,border:"none",cursor:"pointer",
             fontFamily:"'Funnel Display',sans-serif",fontWeight:900,fontSize:15,
             textTransform:"uppercase",letterSpacing:".05em",transition:"all .2s",
-            background:view===v?"rgba(255,255,255,.12)":"transparent",
-            color:view===v?"var(--text)":"var(--text3)",
+            background:view===v?"#101010":"transparent",
+            color:view===v?"#fff":"var(--text3)",
           }}>{l}</button>
         ))}
       </div>
@@ -7503,9 +7504,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               </div>
             </div>
 
-            {/* Come sta la creatura — barre bisogni (display; valori dai campi Supabase, fallback 100) */}
-            <div className="pug-card">
-              <div className="pug-tape" style={{background:'#FDEF26',color:'#101010'}}>🌱 Come sta la creatura</div>
+            {/* Barre bisogni creatura (nascondibili da Vista) */}
+            {visConfig.creatura !== false && (<div className="pug-card">
+              <div className="pug-tape" style={{background:'#FDEF26',color:'#101010'}}>🌱 Come stai al Garden</div>
               {[
                 ['Energia', fullProfile.energia, '#FDEF26', '⚡'],
                 ['Socialità', fullProfile.socialita, '#A3CFFE', '👥'],
@@ -7521,7 +7522,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   </div>
                 );
               })}
-            </div>
+            </div>)}
 
             {/* Profile card: nome editabile + XP */}
             <div className="pd-card">
@@ -8943,7 +8944,7 @@ function BigTopEducatorView({ profile }) {
       <button className="btn btn-yellow btn-sm" style={{width:"100%",marginBottom:14}} disabled={busy || genDays.length===0 || genTimes.length===0} onClick={generateMonth}>
         {busy ? "⏳…" : `➕ Genera turni di ${monthName}`}
       </button>
-      <button className="btn btn-ghost btn-sm" style={{width:"100%",marginBottom:14,color:"#D41323",border:"2px solid #D41323",fontWeight:800}} disabled={busy} onClick={cancelMonth}>🗑️ Annulla turni futuri del mese</button>
+      <button className="btn btn-sm" style={{width:"100%",marginBottom:14,background:"#fff",color:"#D41323",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:800}} disabled={busy} onClick={cancelMonth}>🗑️ Annulla turni futuri del mese</button>
       <button className="btn" style={{width:"100%",marginBottom:14,background:"#FDEF26",color:"#101010",border:"3px solid #101010",boxShadow:"4px 4px 0 #101010",fontWeight:900,fontSize:16,padding:"14px 12px",textTransform:"uppercase",letterSpacing:".01em"}} onClick={notifyPlayers}>🔔 Avvisa i giocatori dei nuovi turni</button>
 
       {loading ? <div style={{color:"var(--text3)",fontSize:13}}>⏳ Caricamento…</div> :
