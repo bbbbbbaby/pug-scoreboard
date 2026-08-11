@@ -6203,10 +6203,11 @@ function VisibilityView() {
       }).catch(console.error);
   }, []);
 
-  function toggle(key) {
+  async function toggle(key) {
     const next = { ...vis, [key]: vis[key] === false ? true : false };
     setVis(next);
     localStorage.setItem("pug_visibility", JSON.stringify(next));
+    await sb.from("profiles").update({ app_config: next }).eq("id", "00000000-0000-0000-0000-000000000099");
   }
 
   async function saveToSupabase() {
@@ -6263,7 +6264,7 @@ function VisibilityView() {
         </button>
       </div>
       <div style={{background:"rgba(163,207,254,.05)",border:"1px solid rgba(163,207,254,.12)",borderRadius:10,padding:"10px 14px",marginTop:12,fontSize:11,color:"var(--text3)"}}>
-        💡 Le modifiche locali sono immediate. Clicca "Salva" per renderle permanenti e condividerle su tutti i dispositivi.
+        💡 Le modifiche vengono salvate e condivise automaticamente su tutti i dispositivi (giocatori inclusi). "Salva" forza una nuova sincronizzazione.
       </div>
     </div>
   );
