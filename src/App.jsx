@@ -1721,6 +1721,8 @@ body:not(.light){--text3:rgba(255,255,255,.78)}
 .pres-table td .pres-toggle{width:42px!important;height:42px!important;aspect-ratio:1!important;padding:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}
 /* #7 login: foglia ferma su mobile */
 @media(max-width:767px){@keyframes leafsway{0%,50%,100%{margin-left:0}}}
+/* #5 night: bottoni filtro/ghost nelle barre filtro non translucidi */
+body:not(.light) .filter-bar .btn-ghost{background:var(--surface2)!important;border-color:var(--border)!important;color:var(--text)!important}
 /* #10 podio: nome come mini-titolo, niente a-capo (ellissi se lungo) */
 .podium-wrap .pod-name{display:inline-block!important;max-width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;background:#101010!important;color:#fff!important;border:2px solid #101010!important;border-radius:8px!important;padding:3px 10px!important;box-shadow:2px 2px 0 rgba(0,0,0,.4)!important;font-size:11px!important;line-height:1.15!important;margin-top:6px!important}
 .light .podium-wrap .pod-name{background:#fff!important;color:#101010!important;box-shadow:2px 2px 0 #101010!important}
@@ -4374,11 +4376,11 @@ function AttendanceView({ sectionColors, setSectionColors }) {
       {/* Tab switcher */}
       <div style={{display:"flex",gap:6,marginBottom:12}}>
         <button className={`chip ${presTab==="daily"?"active":""}`} onClick={()=>setPresTab("daily")}
-          style={presTab==="daily"?{background:"var(--surface3)",color:"var(--neon-blue)",borderColor:"rgba(163,207,254,.4)"}:{}}>
+          style={presTab==="daily"?{background:"var(--surface3)",color:"var(--neon-blue)",borderColor:"#A3CFFE"}:{}}>
           📍 Giornaliere
         </button>
         <button className={`chip ${presTab==="lab"?"active":""}`} onClick={()=>setPresTab("lab")}
-          style={presTab==="lab"?{background:"var(--surface3)",color:"#FDEF26",borderColor:"rgba(253,239,38,.4)"}:{}}>
+          style={presTab==="lab"?{background:"var(--surface3)",color:"#FDEF26",borderColor:"#FDEF26"}:{}}>
           ⚡ Lab {labAtts.length>0 && <span style={{background:"#FDEF26",color:"#111",borderRadius:99,fontSize:8,fontWeight:900,padding:"1px 5px",marginLeft:4}}>{labAtts.length}</span>}
         </button>
       </div>
@@ -5139,7 +5141,7 @@ function SfidaView({ sectionColors, setSectionColors, profile }) {
               <div className="sfida-label">⚡ Sfida attiva</div>
               <div className="sfida-title">{s.name}</div>
               <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-                {s.image_data && <img src={s.image_data} style={{width:"100%",maxHeight:200,objectFit:"cover",borderRadius:10,border:"2px solid #101010",margin:"8px 0",display:"block"}} alt=""/>}
+                {s.image_data && <img src={s.image_data} style={{width:"100%",height:"auto",maxHeight:360,objectFit:"contain",background:"#fff",borderRadius:10,border:"2px solid #101010",margin:"8px 0",display:"block"}} alt=""/>}
                 {(s.location||s.author_name) && <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"6px 0"}}>{s.location && <span style={{background:s.location==="BIG TOP"?"#D41323":"#339966",color:"#fff",fontWeight:800,fontSize:11,padding:"4px 10px",borderRadius:8,border:"2px solid #101010"}}>{s.location==="BIG TOP"?"🎪":"🛋️"} {s.location}</span>}{s.author_name && <span style={{fontSize:11,fontWeight:700,color:"var(--text3)"}}>🌱 {s.author_name}</span>}</div>}
               <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:s.link?8:0 }}>
                 <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
@@ -5386,7 +5388,7 @@ function MessagesView({ profile }) {
     const [{ data: sq }, { data: pl }, { data: act }, { data: m }] = await Promise.all([
       sb.from("squads").select("*").order("name"),
       sb.from("profiles").select("id,display_name,xp,avatar_url").eq("role","player").order("display_name"),
-      sb.from("activities").select("id,name").eq("is_active",true).order("name"),
+      sb.from("activities").select("id,name,description").eq("is_active",true).order("name"),
       sb.from("messages").select("id,body,media_data,is_broadcast,squad_id,recipient_id,sender_id,expires_at,cancelled_at,created_at,profiles!sender_id(display_name,avatar_url)").or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id},is_broadcast.eq.true,squad_id.not.is.null`).order("created_at",{ascending:false}).gt("expires_at", new Date().toISOString()).limit(100),
     ]);
     setSquads(sq||[]); setPlayers(pl||[]); setActivities(act||[]); setMsgs(m||[]); setLoading(false);
@@ -5578,7 +5580,7 @@ function MessagesView({ profile }) {
           {destType==="activity" && (
             <select value={destActivity} onChange={e=>setDestActivity(e.target.value)}>
               <option value="">Seleziona lab…</option>
-              {activities.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+              {activities.filter(a=>!a.description?.startsWith("SFIDA")).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           )}
         </div>
@@ -7723,7 +7725,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="sfida-label">⚡ Sfide</div>
                 <div className="sfida-title">{s.name}</div>
                 <div className="sfida-desc">{s.description?.replace("SFIDA · ", "")}</div>
-                {s.image_data && <img src={s.image_data} style={{width:"100%",maxHeight:200,objectFit:"cover",borderRadius:10,border:"2px solid #101010",margin:"8px 0",display:"block"}} alt=""/>}
+                {s.image_data && <img src={s.image_data} style={{width:"100%",height:"auto",maxHeight:360,objectFit:"contain",background:"#fff",borderRadius:10,border:"2px solid #101010",margin:"8px 0",display:"block"}} alt=""/>}
                 {(s.location||s.author_name) && <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"6px 0"}}>{s.location && <span style={{background:s.location==="BIG TOP"?"#D41323":"#339966",color:"#fff",fontWeight:800,fontSize:11,padding:"4px 10px",borderRadius:8,border:"2px solid #101010"}}>{s.location==="BIG TOP"?"🎪":"🛋️"} {s.location}</span>}{s.author_name && <span style={{fontSize:11,fontWeight:700,color:"var(--text3)"}}>🌱 {s.author_name}</span>}</div>}
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
                   <span className="sfida-reward">🏆 +{s.xp_completed} XP · 🪙 +{s.coin_completed}</span>
@@ -8879,6 +8881,15 @@ function BigTopEducatorView({ profile }) {
     addToast("Turni futuri annullati", "ok"); load(); setBusy(false);
   }
 
+  async function notifyPlayers() {
+    const { data } = await sb.from("profiles").select("id").eq("role","player");
+    const ids = (data||[]).map(p=>p.id);
+    if (!ids.length) { addToast("Nessun giocatore", "error"); return; }
+    await sb.from("notifications").insert(ids.map(pid=>({ user_id:pid, type:"bigtop", title:"🎪 Nuovi turni Big Top", body:"I NUOVI TURNI DEL BIG TOP SONO DISPONIBILI, PRENOTATI SUBITO!" })));
+    try { sendPushToAll(ids, "🎪 Big Top", "I nuovi turni del Big Top sono disponibili, prenotati subito!"); } catch(e){}
+    addToast("Giocatori avvisati", "ok");
+  }
+
   async function bookForPlayer(sid) {
     if (!bookFor) { addToast("Scegli un giocatore", "error"); return; }
     const { data: r, error } = await sb.rpc("bigtop_book", { p_player_id: bookFor, p_slot_ids: [sid] });
@@ -8921,10 +8932,11 @@ function BigTopEducatorView({ profile }) {
         {busy ? "⏳…" : `➕ Genera turni di ${monthName}`}
       </button>
       <button className="btn btn-ghost btn-sm" style={{width:"100%",marginBottom:14,color:"#D41323",border:"2px solid #D41323",fontWeight:800}} disabled={busy} onClick={cancelMonth}>🗑️ Annulla turni futuri del mese</button>
+      <button className="btn btn-ghost btn-sm" style={{width:"100%",marginBottom:14,color:"#339966",border:"2px solid #339966",fontWeight:800}} onClick={notifyPlayers}>📢 Avvisa i giocatori dei nuovi turni</button>
 
       {loading ? <div style={{color:"var(--text3)",fontSize:13}}>⏳ Caricamento…</div> :
        slots.length === 0 ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center",padding:"20px 0"}}>Nessun turno questo mese — premi "Genera turni"</div> :
-      slots.map(s => {
+      slots.filter(s => !s.cancelled_at).map(s => {
         const t = taken(s.id);
         const dead = !!s.cancelled_at;
         return (
@@ -9417,7 +9429,7 @@ function EducatorShell({ profile, onLogout }) {
           <div className="pd-logo-img logo-w" style={{width:130,height:42,margin:"0 auto"}}/>
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,marginTop:6}}>
             <div style={{width:76,height:76,borderRadius:16,overflow:"hidden",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010"}}><Avatar url={profile.avatar_url} emoji="🌱" size={76}/></div>
-            <div style={{fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:16,background:"#FDEF26",color:"#101010",padding:"5px 14px",border:"2px solid #101010",borderRadius:10,transform:"rotate(-1.5deg)",boxShadow:"2px 2px 0 #101010"}}>CIAO {profile.display_name}</div>
+            <div style={{fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:16,background:"#FDEF26",color:"#101010",padding:"5px 14px",border:"2px solid #101010",borderRadius:10,transform:"rotate(-1.5deg)",boxShadow:"2px 2px 0 #101010"}}>{profile.display_name}</div>
           </div>
         </div>
         <nav className="nav">
