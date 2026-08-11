@@ -7026,15 +7026,34 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   // Carica visibilità PRIMA di mostrare qualsiasi cosa
   useEffect(() => {
-    fetchVisibilityConfig()
-      .then((cfg) => {
-        if (cfg && typeof cfg === "object") {
-          localStorage.setItem("pug_visibility", JSON.stringify(cfg));
-          setVisConfig(cfg);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setVisReady(true));
+    let alive = true;
+    const applyCfg = (cfg) => {
+      if (alive && cfg && typeof cfg === "object") {
+        localStorage.setItem("pug_visibility", JSON.stringify(cfg));
+        setVisConfig(cfg);
+      }
+    };
+    const refetch = async () => {
+      try {
+        const { data } = await sb.from("profiles").select("app_config")
+          .eq("id", "00000000-0000-0000-0000-000000000099").single();
+        applyCfg(data?.app_config);
+      } catch(_) {}
+    };
+    fetchVisibilityConfig().then(applyCfg).catch(() => {}).finally(() => { if (alive) setVisReady(true); });
+    const ch = sb.channel("vis-config-" + Math.random().toString(36).slice(2))
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: "id=eq.00000000-0000-0000-0000-000000000099" },
+        (payload) => applyCfg(payload?.new?.app_config))
+      .subscribe();
+    const onFocus = () => { if (document.visibilityState === "visible") refetch(); };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      alive = false;
+      try { sb.removeChannel(ch); } catch(_) {}
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
   const [editingFirstName, setEditingFirstName] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
