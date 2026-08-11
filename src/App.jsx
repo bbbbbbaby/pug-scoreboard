@@ -8944,7 +8944,7 @@ function BigTopEducatorView({ profile }) {
         {busy ? "⏳…" : `➕ Genera turni di ${monthName}`}
       </button>
       <button className="btn btn-ghost btn-sm" style={{width:"100%",marginBottom:14,color:"#D41323",border:"2px solid #D41323",fontWeight:800}} disabled={busy} onClick={cancelMonth}>🗑️ Annulla turni futuri del mese</button>
-      <button className="btn btn-ghost btn-sm" style={{width:"100%",marginBottom:14,color:"#339966",border:"2px solid #339966",fontWeight:800}} onClick={notifyPlayers}>📢 Avvisa i giocatori dei nuovi turni</button>
+      <button className="btn" style={{width:"100%",marginBottom:14,background:"#FDEF26",color:"#101010",border:"3px solid #101010",boxShadow:"4px 4px 0 #101010",fontWeight:900,fontSize:16,padding:"14px 12px",textTransform:"uppercase",letterSpacing:".01em"}} onClick={notifyPlayers}>🔔 Avvisa i giocatori dei nuovi turni</button>
 
       {loading ? <div style={{color:"var(--text3)",fontSize:13}}>⏳ Caricamento…</div> :
        slots.length === 0 ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center",padding:"20px 0"}}>Nessun turno questo mese — premi "Genera turni"</div> :
