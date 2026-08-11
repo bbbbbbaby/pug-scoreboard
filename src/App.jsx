@@ -1558,7 +1558,7 @@ body.light .pod-xp{color:#101010!important}
 .pod-1 .pod-av-wrap,.pod-2 .pod-av-wrap,.pod-3 .pod-av-wrap{width:auto!important;height:auto!important;background:transparent!important;overflow:visible!important;border:none!important;box-shadow:none!important}
 .pod-av-wrap img{border-radius:16px!important;background:transparent!important}
 /* Lab: immagine grande + reward tag ben leggibili */
-.act-img{width:100%;max-height:220px;object-fit:cover;border:3px solid #101010;border-radius:12px;margin-bottom:10px;display:block}
+.act-img{width:100%;height:auto;max-height:400px;object-fit:contain;border:3px solid #101010;border-radius:12px;margin-bottom:10px;display:block;background:#fff}
 .act-rewards .reward-tag{font-size:14px!important;font-weight:800!important;padding:8px 14px!important;border:2px solid #101010!important;border-radius:8px!important}
 /* Community: griglia di avatar grandi (tap per aprire) */
 .comm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
@@ -4374,11 +4374,11 @@ function AttendanceView({ sectionColors, setSectionColors }) {
       {/* Tab switcher */}
       <div style={{display:"flex",gap:6,marginBottom:12}}>
         <button className={`chip ${presTab==="daily"?"active":""}`} onClick={()=>setPresTab("daily")}
-          style={presTab==="daily"?{background:"rgba(163,207,254,.15)",color:"var(--neon-blue)",borderColor:"rgba(163,207,254,.4)"}:{}}>
+          style={presTab==="daily"?{background:"var(--surface3)",color:"var(--neon-blue)",borderColor:"rgba(163,207,254,.4)"}:{}}>
           📍 Giornaliere
         </button>
         <button className={`chip ${presTab==="lab"?"active":""}`} onClick={()=>setPresTab("lab")}
-          style={presTab==="lab"?{background:"rgba(253,239,38,.15)",color:"#FDEF26",borderColor:"rgba(253,239,38,.4)"}:{}}>
+          style={presTab==="lab"?{background:"var(--surface3)",color:"#FDEF26",borderColor:"rgba(253,239,38,.4)"}:{}}>
           ⚡ Lab {labAtts.length>0 && <span style={{background:"#FDEF26",color:"#111",borderRadius:99,fontSize:8,fontWeight:900,padding:"1px 5px",marginLeft:4}}>{labAtts.length}</span>}
         </button>
       </div>
@@ -5299,7 +5299,7 @@ function AvatarStickerPicker({ onSelect }) {
         {ANIMATED_STICKERS.map(s=>(
           <div key={s.id} onClick={()=>onSelect("sticker:" + s.id)}
             style={{cursor:"pointer",borderRadius:12,padding:6,border:"2px solid transparent",
-              background:"rgba(255,255,255,.04)",transition:"all .15s",
+              background:"var(--surface2)",transition:"all .15s",
               display:"flex",flexDirection:"column",alignItems:"center",gap:3}}
             onMouseOver={e=>{e.currentTarget.style.borderColor="var(--neon-blue)";e.currentTarget.style.background="rgba(163,207,254,.08)";}}
             onMouseOut={e=>{e.currentTarget.style.borderColor="transparent";e.currentTarget.style.background="rgba(255,255,255,.04)";}}>
@@ -6076,7 +6076,7 @@ function BachecaView({ profile }) {
 
   return (
     <div>
-      <div style={{fontSize:12,color:"var(--text3)",marginBottom:14}}>Post-it visibili solo ai giardinieri.</div>
+      <div style={{fontSize:12,fontWeight:600,color:"#101010",background:"rgba(255,255,255,.82)",padding:"8px 12px",borderRadius:10,marginBottom:14}}>Post-it visibili solo ai giardinieri.</div>
 
       {/* Form aggiunta */}
       <div className="card" style={{marginBottom:16}}>
@@ -8870,6 +8870,15 @@ function BigTopEducatorView({ profile }) {
     load();
   }
 
+  async function cancelMonth() {
+    const fut = slots.filter(s => !s.cancelled_at && s.date >= localToday());
+    if (!fut.length) { addToast("Nessun turno futuro da annullare", "error"); return; }
+    if (!confirm(`Annullare ${fut.length} turni futuri di questo mese? Gli iscritti verranno avvisati.`)) return;
+    setBusy(true);
+    for (const s of fut) { await sb.rpc("bigtop_cancel_slot", { p_slot_id: s.id }); }
+    addToast("Turni futuri annullati", "ok"); load(); setBusy(false);
+  }
+
   async function bookForPlayer(sid) {
     if (!bookFor) { addToast("Scegli un giocatore", "error"); return; }
     const { data: r, error } = await sb.rpc("bigtop_book", { p_player_id: bookFor, p_slot_ids: [sid] });
@@ -8884,10 +8893,10 @@ function BigTopEducatorView({ profile }) {
   return (
     <div>
       <div style={{textAlign:"center",marginBottom:14}}>
-        <div style={{fontFamily:"'Funnel Display',sans-serif",fontWeight:900,fontSize:22,textTransform:"uppercase",marginBottom:8}}>🎪 Big Top</div>
+        <div style={{display:"inline-block",fontFamily:"'Funnel Display',sans-serif",fontWeight:900,fontSize:22,textTransform:"uppercase",marginBottom:10,background:"#D41323",color:"#fff",padding:"6px 18px",border:"2.5px solid #101010",borderRadius:12,boxShadow:"3px 3px 0 #101010"}}>🎪 Big Top</div>
         <div style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>
           <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===1?c.y-1:c.y, m: c.m===1?12:c.m-1 }))}>‹</button>
-          <div style={{fontWeight:800,minWidth:130,textAlign:"center",textTransform:"capitalize"}}>{monthName}</div>
+          <div style={{fontWeight:800,minWidth:130,textAlign:"center",textTransform:"capitalize",background:"rgba(255,255,255,.85)",color:"#101010",padding:"4px 12px",borderRadius:8}}>{monthName}</div>
           <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===12?c.y+1:c.y, m: c.m===12?1:c.m+1 }))}>›</button>
         </div>
       </div>
@@ -8911,6 +8920,7 @@ function BigTopEducatorView({ profile }) {
       <button className="btn btn-yellow btn-sm" style={{width:"100%",marginBottom:14}} disabled={busy || genDays.length===0 || genTimes.length===0} onClick={generateMonth}>
         {busy ? "⏳…" : `➕ Genera turni di ${monthName}`}
       </button>
+      <button className="btn btn-ghost btn-sm" style={{width:"100%",marginBottom:14,color:"#D41323",border:"2px solid #D41323",fontWeight:800}} disabled={busy} onClick={cancelMonth}>🗑️ Annulla turni futuri del mese</button>
 
       {loading ? <div style={{color:"var(--text3)",fontSize:13}}>⏳ Caricamento…</div> :
        slots.length === 0 ? <div style={{color:"var(--text3)",fontSize:13,textAlign:"center",padding:"20px 0"}}>Nessun turno questo mese — premi "Genera turni"</div> :
@@ -9116,7 +9126,7 @@ function ExportView() {
 
   return (
     <div>
-      <div style={{fontSize:13,color:"var(--text3)",marginBottom:20}}>I file vengono scaricati in formato CSV, compatibile con Excel, Google Fogli e Numbers.</div>
+      <div style={{fontSize:13,fontWeight:600,color:"#101010",background:"rgba(255,255,255,.82)",padding:"8px 12px",borderRadius:10,marginBottom:20}}>I file vengono scaricati in formato CSV, compatibile con Excel, Google Fogli e Numbers.</div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {exports.map(ex=>(
           <div key={ex.id} style={{background:"var(--surface)",border:"1.5px solid var(--border2)",borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
@@ -9405,7 +9415,10 @@ function EducatorShell({ profile, onLogout }) {
         <div className="sidebar-logo">
           <div className="pd-logo-img logo-b" style={{width:130,height:42,margin:"0 auto"}}/>
           <div className="pd-logo-img logo-w" style={{width:130,height:42,margin:"0 auto"}}/>
-          <div className="sidebar-badge">🌱 Pannello Giardiniere</div>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,marginTop:6}}>
+            <div style={{width:76,height:76,borderRadius:16,overflow:"hidden",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010"}}><Avatar url={profile.avatar_url} emoji="🌱" size={76}/></div>
+            <div style={{fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:16,background:"#FDEF26",color:"#101010",padding:"5px 14px",border:"2px solid #101010",borderRadius:10,transform:"rotate(-1.5deg)",boxShadow:"2px 2px 0 #101010"}}>CIAO {profile.display_name}</div>
+          </div>
         </div>
         <nav className="nav">
           {EDUCATOR_GROUPS.map(group => {
@@ -9600,7 +9613,7 @@ function EducatorShell({ profile, onLogout }) {
           </div>
         )}
         <div className="content edu-content-wrap">
-          {!["classifica","presenze","attivita","badge","sfida"].includes(tab) && (
+          {!["classifica","presenze","attivita","badge","sfida","bigtop"].includes(tab) && (
             <SectionBanner sectionKey={tab} title={`${cur?.[1]||""} ${cur?.[2]||""}`} sectionColors={sectionColors}/>
           )}
           {tab === "dashboard"   && <DashboardView />}
