@@ -8916,7 +8916,7 @@ function BigTopEducatorView({ profile }) {
   return (
     <div>
       <div style={{textAlign:"center",marginBottom:14}}>
-        <div style={{display:"inline-block",fontFamily:"'Funnel Display',sans-serif",fontWeight:900,fontSize:22,textTransform:"uppercase",marginBottom:10,background:"#D41323",color:"#fff",padding:"6px 18px",border:"2.5px solid #101010",borderRadius:12,boxShadow:"3px 3px 0 #101010"}}>🎪 Big Top</div>
+        <div className="section-banner-title" style={{ "--pg": "#D41323", color: "#101010", marginBottom: 10 }}>🎪 Big Top</div>
         <div style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>
           <button className="btn btn-ghost btn-xs" onClick={()=>setCursor(c=>({ y: c.m===1?c.y-1:c.y, m: c.m===1?12:c.m-1 }))}>‹</button>
           <div style={{fontWeight:800,minWidth:130,textAlign:"center",textTransform:"capitalize",background:"rgba(255,255,255,.85)",color:"#101010",padding:"4px 12px",borderRadius:8}}>{monthName}</div>
