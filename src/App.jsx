@@ -8460,6 +8460,37 @@ function AdminView({ profile }) {
       });
       push("Realtime su profiles (istantaneita visibilita)", okRT, okRT ? "eventi ricevuti" : "nessun evento in 5s: abilita Realtime su 'profiles'");
     } catch (e) { push("Realtime su profiles", false, e.message || String(e)); }
+    // Notifiche: scrittura + realtime end-to-end (notifica di prova a se stessi, poi cancellata)
+    try {
+      let testId = null;
+      const okN = await new Promise((resolve) => {
+        let done = false;
+        const ch = sb.channel("diag-notif-" + Math.random().toString(36).slice(2))
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + ADMIN_ID }, () => { if (!done) { done = true; resolve(true); } })
+          .subscribe(async (status) => {
+            if (status === "SUBSCRIBED") {
+              const { data, error } = await sb.from("notifications").insert({ user_id: ADMIN_ID, type: "diag", title: "DIAG", body: "test" }).select("id").single();
+              if (error) { if (!done) { done = true; resolve("insert_fail:" + error.message); } } else { testId = data?.id; }
+            }
+          });
+        setTimeout(() => { if (!done) { done = true; resolve(false); } }, 5000);
+      }).finally(async () => {});
+      if (testId) { try { await sb.from("notifications").delete().eq("id", testId); } catch (_) {} }
+      if (okN === true) push("Notifiche: scrittura + realtime OK", true, "evento ricevuto (prova cancellata)");
+      else if (typeof okN === "string" && okN.startsWith("insert_fail")) push("Notifiche: scrittura fallita", false, okN.replace("insert_fail:", ""));
+      else push("Notifiche: realtime spento?", false, "scrittura ok ma nessun evento in 5s: abilita Realtime su 'notifications'");
+    } catch (e) { push("Notifiche (scrittura/realtime)", false, e.message || String(e)); }
+    // Messaggi: canale realtime raggiungibile
+    try {
+      const okM = await new Promise((resolve) => {
+        let done = false;
+        const ch = sb.channel("diag-msg-" + Math.random().toString(36).slice(2))
+          .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => {})
+          .subscribe((status) => { if (!done && status === "SUBSCRIBED") { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(true); } });
+        setTimeout(() => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(false); } }, 4000);
+      });
+      push("Canale realtime 'messages' raggiungibile", okM, okM ? "connesso (consegna al telefono va verificata sul dispositivo)" : "canale non connesso");
+    } catch (e) { push("Canale realtime 'messages'", false, e.message || String(e)); }
     setDiagRunning(false);
   }
 
