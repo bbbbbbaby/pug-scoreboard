@@ -7070,6 +7070,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   // Tema a 3 stati: "auto" (segue il sistema) · "light" · "dark".
   // Default al primo avvio: "auto".
   const [themeChoice, setThemeChoice] = useState(() => localStorage.getItem("pug_theme") || "auto");
+  const [soundOn, setSoundOn] = useState(() => (typeof localStorage!=="undefined" && localStorage.getItem("pug_sound")!=="off"));
   const [sysDark, setSysDark] = useState(() =>
     typeof window !== "undefined" && window.matchMedia
       ? window.matchMedia("(prefers-color-scheme: dark)").matches : true);
@@ -7477,6 +7478,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           {visConfig.squadre !== false && fullProfile?.squads?.name && (
              <div style={{background:'#111',color:'var(--giallo)',fontSize:10,fontWeight:900,borderRadius:'var(--radius-sm)',padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em',display:'inline-flex',alignItems:'center',gap:5}}><PugIcon nome="presenze" dim={11}/> {fullProfile.squads.name}</div>
           )}
+          <button onClick={()=>{ const next=!soundOn; setSoundOn(next); localStorage.setItem("pug_sound", next?"on":"off"); if(next) pugSound("coin"); }} title="Suoni" style={{background:'rgba(16,16,16,.9)',border:'1px solid rgba(255,255,255,.22)',borderRadius:'var(--r-s)',padding:'5px 9px',cursor:'pointer',fontSize:16}}>{soundOn?"🔊":"🔇"}</button>
           <button onClick={()=>setThemeChoice(c=>c==="auto"?"light":c==="light"?"dark":"auto")} style={{background:'rgba(16,16,16,.9)',border:'1px solid rgba(255,255,255,.22)',borderRadius:'var(--r-s)',padding:'5px 9px',cursor:'pointer',lineHeight:1,display:'flex',alignItems:'center',gap:5,color:'#fff'}} title={themeChoice==="auto"?"Tema: automatico":themeChoice==="light"?"Tema: chiaro":"Tema: scuro"}>
             {themeChoice==="auto"
               ? <PugIcon nome={sysDark?"luna":"sole"} dim={15} style={{opacity:.9}}/>
@@ -8449,14 +8451,19 @@ function AdminView({ profile }) {
       try { const { error } = await sb.from(table).select(cols).limit(1); if (error) throw new Error(error.message); push(label, true, "ok"); }
       catch (e) { push(label, false, e.message || String(e)); }
     };
-    await col("Colonna activities.image_data (migr. 020)", "activities", "image_data");
-    await col("Colonne activities.location + author_name (migr. 021)", "activities", "location,author_name");
-    await col("Colonna profiles.app_config", "profiles", "app_config");
-    try { const { error } = await sb.rpc("bigtop_generate_month", { p_year: 2000, p_month: 1, p_days: [], p_times: ["16:00-17:00"] }); if (error) throw new Error(error.message); push("RPC bigtop_generate_month + orari (migr. 024)", true, "esiste (test a vuoto)"); }
-    catch (e) { push("RPC bigtop_generate_month + orari (migr. 024)", false, e.message || String(e)); }
-    try { const { error } = await sb.rpc("bigtop_cancel_slot", { p_slot_id: "00000000-0000-0000-0000-000000000000" }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("RPC bigtop_cancel_slot esiste", true, "ok"); }
-    catch (e) { push("RPC bigtop_cancel_slot esiste", false, e.message || String(e)); }
-    for (const t of ["activities", "bigtop_slots", "profiles", "messages", "badges"]) { await col("Lettura tabella " + t, t, "id"); }
+    await col("Foto attività: si salvano? (migr. 020)", "activities", "image_data");
+    await col("Sfide: luogo e autore si salvano? (migr. 021)", "activities", "location,author_name");
+    await col("Impostazioni visibilità: si salvano?", "profiles", "app_config");
+    try { const { error } = await sb.rpc("bigtop_generate_month", { p_year: 2000, p_month: 1, p_days: [], p_times: ["16:00-17:00"] }); if (error) throw new Error(error.message); push("Big Top: generazione turni OK? (migr. 024)", true, "ok (prova a vuoto)"); }
+    catch (e) { push("Big Top: generazione turni OK? (migr. 024)", false, e.message || String(e)); }
+    try { const { error } = await sb.rpc("bigtop_cancel_slot", { p_slot_id: "00000000-0000-0000-0000-000000000000" }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("Big Top: annullo turni OK?", true, "ok"); }
+    catch (e) { push("Big Top: annullo turni OK?", false, e.message || String(e)); }
+    try { const { error } = await sb.rpc("verify_pin", { p_player_id: "00000000-0000-0000-0000-000000000000", p_pin: "0000" }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("Accesso giocatori (PIN): risponde?", true, "ok"); }
+    catch (e) { push("Accesso giocatori (PIN)", false, e.message || String(e)); }
+    try { const { error } = await sb.rpc("do_checkin", { p_player_id: "00000000-0000-0000-0000-000000000000", p_code: "DIAG_NO" }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("Check-in presenze: risponde?", true, "ok"); }
+    catch (e) { push("Check-in presenze", false, e.message || String(e)); }
+    const _tn = { activities:"Attività", bigtop_slots:"Turni Big Top", profiles:"Giocatori", messages:"Messaggi", badges:"Badge", bookings:"Prenotazioni" };
+    for (const t of ["activities","bigtop_slots","profiles","messages","badges","bookings"]) { await col("Accesso ai dati: " + (_tn[t]||t), t, "id"); }
     try {
       const { data: cur } = await sb.from("profiles").select("app_config").eq("id", ADMIN_ID).single();
       const okRT = await new Promise((resolve) => {
@@ -8466,7 +8473,7 @@ function AdminView({ profile }) {
           .subscribe(async (status) => { if (status === "SUBSCRIBED") { await sb.from("profiles").update({ app_config: cur?.app_config || {} }).eq("id", ADMIN_ID); } });
         setTimeout(() => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(false); } }, 5000);
       });
-      push("Realtime su profiles (istantaneita visibilita)", okRT, okRT ? "eventi ricevuti" : "nessun evento in 5s: abilita Realtime su 'profiles'");
+      push("Aggiornamenti istantanei (visibilità) attivi?", okRT, okRT ? "sì, in tempo reale" : "no: abilita Realtime su 'profiles'");
     } catch (e) { push("Realtime su profiles", false, e.message || String(e)); }
     // Notifiche: scrittura + realtime end-to-end (notifica di prova a se stessi, poi cancellata)
     try {
@@ -8484,7 +8491,7 @@ function AdminView({ profile }) {
         setTimeout(() => { if (!done) { done = true; resolve(false); } }, 5000);
       }).finally(async () => {});
       if (testId) { try { await sb.from("notifications").delete().eq("id", testId); } catch (_) {} }
-      if (okN === true) push("Notifiche: scrittura + realtime OK", true, "evento ricevuto (prova cancellata)");
+      if (okN === true) push("Notifiche in tempo reale: OK", true, "arrivate (prova cancellata)");
       else if (typeof okN === "string" && okN.startsWith("insert_fail")) push("Notifiche: scrittura fallita", false, okN.replace("insert_fail:", ""));
       else push("Notifiche: realtime spento?", false, "scrittura ok ma nessun evento in 5s: abilita Realtime su 'notifications'");
     } catch (e) { push("Notifiche (scrittura/realtime)", false, e.message || String(e)); }
@@ -8497,7 +8504,7 @@ function AdminView({ profile }) {
           .subscribe((status) => { if (!done && status === "SUBSCRIBED") { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(true); } });
         setTimeout(() => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(false); } }, 4000);
       });
-      push("Canale realtime 'messages' raggiungibile", okM, okM ? "connesso (consegna al telefono va verificata sul dispositivo)" : "canale non connesso");
+      push("Canale messaggi attivo?", okM, okM ? "sì (la consegna al telefono va provata sul dispositivo)" : "no: canale non connesso");
     } catch (e) { push("Canale realtime 'messages'", false, e.message || String(e)); }
     setDiagRunning(false);
   }
