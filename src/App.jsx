@@ -8993,6 +8993,22 @@ function BigTopEducatorView({ profile }) {
     load();
   }
 
+  async function markAllPresent(s) {
+    if (!confirm(`Segnare PRESENTI tutti i prenotati del turno ${s.date.split("-").reverse().join("/")} ${s.start_time.slice(0,5)}?`)) return;
+    const { data: qr, error: qe } = await sb.rpc("bigtop_generate_qr", { p_slot_id: s.id });
+    if (qe || qr?.error || !qr?.code) { addToast("❌ " + (qe?.message || qr?.error || "QR non generato"), "error"); return; }
+    const { data: bks } = await sb.from("bigtop_bookings").select("player_id,status").eq("slot_id", s.id);
+    const toMark = (bks || []).filter(b => b.status !== "cancelled" && b.status !== "checked_in");
+    if (!toMark.length) { addToast("Nessun prenotato da segnare presente", "ok"); return; }
+    let done = 0, fail = 0;
+    for (const b of toMark) {
+      const { data: r, error } = await sb.rpc("bigtop_checkin", { p_player_id: b.player_id, p_code: qr.code });
+      if (error || r?.error) fail++; else done++;
+    }
+    addToast(`\u2705 Presenti: ${done}${fail ? ` \u00b7 ${fail} non riusciti` : ""}`, done ? "ok" : "error");
+    load();
+  }
+
   async function cancelSlot(s) {
     if (!confirm(`Annullare il turno del ${s.date.split("-").reverse().join("/")} ${s.start_time.slice(0,5)}?\n\nGli iscritti riceveranno una notifica.`)) return;
     const { data: r, error } = await sb.rpc("bigtop_cancel_slot", { p_slot_id: s.id });
@@ -9085,6 +9101,7 @@ function BigTopEducatorView({ profile }) {
               {!dead && <button className="btn btn-ghost btn-xs" style={{color:"#FDEF26"}} onClick={()=>setEditSlot({...s})}>✏️</button>}
               <button className="btn btn-ghost btn-xs" onClick={()=>setExpanded(expanded===s.id?null:s.id)}>👥</button>
               {!dead && isPast(s) === false && s.date === localToday() && null}
+              {!dead && <button className="btn btn-ghost btn-xs" style={{color:"#339966"}} onClick={()=>markAllPresent(s)}>Presenti</button>}
               {!dead && s.date <= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#D41323"}} onClick={()=>markAbsents(s)}>Assenti</button>}
               {!dead && s.date >= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#D41323"}} onClick={()=>cancelSlot(s)}>🚫</button>}
             </div>
