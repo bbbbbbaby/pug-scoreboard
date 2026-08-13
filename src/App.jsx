@@ -1721,6 +1721,8 @@ body:not(.light){--text3:rgba(255,255,255,.78)}
 .pres-table td .pres-toggle{width:42px!important;height:42px!important;aspect-ratio:1!important;padding:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;box-sizing:border-box!important}
 /* #7 login: foglia ferma su mobile */
 @media(max-width:767px){@keyframes leafsway{0%,50%,100%{margin-left:0}}}
+/* #5 rispetta la riduzione movimento di sistema */
+@media (prefers-reduced-motion: reduce){ *,*::before,*::after{ animation-duration:.001s!important; animation-iteration-count:1!important; transition-duration:.001s!important; scroll-behavior:auto!important } }
 /* #5 night: bottoni filtro/ghost nelle barre filtro non translucidi */
 body:not(.light) .filter-bar .btn-ghost{background:var(--surface2)!important;border-color:var(--border)!important;color:var(--text)!important}
 body:not(.light) .pres-table td, body:not(.light) .pres-table th{background:var(--surface)!important}
@@ -3189,6 +3191,9 @@ function Login({ onLogin }) {
 
   async function loginPlayer() {
     if (!selected || pin.length !== 4) return;
+    const _lk = "pug_lock_" + selected.id;
+    const _lu = parseInt(localStorage.getItem(_lk) || "0", 10);
+    if (_lu > Date.now()) { setErr("Troppi tentativi. Riprova tra " + Math.ceil((_lu - Date.now())/60000) + " min o chiedi a un operatore."); setPin(""); return; }
     setLoadingPin(true); setErr("");
 
     // ① Login Auth vero: crea una sessione Supabase firmata (serve alle RLS).
@@ -3204,6 +3209,7 @@ function Login({ onLogin }) {
         .select("id,display_name,first_name,avatar_url,xp,coin,squad_id,role,current_streak,longest_streak,last_checkin_date,xp_goal,created_at,squads(name)")
         .eq("id", selected.id).single();
       const data = { ...(prof || { id: selected.id, display_name: selected.display_name }), _playerSession: true, _mustChangePin: pin === "1234" };
+      localStorage.removeItem("pug_att_"+selected.id); localStorage.removeItem("pug_lock_"+selected.id);
       localStorage.setItem("pug_player", JSON.stringify(data));
       onLogin(data);
       setTimeout(() => registerPush(data.id), 2000);
@@ -3216,7 +3222,8 @@ function Login({ onLogin }) {
     const { data: res, error } = await sb.rpc("verify_pin", { p_player_id: selected.id, p_pin: pin });
     if (error) { setErr("Errore di rete. Riprova."); setLoadingPin(false); return; }
     if (res?.error === "rate_limited") { setErr("Troppi tentativi errati. Riprova tra 10 minuti."); setPin(""); setLoadingPin(false); return; }
-    if (!res?.ok || !res?.profile) { setErr("PIN errato. Riprova."); setPin(""); setLoadingPin(false); return; }
+    if (!res?.ok || !res?.profile) { const _ak="pug_att_"+selected.id; const _at=parseInt(localStorage.getItem(_ak)||"0",10)+1; if(_at>=4){ localStorage.setItem("pug_lock_"+selected.id, String(Date.now()+300000)); localStorage.removeItem(_ak); setErr("Troppi tentativi. Bloccato 5 minuti (o chiedi a un operatore)."); } else { localStorage.setItem(_ak, String(_at)); setErr("PIN errato ("+_at+"/4). Riprova."); } setPin(""); setLoadingPin(false); return; }
+    localStorage.removeItem("pug_att_"+selected.id); localStorage.removeItem("pug_lock_"+selected.id);
     const data = { ...res.profile, _playerSession: true, _mustChangePin: res.must_change_pin === true };
     localStorage.setItem("pug_player", JSON.stringify(data));
     onLogin(data);
@@ -7283,6 +7290,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         setQrMsg(`🎉 LAB COMPLETATO "${res.name}"! Bonus ×→ +${res.bonus_xp} XP, +${res.bonus_coin} 🪙`);
         setQrCelebration({ xpGained: res.xp + (res.bonus_xp||0), playerName: fullProfile?.display_name||"", special: true });
       } else {
+        try { const AC=window.AudioContext||window.webkitAudioContext; if(AC){ const ctx=new AC(); const now=ctx.currentTime; [[988,0],[1319,0.09]].forEach(([f,t])=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.type="square"; o.frequency.value=f; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001,now+t); g.gain.exponentialRampToValueAtTime(0.16,now+t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,now+t+0.22); o.start(now+t); o.stop(now+t+0.24); }); setTimeout(()=>{try{ctx.close();}catch(_){}} ,700); } if(navigator.vibrate) navigator.vibrate([25,20,45]); } catch(_){}
         setQrMsg(`✅ Presenza "${res.name}" (${res.progress}/${res.total})! +${res.xp} XP +${res.coin} 🪙`);
         setQrCelebration({ xpGained: res.xp, playerName: fullProfile?.display_name||"" });
       }
@@ -9854,6 +9862,22 @@ function EducatorShell({ profile, onLogout }) {
 
 // ─── ROOT ─────────────────────────────────────────────────
 
+let _pugAC = null;
+function pugSound(type){
+  try{
+    if(typeof localStorage!=="undefined" && localStorage.getItem("pug_sound")==="off") return;
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    if(!_pugAC) _pugAC=new AC();
+    if(_pugAC.state==="suspended"){ _pugAC.resume(); }
+    const ctx=_pugAC, now=ctx.currentTime;
+    const beep=(f,t,dur,vol,wave)=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.type=wave||"square"; o.frequency.value=f; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001,now+t); g.gain.exponentialRampToValueAtTime(vol,now+t+0.006); g.gain.exponentialRampToValueAtTime(0.0001,now+t+dur); o.start(now+t); o.stop(now+t+dur+0.02); };
+    if(type==="tab"){ beep(520,0,0.07,0.045,"triangle"); beep(760,0.05,0.08,0.04,"triangle"); }
+    else if(type==="coin"){ beep(988,0,0.2,0.13,"square"); beep(1319,0.09,0.2,0.13,"square"); }
+    else if(type==="success"){ beep(523,0,0.09,0.06,"square"); beep(659,0.08,0.09,0.06,"square"); beep(784,0.16,0.14,0.06,"square"); }
+    else if(type==="error"){ beep(180,0,0.16,0.07,"sawtooth"); }
+    else { beep(600,0,0.055,0.03,"square"); }
+  }catch(_){}
+}
 export default function App() {
 
   const [profile, setProfile] = useState(null);
@@ -9866,6 +9890,11 @@ export default function App() {
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+  useEffect(() => {
+    const onClick = (e) => { const t = e.target; if (t && t.closest && t.closest("button, .btn, [role='button']")) pugSound("click"); };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
   }, []);
   const [sectionColors] = useState(DEFAULT_SECTION_COLORS);
 
