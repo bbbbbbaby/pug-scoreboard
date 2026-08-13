@@ -8430,6 +8430,39 @@ function AdminView({ profile }) {
   const [editEdu, setEditEdu] = useState(null);
   const [editAvatar, setEditAvatar] = useState(null); // {id, avatar_url}
 
+  const [diag, setDiag] = useState([]);
+  const [diagRunning, setDiagRunning] = useState(false);
+  async function runDiagnostics() {
+    const ADMIN_ID = "00000000-0000-0000-0000-000000000099";
+    setDiagRunning(true);
+    const res = [];
+    const push = (name, okv, detail) => { res.push({ name, ok: okv, detail: detail || "" }); setDiag([...res]); };
+    const col = async (label, table, cols) => {
+      try { const { error } = await sb.from(table).select(cols).limit(1); if (error) throw new Error(error.message); push(label, true, "ok"); }
+      catch (e) { push(label, false, e.message || String(e)); }
+    };
+    await col("Colonna activities.image_data (migr. 020)", "activities", "image_data");
+    await col("Colonne activities.location + author_name (migr. 021)", "activities", "location,author_name");
+    await col("Colonna profiles.app_config", "profiles", "app_config");
+    try { const { error } = await sb.rpc("bigtop_generate_month", { p_year: 2000, p_month: 1, p_days: [], p_times: ["16:00-17:00"] }); if (error) throw new Error(error.message); push("RPC bigtop_generate_month + orari (migr. 024)", true, "esiste (test a vuoto)"); }
+    catch (e) { push("RPC bigtop_generate_month + orari (migr. 024)", false, e.message || String(e)); }
+    try { const { error } = await sb.rpc("bigtop_cancel_slot", { p_slot_id: "00000000-0000-0000-0000-000000000000" }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("RPC bigtop_cancel_slot esiste", true, "ok"); }
+    catch (e) { push("RPC bigtop_cancel_slot esiste", false, e.message || String(e)); }
+    for (const t of ["activities", "bigtop_slots", "profiles", "messages", "badges"]) { await col("Lettura tabella " + t, t, "id"); }
+    try {
+      const { data: cur } = await sb.from("profiles").select("app_config").eq("id", ADMIN_ID).single();
+      const okRT = await new Promise((resolve) => {
+        let done = false;
+        const ch = sb.channel("diag-rt-" + Math.random().toString(36).slice(2))
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: "id=eq." + ADMIN_ID }, () => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(true); } })
+          .subscribe(async (status) => { if (status === "SUBSCRIBED") { await sb.from("profiles").update({ app_config: cur?.app_config || {} }).eq("id", ADMIN_ID); } });
+        setTimeout(() => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(false); } }, 5000);
+      });
+      push("Realtime su profiles (istantaneita visibilita)", okRT, okRT ? "eventi ricevuti" : "nessun evento in 5s: abilita Realtime su 'profiles'");
+    } catch (e) { push("Realtime su profiles", false, e.message || String(e)); }
+    setDiagRunning(false);
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     const { data } = await sb.from("profiles").select("id,display_name,avatar_url,xp,created_at").eq("role","educator").order("display_name");
@@ -8473,6 +8506,23 @@ function AdminView({ profile }) {
 
   return (
     <div>
+      <div className="card" style={{ marginBottom: 16, border: "3px solid #101010" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: diag.length ? 10 : 0 }}>
+          <div style={{ fontWeight: 900, fontSize: 15 }}>🔧 Diagnostica (solo admin)</div>
+          <button className="btn btn-sm" style={{ background: "#FDEF26", color: "#101010", border: "2.5px solid #101010", boxShadow: "3px 3px 0 #101010", fontWeight: 800 }} disabled={diagRunning} onClick={runDiagnostics}>{diagRunning ? "⏳ Test in corso…" : "▶️ Esegui test"}</button>
+        </div>
+        {diag.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {diag.map((d, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13 }}>
+                <span>{d.ok ? "✅" : "❌"}</span>
+                <div><div style={{ fontWeight: 700 }}>{d.name}</div>{d.detail && <div style={{ fontSize: 11, color: d.ok ? "var(--text3)" : "#D41323" }}>{d.detail}</div>}</div>
+              </div>
+            ))}
+            <div style={{ fontSize: 12, fontWeight: 800, marginTop: 6 }}>{diag.filter(d => d.ok).length}/{diag.length} test superati</div>
+          </div>
+        )}
+      </div>
       {resetTarget && (
         <div className="modal-bg" onClick={()=>setResetTarget(null)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
