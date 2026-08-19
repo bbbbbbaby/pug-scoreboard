@@ -6500,6 +6500,7 @@ function ProfileReactions({ targetId, myId }) {
   const REACTS = ["❤️","🔥","👏","🤩","💪"];
   const [counts, setCounts] = useState({});
   const [mine, setMine] = useState(null);
+  const [mineId, setMineId] = useState(null);
 
   useEffect(() => {
     sb.from("reactions").select("type").eq("target_player_id", targetId).is("badge_id", null)
@@ -6508,25 +6509,29 @@ function ProfileReactions({ targetId, myId }) {
         (data||[]).forEach(r => { c[r.type] = (c[r.type]||0)+1; });
         setCounts(c);
       });
-    sb.from("reactions").select("type").eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null).maybeSingle()
-      .then(({ data }) => { if (data) setMine(data.type); })
+    const _ts = new Date(); _ts.setHours(0,0,0,0);
+    sb.from("reactions").select("id,type").eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null).gte("created_at", _ts.toISOString()).order("created_at",{ascending:false}).limit(1).maybeSingle()
+      .then(({ data }) => { if (data) { setMine(data.type); setMineId(data.id); } else { setMine(null); setMineId(null); } })
       .catch(()=>{});
   }, [targetId, myId]);
 
   async function react(type) {
-    if (mine === type) {
-      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null);
+    // Cumulativa: max 1 reaction al giorno per giocatore; le reaction dei giorni precedenti restano.
+    if (mineId && mine === type) {
+      await sb.from("reactions").delete().eq("id", mineId);
       setCounts(p => ({...p, [type]: Math.max(0,(p[type]||1)-1)}));
-      setMine(null);
-    } else {
-      // Delete existing profile reaction first (NULL badge_id)
-      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", targetId).is("badge_id", null);
-      await sb.from("reactions").insert({ player_id:myId, target_player_id:targetId, badge_id:null, type });
+      setMine(null); setMineId(null);
+    } else if (mineId) {
+      await sb.from("reactions").update({ type }).eq("id", mineId);
       if (mine) setCounts(p => ({...p, [mine]: Math.max(0,(p[mine]||1)-1)}));
       setCounts(p => ({...p, [type]: (p[type]||0)+1}));
       setMine(type);
-      playPixel("msg");
-      if(navigator.vibrate) navigator.vibrate(30);
+      playPixel("msg"); if(navigator.vibrate) navigator.vibrate(30);
+    } else {
+      const { data } = await sb.from("reactions").insert({ player_id:myId, target_player_id:targetId, badge_id:null, type }).select("id").single();
+      setCounts(p => ({...p, [type]: (p[type]||0)+1}));
+      setMine(type); setMineId(data?.id || "x");
+      playPixel("msg"); if(navigator.vibrate) navigator.vibrate(30);
     }
   }
 
