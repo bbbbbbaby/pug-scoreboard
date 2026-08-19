@@ -7071,6 +7071,56 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   // Default al primo avvio: "auto".
   const [themeChoice, setThemeChoice] = useState(() => localStorage.getItem("pug_theme") || "auto");
   const [soundOn, setSoundOn] = useState(() => (typeof localStorage!=="undefined" && localStorage.getItem("pug_sound")!=="off"));
+  const [nextSlot, setNextSlot] = useState(null);
+  const [weekly, setWeekly] = useState(null);
+  const [creatureBars, setCreatureBars] = useState(null);
+  useEffect(() => {
+    if (!fullProfile?.id) return;
+    let alive = true;
+    (async () => {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7*86400000);
+      const weekAgoDate = weekAgo.toISOString().slice(0,10);
+      const weekAgoISO = weekAgo.toISOString();
+      const today = localToday();
+      try {
+        const { data: bks } = await sb.from("bigtop_bookings").select("status, bigtop_slots(date,start_time,end_time,cancelled_at)").eq("player_id", fullProfile.id);
+        const up = (bks||[])
+          .filter(x => x.bigtop_slots && !x.bigtop_slots.cancelled_at && x.status !== "cancelled" && x.bigtop_slots.date >= today)
+          .map(x => x.bigtop_slots)
+          .sort((a,b) => (a.date+a.start_time).localeCompare(b.date+b.start_time));
+        if (alive) setNextSlot(up[0] || null);
+      } catch(_) { if (alive) setNextSlot(null); }
+      try {
+        const [att, xph, pb] = await Promise.all([
+          sb.from("attendances").select("id").eq("player_id", fullProfile.id).gte("date", weekAgoDate).neq("status","none"),
+          sb.from("xp_history").select("xp_gained").eq("player_id", fullProfile.id).gte("created_at", weekAgoISO),
+          sb.from("player_badges").select("id").eq("player_id", fullProfile.id).gte("assigned_at", weekAgoISO),
+        ]);
+        const xpSum = (xph.data||[]).reduce((sm,r)=> sm + (r.xp_gained||0), 0);
+        if (alive) setWeekly({ presenze: (att.data||[]).length, xp: xpSum, badge: (pb.data||[]).length });
+      } catch(_) { if (alive) setWeekly(null); }
+      try {
+        const w14 = new Date(now.getTime() - 14*86400000).toISOString().slice(0,10);
+        const w21 = new Date(now.getTime() - 21*86400000).toISOString();
+        const daysAgo = (d) => Math.max(0, Math.floor((Date.now() - new Date(d).getTime())/86400000));
+        const [pres, lab, bt, rx] = await Promise.all([
+          sb.from("attendances").select("date").eq("player_id", fullProfile.id).gte("date", w14).neq("status","none"),
+          sb.from("bookings").select("created_at").eq("player_id", fullProfile.id).gte("created_at", w21),
+          sb.from("bigtop_bookings").select("created_at,status").eq("player_id", fullProfile.id).gte("created_at", w21),
+          sb.from("reactions").select("created_at").eq("target_player_id", fullProfile.id).is("badge_id", null).gte("created_at", w21),
+        ]);
+        const clampV = (v) => Math.max(5, Math.min(100, Math.round(v)));
+        let fel = 5; (pres.data||[]).forEach(r => { fel += 25 * Math.pow(0.93, daysAgo(r.date)); });
+        let soc = 5;
+        (lab.data||[]).forEach(r => { soc += 15 * Math.pow(0.92, daysAgo(r.created_at)); });
+        (bt.data||[]).filter(r => r.status !== "cancelled").forEach(r => { soc += 10 * Math.pow(0.92, daysAgo(r.created_at)); });
+        (rx.data||[]).forEach(r => { soc += 8 * Math.pow(0.92, daysAgo(r.created_at)); });
+        if (alive) setCreatureBars({ felicita: clampV(fel), socialita: clampV(soc) });
+      } catch(_) {}
+    })();
+    return () => { alive = false; };
+  }, [fullProfile?.id]);
   const [sysDark, setSysDark] = useState(() =>
     typeof window !== "undefined" && window.matchMedia
       ? window.matchMedia("(prefers-color-scheme: dark)").matches : true);
@@ -7539,8 +7589,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               <div className="pug-tape" style={{background:'#FDEF26',color:'#101010'}}>🌱 Come stai al Garden</div>
               {[
                 ['Energia', fullProfile.energia, '#FDEF26', '⚡'],
-                ['Socialità', fullProfile.socialita, '#A3CFFE', '👥'],
-                ['Felicità', fullProfile.felicita, '#FF6DEC', '❤️'],
+                ['Socialità', creatureBars?.socialita ?? fullProfile.socialita, '#A3CFFE', '👥'],
+                ['Felicità', creatureBars?.felicita ?? fullProfile.felicita, '#FF6DEC', '❤️'],
               ].map(([nome, val, col, ic]) => {
                 const pct = Math.max(0, Math.min(100, Math.round(Number(val ?? 100))));
                 return (
@@ -7554,6 +7604,22 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               })}
             </div>)}
 
+            {nextSlot && (
+              <div className="pd-card" style={{marginBottom:12}}>
+                <div style={{fontWeight:800,fontSize:13,marginBottom:4}}>🎪 Prossimo turno Big Top</div>
+                <div style={{fontWeight:900,fontSize:16}}>{nextSlot.date.split("-").reverse().join("/")} · {nextSlot.start_time.slice(0,5)}–{(nextSlot.end_time||"").slice(0,5)}</div>
+              </div>
+            )}
+            {weekly && (
+              <div className="pd-card" style={{marginBottom:12}}>
+                <div style={{fontWeight:800,fontSize:13,marginBottom:8}}>📅 Questa settimana</div>
+                <div style={{display:"flex",gap:8,textAlign:"center"}}>
+                  <div style={{flex:1}}><div style={{fontWeight:900,fontSize:20}}>{weekly.presenze}</div><div style={{fontSize:11,opacity:.7}}>presenze</div></div>
+                  <div style={{flex:1}}><div style={{fontWeight:900,fontSize:20}}>+{weekly.xp}</div><div style={{fontSize:11,opacity:.7}}>XP</div></div>
+                  <div style={{flex:1}}><div style={{fontWeight:900,fontSize:20}}>{weekly.badge}</div><div style={{fontSize:11,opacity:.7}}>badge</div></div>
+                </div>
+              </div>
+            )}
             {/* Profile card: nome editabile + XP */}
             <div className="pd-card">
               {/* Goal XP personale */}
@@ -8462,8 +8528,12 @@ function AdminView({ profile }) {
     catch (e) { push("Accesso giocatori (PIN)", false, e.message || String(e)); }
     try { const { error } = await sb.rpc("do_checkin", { p_player_id: "00000000-0000-0000-0000-000000000000", p_code: "DIAG_NO" }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("Check-in presenze: risponde?", true, "ok"); }
     catch (e) { push("Check-in presenze", false, e.message || String(e)); }
-    const _tn = { activities:"Attività", bigtop_slots:"Turni Big Top", profiles:"Giocatori", messages:"Messaggi", badges:"Badge", bookings:"Prenotazioni" };
-    for (const t of ["activities","bigtop_slots","profiles","messages","badges","bookings"]) { await col("Accesso ai dati: " + (_tn[t]||t), t, "id"); }
+    for (const [rpc, args, lbl] of [["bigtop_book",{p_player_id:"00000000-0000-0000-0000-000000000000",p_slot_ids:[]},"Big Top: prenotazione risponde?"],["bigtop_checkin",{p_player_id:"00000000-0000-0000-0000-000000000000",p_code:"DIAG_NO"},"Big Top: check-in risponde?"],["bigtop_generate_qr",{p_slot_id:"00000000-0000-0000-0000-000000000000"},"Big Top: QR risponde?"]]) {
+      try { const { error } = await sb.rpc(rpc, args); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push(lbl, true, "ok"); }
+      catch (e) { push(lbl, false, e.message || String(e)); }
+    }
+    const _tn = { activities:"Attività", bigtop_slots:"Turni Big Top", bigtop_bookings:"Prenotazioni Big Top", profiles:"Giocatori", messages:"Messaggi", badges:"Badge", player_badges:"Badge assegnati", bookings:"Prenotazioni Lab", attendances:"Presenze", xp_history:"Storico punti", squads:"Squadre", notifications:"Notifiche" };
+    for (const t of ["activities","bigtop_slots","bigtop_bookings","profiles","messages","badges","player_badges","bookings","attendances","xp_history","squads","notifications"]) { await col("Accesso ai dati: " + (_tn[t]||t), t, "id"); }
     try {
       const { data: cur } = await sb.from("profiles").select("app_config").eq("id", ADMIN_ID).single();
       const okRT = await new Promise((resolve) => {
@@ -9226,6 +9296,9 @@ function downloadCSV(rows, filename) {
 
 function ExportView() {
   const [loading, setLoading] = useState("");
+  const [dFrom, setDFrom] = useState("");
+  const [dTo, setDTo] = useState("");
+  const _range = () => (dFrom||dTo) ? `_${dFrom||"inizio"}_${dTo||"oggi"}` : "";
 
   async function exportPlayers() {
     setLoading("players");
@@ -9238,7 +9311,10 @@ function ExportView() {
 
   async function exportAttendances() {
     setLoading("att");
-    const { data: att } = await sb.from("attendances").select("date,check_type,status,xp_awarded,coin_awarded,qr_verified,activity_id,profiles(display_name)").order("date",{ascending:false}).limit(2000);
+    let _qa = sb.from("attendances").select("date,check_type,status,xp_awarded,coin_awarded,qr_verified,activity_id,profiles(display_name)").order("date",{ascending:false}).limit(5000);
+    if (dFrom) _qa = _qa.gte("date", dFrom);
+    if (dTo) _qa = _qa.lte("date", dTo);
+    const { data: att } = await _qa;
     const actIds = [...new Set((att||[]).map(a=>a.activity_id).filter(Boolean))];
     let actMap = {};
     if (actIds.length) {
@@ -9247,7 +9323,7 @@ function ExportView() {
     }
     const rows = [["Giocatore","Data","Tipo","Lab","Stato","XP","Coin","QR Verificato"]];
     (att||[]).forEach(a => rows.push([a.profiles?.display_name||"—", a.date, a.check_type==="lab"?"Lab":"Giornaliero", a.activity_id?actMap[a.activity_id]||"Lab":"—", a.status, a.xp_awarded||0, a.coin_awarded||0, a.qr_verified?"Sì":"No"]));
-    downloadCSV(rows, `pug_presenze_${localToday()}.csv`);
+    downloadCSV(rows, `pug_presenze${_range()}_${localToday()}.csv`);
     setLoading("");
   }
 
@@ -9268,10 +9344,13 @@ function ExportView() {
 
   async function exportHistory() {
     setLoading("hist");
-    const { data } = await sb.from("notifications").select("title,body,type,created_at,profiles(display_name)").order("created_at",{ascending:false}).limit(2000);
+    let _qh = sb.from("notifications").select("title,body,type,created_at,profiles(display_name)").order("created_at",{ascending:false}).limit(5000);
+    if (dFrom) _qh = _qh.gte("created_at", dFrom + "T00:00:00");
+    if (dTo) _qh = _qh.lte("created_at", dTo + "T23:59:59");
+    const { data } = await _qh;
     const rows = [["Giocatore","Azione","Dettaglio","Tipo","Data"]];
     (data||[]).filter(n=>n.profiles).forEach(n => rows.push([n.profiles?.display_name||"—", n.title, n.body||"", n.type, new Date(n.created_at).toLocaleDateString("it-IT")]));
-    downloadCSV(rows, `pug_storico_${localToday()}.csv`);
+    downloadCSV(rows, `pug_storico${_range()}_${localToday()}.csv`);
     setLoading("");
   }
 
@@ -9285,6 +9364,12 @@ function ExportView() {
   return (
     <div>
       <div style={{fontSize:13,fontWeight:600,color:"#101010",background:"rgba(255,255,255,.82)",padding:"8px 12px",borderRadius:10,marginBottom:20}}>I file vengono scaricati in formato CSV, compatibile con Excel, Google Fogli e Numbers.</div>
+      <div style={{display:"flex",gap:8,alignItems:"flex-end",marginBottom:12,flexWrap:"wrap"}}>
+        <div><label className="form-label" style={{fontSize:10,marginBottom:2}}>Dal</label><input type="date" className="form-input" value={dFrom} onChange={e=>setDFrom(e.target.value)} style={{width:150}}/></div>
+        <div><label className="form-label" style={{fontSize:10,marginBottom:2}}>Al</label><input type="date" className="form-input" value={dTo} onChange={e=>setDTo(e.target.value)} style={{width:150}}/></div>
+        {(dFrom||dTo) && <button className="btn btn-ghost btn-xs" onClick={()=>{setDFrom("");setDTo("");}}>Azzera</button>}
+      </div>
+      <div style={{fontSize:11,color:"var(--text3)",marginBottom:12}}>L\u2019intervallo di date si applica a <b>Presenze</b> e <b>Storico azioni</b> (gli altri esportano tutto).</div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {exports.map(ex=>(
           <div key={ex.id} style={{background:"var(--surface)",border:"1.5px solid var(--border2)",borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
@@ -9895,11 +9980,12 @@ function pugSound(type){
     if(_pugAC.state==="suspended"){ _pugAC.resume(); }
     const ctx=_pugAC, now=ctx.currentTime;
     const beep=(f,t,dur,vol,wave)=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.type=wave||"square"; o.frequency.value=f; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001,now+t); g.gain.exponentialRampToValueAtTime(vol,now+t+0.006); g.gain.exponentialRampToValueAtTime(0.0001,now+t+dur); o.start(now+t); o.stop(now+t+dur+0.02); };
-    if(type==="tab"){ beep(520,0,0.07,0.045,"triangle"); beep(760,0.05,0.08,0.04,"triangle"); }
-    else if(type==="coin"){ beep(988,0,0.2,0.13,"square"); beep(1319,0.09,0.2,0.13,"square"); }
-    else if(type==="success"){ beep(523,0,0.09,0.06,"square"); beep(659,0.08,0.09,0.06,"square"); beep(784,0.16,0.14,0.06,"square"); }
-    else if(type==="error"){ beep(180,0,0.16,0.07,"sawtooth"); }
-    else { beep(600,0,0.055,0.03,"square"); }
+    const slide=(f1,f2,t,dur,vol,wave)=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.type=wave||"square"; o.frequency.setValueAtTime(f1,now+t); o.frequency.exponentialRampToValueAtTime(f2,now+t+dur); o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001,now+t); g.gain.exponentialRampToValueAtTime(vol,now+t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,now+t+dur+0.03); o.start(now+t); o.stop(now+t+dur+0.06); };
+    if(type==="tab"){ slide(300,780,0,0.12,0.06,"triangle"); beep(880,0.12,0.08,0.05,"square"); }
+    else if(type==="coin"){ beep(988,0,0.09,0.14,"square"); beep(1319,0.08,0.26,0.14,"square"); }
+    else if(type==="success"){ beep(523,0,0.08,0.07,"square"); beep(659,0.08,0.08,0.07,"square"); beep(784,0.16,0.08,0.07,"square"); beep(1047,0.24,0.22,0.09,"square"); }
+    else if(type==="error"){ slide(420,110,0,0.3,0.09,"sawtooth"); }
+    else { slide(520,940,0,0.05,0.055,"square"); beep(1180,0.05,0.04,0.03,"square"); }
   }catch(_){}
 }
 export default function App() {
@@ -9916,7 +10002,7 @@ export default function App() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
   useEffect(() => {
-    const onClick = (e) => { const t = e.target; if (t && t.closest && t.closest("button, .btn, [role='button']")) pugSound("click"); };
+    const onClick = (e) => { const t = e.target; if (!t || !t.closest) return; if (t.closest(".nav-item")) pugSound("tab"); else if (t.closest("button, .btn, [role='button']")) pugSound("click"); };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
   }, []);
