@@ -1558,7 +1558,7 @@ body.light .pod-xp{color:#101010!important}
 .pod-1 .pod-av-wrap,.pod-2 .pod-av-wrap,.pod-3 .pod-av-wrap{width:auto!important;height:auto!important;background:transparent!important;overflow:visible!important;border:none!important;box-shadow:none!important}
 .pod-av-wrap img{border-radius:16px!important;background:transparent!important}
 /* Lab: immagine grande + reward tag ben leggibili */
-.act-img{width:100%;height:auto;max-height:400px;object-fit:contain;border:3px solid #101010;border-radius:12px;margin-bottom:10px;display:block;background:#fff}
+.act-img{width:auto;height:auto;max-width:100%;max-height:400px;object-fit:contain;border:3px solid #101010;border-radius:12px;margin:0 auto 10px;display:block}
 .act-rewards .reward-tag{font-size:14px!important;font-weight:800!important;padding:8px 14px!important;border:2px solid #101010!important;border-radius:8px!important}
 /* Community: griglia di avatar grandi (tap per aprire) */
 .comm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
