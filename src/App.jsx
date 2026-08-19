@@ -7595,14 +7595,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                     ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura"/>
                     : <span className="pug-pet" style={{width:112,fontSize:82,textAlign:'center',lineHeight:'112px'}}>{lv.emoji}</span>}
                   <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{cursor:'pointer'}}><span className="g"/></div>
-                  <button className="pug-food-btn" onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",right:8,bottom:8,width:46,height:46,borderRadius:12,border:"2.5px solid #101010",background:"#fff",boxShadow:"2px 2px 0 #101010",cursor:"pointer",fontSize:26,lineHeight:"1",padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{FOODS[selectedFood]?.emoji}</button>
+                  {visConfig.creatura !== false && <button className="pug-food-btn" onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",right:8,bottom:8,width:46,height:46,borderRadius:12,border:"2.5px solid #101010",background:"#fff",boxShadow:"2px 2px 0 #101010",cursor:"pointer",fontSize:26,lineHeight:"1",padding:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{FOODS[selectedFood]?.emoji}</button>}
                 </div>
+                {visConfig.creatura !== false && (<>
                 <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:8}}>
                   {FOODS.map((f,i)=>(
                     <button key={i} onClick={()=>setSelectedFood(i)} title={f.name} style={{width:13,height:13,borderRadius:"50%",border:"2px solid #101010",background:selectedFood===i?"#101010":"#fff",cursor:"pointer",padding:0}}/>
                   ))}
                 </div>
                 {feedMsg && <div style={{fontSize:11,color:"#D41323",fontWeight:800,textAlign:"center",marginTop:6}}>{feedMsg}</div>}
+                </>)}
                 {visConfig.squadre !== false && fullProfile.squads?.name && (
                   <div className="pug-squadtab" style={{background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',color:'#fff'}}>Squadra {fullProfile.squads.name}</div>
                 )}
