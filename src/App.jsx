@@ -7993,7 +7993,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         <div className="modal-bg" onClick={() => setSelectedBadge(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
-              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width:140,height:140,borderRadius:16,objectFit:"contain", border: "3px solid var(--rosa)", margin: "0 auto 10px", display: "block" }} alt="" /> : <div style={{ fontSize: 56, marginBottom: 10 }}>🎖️</div>}
+              {selectedBadge.badges?.image_url ? <img src={selectedBadge.badges.image_url} style={{ width:"min(300px,74vw)", height:"auto", maxHeight:"56vh", borderRadius:16, objectFit:"contain", border: "3px solid var(--rosa)", margin: "0 auto 12px", display: "block" }} alt="" /> : <div style={{ fontSize: 90, marginBottom: 10 }}>🎖️</div>}
               <div style={{ fontFamily: "'Funnel Display'", fontSize: 24, fontWeight: 900, textTransform: "uppercase", color: "var(--text)" }}>{selectedBadge.badges?.name}</div>
               <div style={{ fontSize: 13, color: "var(--azzurro)", fontWeight: 700, marginTop: 4 }}>+{selectedBadge.xp_awarded} XP · 🪙 +{selectedBadge.coin_awarded}</div>
             </div>
