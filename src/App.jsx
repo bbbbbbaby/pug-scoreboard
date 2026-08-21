@@ -6374,7 +6374,7 @@ function EducatorSocialView({ profile }) {
   const [view, setView] = useState("community");
   const [players, setPlayers] = useState([]);
   useEffect(() => {
-    sb.from("profiles").select("id,display_name,avatar_url,xp,squad_id,squads(name)")
+    sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,squad_id,squads(name)")
       .eq("role","player").order("xp",{ascending:false})
       .then(({data})=>setPlayers(data||[]));
   }, []);
@@ -6698,6 +6698,7 @@ function CommunityTab({ players, myId, myProfile }) {
                       : <span className="comm-av-emoji">{lv.emoji}</span>}
                   </div>
                   <div className="comm-nm">{p.display_name}</div>
+                  {p.first_name && <div style={{fontSize:11,opacity:.7,fontWeight:600,marginTop:1}}>{p.first_name}</div>}
                   <div className="comm-xp">⭐ {p.xp||0} XP · Lv {lv.name}</div>
                 </div>
               );
@@ -7615,10 +7616,18 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 )}
               </div>
               <div className="pug-name">{fullProfile.display_name}</div>
-              <div className="pug-realname" style={{cursor:'pointer'}}
-                onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>
-                {fullProfile.first_name || 'scrivi il tuo nome'} <PugIcon nome="matita" dim={14} style={{opacity:.6}}/>
-              </div>
+              {editingFirstName ? (
+                <div style={{display:'flex',gap:6,alignItems:'center',marginTop:4,marginBottom:4,flexWrap:'wrap'}}>
+                  <input className="form-input" autoFocus value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} onKeyDown={e=>{if(e.key==='Enter'&&newFirstName.trim())saveFirstName();}} placeholder="Il tuo nome…" maxLength={30} style={{flex:'1 1 120px',minWidth:0}}/>
+                  <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setEditingFirstName(false)}>✕</button>
+                </div>
+              ) : (
+                <div className="pug-realname" style={{cursor:'pointer'}}
+                  onClick={()=>{setNewFirstName(fullProfile.first_name||'');setEditingFirstName(true);}}>
+                  {fullProfile.first_name || 'scrivi il tuo nome'} <span style={{opacity:.7,fontSize:12}}>✏️</span>
+                </div>
+              )}
             </div>
 
             {/* Barre bisogni creatura (nascondibili da Vista) */}
@@ -7676,13 +7685,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 </div>
               ) : null;
             })()}
-            {editingFirstName ? (
-                <div style={{display:'flex',gap:8,marginBottom:8}}>
-                  <input className="form-input" value={newFirstName} onChange={e=>setNewFirstName(e.target.value.slice(0,30))} placeholder="Il tuo nome…" style={{flex:1}} maxLength={30} autoFocus/>
-                  <button className="btn btn-yellow btn-sm" onClick={saveFirstName} disabled={!newFirstName.trim()}>Salva</button>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>setEditingFirstName(false)}>✕</button>
-                </div>
-              ) : null}
+
               <AnimatedLevelBar xp={fullProfile.xp||0} lv={lv} />
             </div>
 
@@ -8569,6 +8572,12 @@ function AdminView({ profile }) {
       try { const { error } = await sb.rpc(rpc, args); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push(lbl, true, "ok"); }
       catch (e) { push(lbl, false, e.message || String(e)); }
     }
+    try { const { error } = await sb.from("profiles").select("energia,energia_at,meals_count,meals_date").limit(1); if (error) throw new Error(error.message); push("Cibo creatura: colonne pronte? (migr. 025)", true, "ok"); }
+    catch (e) { push("Cibo creatura: colonne (migr. 025)", false, e.message || String(e)); }
+    try { const { error } = await sb.rpc("pug_feed", { p_player_id: "00000000-0000-0000-0000-000000000000", p_food: "diag" }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("Cibo creatura: dai da mangiare risponde?", true, "ok"); }
+    catch (e) { push("Cibo creatura: dai da mangiare", false, e.message || String(e)); }
+    try { const { error } = await sb.from("reactions").select("id,type,created_at,badge_id,target_player_id,player_id").limit(1); if (error) throw new Error(error.message); push("Reaction: accesso e campi ok?", true, "ok"); }
+    catch (e) { push("Reaction: accesso", false, e.message || String(e)); }
     const _tn = { activities:"Attività", bigtop_slots:"Turni Big Top", bigtop_bookings:"Prenotazioni Big Top", profiles:"Giocatori", messages:"Messaggi", badges:"Badge", player_badges:"Badge assegnati", bookings:"Prenotazioni Lab", attendances:"Presenze", xp_history:"Storico punti", squads:"Squadre", notifications:"Notifiche" };
     for (const t of ["activities","bigtop_slots","bigtop_bookings","profiles","messages","badges","player_badges","bookings","attendances","xp_history","squads","notifications"]) { await col("Accesso ai dati: " + (_tn[t]||t), t, "id"); }
     try {
