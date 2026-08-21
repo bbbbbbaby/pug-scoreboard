@@ -7599,10 +7599,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="pug-room">
                   <div className="pug-petshadow"/>
                   {fullProfile.avatar_url
-                    ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura"/>
-                    : <span className="pug-pet" style={{width:112,fontSize:82,textAlign:'center',lineHeight:'112px'}}>{lv.emoji}</span>}
+                    ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura" style={{width:160,height:160,objectFit:"contain",transform:"translate(-16%,-10%)"}}/>
+                    : <span className="pug-pet" style={{width:160,fontSize:118,textAlign:'center',lineHeight:'160px',transform:"translate(-16%,-10%)",display:"inline-block"}}>{lv.emoji}</span>}
                   <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{cursor:'pointer'}}><span className="g"/></div>
-                  {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",left:"50%",bottom:10,transform:"translateX(-50%)",background:"transparent",border:"none",padding:0,cursor:"pointer",lineHeight:0,transition:"transform .1s"}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:58,height:58,objectFit:"contain",filter:"drop-shadow(0 3px 4px rgba(0,0,0,.45))"}}/> : <span style={{fontSize:30}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
+                  {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",left:"58%",bottom:18,transform:"translateX(-50%)",background:"transparent",border:"none",padding:0,cursor:"pointer",lineHeight:0,transition:"transform .1s",zIndex:5}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:66,height:66,objectFit:"contain",filter:"drop-shadow(0 3px 4px rgba(0,0,0,.45))"}}/> : <span style={{fontSize:30}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
                 </div>
                 {visConfig.creatura !== false && (<>
                 <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:8}}>
