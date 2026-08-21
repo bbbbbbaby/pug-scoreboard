@@ -7599,10 +7599,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                 <div className="pug-room">
                   <div className="pug-petshadow" style={{display:"none"}}/>
                   {fullProfile.avatar_url
-                    ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura" style={{position:"absolute",left:"20%",top:"40%",width:150,height:150,objectFit:"contain",zIndex:3}}/>
-                    : <span className="pug-pet" style={{position:"absolute",left:"20%",top:"40%",width:150,fontSize:110,textAlign:'center',lineHeight:'150px',display:"inline-block",zIndex:3}}>{lv.emoji}</span>}
-                  <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{cursor:'pointer'}}><span className="g"/></div>
-                  {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",left:"49%",top:"56%",transform:"translate(-50%,-50%)",background:"transparent",border:"none",padding:0,cursor:"pointer",lineHeight:0,transition:"transform .1s",zIndex:5}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:44,height:44,objectFit:"contain",filter:"drop-shadow(0 3px 4px rgba(0,0,0,.4))"}}/> : <span style={{fontSize:30}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
+                    ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura" style={{position:"absolute",left:"27%",top:"42%",width:150,height:150,objectFit:"contain",zIndex:3}}/>
+                    : <span className="pug-pet" style={{position:"absolute",left:"27%",top:"42%",width:150,fontSize:110,textAlign:'center',lineHeight:'150px',display:"inline-block",zIndex:3}}>{lv.emoji}</span>}
+                  <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{position:"absolute",left:"8.5%",top:"15%",width:"10%",aspectRatio:"1",borderRadius:"50%",cursor:"pointer",zIndex:4}}><span className="g"/></div>
+                  {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",left:"49%",top:"56%",transform:"translate(-50%,-50%)",background:"transparent",border:"none",padding:0,cursor:"pointer",lineHeight:0,transition:"transform .1s",zIndex:5}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:46,height:46,objectFit:"contain",transform:"perspective(240px) rotateX(24deg)",filter:"drop-shadow(0 5px 3px rgba(0,0,0,.35))"}}/> : <span style={{fontSize:30}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
                 </div>
                 {visConfig.creatura !== false && (<>
                 <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:8}}>
@@ -7610,7 +7610,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                     <button key={i} onClick={()=>setSelectedFood(i)} title={f.name} style={{width:13,height:13,borderRadius:"50%",border:"2px solid #101010",background:selectedFood===i?"#101010":"#fff",cursor:"pointer",padding:0}}/>
                   ))}
                 </div>
-                {feedMsg && <div style={{fontSize:11,color:"#D41323",fontWeight:800,textAlign:"center",marginTop:6}}>{feedMsg}</div>}
+                {feedMsg && <div style={{background: feedMsg.includes("Sazio")?"#339966":"#D41323", color:"#fff", fontWeight:900, fontSize:15, padding:"10px 16px", borderRadius:12, textAlign:"center", marginTop:10, border:"2.5px solid #101010", boxShadow:"3px 3px 0 #101010"}}>{feedMsg}</div>}
                 </>)}
                 {visConfig.squadre !== false && fullProfile.squads?.name && (
                   <div className="pug-squadtab" style={{background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',color:'#fff'}}>Squadra {fullProfile.squads.name}</div>
