@@ -7597,12 +7597,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               {/* Stanza tamagocification — spogliata: solo la porta rimanda al Social */}
               <div className="pug-roomzone">
                 <div className="pug-room">
-                  <div className="pug-petshadow"/>
+                  <div className="pug-petshadow" style={{display:"none"}}/>
                   {fullProfile.avatar_url
-                    ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura" style={{width:160,height:160,objectFit:"contain",transform:"translate(-40%,-12%)"}}/>
-                    : <span className="pug-pet" style={{width:160,fontSize:118,textAlign:'center',lineHeight:'160px',transform:"translate(-40%,-12%)",display:"inline-block"}}>{lv.emoji}</span>}
+                    ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura" style={{position:"absolute",left:"20%",top:"40%",width:150,height:150,objectFit:"contain",zIndex:3}}/>
+                    : <span className="pug-pet" style={{position:"absolute",left:"20%",top:"40%",width:150,fontSize:110,textAlign:'center',lineHeight:'150px',display:"inline-block",zIndex:3}}>{lv.emoji}</span>}
                   <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{cursor:'pointer'}}><span className="g"/></div>
-                  {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",left:"77%",bottom:"43%",transform:"translateX(-50%)",background:"transparent",border:"none",padding:0,cursor:"pointer",lineHeight:0,transition:"transform .1s",zIndex:5}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:50,height:50,objectFit:"contain",filter:"drop-shadow(0 3px 4px rgba(0,0,0,.45))"}}/> : <span style={{fontSize:30}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
+                  {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",left:"49%",top:"56%",transform:"translate(-50%,-50%)",background:"transparent",border:"none",padding:0,cursor:"pointer",lineHeight:0,transition:"transform .1s",zIndex:5}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:44,height:44,objectFit:"contain",filter:"drop-shadow(0 3px 4px rgba(0,0,0,.4))"}}/> : <span style={{fontSize:30}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
                 </div>
                 {visConfig.creatura !== false && (<>
                 <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:8}}>
