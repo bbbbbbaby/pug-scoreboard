@@ -6496,7 +6496,7 @@ function MsgReactions({ msgId, myId }) {
 }
 
 // ─── PROFILE REACTIONS ───────────────────────────────────
-function ProfileReactions({ targetId, myId }) {
+function ProfileReactions({ targetId, myId, myName }) {
   const REACTS = ["❤️","🔥","👏","🤩","💪"];
   const [counts, setCounts] = useState({});
   const [mine, setMine] = useState(null);
@@ -6529,6 +6529,7 @@ function ProfileReactions({ targetId, myId }) {
       playPixel("msg"); if(navigator.vibrate) navigator.vibrate(30);
     } else {
       const { data } = await sb.from("reactions").insert({ player_id:myId, target_player_id:targetId, badge_id:null, type }).select("id").single();
+      try { await sb.from("notifications").insert({ user_id: targetId, type:"reaction", title:"💥 Nuova reaction!", body:(myName||"Un giocatore")+" ti ha lasciato "+type }); } catch(_){}
       setCounts(p => ({...p, [type]: (p[type]||0)+1}));
       setMine(type); setMineId(data?.id || "x");
       playPixel("msg"); if(navigator.vibrate) navigator.vibrate(30);
@@ -6632,7 +6633,7 @@ function CommunityTab({ players, myId, myProfile }) {
             </div>
           )}
           {/* Profile reactions */}
-          <ProfileReactions targetId={selected.id} myId={myId}/>
+          <ProfileReactions targetId={selected.id} myId={myId} myName={myProfile?.display_name}/>
         </div>
 
         {loadingProfile ? <div className="loading">⏳</div> : (
@@ -7080,6 +7081,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [nextSlot, setNextSlot] = useState(null);
   const [weekly, setWeekly] = useState(null);
   const [creatureBars, setCreatureBars] = useState(null);
+  const [visitors, setVisitors] = useState([]);
+  const [reactionsReceived, setReactionsReceived] = useState(0);
   const [selectedFood, setSelectedFood] = useState(0);
   const [feeding, setFeeding] = useState(false);
   const [feedMsg, setFeedMsg] = useState("");
@@ -7147,6 +7150,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         let ene = 100;
         try { const { data: me } = await sb.from("profiles").select("energia,energia_at").eq("id", fullProfile.id).single(); if (me?.energia != null) { ene = me.energia_at ? Math.max(5, Math.round(me.energia - 15 * ((Date.now()-new Date(me.energia_at).getTime())/86400000))) : me.energia; } } catch(_) {}
         if (alive) setCreatureBars({ felicita: clampV(fel), socialita: clampV(soc), energia: ene });
+      } catch(_) {}
+      try {
+        const { data: rx } = await sb.from("reactions").select("player_id,type,created_at").eq("target_player_id", fullProfile.id).is("badge_id", null).order("created_at",{ascending:false}).limit(50);
+        const rxs = rx||[];
+        const giverIds = [...new Set(rxs.map(r=>r.player_id))].slice(0,10);
+        let gmap = {};
+        if (giverIds.length) { const { data: gs } = await sb.from("profiles").select("id,display_name,avatar_url").in("id", giverIds); gmap = Object.fromEntries((gs||[]).map(g=>[g.id,g])); }
+        const vis = []; const seen = new Set();
+        for (const r of rxs) { const g = gmap[r.player_id]; if (g && !seen.has(g.id)) { seen.add(g.id); vis.push({ ...g, type:r.type }); } if (vis.length>=6) break; }
+        if (alive) { setReactionsReceived(rxs.length); setVisitors(vis); }
       } catch(_) {}
     })();
     return () => { alive = false; };
@@ -7603,6 +7616,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                     : <span className="pug-pet" style={{position:"absolute",left:"27%",top:"42%",width:150,fontSize:110,textAlign:'center',lineHeight:'150px',display:"inline-block",zIndex:3}}>{lv.emoji}</span>}
                   <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{position:"absolute",left:"8.5%",top:"15%",width:"10%",aspectRatio:"1",borderRadius:"50%",cursor:"pointer",zIndex:4}}><span className="g"/></div>
                   {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",left:"49%",top:"56%",transform:"translate(-50%,-50%)",background:"transparent",border:"none",padding:0,cursor:"pointer",lineHeight:0,transition:"transform .1s",zIndex:5}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:46,height:46,objectFit:"contain",transform:"perspective(240px) rotateX(24deg)",filter:"drop-shadow(0 5px 3px rgba(0,0,0,.35))"}}/> : <span style={{fontSize:30}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
+                  {visitors[0] && (visitors[0].avatar_url
+                    ? <img className="visitor" src={visitors[0].avatar_url} alt="" title={"Passato a trovarti: "+(visitors[0].display_name||"")}/>
+                    : <span className="visitor" title={"Passato a trovarti: "+(visitors[0].display_name||"")} style={{fontSize:38,textAlign:"center"}}>🙂</span>)}
                 </div>
                 {visConfig.creatura !== false && (<>
                 <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:8}}>
@@ -7616,6 +7632,18 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   <div className="pug-squadtab" style={{background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',color:'#fff'}}>Squadra {fullProfile.squads.name}</div>
                 )}
               </div>
+              {reactionsReceived > 0 && (
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,margin:"8px 0",flexWrap:"wrap"}}>
+                  <span style={{fontWeight:800,fontSize:13}}>💥 {reactionsReceived} reaction · passati a trovarti:</span>
+                  <div style={{display:"flex"}}>
+                    {visitors.slice(0,5).map((v,i)=>(
+                      v.avatar_url
+                        ? <img key={i} src={v.avatar_url} alt="" title={v.display_name} style={{width:26,height:26,borderRadius:"50%",border:"2px solid #101010",marginLeft:i?-8:0,objectFit:"cover"}}/>
+                        : <span key={i} title={v.display_name} style={{width:26,height:26,borderRadius:"50%",border:"2px solid #101010",marginLeft:i?-8:0,background:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🙂</span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="pug-name">{fullProfile.display_name}</div>
               {editingFirstName ? (
                 <div style={{display:'flex',gap:6,alignItems:'center',marginTop:4,marginBottom:4,flexWrap:'wrap'}}>
