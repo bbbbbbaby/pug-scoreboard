@@ -7133,10 +7133,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   async function feedPet() {
     if (feeding) return;
     setFeeding(true);
-    setPopKey(k => k + 1); setFeedAnim(true); setBurp(true);
+    setPopKey(k => k + 1); setFeedAnim(true); setBurp(false);
     pugSound("coin"); if (navigator.vibrate) navigator.vibrate(35);
-    setTimeout(() => setFeedAnim(false), 1200);
-    setTimeout(() => setBurp(false), 2600);
+    setTimeout(() => setFeedAnim(false), 1150);
+    setTimeout(() => setBurp(true), 1250);
+    setTimeout(() => setBurp(false), 3750);
     const { data: r, error } = await sb.rpc("pug_feed", { p_player_id: fullProfile.id, p_food: FOODS[selectedFood]?.name || null });
     setFeeding(false);
     if (!error && r?.ok) {
