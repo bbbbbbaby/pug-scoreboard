@@ -6496,6 +6496,38 @@ function MsgReactions({ msgId, myId }) {
 }
 
 // ─── PROFILE REACTIONS ───────────────────────────────────
+function OwnReactions({ myId }) {
+  const [count, setCount] = useState(0);
+  const [byType, setByType] = useState({});
+  const [vis, setVis] = useState([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: rx } = await sb.from("reactions").select("player_id,type,created_at").eq("target_player_id", myId).is("badge_id", null).order("created_at",{ascending:false}).limit(100);
+        const rxs = rx||[];
+        setCount(rxs.length);
+        const bt = {}; rxs.forEach(r=>{bt[r.type]=(bt[r.type]||0)+1;}); setByType(bt);
+        const ids=[...new Set(rxs.map(r=>r.player_id))].slice(0,12);
+        if (ids.length){ const { data: gs } = await sb.from("profiles").select("id,display_name,avatar_url").in("id", ids); const gm=Object.fromEntries((gs||[]).map(g=>[g.id,g])); const seen=new Set(); const v=[]; for(const r of rxs){const g=gm[r.player_id]; if(g&&!seen.has(g.id)){seen.add(g.id);v.push(g);} if(v.length>=12)break;} setVis(v); }
+      } catch(_){}
+    })();
+  }, [myId]);
+  return (
+    <div style={{textAlign:"center"}}>
+      <div style={{fontWeight:900,fontSize:18,marginBottom:6}}>💥 {count} reaction ricevute</div>
+      <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",marginBottom:12}}>
+        {Object.entries(byType).map(([t,n])=>(<span key={t} style={{fontWeight:700,fontSize:15}}>{t} {n}</span>))}
+      </div>
+      <div style={{fontSize:13,fontWeight:800,marginBottom:8}}>👋 Passati a trovarti</div>
+      <div style={{display:"flex",justifyContent:"center",flexWrap:"wrap"}}>
+        {vis.length ? vis.map((v,i)=>(v.avatar_url
+          ? <img key={i} src={v.avatar_url} alt="" title={v.display_name} style={{width:36,height:36,borderRadius:"50%",border:"2px solid #101010",marginLeft:i?-8:0,objectFit:"cover"}}/>
+          : <span key={i} title={v.display_name} style={{width:36,height:36,borderRadius:"50%",border:"2px solid #101010",marginLeft:i?-8:0,background:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>🙂</span>
+        )) : <span style={{fontSize:12,opacity:.6}}>Ancora nessuna visita</span>}
+      </div>
+    </div>
+  );
+}
 function ProfileReactions({ targetId, myId, myName }) {
   const REACTS = ["❤️","🔥","👏","🤩","💪"];
   const [counts, setCounts] = useState({});
@@ -6572,7 +6604,7 @@ function CommunityTab({ players, myId, myProfile }) {
   const REACT_TYPES = ["❤️","🔥","👏","😮","⭐"];
 
   const others = players
-    .filter(p=>p.id!==myId && (p.xp||0)>=0)
+    .filter(p=>(p.xp||0)>=0)
     .filter(p=>!search || p.display_name.toLowerCase().includes(search.toLowerCase()))
     .sort((a,b)=>(b.xp||0)-(a.xp||0));
 
@@ -6633,7 +6665,7 @@ function CommunityTab({ players, myId, myProfile }) {
             </div>
           )}
           {/* Profile reactions */}
-          <ProfileReactions targetId={selected.id} myId={myId} myName={myProfile?.display_name}/>
+          {selected.id === myId ? <OwnReactions myId={myId}/> : <ProfileReactions targetId={selected.id} myId={myId} myName={myProfile?.display_name}/>}
         </div>
 
         {loadingProfile ? <div className="loading">⏳</div> : (
@@ -7617,8 +7649,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{position:"absolute",left:"8.5%",top:"15%",width:"10%",aspectRatio:"1",borderRadius:"50%",cursor:"pointer",zIndex:4}}><span className="g"/></div>
                   {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",left:"49%",top:"56%",transform:"translate(-50%,-50%)",background:"transparent",border:"none",padding:0,cursor:"pointer",lineHeight:0,transition:"transform .1s",zIndex:5}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:46,height:46,objectFit:"contain",transform:"perspective(240px) rotateX(24deg)",filter:"drop-shadow(0 5px 3px rgba(0,0,0,.35))"}}/> : <span style={{fontSize:30}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
                   {visitors[0] && (visitors[0].avatar_url
-                    ? <img className="visitor" src={visitors[0].avatar_url} alt="" title={"Passato a trovarti: "+(visitors[0].display_name||"")}/>
-                    : <span className="visitor" title={"Passato a trovarti: "+(visitors[0].display_name||"")} style={{fontSize:38,textAlign:"center"}}>🙂</span>)}
+                    ? <img className="visitor" src={visitors[0].avatar_url} alt="" title={"Passato a trovarti: "+(visitors[0].display_name||"")} style={{position:"absolute",right:"6%",bottom:"14%",width:88,height:88,objectFit:"contain",zIndex:2}}/>
+                    : <span className="visitor" title={"Passato a trovarti: "+(visitors[0].display_name||"")} style={{position:"absolute",right:"6%",bottom:"14%",width:88,fontSize:58,textAlign:"center",zIndex:2}}>🙂</span>)}
                 </div>
                 {visConfig.creatura !== false && (<>
                 <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:8}}>
@@ -7632,18 +7664,6 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                   <div className="pug-squadtab" style={{background:SQUAD_STYLE[fullProfile.squads.name]?.bg||'#339966',color:'#fff'}}>Squadra {fullProfile.squads.name}</div>
                 )}
               </div>
-              {reactionsReceived > 0 && (
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,margin:"8px 0",flexWrap:"wrap"}}>
-                  <span style={{fontWeight:800,fontSize:13}}>💥 {reactionsReceived} reaction · passati a trovarti:</span>
-                  <div style={{display:"flex"}}>
-                    {visitors.slice(0,5).map((v,i)=>(
-                      v.avatar_url
-                        ? <img key={i} src={v.avatar_url} alt="" title={v.display_name} style={{width:26,height:26,borderRadius:"50%",border:"2px solid #101010",marginLeft:i?-8:0,objectFit:"cover"}}/>
-                        : <span key={i} title={v.display_name} style={{width:26,height:26,borderRadius:"50%",border:"2px solid #101010",marginLeft:i?-8:0,background:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🙂</span>
-                    ))}
-                  </div>
-                </div>
-              )}
               <div className="pug-name">{fullProfile.display_name}</div>
               {editingFirstName ? (
                 <div style={{display:'flex',gap:6,alignItems:'center',marginTop:4,marginBottom:4,flexWrap:'wrap'}}>
