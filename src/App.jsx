@@ -6243,6 +6243,7 @@ function VisibilityView() {
     { key:"bigtop",     label:"🎪 Tab BIG TOP",        desc:"Mostra la sezione Circo nel menu player" },
     { key:"messaggi",   label:"💬 Messaggi",           desc:"Mostra la tab messaggi nel menu player" },
     { key:"creatura",   label:"🌱 Barre creatura",     desc:"Mostra le barre Energia/Socialità/Felicità nel profilo" },
+    { key:"giochi",     label:"🎮 Giochi",             desc:"Mostra PIN PUG e XOXO nel profilo player" },
   ];
   const allVisible = sections.every(s => vis[s.key] !== false);
   return (
@@ -6499,6 +6500,90 @@ function MsgReactions({ msgId, myId }) {
 }
 
 // ─── PROFILE REACTIONS ───────────────────────────────────
+function XoxoGame({ myId }) {
+  const [matches, setMatches] = useState([]);
+  const [names, setNames] = useState({});
+  const [opp, setOpp] = useState([]);
+  const [active, setActive] = useState(null);
+  const [picking, setPicking] = useState(false);
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    load(); loadOpp();
+    const ch = sb.channel("xoxo-" + Math.random().toString(36).slice(2))
+      .on("postgres_changes", { event: "*", schema: "public", table: "oxo_matches" }, () => load())
+      .subscribe();
+    return () => { try { sb.removeChannel(ch); } catch(_){} };
+  }, []);
+  async function load() {
+    try {
+      const { data } = await sb.from("oxo_matches").select("*").or("player_x.eq." + myId + ",player_o.eq." + myId).order("updated_at", { ascending: false }).limit(40);
+      const ms = data || [];
+      setMatches(ms);
+      const ids = [...new Set(ms.flatMap(m => [m.player_x, m.player_o]))];
+      if (ids.length) { const { data: ps } = await sb.from("profiles").select("id,display_name").in("id", ids); setNames(Object.fromEntries((ps||[]).map(p => [p.id, p.display_name]))); }
+      setActive(a => a ? (ms.find(m => m.id === a.id) || null) : null);
+    } catch(_){}
+  }
+  async function loadOpp() {
+    try { const { data } = await sb.from("profiles").select("id,display_name,role").in("role", ["player","educator"]).neq("id", myId).order("display_name"); setOpp(data || []); } catch(_){}
+  }
+  async function challenge(toId) {
+    setPicking(false);
+    const { data: r } = await sb.rpc("oxo_challenge", { p_from: myId, p_to: toId });
+    if (r && r.ok) { try { await sb.from("notifications").insert({ user_id: toId, type: "xoxo", title: "\u{1F19A} Sfida XOXO!", body: "Ti hanno sfidato a XOXO" }); } catch(_){} load(); pugSound("success"); }
+    else setMsg((r && r.error) || "Errore");
+  }
+  async function respond(m, accept) { const { data: r } = await sb.rpc("oxo_respond", { p_match: m.id, p_player: myId, p_accept: accept }); if (r && r.ok) load(); }
+  async function move(m, cell) {
+    const { data: r } = await sb.rpc("oxo_move", { p_match: m.id, p_player: myId, p_cell: cell + 1 });
+    if (r && r.ok) { if (r.coin || r.xp) { setMsg("\u{1F3C6} Hai vinto!" + (r.coin ? " +" + r.coin + " \u{1FA99}" : "") + (r.xp ? " +" + r.xp + " XP" : "")); pugSound("success"); } load(); }
+    else setMsg((r && r.error) || "");
+  }
+  const myMark = (m) => m.player_x === myId ? "x" : "o";
+  const oppName = (m) => names[m.player_x === myId ? m.player_o : m.player_x] || "\u2014";
+  const pending = matches.filter(m => m.status === "pending" && m.player_o === myId);
+  const sent = matches.filter(m => m.status === "pending" && m.player_x === myId);
+  const activeM = matches.filter(m => m.status === "active");
+  const done = matches.filter(m => m.status === "done").slice(0, 5);
+
+  if (active && active.status !== "declined") {
+    const m = active; const mark = myMark(m); const myTurn = m.status === "active" && m.turn === mark;
+    return (<div>
+      <button className="btn btn-ghost btn-sm" onClick={() => { setActive(null); setMsg(""); }}>\u2039 Indietro</button>
+      <div style={{ textAlign: "center", fontWeight: 800, margin: "8px 0" }}>Tu ({mark.toUpperCase()}) vs {oppName(m)}</div>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 13, marginBottom: 10, color: m.status === "done" ? "#339966" : "#101010" }}>
+        {m.status === "done" ? (m.winner === "draw" ? "Pareggio" : (m.winner === mark ? "\u{1F3C6} Hai vinto!" : "Hai perso")) : (myTurn ? "Tocca a te" : "Aspetta l'avversario\u2026")}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,72px)", gap: 6, justifyContent: "center", margin: "0 auto", width: "fit-content" }}>
+        {m.board.split("").map((c, i) => (
+          <button key={i} disabled={!myTurn || c !== "."} onClick={() => move(m, i)}
+            style={{ width: 72, height: 72, fontSize: 34, fontWeight: 900, border: "3px solid #101010", borderRadius: 10, background: c === "." ? "#fff" : (c === "x" ? "#A3CFFE" : "#FF6DEC"), color: "#101010", cursor: myTurn && c === "." ? "pointer" : "default" }}>
+            {c === "." ? "" : c.toUpperCase()}
+          </button>
+        ))}
+      </div>
+      {msg && <div style={{ textAlign: "center", marginTop: 10, fontWeight: 800 }}>{msg}</div>}
+    </div>);
+  }
+  return (<div>
+    <button className="btn" style={{ width: "100%", background: "#FDEF26", color: "#101010", border: "3px solid #101010", boxShadow: "3px 3px 0 #101010", fontWeight: 900, padding: "12px", marginBottom: 12 }} onClick={() => setPicking(p => !p)}>\u2795 Nuova sfida</button>
+    {picking && <div style={{ border: "2px solid #101010", borderRadius: 12, padding: 10, marginBottom: 12, maxHeight: 220, overflowY: "auto" }}>
+      <div style={{ fontWeight: 800, marginBottom: 6 }}>Sfida chi?</div>
+      {opp.map(o => (<button key={o.id} className="btn btn-ghost btn-sm" style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 4 }} onClick={() => challenge(o.id)}>{o.role === "educator" ? "\u{1F331} " : "\u{1F464} "}{o.display_name}</button>))}
+    </div>}
+    {msg && <div style={{ marginBottom: 8, fontWeight: 700, fontSize: 13 }}>{msg}</div>}
+    {pending.length > 0 && <div style={{ marginBottom: 12 }}><div style={{ fontWeight: 800, fontSize: 13, marginBottom: 4 }}>Sfide ricevute</div>
+      {pending.map(m => (<div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: 4 }}><span style={{ fontSize: 13 }}>{oppName(m)} ti sfida</span><span><button className="btn btn-sm" style={{ background: "#339966", color: "#fff", marginRight: 4 }} onClick={() => respond(m, true)}>Accetta</button><button className="btn btn-ghost btn-sm" onClick={() => respond(m, false)}>Rifiuta</button></span></div>))}
+    </div>}
+    {activeM.length > 0 && <div style={{ marginBottom: 12 }}><div style={{ fontWeight: 800, fontSize: 13, marginBottom: 4 }}>Partite in corso</div>
+      {activeM.map(m => (<button key={m.id} className="btn btn-ghost btn-sm" style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 4 }} onClick={() => { setActive(m); setMsg(""); }}>vs {oppName(m)} \u2014 {m.turn === myMark(m) ? "tocca a te" : "aspetta"}</button>))}
+    </div>}
+    {sent.length > 0 && <div style={{ marginBottom: 10, fontSize: 12, opacity: .7 }}>In attesa di risposta: {sent.map(m => oppName(m)).join(", ")}</div>}
+    {done.length > 0 && <div><div style={{ fontWeight: 800, fontSize: 13, marginBottom: 4 }}>Ultime partite</div>
+      {done.map(m => (<div key={m.id} style={{ fontSize: 12, padding: "2px 0" }}>vs {oppName(m)}: {m.winner === "draw" ? "pareggio" : (m.winner === myMark(m) ? "vinta \u{1F3C6}" : "persa")}</div>))}
+    </div>}
+  </div>);
+}
 function PongGame({ myId }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(0);
@@ -6532,8 +6617,8 @@ function PongGame({ myId }) {
     const py=H-22;
     if(s.vy>0 && s.by>py-s.r && s.by<py+14 && s.bx>s.px-s.pw/2 && s.bx<s.px+s.pw/2){
       const rel=Math.max(-1,Math.min(1,(s.bx-s.px)/(s.pw/2)));
-      s.speed+=0.4;
-      const sp=6+s.speed*0.5;
+      s.speed+=0.75;
+      const sp=7.5+s.speed*0.95;
       const ang=(-Math.PI/2)+rel*(Math.PI/3);
       s.vx=Math.cos(ang)*sp; s.vy=Math.sin(ang)*sp;
       if(s.vy>-2.5) s.vy=-2.5;
@@ -6545,7 +6630,7 @@ function PongGame({ myId }) {
   }
   function begin() {
     const c=canvasRef.current; if(!c) return; const W=c.width,H=c.height;
-    g.current={ px:W/2, pw:72, bx:W/2, by:H/3, vx:3*(Math.random()>.5?1:-1), vy:6, r:9, speed:0, score:0, over:false };
+    g.current={ px:W/2, pw:72, bx:W/2, by:H/3, vx:4*(Math.random()>.5?1:-1), vy:7.5, r:9, speed:0, score:0, over:false };
     setScore(0); setResult(null); setPhase("playing");
     cancelAnimationFrame(rafRef.current); rafRef.current=requestAnimationFrame(step);
   }
@@ -7204,6 +7289,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [burp, setBurp] = useState(false);
   const [feedAnim, setFeedAnim] = useState(false);
   const [showPong, setShowPong] = useState(false);
+  const [showXoxo, setShowXoxo] = useState(false);
   const [feedMsg, setFeedMsg] = useState("");
   const FOODS = [
     { name:"Muffin", emoji:"🧁", img:"data:image/webp;base64,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" },
@@ -7920,7 +8006,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               </div>
             )}
 
-            <button className="btn" style={{width:"100%",background:"#FF6DEC",color:"#101010",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:900,fontSize:16,padding:"14px",marginBottom:12}} onClick={()=>setShowPong(true)}>🎮 Gioca a PIN PUG</button>
+            {visConfig.giochi !== false && <button className="btn" style={{width:"100%",background:"#FF6DEC",color:"#101010",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:900,fontSize:16,padding:"14px",marginBottom:12}} onClick={()=>setShowPong(true)}>🎮 Gioca a PIN PUG</button>}
+            {visConfig.giochi !== false && <button className="btn" style={{width:"100%",background:"#A3CFFE",color:"#101010",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:900,fontSize:16,padding:"14px",marginBottom:12}} onClick={()=>setShowXoxo(true)}>🆚 Sfida a XOXO</button>}
+            {showXoxo && <div className="modal-bg" onClick={()=>setShowXoxo(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:400}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><div style={{fontWeight:900,fontSize:18}}>🆚 XOXO</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowXoxo(false)}>✕</button></div><XoxoGame myId={fullProfile.id}/></div></div>}
             {showPong && <div className="modal-bg" onClick={()=>setShowPong(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:400}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><div style={{fontWeight:900,fontSize:18}}>🎮 PIN PUG</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowPong(false)}>✕</button></div><PongGame myId={fullProfile.id}/></div></div>}
 
             <InstallPWAButton/>
@@ -8723,6 +8811,14 @@ function AdminView({ profile }) {
     catch (e) { push("Cibo creatura: dai da mangiare", false, e.message || String(e)); }
     try { const { error } = await sb.from("reactions").select("id,type,created_at,badge_id,target_player_id,player_id").limit(1); if (error) throw new Error(error.message); push("Reaction: accesso e campi ok?", true, "ok"); }
     catch (e) { push("Reaction: accesso", false, e.message || String(e)); }
+    try { const { error } = await sb.from("game_scores").select("id").limit(1); if (error) throw new Error(error.message); push("Giochi: classifica accessibile? (migr. 027)", true, "ok"); }
+    catch (e) { push("Giochi: classifica (migr. 027)", false, e.message || String(e)); }
+    try { const { error } = await sb.rpc("pong_submit", { p_player_id: "00000000-0000-0000-0000-000000000000", p_score: 0 }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("Giochi: PONG salva punteggio?", true, "ok"); }
+    catch (e) { push("Giochi: PONG punteggio", false, e.message || String(e)); }
+    try { const { error } = await sb.from("oxo_matches").select("id").limit(1); if (error) throw new Error(error.message); push("Giochi: XOXO partite accessibili? (migr. 028)", true, "ok"); }
+    catch (e) { push("Giochi: XOXO partite (migr. 028)", false, e.message || String(e)); }
+    try { const { error } = await sb.rpc("oxo_move", { p_match: "00000000-0000-0000-0000-000000000000", p_player: "00000000-0000-0000-0000-000000000000", p_cell: 1 }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("Giochi: XOXO mosse rispondono?", true, "ok"); }
+    catch (e) { push("Giochi: XOXO mosse", false, e.message || String(e)); }
     const _tn = { activities:"Attività", bigtop_slots:"Turni Big Top", bigtop_bookings:"Prenotazioni Big Top", profiles:"Giocatori", messages:"Messaggi", badges:"Badge", player_badges:"Badge assegnati", bookings:"Prenotazioni Lab", attendances:"Presenze", xp_history:"Storico punti", squads:"Squadre", notifications:"Notifiche" };
     for (const t of ["activities","bigtop_slots","bigtop_bookings","profiles","messages","badges","player_badges","bookings","attendances","xp_history","squads","notifications"]) { await col("Accesso ai dati: " + (_tn[t]||t), t, "id"); }
     try {
