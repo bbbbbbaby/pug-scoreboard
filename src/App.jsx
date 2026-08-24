@@ -1722,7 +1722,7 @@ body:not(.light){--text3:rgba(255,255,255,.78)}
 /* #7 login: foglia ferma su mobile */
 @media(max-width:767px){@keyframes leafsway{0%,50%,100%{margin-left:0}}}
 /* #5 rispetta la riduzione movimento di sistema */
-@keyframes pugfoodpop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}30%{transform:translate(-50%,-64%) scale(1.25);opacity:1}55%{transform:translate(-50%,-50%) scale(1);opacity:1}80%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(.15);opacity:0}}
+@keyframes pugfoodpop{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}22%{transform:translate(-50%,-50%) scale(1.12);opacity:1}38%{transform:translate(-50%,-50%) scale(1);opacity:1}80%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(.8);opacity:0}}
 @keyframes pugburp{0%{opacity:0;transform:translateY(8px) rotate(-8deg) scale(.5)}10%{opacity:1;transform:translateY(0) rotate(-8deg) scale(1.2)}18%{transform:translateY(-4px) rotate(-8deg) scale(1)}82%{opacity:1;transform:translateY(-6px) rotate(-8deg) scale(1)}100%{opacity:0;transform:translateY(-9px) rotate(-8deg) scale(.95)}}
 @media (prefers-reduced-motion: reduce){ [style*="pugfoodpop"]{animation-duration:1s!important} [style*="pugburp"]{animation-duration:2.5s!important} }
 @media (prefers-reduced-motion: reduce){ *,*::before,*::after{ animation-duration:.001s!important; animation-iteration-count:1!important; transition-duration:.001s!important; scroll-behavior:auto!important } }
@@ -7886,14 +7886,14 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             <div className="pug-hero" style={{paddingTop:6}}>
               {/* Stanza tamagocification — spogliata: solo la porta rimanda al Social */}
               <div className="pug-roomzone">
-                <div className="pug-room">
+                <div className="pug-room" style={{overflow:"visible"}}>
                   <div className="pug-petshadow" style={{display:"none"}}/>
                   {fullProfile.avatar_url
                     ? <img className="pug-pet" src={fullProfile.avatar_url} alt="creatura" style={{position:"absolute",left:"27%",top:"42%",width:150,height:150,objectFit:"contain",zIndex:3}}/>
                     : <span className="pug-pet" style={{position:"absolute",left:"27%",top:"42%",width:150,fontSize:110,textAlign:'center',lineHeight:'150px',display:"inline-block",zIndex:3}}>{lv.emoji}</span>}
                   <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{position:"absolute",left:"8.5%",top:"15%",width:"10%",aspectRatio:"1",borderRadius:"50%",cursor:"pointer",zIndex:4}}><span className="g"/></div>
                   {visConfig.creatura !== false && feedAnim && <img key={popKey} src={FOODS[selectedFood]?.img} alt="" style={{position:"absolute",left:"49%",top:"56%",width:48,height:48,objectFit:"contain",filter:"drop-shadow(0 5px 3px rgba(0,0,0,.35))",animation:"pugfoodpop 1s ease-out",zIndex:4,pointerEvents:"none"}}/>}
-                  {visConfig.creatura !== false && burp && <div style={{position:"absolute",left:"33%",top:"44%",fontFamily:"var(--hand), 'Jelek Type', cursive",fontSize:24,fontWeight:700,color:"#101010",animation:"pugburp 2.5s ease-out forwards",zIndex:7,pointerEvents:"none",whiteSpace:"nowrap",transformOrigin:"left center"}}>BURP!</div>}
+                  {visConfig.creatura !== false && burp && <div style={{position:"absolute",left:"34%",top:"46%",fontFamily:"var(--hand), 'Jelek Type', cursive",fontSize:24,fontWeight:700,color:"#101010",animation:"pugburp 2.5s ease-out forwards",zIndex:7,pointerEvents:"none",whiteSpace:"nowrap",transformOrigin:"left center"}}>BURP!</div>}
                   {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",right:8,bottom:8,width:54,height:54,borderRadius:12,border:"2.5px solid #101010",background:"#fff",boxShadow:"2px 2px 0 #101010",cursor:"pointer",padding:5,display:"flex",alignItems:"center",justifyContent:"center",zIndex:6}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:42,height:42,objectFit:"contain"}}/> : <span style={{fontSize:26}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
                   {(visitors[visIdx]||visitors[0]) && ((visitors[visIdx]||visitors[0]).avatar_url
                     ? <img key={visIdx} className="visitor" src={(visitors[visIdx]||visitors[0]).avatar_url} alt="" title={"Passato a trovarti: "+((visitors[visIdx]||visitors[0]).display_name||"")} style={{position:"absolute",right:"3%",bottom:"12%",width:150,height:150,objectFit:"contain",zIndex:2}}/>
