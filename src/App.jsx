@@ -1655,12 +1655,12 @@ body:not(.light) .edu-main{background:#0d0d0d url(/public/sfondi/sfondo-notte-wi
 body:not(.light) .edu-main{background:transparent!important}
 .edu-main::before{content:"";position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none}
 .edu-main>*{position:relative;z-index:1}
-.edu-main.ebg-azzurro::before{background-color:#A3CFFF;background-image:url(/public/sfondi/sfondo-azzurro-tel.webp?v4)}
-.edu-main.ebg-rosa::before{background-color:#FF6DEC;background-image:url(/public/sfondi/sfondo-rosa-tel.webp?v4)}
-.edu-main.ebg-giallo::before{background-color:#FCEF25;background-image:url(/public/sfondi/sfondo-giallo-tel.webp?v4)}
-.edu-main.ebg-verde::before{background-color:#339967;background-image:url(/public/sfondi/sfondo-verde-tel.webp?v4)}
-.edu-main.ebg-rosso::before{background-color:#D41423;background-image:url(/public/sfondi/sfondo-rosso-tel.webp?v4)}
-body:not(.light) .edu-main::before{background-color:#0d0d0d;background-image:url(/public/sfondi/sfondo-notte-tel.webp?v4)}
+.edu-main.ebg-azzurro::before{background-color:#A3CFFF;background-image:url(/public/sfondi/sfondo-azzurro-tel2.webp)}
+.edu-main.ebg-rosa::before{background-color:#FF6DEC;background-image:url(/public/sfondi/sfondo-rosa-tel2.webp)}
+.edu-main.ebg-giallo::before{background-color:#FCEF25;background-image:url(/public/sfondi/sfondo-giallo-tel2.webp)}
+.edu-main.ebg-verde::before{background-color:#339967;background-image:url(/public/sfondi/sfondo-verde-tel2.webp)}
+.edu-main.ebg-rosso::before{background-color:#D41423;background-image:url(/public/sfondi/sfondo-rosso-tel2.webp)}
+body:not(.light) .edu-main::before{background-color:#0d0d0d;background-image:url(/public/sfondi/sfondo-notte-tel2.webp)}
 @media(min-width:768px){
 .edu-main.ebg-azzurro::before{background-image:url(/public/sfondi/sfondo-azzurro-wide.webp?v4)}
 .edu-main.ebg-rosa::before{background-image:url(/public/sfondi/sfondo-rosa-wide.webp?v4)}
@@ -1676,12 +1676,12 @@ body:not(.light) .edu-main{background-attachment:fixed!important;background-posi
 .player-wrap[class*="bg-"]{background-attachment:fixed!important;background-position:center top!important}
 }
 @media(max-width:767px){
-.edu-main.ebg-azzurro{background-image:url(/public/sfondi/sfondo-azzurro-tel.webp?v4)!important}
-.edu-main.ebg-rosa{background-image:url(/public/sfondi/sfondo-rosa-tel.webp?v4)!important}
-.edu-main.ebg-giallo{background-image:url(/public/sfondi/sfondo-giallo-tel.webp?v4)!important}
-.edu-main.ebg-verde{background-image:url(/public/sfondi/sfondo-verde-tel.webp?v4)!important}
-.edu-main.ebg-rosso{background-image:url(/public/sfondi/sfondo-rosso-tel.webp?v4)!important}
-body:not(.light) .edu-main{background-image:url(/public/sfondi/sfondo-notte-tel.webp?v4)!important}
+.edu-main.ebg-azzurro{background-image:url(/public/sfondi/sfondo-azzurro-tel2.webp)!important}
+.edu-main.ebg-rosa{background-image:url(/public/sfondi/sfondo-rosa-tel2.webp)!important}
+.edu-main.ebg-giallo{background-image:url(/public/sfondi/sfondo-giallo-tel2.webp)!important}
+.edu-main.ebg-verde{background-image:url(/public/sfondi/sfondo-verde-tel2.webp)!important}
+.edu-main.ebg-rosso{background-image:url(/public/sfondi/sfondo-rosso-tel2.webp)!important}
+body:not(.light) .edu-main{background-image:url(/public/sfondi/sfondo-notte-tel2.webp)!important}
 }
 
 /* Educatore: titolo a barra come player */
@@ -1742,12 +1742,12 @@ body:not(.light){--text3:rgba(255,255,255,.82)}
 body:not(.light){--text2:rgba(255,255,255,.86);--text3:rgba(255,255,255,.7)}
 .topbar{overflow:visible}
 
-.player-wrap.bg-azzurro{background:#A3CFFF url(/public/sfondi/sfondo-azzurro-tel.webp?v4) top center/cover no-repeat}
-.player-wrap.bg-rosa{background:#FF6DEC url(/public/sfondi/sfondo-rosa-tel.webp?v4) top center/cover no-repeat}
-.player-wrap.bg-giallo{background:#FCEF25 url(/public/sfondi/sfondo-giallo-tel.webp?v4) top center/cover no-repeat}
-.player-wrap.bg-verde{background:#339967 url(/public/sfondi/sfondo-verde-tel.webp?v4) top center/cover no-repeat}
-.player-wrap.bg-rosso{background:#D41423 url(/public/sfondi/sfondo-rosso-tel.webp?v4) top center/cover no-repeat}
-.player-wrap.bg-notte{background:#0d0d0d url(/public/sfondi/sfondo-notte-tel.webp?v4) top center/cover no-repeat}
+.player-wrap.bg-azzurro{background:#A3CFFF url(/public/sfondi/sfondo-azzurro-tel2.webp) top center/cover no-repeat}
+.player-wrap.bg-rosa{background:#FF6DEC url(/public/sfondi/sfondo-rosa-tel2.webp) top center/cover no-repeat}
+.player-wrap.bg-giallo{background:#FCEF25 url(/public/sfondi/sfondo-giallo-tel2.webp) top center/cover no-repeat}
+.player-wrap.bg-verde{background:#339967 url(/public/sfondi/sfondo-verde-tel2.webp) top center/cover no-repeat}
+.player-wrap.bg-rosso{background:#D41423 url(/public/sfondi/sfondo-rosso-tel2.webp) top center/cover no-repeat}
+.player-wrap.bg-notte{background:#0d0d0d url(/public/sfondi/sfondo-notte-tel2.webp) top center/cover no-repeat}
 @media(min-width:640px){
 .player-wrap.bg-azzurro{background-image:url(/public/sfondi/sfondo-azzurro-wide.webp?v4)}
 .player-wrap.bg-rosa{background-image:url(/public/sfondi/sfondo-rosa-wide.webp?v4)}
@@ -7856,7 +7856,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:9,fontWeight:800,color:"#D41323",marginRight:6}}>B24-23h-bg4</span>
+          <span style={{fontSize:9,fontWeight:800,color:"#D41323",marginRight:6}}>B24-tel2</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
