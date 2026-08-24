@@ -1722,8 +1722,8 @@ body:not(.light){--text3:rgba(255,255,255,.78)}
 /* #7 login: foglia ferma su mobile */
 @media(max-width:767px){@keyframes leafsway{0%,50%,100%{margin-left:0}}}
 /* #5 rispetta la riduzione movimento di sistema */
-@keyframes pugfoodpop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}30%{transform:translate(-50%,-64%) scale(1.25);opacity:1}55%{transform:translate(-50%,-50%) scale(1);opacity:1}80%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-175%,-120%) scale(.2);opacity:0}}
-@keyframes pugburp{0%{opacity:0;transform:translateY(8px) rotate(-8deg) scale(.5)}10%{opacity:1;transform:translateY(0) rotate(-8deg) scale(1.2)}18%{transform:translateY(-4px) rotate(-8deg) scale(1)}82%{opacity:1;transform:translateY(-6px) rotate(-8deg) scale(1)}100%{opacity:0;transform:translateY(-16px) rotate(-8deg) scale(.95)}}
+@keyframes pugfoodpop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}30%{transform:translate(-50%,-64%) scale(1.25);opacity:1}55%{transform:translate(-50%,-50%) scale(1);opacity:1}80%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(.15);opacity:0}}
+@keyframes pugburp{0%{opacity:0;transform:translateY(8px) rotate(-8deg) scale(.5)}10%{opacity:1;transform:translateY(0) rotate(-8deg) scale(1.2)}18%{transform:translateY(-4px) rotate(-8deg) scale(1)}82%{opacity:1;transform:translateY(-6px) rotate(-8deg) scale(1)}100%{opacity:0;transform:translateY(-9px) rotate(-8deg) scale(.95)}}
 @media (prefers-reduced-motion: reduce){ [style*="pugfoodpop"]{animation-duration:1s!important} [style*="pugburp"]{animation-duration:2.5s!important} }
 @media (prefers-reduced-motion: reduce){ *,*::before,*::after{ animation-duration:.001s!important; animation-iteration-count:1!important; transition-duration:.001s!important; scroll-behavior:auto!important } }
 /* #5 night: bottoni filtro/ghost nelle barre filtro non translucidi */
@@ -2110,6 +2110,15 @@ async function checkLevelUp(playerId, oldXp, newXp) {
   if (newLv.name === oldLv.name) return false;
   sendPush(playerId, "🆙 Sei salito di livello!", `Sei diventato ${newLv.emoji} ${newLv.name}!`).catch(()=>{});
   await sb.from("notifications").insert({user_id:playerId, type:"level_up", title:"🆙 Nuovo livello!", body:`${newLv.emoji} ${newLv.name}`});
+  if (newLv.id % 5 === 0) {
+    try {
+      const { data: pl } = await sb.from("profiles").select("display_name").eq("id", playerId).single();
+      const nm = pl?.display_name || "Un giocatore";
+      const { data: edus } = await sb.from("profiles").select("id").in("role", ["educator","admin"]);
+      const rows = (edus||[]).map(e => ({ user_id: e.id, type: "level_up", title: "🆙 Traguardo di livello", body: `${nm} è salito a ${newLv.emoji} ${newLv.name}` }));
+      if (rows.length) await sb.from("notifications").insert(rows);
+    } catch(_){}
+  }
   return true;
 }
 
@@ -3546,6 +3555,11 @@ function PlayersView({ sectionColors, setSectionColors }) {
     }
     setShowCreatePlayer(false);
     setNewPlayer({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
+    { const nm = newPlayer.display_name.trim();
+      sb.from("profiles").select("id").eq("role","educator").then(({ data: edus }) => {
+        const rows=(edus||[]).map(e=>({user_id:e.id,type:"new_player",title:"🌱 Nuovo giocatore",body:`${nm} è stato aggiunto al gioco`}));
+        if(rows.length) sb.from("notifications").insert(rows).then(()=>{}).catch(()=>{});
+      }); }
     setMsg("Giocatore creato! PIN: " + (newPlayer.pin || "1234"));
     setTimeout(() => setMsg(""), 4000);
     load();
@@ -6500,8 +6514,8 @@ function MsgReactions({ msgId, myId }) {
 }
 
 // ─── PROFILE REACTIONS ───────────────────────────────────
-function GamesHub({ myId }) {
-  const [tab, setTab] = useState("pong");
+function GamesHub({ myId, initialTab }) {
+  const [tab, setTab] = useState(initialTab || "pong");
   return (
     <div>
       <div style={{display:"flex",gap:8,marginBottom:14}}>
@@ -7312,12 +7326,19 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   const [creatureBars, setCreatureBars] = useState(null);
   const [visitors, setVisitors] = useState([]);
   const [reactionsReceived, setReactionsReceived] = useState(0);
+  const [visIdx, setVisIdx] = useState(0);
+  useEffect(() => {
+    if (visitors.length <= 1) { setVisIdx(0); return; }
+    const t = setInterval(() => setVisIdx(i => (i + 1) % visitors.length), 2600);
+    return () => clearInterval(t);
+  }, [visitors.length]);
   const [selectedFood, setSelectedFood] = useState(0);
   const [feeding, setFeeding] = useState(false);
   const [popKey, setPopKey] = useState(0);
   const [burp, setBurp] = useState(false);
   const [feedAnim, setFeedAnim] = useState(false);
   const [showGames, setShowGames] = useState(false);
+  const [gamesTab, setGamesTab] = useState("pong");
   const [feedMsg, setFeedMsg] = useState("");
   const FOODS = [
     { name:"Muffin", emoji:"🧁", img:"data:image/webp;base64,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" },
@@ -7384,6 +7405,21 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         (lab.data||[]).forEach(r => { soc += 15 * Math.pow(0.92, daysAgo(r.created_at)); });
         (bt.data||[]).filter(r => r.status !== "cancelled").forEach(r => { soc += 10 * Math.pow(0.92, daysAgo(r.created_at)); });
         (rx.data||[]).forEach(r => { soc += 8 * Math.pow(0.92, daysAgo(r.created_at)); });
+        try {
+          const [{ data: xm }, { data: pg }] = await Promise.all([
+            sb.from("oxo_matches").select("winner,player_x,player_o,status,updated_at").or("player_x.eq." + fullProfile.id + ",player_o.eq." + fullProfile.id),
+            sb.from("game_scores").select("score,created_at").eq("player_id", fullProfile.id).eq("game","pong"),
+          ]);
+          (xm||[]).forEach(m => {
+            const d = daysAgo(m.updated_at);
+            if (m.status === "active" || m.status === "done") soc += 3 * Math.pow(0.92, d);
+            const iWon = m.status === "done" && ((m.winner === "x" && m.player_x === fullProfile.id) || (m.winner === "o" && m.player_o === fullProfile.id));
+            if (iWon) fel += 4 * Math.pow(0.93, d);
+          });
+          const pgSorted = (pg||[]).slice().sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+          let bestSoFar = -1;
+          pgSorted.forEach(r => { const sc = r.score||0; if (sc > bestSoFar) { bestSoFar = sc; fel += 5 * Math.pow(0.93, daysAgo(r.created_at)); } });
+        } catch(_) {}
         let ene = 100;
         try { const { data: me } = await sb.from("profiles").select("energia,energia_at").eq("id", fullProfile.id).single(); if (me?.energia != null) { ene = me.energia_at ? Math.max(5, Math.round(me.energia - 15 * ((Date.now()-new Date(me.energia_at).getTime())/86400000))) : me.energia; } } catch(_) {}
         if (alive) setCreatureBars({ felicita: clampV(fel), socialita: clampV(soc), energia: ene });
@@ -7391,11 +7427,12 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       try {
         const { data: rx } = await sb.from("reactions").select("player_id,type,created_at").eq("target_player_id", fullProfile.id).is("badge_id", null).order("created_at",{ascending:false}).limit(50);
         const rxs = rx||[];
+        const _t0 = new Date(); _t0.setHours(0,0,0,0);
         const giverIds = [...new Set(rxs.map(r=>r.player_id))].slice(0,10);
         let gmap = {};
         if (giverIds.length) { const { data: gs } = await sb.from("profiles").select("id,display_name,avatar_url").in("id", giverIds); gmap = Object.fromEntries((gs||[]).map(g=>[g.id,g])); }
         const vis = []; const seen = new Set();
-        for (const r of rxs) { const g = gmap[r.player_id]; if (g && !seen.has(g.id)) { seen.add(g.id); vis.push({ ...g, type:r.type }); } if (vis.length>=6) break; }
+        for (const r of rxs) { if (new Date(r.created_at) < _t0) continue; const g = gmap[r.player_id]; if (g && !seen.has(g.id)) { seen.add(g.id); vis.push({ ...g, type:r.type }); } if (vis.length>=6) break; }
         if (alive) { setReactionsReceived(rxs.length); setVisitors(vis); }
       } catch(_) {}
     })();
@@ -7646,7 +7683,10 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
       if (!res?.ok) { alert("❌ Errore prenotazione."); return; }
       // Notifica push a tutti gli educator
       sb.from("profiles").select("id").in("role",["educator","admin"]).then(({ data: edus }) => {
-        (edus||[]).forEach(e => sendPush(e.id, "📋 Nuova prenotazione", `${fullProfile?.display_name||"Un giocatore"} ha prenotato un Lab`).catch(()=>{}));
+        const nm = fullProfile?.display_name||"Un giocatore";
+        (edus||[]).forEach(e => sendPush(e.id, "📋 Nuova prenotazione", `${nm} ha prenotato un Lab`).catch(()=>{}));
+        const rows=(edus||[]).map(e=>({user_id:e.id,type:"booking",title:"📋 Nuova prenotazione Lab",body:`${nm} ha prenotato un Lab`}));
+        if(rows.length) sb.from("notifications").insert(rows).then(()=>{}).catch(()=>{});
       });
       if (res.coin_held > 0) setFullProfile(prev => ({ ...prev, coin: res.new_coin }));
       alert("✅ Prenotazione inviata!");
@@ -7853,11 +7893,11 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
                     : <span className="pug-pet" style={{position:"absolute",left:"27%",top:"42%",width:150,fontSize:110,textAlign:'center',lineHeight:'150px',display:"inline-block",zIndex:3}}>{lv.emoji}</span>}
                   <div className="pug-hot hot-door" onClick={()=>setTab("social")} title="Vai al Social" style={{position:"absolute",left:"8.5%",top:"15%",width:"10%",aspectRatio:"1",borderRadius:"50%",cursor:"pointer",zIndex:4}}><span className="g"/></div>
                   {visConfig.creatura !== false && feedAnim && <img key={popKey} src={FOODS[selectedFood]?.img} alt="" style={{position:"absolute",left:"49%",top:"56%",width:48,height:48,objectFit:"contain",filter:"drop-shadow(0 5px 3px rgba(0,0,0,.35))",animation:"pugfoodpop 1s ease-out",zIndex:4,pointerEvents:"none"}}/>}
-                  {visConfig.creatura !== false && burp && <div style={{position:"absolute",left:"30%",top:"36%",fontFamily:"var(--hand), 'Jelek Type', cursive",fontSize:24,fontWeight:700,color:"#101010",animation:"pugburp 2.5s ease-out forwards",zIndex:7,pointerEvents:"none",whiteSpace:"nowrap",transformOrigin:"left center"}}>BURP!</div>}
+                  {visConfig.creatura !== false && burp && <div style={{position:"absolute",left:"33%",top:"44%",fontFamily:"var(--hand), 'Jelek Type', cursive",fontSize:24,fontWeight:700,color:"#101010",animation:"pugburp 2.5s ease-out forwards",zIndex:7,pointerEvents:"none",whiteSpace:"nowrap",transformOrigin:"left center"}}>BURP!</div>}
                   {visConfig.creatura !== false && <button onClick={feedPet} disabled={feeding} title={"Dai da mangiare: " + (FOODS[selectedFood]?.name||"")} style={{position:"absolute",right:8,bottom:8,width:54,height:54,borderRadius:12,border:"2.5px solid #101010",background:"#fff",boxShadow:"2px 2px 0 #101010",cursor:"pointer",padding:5,display:"flex",alignItems:"center",justifyContent:"center",zIndex:6}}>{FOODS[selectedFood]?.img ? <img src={FOODS[selectedFood].img} alt={FOODS[selectedFood].name} style={{width:42,height:42,objectFit:"contain"}}/> : <span style={{fontSize:26}}>{FOODS[selectedFood]?.emoji}</span>}</button>}
-                  {visitors[0] && (visitors[0].avatar_url
-                    ? <img className="visitor" src={visitors[0].avatar_url} alt="" title={"Passato a trovarti: "+(visitors[0].display_name||"")} style={{position:"absolute",right:"3%",bottom:"12%",width:150,height:150,objectFit:"contain",zIndex:2}}/>
-                    : <span className="visitor" title={"Passato a trovarti: "+(visitors[0].display_name||"")} style={{position:"absolute",right:"3%",bottom:"12%",width:150,fontSize:110,textAlign:"center",zIndex:2}}>🙂</span>)}
+                  {(visitors[visIdx]||visitors[0]) && ((visitors[visIdx]||visitors[0]).avatar_url
+                    ? <img key={visIdx} className="visitor" src={(visitors[visIdx]||visitors[0]).avatar_url} alt="" title={"Passato a trovarti: "+((visitors[visIdx]||visitors[0]).display_name||"")} style={{position:"absolute",right:"3%",bottom:"12%",width:150,height:150,objectFit:"contain",zIndex:2}}/>
+                    : <span key={visIdx} className="visitor" title={"Passato a trovarti: "+((visitors[visIdx]||visitors[0]).display_name||"")} style={{position:"absolute",right:"3%",bottom:"12%",width:150,fontSize:110,textAlign:"center",zIndex:2}}>🙂</span>)}
                 </div>
                 {visConfig.creatura !== false && (<>
                 <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:8}}>
@@ -8034,8 +8074,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               </div>
             )}
 
-            {visConfig.giochi !== false && <button className="btn" style={{width:"100%",background:"#FF6DEC",color:"#101010",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:900,fontSize:16,padding:"14px",marginBottom:12}} onClick={()=>setShowGames(true)}>🎮 Giochi</button>}
-            {showGames && <div className="modal-bg" onClick={()=>setShowGames(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:410}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:900,fontSize:18}}>🎮 Giochi</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowGames(false)}>✕</button></div><GamesHub myId={fullProfile.id}/></div></div>}
+            {visConfig.giochi !== false && <div style={{padding:"0 14px",marginBottom:12}}><button className="btn" style={{width:"100%",background:"#FF6DEC",color:"#101010",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:900,fontSize:16,padding:"14px"}} onClick={()=>{setGamesTab("pong");setShowGames(true);}}>🎮 Giochi</button></div>}
+            {showGames && <div className="modal-bg" onClick={()=>setShowGames(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:410}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:900,fontSize:18}}>🎮 Giochi</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowGames(false)}>✕</button></div><GamesHub myId={fullProfile.id} initialTab={gamesTab}/></div></div>}
 
             <InstallPWAButton/>
 
@@ -8269,9 +8309,17 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
             )}
           </div>
             {notifications.length === 0 ? <div className="empty">Nessuna notifica.</div> : notifications.map(n => {
-              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬" };
+              const icons = { badge_assigned: "🎖️", booking_confirmed: "✅", booking_rejected: "❌", new_activity: "⚡", level_up: "🆙", new_message: "💬", reaction: "💥", xoxo: "🆚", educator_msg: "💬", bigtop: "🎪" };
               return (
-                <div key={n.id} className="notif-item">
+                <div key={n.id} className="notif-item" style={{cursor:"pointer"}} onClick={()=>{
+                  if(!n.read_at){ sb.from("notifications").update({read_at:new Date().toISOString()}).eq("id",n.id).then(()=>{}); setNotifications(ns=>ns.map(x=>x.id===n.id?{...x,read_at:new Date().toISOString()}:x)); }
+                  const t=n.type;
+                  if(t==="reaction") setTab("social");
+                  else if(t==="xoxo"){ setGamesTab("xoxo"); setShowGames(true); setTab("profilo"); }
+                  else if(t==="educator_msg"||t==="new_message"||t==="message") setTab("messaggi");
+                  else if(t==="booking_confirmed"||t==="booking_rejected"||t==="bigtop") setTab("bigtop");
+                  else setTab("profilo");
+                }}>
                   <div className="notif-icon">{icons[n.type] || "🔔"}</div>
                   <div style={{ flex: 1 }}>
                     <div className="notif-title">{n.title}{!n.read_at && <span className="notif-dot" />}</div>
@@ -8714,6 +8762,7 @@ function AdminResetPwdForm({ educator, onClose }) {
 // così l'account capo può essere ceduto a un'altra persona.
 function AdminAccountCard({ profile }) {
   const [open, setOpen] = useState(false);
+  const [showGames, setShowGames] = useState(false);
   const [curEmail, setCurEmail] = useState("");
   const [newName, setNewName] = useState(profile.display_name || "");
   const [newEmail, setNewEmail] = useState("");
@@ -8762,6 +8811,9 @@ function AdminAccountCard({ profile }) {
         <div style={{fontSize:14,color:"var(--text3)"}}>{open ? "▲" : "▼"}</div>
       </div>
 
+      <button className="btn" style={{width:"100%",marginTop:10,background:"#A3CFFE",color:"#101010",border:"2px solid #101010",fontWeight:800}} onClick={()=>setShowGames(true)}>🎮 Giochi (PIN PUG · XOXO)</button>
+      {showGames && <div className="modal-bg" onClick={()=>setShowGames(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:410}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:900,fontSize:18}}>🎮 Giochi</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowGames(false)}>✕</button></div><GamesHub myId={profile.id}/></div></div>}
+
       {open && (
         <div style={{marginTop:14}}>
           {msg && <div style={{background:"rgba(51,153,102,.1)",border:"1px solid rgba(51,153,102,.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
@@ -8793,6 +8845,56 @@ function AdminAccountCard({ profile }) {
 
 // ─── ADMIN VIEW ──────────────────────────────────────────
 
+function AdminNotifiche({ profile }) {
+  const [items, setItems] = useState([]);
+  const [openN, setOpenN] = useState(true);
+  useEffect(() => {
+    load();
+    const ch = sb.channel("adminnotif-" + Math.random().toString(36).slice(2))
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: "user_id=eq." + profile.id }, () => load())
+      .subscribe();
+    return () => { try { sb.removeChannel(ch); } catch(_){} };
+  }, []);
+  async function load() {
+    try { const { data } = await sb.from("notifications").select("*").eq("user_id", profile.id).order("created_at", { ascending: false }).limit(40); setItems(data || []); } catch(_){}
+  }
+  async function markRead(n) {
+    if (n.read_at) return;
+    await sb.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", n.id);
+    setItems(it => it.map(x => x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x));
+  }
+  async function clearAll() {
+    if (!confirm("Cancellare tutte le notifiche?")) return;
+    await sb.from("notifications").delete().eq("user_id", profile.id); setItems([]);
+  }
+  const unread = items.filter(n => !n.read_at).length;
+  const icons = { booking: "\ud83d\udccb", booking_confirmed: "\u2705", educator_msg: "\ud83d\udcac", xoxo: "\ud83c\udd9a", reaction: "\ud83d\udca5", bigtop: "\ud83c\udfaa", badge_assigned: "\ud83c\udf96\ufe0f", level_up: "\ud83c\udd99", new_player: "\ud83c\udf31" };
+  return (
+    <div className="card-sm" style={{ marginBottom: 16, border: "1px solid rgba(163,207,255,.4)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setOpenN(o => !o)}>
+        <div style={{ fontSize: 22 }}>\ud83d\udd14</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, color: "#A3CFFE" }}>Notifiche giardiniere {unread > 0 && <span style={{ background: "#FF6DEC", color: "#fff", borderRadius: 99, fontSize: 11, padding: "1px 7px", marginLeft: 6 }}>{unread}</span>}</div>
+          <div style={{ fontSize: 12, color: "var(--text3)" }}>Prenotazioni, messaggi tra giardinieri, sfide</div>
+        </div>
+        <div style={{ fontSize: 14, color: "var(--text3)" }}>{openN ? "\u25b2" : "\u25bc"}</div>
+      </div>
+      {openN && <div style={{ marginTop: 12 }}>
+        {items.length === 0 ? <div style={{ fontSize: 13, opacity: .6 }}>Nessuna notifica.</div> : items.map(n => (
+          <div key={n.id} onClick={() => markRead(n)} style={{ display: "flex", gap: 10, padding: "8px 4px", borderBottom: "1px solid var(--border)", cursor: "pointer", opacity: n.read_at ? .55 : 1 }}>
+            <div style={{ fontSize: 18 }}>{icons[n.type] || "\ud83d\udd14"}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{n.title}{!n.read_at && <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: 99, background: "#FF6DEC", marginLeft: 6 }} />}</div>
+              <div style={{ fontSize: 12, color: "var(--text2)" }}>{n.body}</div>
+              <div style={{ fontSize: 10, color: "var(--text3)" }}>{new Date(n.created_at).toLocaleDateString("it-IT")}</div>
+            </div>
+          </div>
+        ))}
+        {items.length > 0 && <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={clearAll}>\ud83d\uddd1\ufe0f Cancella tutte</button>}
+      </div>}
+    </div>
+  );
+}
 function AdminView({ profile }) {
   const [educators, setEducators] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -8960,6 +9062,7 @@ function AdminView({ profile }) {
         </div>
       )}
 
+      <AdminNotifiche profile={profile} />
       <AdminAccountCard profile={profile} />
       {msg && <div style={{background:"rgba(51,153,102,.1)",border:"1px solid rgba(51,153,102,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--neon-green)"}}>{msg}</div>}
       {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
@@ -9125,6 +9228,14 @@ function BigTopPlayerView({ fullProfile, setFullProfile }) {
     const errs = (r.errors || []).length;
     setMsg(r.booked > 0 ? `🎪 Prenotati ${r.booked} turni!${errs ? ` (${errs} non disponibili)` : ""}` : "⚠️ Nessun turno prenotato (pieni o non disponibili)");
     playPixel("checkin");
+    if (r.booked > 0) {
+      const nm = fullProfile?.display_name||"Un giocatore";
+      sb.from("profiles").select("id").in("role",["educator","admin"]).then(({ data: edus }) => {
+        (edus||[]).forEach(e => sendPush(e.id, "🎪 Nuova prenotazione Big Top", `${nm} ha prenotato ${r.booked} turno/i`).catch(()=>{}));
+        const rows=(edus||[]).map(e=>({user_id:e.id,type:"bigtop",title:"🎪 Nuova prenotazione Big Top",body:`${nm} ha prenotato ${r.booked} turno/i`}));
+        if(rows.length) sb.from("notifications").insert(rows).then(()=>{}).catch(()=>{});
+      });
+    }
     load();
   }
 
