@@ -6567,7 +6567,7 @@ function XoxoGame({ myId }) {
     } catch(_){}
   }
   async function loadOpp() {
-    try { const { data } = await sb.from("profiles").select("id,display_name,role,avatar_url").in("role", ["player","educator"]).neq("id", myId).order("display_name"); setOpp(data || []); } catch(_){}
+    try { const { data } = await sb.from("profiles").select("id,display_name,role,avatar_url").in("role", ["player","educator","admin"]).neq("id", myId).order("display_name"); setOpp(data || []); } catch(_){}
   }
   async function challenge(toId) {
     setPicking(false);
@@ -7859,7 +7859,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b31</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b32</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9999,6 +9999,7 @@ function EducatorShell({ profile, onLogout }) {
   const [tab, setTab] = useState("dashboard");
   const [openGroup, setOpenGroup] = useState("gioco");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showGamesTop, setShowGamesTop] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
   const [theme, setTheme] = useState(() => { try { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"; } catch(_) { return "light"; } });
@@ -10182,6 +10183,8 @@ function EducatorShell({ profile, onLogout }) {
         </div>
       </div>
 
+      {showGamesTop && <div className="modal-bg" onClick={()=>setShowGamesTop(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:410}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:900,fontSize:18}}>🎮 Giochi</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowGamesTop(false)}>✕</button></div><GamesHub myId={profile.id}/></div></div>}
+
       {/* Drawer mobile */}
       {drawerOpen && <div className="mob-drawer-bg" onClick={() => setDrawerOpen(false)}/>}
       <div className={`mob-drawer ${drawerOpen ? "open" : ""}`}>
@@ -10253,6 +10256,7 @@ function EducatorShell({ profile, onLogout }) {
               </div>
               <div style={{fontSize:13,color:"rgba(255,255,255,.85)",fontWeight:800,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile.display_name}</div>
             </div>
+            <button onClick={()=>setShowGamesTop(true)} title="Giochi" style={{background:"rgba(255,109,236,.15)",border:"1px solid rgba(255,109,236,.45)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:15,lineHeight:1}}>🎮</button>
             <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(253,239,38,.1)",border:"1px solid rgba(253,239,38,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#FDEF26",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
             <div className="edu-notif-bell" onClick={()=>setShowNotifPanel(p=>!p)}>
               🔔
