@@ -7859,7 +7859,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b30</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b31</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -10189,6 +10189,9 @@ function EducatorShell({ profile, onLogout }) {
           <div style={{transform:"rotate(-1deg)",marginBottom:8}}>
           <div className="logo-b" style={{width:120,height:40,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
           <div className="logo-w" style={{width:120,height:40,backgroundSize:"contain",backgroundRepeat:"no-repeat",backgroundPosition:"left center"}}/>
+          </div>
+          <div style={{width:96,height:96,borderRadius:18,overflow:"hidden",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",margin:"4px 0 10px",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <Avatar url={profile.avatar_url} emoji="🌱" size={96}/>
           </div>
           <div style={{display:"inline-block",background:"#FDEF26",color:"#101010",fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:13,padding:"5px 12px",border:"2px solid #101010",borderRadius:8,boxShadow:"2px 2px 0 #101010",transform:"rotate(-1.5deg)"}}>🌱 {profile.display_name||"Giardiniere"}</div>
         </div>
