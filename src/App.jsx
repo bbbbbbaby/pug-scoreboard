@@ -7859,7 +7859,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b32</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b35</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -8905,7 +8905,8 @@ function AdminView({ profile }) {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
-  const [form, setForm] = useState({ display_name:"", email:"", password:"", avatar_url:"" });
+  const [form, setForm] = useState({ display_name:"", email:"", password:"", avatar_url:"", perms:null });
+  const [permsTarget, setPermsTarget] = useState(null);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [creating, setCreating] = useState(false);
@@ -9001,7 +9002,7 @@ function AdminView({ profile }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await sb.from("profiles").select("id,display_name,avatar_url,xp,created_at").eq("role","educator").order("display_name");
+    const { data } = await sb.from("profiles").select("id,display_name,avatar_url,xp,created_at,perms").eq("role","educator").order("display_name");
     setEducators(data || []); setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -9016,10 +9017,10 @@ function AdminView({ profile }) {
     if (ae) { setErr("Errore: " + ae.message); setCreating(false); return; }
     const uid = a?.user?.id;
     if (!uid) { setErr("Account non creato — email già esistente?"); setCreating(false); return; }
-    const { error: pe } = await sb.from("profiles").insert({ id: uid, display_name: form.display_name.trim(), role: "educator", avatar_url: form.avatar_url.trim() || null, pin: "1234" });
+    const { error: pe } = await sb.from("profiles").insert({ id: uid, display_name: form.display_name.trim(), role: "educator", perms: form.perms, avatar_url: form.avatar_url.trim() || null, pin: "1234" });
     if (pe) { setErr("Profilo: " + pe.message); setCreating(false); return; }
     setMsg(`✅ Giardiniere "${form.display_name}" creato! Email: ${form.email} · Password: ${form.password}`);
-    setForm({ display_name:"", email:"", password:"", avatar_url:"" }); setShowCreate(false); load();
+    setForm({ display_name:"", email:"", password:"", avatar_url:"", perms:null }); setShowCreate(false); load();
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user?.id !== adminId) { await sb.auth.signOut(); window.location.reload(); }
     setCreating(false);
@@ -9096,19 +9097,46 @@ function AdminView({ profile }) {
                 ) : (
                   <div>
                     <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{e.display_name}</div>
-                    <div style={{fontSize:11,color:"var(--text3)"}}>Creato: {new Date(e.created_at).toLocaleDateString("it-IT")}</div>
+                    <div style={{fontSize:11,color:"var(--text3)"}}>{Array.isArray(e.perms) ? "🌿 Apprendista · " + e.perms.length + " sezioni" : "🌱 Giardiniere (accesso completo)"} · {new Date(e.created_at).toLocaleDateString("it-IT")}</div>
                   </div>
                 )}
               </div>
               {editEdu?.id !== e.id && (
                 <div style={{display:"flex",gap:6}}>
                   <button className="btn btn-ghost btn-xs" onClick={()=>setEditEdu({...e})}>✏️</button>
+                  <button className="btn btn-ghost btn-xs" title="Permessi" onClick={()=>setPermsTarget({id:e.id,display_name:e.display_name,perms:Array.isArray(e.perms)?[...e.perms]:null})}>🔐</button>
                   <button className="btn btn-ghost btn-xs" onClick={()=>setEditAvatar({id:e.id,display_name:e.display_name,avatar_url:e.avatar_url||""})} title="Cambia avatar">🖼️</button>
                   <button className="btn btn-danger btn-xs" onClick={()=>deleteEdu(e.id,e.display_name)}>🗑️</button>
                 </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {permsTarget && (
+        <div className="modal-bg" onClick={()=>setPermsTarget(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">🔐 Permessi · {permsTarget.display_name}</div>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
+              <button className="btn btn-sm" style={{flex:1,background:permsTarget.perms===null?"#339966":"transparent",color:permsTarget.perms===null?"#fff":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setPermsTarget(p=>({...p,perms:null}))}>🌱 Giardiniere (tutto)</button>
+              <button className="btn btn-sm" style={{flex:1,background:Array.isArray(permsTarget.perms)?"#FDEF26":"transparent",color:Array.isArray(permsTarget.perms)?"#101010":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setPermsTarget(p=>({...p,perms:Array.isArray(p.perms)?p.perms:["dashboard","presenze","qr"]}))}>🌿 Apprendista</button>
+            </div>
+            {Array.isArray(permsTarget.perms) && (
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:220,overflowY:"auto",marginBottom:10}}>
+                {EDUCATOR_TABS.filter(t=>t[0]!=="admin").map(t=>{
+                  const on = permsTarget.perms.includes(t[0]);
+                  return <button key={t[0]} className="btn btn-xs" onClick={()=>setPermsTarget(p=>({...p,perms: on ? p.perms.filter(x=>x!==t[0]) : [...p.perms,t[0]]}))}
+                    style={{background:on?"#339966":"transparent",color:on?"#fff":"var(--text2)",border:"1px solid var(--border)",padding:"5px 9px",fontSize:11}}>{on?"✓ ":""}{t[1]} {t[2]}</button>;
+                })}
+              </div>
+            )}
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-primary" style={{flex:1}} onClick={async()=>{ await sb.from("profiles").update({ perms: permsTarget.perms }).eq("id", permsTarget.id); setPermsTarget(null); load(); }}>Salva permessi</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setPermsTarget(null)}>Annulla</button>
+            </div>
+            <div style={{fontSize:11,color:"var(--text3)",marginTop:10}}>L\'apprendista dovrà uscire e rientrare per vedere i nuovi permessi.</div>
+          </div>
         </div>
       )}
 
@@ -9158,6 +9186,23 @@ function AdminView({ profile }) {
             <div style={{height:1,background:"var(--border)",margin:"8px 0"}}/>
             <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Oppure carica una foto:</div>
             <InlineAvatarUpload playerId={"new_edu_" + Date.now()} onUploaded={url=>setForm(f=>({...f,avatar_url:url}))}/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Tipo di account</label>
+            <div style={{display:"flex",gap:8,marginBottom:8}}>
+              <button className="btn btn-sm" style={{flex:1,background:form.perms===null?"#339966":"transparent",color:form.perms===null?"#fff":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setForm(f=>({...f,perms:null}))}>🌱 Giardiniere (tutto)</button>
+              <button className="btn btn-sm" style={{flex:1,background:Array.isArray(form.perms)?"#FDEF26":"transparent",color:Array.isArray(form.perms)?"#101010":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setForm(f=>({...f,perms:Array.isArray(f.perms)?f.perms:["dashboard","presenze","qr"]}))}>🌿 Apprendista</button>
+            </div>
+            {Array.isArray(form.perms) && (<>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:6}}>Spunta le sezioni che l'apprendista potrà vedere:</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:180,overflowY:"auto"}}>
+                {EDUCATOR_TABS.filter(t=>t[0]!=="admin").map(t=>{
+                  const on = form.perms.includes(t[0]);
+                  return <button key={t[0]} className="btn btn-xs" onClick={()=>setForm(f=>({...f,perms: on ? f.perms.filter(x=>x!==t[0]) : [...f.perms,t[0]]}))}
+                    style={{background:on?"#339966":"transparent",color:on?"#fff":"var(--text2)",border:"1px solid var(--border)",padding:"5px 9px",fontSize:11}}>{on?"✓ ":""}{t[1]} {t[2]}</button>;
+                })}
+              </div>
+            </>)}
           </div>
           <div style={{display:"flex",gap:8,marginTop:4}}>
             <button className="btn btn-primary" style={{flex:1}} onClick={createEducator} disabled={creating}>{creating?"⏳ Creazione…":"Crea giardiniere"}</button>
@@ -10074,7 +10119,7 @@ function EducatorShell({ profile, onLogout }) {
 
   const cur = EDUCATOR_TABS.find(t => t[0] === tab);
   const lv = getLevel(profile.xp || 0);
-  const mobTabs = EDUCATOR_TABS.filter(t => MOB_TABS_IDS.includes(t[0]));
+  const mobTabs = EDUCATOR_TABS.filter(t => MOB_TABS_IDS.includes(t[0]) && (!Array.isArray(profile.perms) || profile.perms.includes(t[0])));
 
   useEffect(() => { document.body.classList.toggle("light", theme === "light"); }, [theme]);
 
@@ -10098,6 +10143,7 @@ function EducatorShell({ profile, onLogout }) {
             // Voci del gruppo (Admin solo per ruolo admin)
             const groupTabs = group.tabs
               .filter(tid => tid !== "admin" || profile.role === "admin")
+              .filter(tid => !Array.isArray(profile.perms) || profile.perms.includes(tid))
               .map(tid => EDUCATOR_TABS.find(t => t[0] === tid))
               .filter(Boolean);
             if (groupTabs.length === 0) return null;
@@ -10202,6 +10248,7 @@ function EducatorShell({ profile, onLogout }) {
           {EDUCATOR_GROUPS.map(group => {
             const groupTabs = group.tabs
               .filter(tid => tid !== "admin" || profile.role === "admin")
+              .filter(tid => !Array.isArray(profile.perms) || profile.perms.includes(tid))
               .map(tid => EDUCATOR_TABS.find(t => t[0] === tid))
               .filter(Boolean);
             if (groupTabs.length === 0) return null;
