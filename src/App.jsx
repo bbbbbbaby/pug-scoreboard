@@ -410,8 +410,9 @@ const css = `
   .mob-header { display:none; position:fixed; top:0; left:0; right:0; min-height:56px; background:#0d0d0d; border-bottom:1px solid #2a2a2a; z-index:20; align-items:center; padding:env(safe-area-inset-top,0px) 14px; gap:10px; backdrop-filter:blur(24px);  height:calc(56px + env(safe-area-inset-top,0px)); }
   .mob-header-title { font-family:'Funnel Display',sans-serif; font-weight:900; font-size:20px; text-transform:uppercase; color:#fff; flex:1; letter-spacing:.05em; }
   .mob-drawer-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:30; backdrop-filter:blur(6px); }
-  .mob-drawer { position:fixed; top:0; left:0; bottom:0; width:270px; background:rgba(16,16,16,.97); border-right:1px solid rgba(255,255,255,.08); z-index:40; transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; backdrop-filter:blur(24px); }
+  .mob-drawer { padding-top:env(safe-area-inset-top,0px); position:fixed; top:0; left:0; bottom:0; width:270px; background:rgba(16,16,16,.97); border-right:1px solid rgba(255,255,255,.08); z-index:40; transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; backdrop-filter:blur(24px); }
   .mob-drawer.open { transform:translateX(0); }
+  .modal-bg{padding-top:env(safe-area-inset-top,0px)}
   .mob-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; padding-bottom:env(safe-area-inset-bottom,0px); background:#0d0d0d; border-top:1px solid #2a2a2a; z-index:20; padding-bottom:env(safe-area-inset-bottom,0px); backdrop-filter:blur(24px); }
   .mob-bottom-nav-inner { display:flex; height:60px; }
   .mob-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:rgba(255,255,255,.28); font-family:'Funnel Display'; padding:0; transition:color .15s; }  /* pug-ok: testo su fondo nero */
@@ -7859,7 +7860,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b35</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b36</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -10219,6 +10220,7 @@ function EducatorShell({ profile, onLogout }) {
         <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color: theme==="light"?"#101010":"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
         <span className="mob-header-title" style={{flex:1,marginLeft:8}}>{cur?.[2]}</span>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <button onClick={()=>setShowGamesTop(true)} title="Giochi" style={{background:"rgba(255,109,236,.18)",border:"1px solid rgba(255,109,236,.45)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:15,lineHeight:1}}>🎮</button>
           <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(253,239,38,.15)",border:"1px solid rgba(253,239,38,.3)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#FDEF26",lineHeight:1}} title="Presentazione">🎮</button>
           <button onClick={()=>setTheme(t=>t==="dark"?"light":"dark")} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,lineHeight:1}} title="Tema">
             {theme==="dark"?"☀️":"🌙"}
