@@ -17,3 +17,4 @@ App.jsx è più pesante (~1,7 MB) perché ora contiene anche i 12 sfondi (telefo
 ## Ancora da decidere
 - **Messaggi/Notifiche**: nell'app rosa/azzurro, nei camerini azzurro/giallo. Tenuti i colori dell'app.
 - **Lato educatore**: non toccato (sfondo personalizzabile dall'educatore) — da fare insieme.
+okok 31/08
