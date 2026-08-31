@@ -3319,7 +3319,6 @@ function Login({ onLogin }) {
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:14,fontWeight:800,color:"#101010",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.display_name}</div>
                         {p.first_name && <div style={{fontSize:11,color:"rgba(16,16,16,.55)",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.first_name}</div>}
-                        {showSquadLogin && p.squads?.name && <SquadPill name={p.squads.name}/>}
                       </div>
                       <span style={{color:"var(--text3)",fontSize:16}}>→</span>
                     </div>
@@ -7860,7 +7859,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b29</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b30</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -10245,7 +10244,12 @@ function EducatorShell({ profile, onLogout }) {
         <div className="topbar" style={{borderBottom:`1px solid ${EduTabColors[tab]?.border||"rgba(255,255,255,.08)"}`}}>
           <div/>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:700}}>{profile.display_name}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:32,height:32,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(253,239,38,.65)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,.06)"}}>
+                <Avatar url={profile.avatar_url} emoji="🌱" size={32}/>
+              </div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.85)",fontWeight:800,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile.display_name}</div>
+            </div>
             <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(253,239,38,.1)",border:"1px solid rgba(253,239,38,.3)",borderRadius:10,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#FDEF26",whiteSpace:"nowrap"}} title="Modalità presentazione">🎮</button>
             <div className="edu-notif-bell" onClick={()=>setShowNotifPanel(p=>!p)}>
               🔔
