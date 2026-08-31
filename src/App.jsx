@@ -1432,7 +1432,8 @@ body:not(.light){--pt-empty-bg:#17181c;--pt-empty-color:rgba(255,255,255,.55);--
   .player-wrap { background:#000; min-height:100vh; position:relative; z-index:1; transition:background .4s ease; }
 /* pass grafico: sfondi reali responsive (telefono default, largo da >=640px) */
 /* topbar in tinta col tab (giorno) e senza riga di stacco — come il camerino */
-.pd-topbar{border-bottom:none!important;box-shadow:none}
+.pd-topbar{border-bottom:none!important;box-shadow:none;z-index:100!important}
+.pd-nav{z-index:90!important}
 .player-wrap.bg-azzurro .pd-topbar{background:#A3CFFF}
 .player-wrap.bg-rosa .pd-topbar{background:#FF6DEC}
 .player-wrap.bg-giallo .pd-topbar{background:#FCEF25}
@@ -7859,7 +7860,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b28</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b29</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
