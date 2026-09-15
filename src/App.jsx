@@ -3254,7 +3254,7 @@ function Login({ onLogin }) {
     setLoadingEdu(true); setErr("");
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) { setErr(error.message); setLoadingEdu(false); return; }
-    const { data: profile } = await sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", data.user.id).single();
+    const { data: profile } = await sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
     if (profile?.id) setTimeout(() => registerPush(profile.id), 2000);
     setLoadingEdu(false);
@@ -3770,7 +3770,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 
   const loadData = useCallback(async () => {
     const [{ data: p }, { data: badges }, { data: att }, { data: notifs }] = await Promise.all([
-      sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", playerId).single(),
+      sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", playerId).single(),
       sb.from("player_badges").select("*, badges(name,image_url)").eq("player_id", playerId).order("assigned_at", { ascending: false }),
       sb.from("attendances").select("*").eq("player_id", playerId).order("date", { ascending: false }).limit(30),
       sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(40),
@@ -7860,7 +7860,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b39</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b40</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -10586,7 +10586,7 @@ export default function App() {
               }
               if (session) {
                 const { data: p } = await sb.from("profiles")
-                  .select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single();
+                  .select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", session.user.id).single();
                 if (p) {
                   setProfile(p);
                   localStorage.setItem("pug_edu", JSON.stringify(p));
@@ -10599,7 +10599,7 @@ export default function App() {
           // Ascolta solo il logout ESPLICITO
           const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange((event, session) => {
             if (event === "SIGNED_IN" && session) {
-              sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single()
+              sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", session.user.id).single()
                 .then(({ data: p }) => {
                   if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
                 });
@@ -10615,7 +10615,7 @@ export default function App() {
     setChecking(false);
     const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,squads(name)").eq("id", session.user.id).single()
+        sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", session.user.id).single()
           .then(({ data: p }) => {
             if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
           });
