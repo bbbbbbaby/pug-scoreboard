@@ -7860,7 +7860,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b36</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b37</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9003,7 +9003,8 @@ function AdminView({ profile }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await sb.from("profiles").select("id,display_name,avatar_url,xp,created_at,perms").eq("role","educator").order("display_name");
+    let { data, error: le } = await sb.from("profiles").select("id,display_name,avatar_url,xp,created_at,perms").eq("role","educator").order("display_name");
+    if (le) { const r = await sb.from("profiles").select("id,display_name,avatar_url,xp,created_at").eq("role","educator").order("display_name"); data = r.data; }
     setEducators(data || []); setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -9018,8 +9019,12 @@ function AdminView({ profile }) {
     if (ae) { setErr("Errore: " + ae.message); setCreating(false); return; }
     const uid = a?.user?.id;
     if (!uid) { setErr("Account non creato — email già esistente?"); setCreating(false); return; }
-    const { error: pe } = await sb.from("profiles").insert({ id: uid, display_name: form.display_name.trim(), role: "educator", perms: form.perms, avatar_url: form.avatar_url.trim() || null, pin: "1234" });
+    const { error: pe } = await sb.from("profiles").insert({ id: uid, display_name: form.display_name.trim(), role: "educator", avatar_url: form.avatar_url.trim() || null, pin: "1234" });
     if (pe) { setErr("Profilo: " + pe.message); setCreating(false); return; }
+    if (Array.isArray(form.perms)) {
+      const { error: permErr } = await sb.from("profiles").update({ perms: form.perms }).eq("id", uid);
+      if (permErr) setErr("Creato, ma permessi non salvati (manca la migrazione 030): " + permErr.message);
+    }
     setMsg(`✅ Giardiniere "${form.display_name}" creato! Email: ${form.email} · Password: ${form.password}`);
     setForm({ display_name:"", email:"", password:"", avatar_url:"", perms:null }); setShowCreate(false); load();
     const { data: { session } } = await sb.auth.getSession();
