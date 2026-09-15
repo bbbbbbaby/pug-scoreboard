@@ -7860,7 +7860,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b37</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b39</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9128,12 +9128,25 @@ function AdminView({ profile }) {
               <button className="btn btn-sm" style={{flex:1,background:permsTarget.perms===null?"#339966":"transparent",color:permsTarget.perms===null?"#fff":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setPermsTarget(p=>({...p,perms:null}))}>🌱 Giardiniere (tutto)</button>
               <button className="btn btn-sm" style={{flex:1,background:Array.isArray(permsTarget.perms)?"#FDEF26":"transparent",color:Array.isArray(permsTarget.perms)?"#101010":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setPermsTarget(p=>({...p,perms:Array.isArray(p.perms)?p.perms:["dashboard","presenze","qr"]}))}>🌿 Apprendista</button>
             </div>
+            <div onClick={()=>setPermsTarget(p=>{
+                   const all = EDUCATOR_TABS.map(t=>t[0]);
+                   if (Array.isArray(p.perms)) return {...p, perms: p.perms.includes("admin") ? p.perms.filter(x=>x!=="admin") : [...p.perms,"admin"]};
+                   return {...p, perms: all};
+                 })}
+                 style={{display:"flex",alignItems:"center",gap:10,border:"2px solid #101010",borderRadius:10,padding:"10px 12px",marginBottom:12,cursor:"pointer",background:(Array.isArray(permsTarget.perms)&&permsTarget.perms.includes("admin"))?"rgba(212,20,35,.12)":"transparent"}}>
+              <div style={{width:20,height:20,borderRadius:5,border:"2px solid #101010",background:(Array.isArray(permsTarget.perms)&&permsTarget.perms.includes("admin"))?"#D41323":"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13,fontWeight:900}}>{(Array.isArray(permsTarget.perms)&&permsTarget.perms.includes("admin"))?"✓":""}</div>
+              <div>
+                <div style={{fontWeight:800,fontSize:13}}>🔑 Può creare e gestire Giardinieri</div>
+                <div style={{fontSize:11,color:"var(--text3)"}}>Dà accesso alla sezione Giardinieri: potrà creare nuovi account e modificarne i permessi.</div>
+              </div>
+            </div>
             {Array.isArray(permsTarget.perms) && (
               <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:220,overflowY:"auto",marginBottom:10}}>
-                {EDUCATOR_TABS.filter(t=>t[0]!=="admin").map(t=>{
+                {EDUCATOR_TABS.map(t=>{
                   const on = permsTarget.perms.includes(t[0]);
+                  const lab = t[0]==="admin" ? "🔑 Gestione Giardinieri" : (t[1]+" "+t[2]);
                   return <button key={t[0]} className="btn btn-xs" onClick={()=>setPermsTarget(p=>({...p,perms: on ? p.perms.filter(x=>x!==t[0]) : [...p.perms,t[0]]}))}
-                    style={{background:on?"#339966":"transparent",color:on?"#fff":"var(--text2)",border:"1px solid var(--border)",padding:"5px 9px",fontSize:11}}>{on?"✓ ":""}{t[1]} {t[2]}</button>;
+                    style={{background:on?(t[0]==="admin"?"#D41323":"#339966"):"transparent",color:on?"#fff":"var(--text2)",border:"1px solid var(--border)",padding:"5px 9px",fontSize:11}}>{on?"✓ ":""}{lab}</button>;
                 })}
               </div>
             )}
@@ -9202,10 +9215,11 @@ function AdminView({ profile }) {
             {Array.isArray(form.perms) && (<>
               <div style={{fontSize:11,color:"var(--text3)",marginBottom:6}}>Spunta le sezioni che l'apprendista potrà vedere:</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:180,overflowY:"auto"}}>
-                {EDUCATOR_TABS.filter(t=>t[0]!=="admin").map(t=>{
+                {EDUCATOR_TABS.map(t=>{
                   const on = form.perms.includes(t[0]);
+                  const lab = t[0]==="admin" ? "🔑 Gestione Giardinieri" : (t[1]+" "+t[2]);
                   return <button key={t[0]} className="btn btn-xs" onClick={()=>setForm(f=>({...f,perms: on ? f.perms.filter(x=>x!==t[0]) : [...f.perms,t[0]]}))}
-                    style={{background:on?"#339966":"transparent",color:on?"#fff":"var(--text2)",border:"1px solid var(--border)",padding:"5px 9px",fontSize:11}}>{on?"✓ ":""}{t[1]} {t[2]}</button>;
+                    style={{background:on?(t[0]==="admin"?"#D41323":"#339966"):"transparent",color:on?"#fff":"var(--text2)",border:"1px solid var(--border)",padding:"5px 9px",fontSize:11}}>{on?"✓ ":""}{lab}</button>;
                 })}
               </div>
             </>)}
@@ -10148,7 +10162,7 @@ function EducatorShell({ profile, onLogout }) {
           {EDUCATOR_GROUPS.map(group => {
             // Voci del gruppo (Admin solo per ruolo admin)
             const groupTabs = group.tabs
-              .filter(tid => tid !== "admin" || profile.role === "admin")
+              .filter(tid => tid !== "admin" || profile.role === "admin" || (Array.isArray(profile.perms) && profile.perms.includes("admin")))
               .filter(tid => !Array.isArray(profile.perms) || profile.perms.includes(tid))
               .map(tid => EDUCATOR_TABS.find(t => t[0] === tid))
               .filter(Boolean);
@@ -10254,7 +10268,7 @@ function EducatorShell({ profile, onLogout }) {
         <nav style={{flex:1,padding:"8px 0",overflowY:"auto"}}>
           {EDUCATOR_GROUPS.map(group => {
             const groupTabs = group.tabs
-              .filter(tid => tid !== "admin" || profile.role === "admin")
+              .filter(tid => tid !== "admin" || profile.role === "admin" || (Array.isArray(profile.perms) && profile.perms.includes("admin")))
               .filter(tid => !Array.isArray(profile.perms) || profile.perms.includes(tid))
               .map(tid => EDUCATOR_TABS.find(t => t[0] === tid))
               .filter(Boolean);
