@@ -5898,7 +5898,7 @@ function BookingsView() {
     load();
   }
 
-  const visible = showArchive ? bookings : bookings.filter(b => (b.created_at||"") >= cutoff);
+  const visible = showArchive ? bookings : bookings.filter(b => b.status === "pending" || (b.created_at||"") >= cutoff);
   const statusTag = { pending:["tag-amber","In attesa"], confirmed:["tag-green","Confermata"], rejected:["tag-red","Rifiutata"], cancelled:["tag-gray","Annullata"] };
 
   return (
@@ -7978,7 +7978,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b54</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b55</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9219,42 +9219,46 @@ function AdminView({ profile }) {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  async function staffRpc(fn, args) {
+    const { data, error } = await sb.rpc(fn, args);
+    if (error) return /function|schema cache/i.test(error.message||"") ? "manca la migrazione 036 nel database" : error.message;
+    if (data && data.error) return data.error;
+    return null;
+  }
+
   async function createEducator() {
     setErr(""); setMsg("");
     if (!form.display_name.trim() || !form.email.trim() || !form.password.trim()) { setErr("Nome, email e password obbligatori."); return; }
-    if (form.password.length < 6) { setErr("Password minimo 6 caratteri."); return; }
+    if (form.password.trim().length < 6) { setErr("Password minimo 6 caratteri."); return; }
     setCreating(true);
-    const adminId = profile.id;
-    const { data: a, error: ae } = await sb.auth.signUp({ email: form.email.trim(), password: form.password.trim() });
-    if (ae) { setErr("Errore: " + ae.message); setCreating(false); return; }
-    const uid = a?.user?.id;
-    if (!uid) { setErr("Account non creato — email già esistente?"); setCreating(false); return; }
-    const { error: pe } = await sb.from("profiles").insert({ id: uid, display_name: form.display_name.trim(), role: "educator", avatar_url: form.avatar_url.trim() || null, pin: "1234" });
-    if (pe) { setErr("Profilo: " + pe.message); setCreating(false); return; }
-    if (Array.isArray(form.perms)) {
-      const { error: permErr } = await sb.from("profiles").update({ perms: form.perms }).eq("id", uid);
-      if (permErr) setErr("Creato, ma permessi non salvati (manca la migrazione 030): " + permErr.message);
-    }
-    setMsg(`✅ Giardiniere "${form.display_name}" creato! Email: ${form.email} · Password: ${form.password}`);
-    setForm({ display_name:"", email:"", password:"", avatar_url:"", perms:null }); setShowCreate(false); load();
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user?.id !== adminId) { await sb.auth.signOut(); window.location.reload(); }
+    const e = await staffRpc("admin_create_educator", { p_email: form.email.trim(), p_password: form.password.trim(), p_display_name: form.display_name.trim(), p_avatar_url: form.avatar_url.trim() || null, p_perms: Array.isArray(form.perms) ? form.perms : null });
     setCreating(false);
+    if (e) { setErr("Non creato: " + e); return; }
+    setMsg(`✅ Giardiniere "${form.display_name}" creato! Email: ${form.email.trim()} · Password: ${form.password.trim()}`);
+    setForm({ display_name:"", email:"", password:"", avatar_url:"", perms:null }); setShowCreate(false); load();
   }
 
   async function saveEdu(e) {
-    await sb.from("profiles").update({ display_name: e.display_name, avatar_url: e.avatar_url || null }).eq("id", e.id);
+    setErr(""); setMsg("");
+    const x = await staffRpc("admin_update_educator", { p_id: e.id, p_display_name: e.display_name || "", p_avatar_url: e.avatar_url || null });
+    if (x) { setErr("Non salvato: " + x); return; }
     setEditEdu(null); load();
   }
 
   async function saveAvatar(id, url) {
-    await sb.from("profiles").update({ avatar_url: url || null }).eq("id", id);
+    setErr(""); setMsg("");
+    const cur = educators.find(x => x.id === id);
+    const x = await staffRpc("admin_update_educator", { p_id: id, p_display_name: cur?.display_name || "", p_avatar_url: url || null });
+    if (x) { setErr("Avatar non salvato: " + x); return; }
     setEditAvatar(null); load();
   }
 
   async function deleteEdu(id, name) {
     if (!confirm(`Eliminare il giardiniere "${name}"?`)) return;
-    await sb.from("profiles").delete().eq("id", id); load();
+    setErr(""); setMsg("");
+    const x = await staffRpc("admin_delete_educator", { p_id: id });
+    if (x) { setErr("Non eliminato: " + x); return; }
+    setMsg(`🗑️ Giardiniere "${name}" eliminato.`); load();
   }
 
   return (
@@ -9361,7 +9365,7 @@ function AdminView({ profile }) {
               </div>
             )}
             <div style={{display:"flex",gap:8}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={async()=>{ await sb.from("profiles").update({ perms: permsTarget.perms }).eq("id", permsTarget.id); setPermsTarget(null); load(); }}>Salva permessi</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={async()=>{ const x = await staffRpc("admin_set_educator_perms", { p_id: permsTarget.id, p_perms: Array.isArray(permsTarget.perms) ? permsTarget.perms : null }); if (x) { alert("Permessi non salvati: " + x); return; } setMsg(`🔐 Permessi di "${permsTarget.display_name}" salvati.`); setPermsTarget(null); load(); }}>Salva permessi</button>
               <button className="btn btn-ghost btn-sm" onClick={()=>setPermsTarget(null)}>Annulla</button>
             </div>
             <div style={{fontSize:11,color:"var(--text3)",marginTop:10}}>L\'apprendista dovrà uscire e rientrare per vedere i nuovi permessi.</div>
