@@ -62,7 +62,7 @@ let _visFetch = null;
 async function readAppConfig() {
   const r = await sb.rpc("get_app_config");
   if (!r.error && r.data && typeof r.data === "object") return r.data;
-  const { data } = await sb.from("app_settings").select("config").eq("id", 1).maybeSingle();
+  const { data } = await sb.from("pug_settings").select("config").eq("id", 1).maybeSingle();
   return data?.config || null;
 }
 async function writeAppConfig(cfg) {
@@ -7440,7 +7440,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     };
     fetchVisibilityConfig().then(applyCfg).catch(() => {}).finally(() => { if (alive) setVisReady(true); });
     const ch = sb.channel("vis-config-" + Math.random().toString(36).slice(2))
-      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: "id=eq.1" },
+      .on("postgres_changes", { event: "*", schema: "public", table: "pug_settings", filter: "id=eq.1" },
         (payload) => applyCfg(payload?.new?.config))
       .subscribe();
     const onFocus = () => { if (document.visibilityState === "visible") refetch(); };
@@ -8002,7 +8002,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b62</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b63</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9192,7 +9192,7 @@ function AdminView({ profile }) {
       const okRT = await new Promise((resolve) => {
         let done = false;
         const ch = sb.channel("diag-rt-" + Math.random().toString(36).slice(2))
-          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.1" }, () => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(true); } })
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "pug_settings", filter: "id=eq.1" }, () => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(true); } })
           .subscribe(async (status) => { if (status === "SUBSCRIBED") { await writeAppConfig({}); } });
         setTimeout(() => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(false); } }, 5000);
       });
