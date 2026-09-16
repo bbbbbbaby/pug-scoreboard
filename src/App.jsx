@@ -59,13 +59,24 @@ function localToday() {
 // Fetch della config di visibilità con dedupe: chiamate concorrenti
 // condividono la stessa richiesta (evita doppio fetch al mount).
 let _visFetch = null;
+async function readAppConfig() {
+  const r = await sb.rpc("get_app_config");
+  if (!r.error && r.data && typeof r.data === "object") return r.data;
+  const { data } = await sb.from("profiles").select("app_config")
+    .eq("id", "00000000-0000-0000-0000-000000000099").single();
+  return data?.app_config || null;
+}
+async function writeAppConfig(cfg) {
+  const { data, error } = await sb.rpc("set_app_config", { p_cfg: cfg });
+  if (error) return /function|schema cache/i.test(error.message||"") ? "manca la migrazione 037 nel database" : error.message;
+  if (data && data.error) return data.error;
+  return null;
+}
 async function fetchVisibilityConfig() {
   if (_visFetch) return _visFetch;
   _visFetch = (async () => {
     try {
-      const { data } = await sb.from("profiles").select("app_config")
-        .eq("id", "00000000-0000-0000-0000-000000000099").single();
-      return data?.app_config || null;
+      return await readAppConfig();
     } catch(_) {
       return null;
     } finally {
@@ -3192,8 +3203,8 @@ function Login({ onLogin }) {
   const [showSquadLogin, setShowSquadLogin] = useState(true);
   useEffect(() => {
     // Carica visibilità per squadre (anche senza login)
-    sb.from("profiles").select("app_config").eq("id","00000000-0000-0000-0000-000000000099").single()
-      .then(({data})=>{ if(data?.app_config?.squadre===false) setShowSquadLogin(false); }).catch(()=>{});
+    readAppConfig()
+      .then((cfg)=>{ if(cfg?.squadre===false) setShowSquadLogin(false); }).catch(()=>{});
     sb.from("profiles")
       .select("id,display_name,first_name,avatar_url,squad_id,squads(name)")
       .eq("role","player").neq("display_name","AppConfig")
@@ -6338,9 +6349,8 @@ function VisibilityView() {
 
   useEffect(() => {
     // Carica da profiles — sempre accessibile
-    sb.from("profiles").select("app_config").eq("id", "00000000-0000-0000-0000-000000000099").single()
-      .then(({ data }) => {
-        const cfg = data?.app_config;
+    readAppConfig()
+      .then((cfg) => {
         if (cfg && typeof cfg === "object") {
           setVis(cfg);
           localStorage.setItem("pug_visibility", JSON.stringify(cfg));
@@ -6349,19 +6359,19 @@ function VisibilityView() {
   }, []);
 
   async function toggle(key) {
+    const prev = vis;
     const next = { ...vis, [key]: vis[key] === false ? true : false };
     setVis(next);
+    const e = await writeAppConfig(next);
+    if (e) { setVis(prev); alert("Non salvato sui telefoni: " + e); return; }
     localStorage.setItem("pug_visibility", JSON.stringify(next));
-    await sb.from("profiles").update({ app_config: next }).eq("id", "00000000-0000-0000-0000-000000000099");
   }
 
   async function saveToSupabase() {
     setSaving(true);
     // Salva in profiles del primo admin/educator — profiles è sempre accessibile
-    const { error } = await sb.from("profiles")
-      .update({ app_config: vis })
-      .eq("id", "00000000-0000-0000-0000-000000000099");
-    if (error) { alert("Errore: " + error.message); setSaving(false); return; }
+    const e = await writeAppConfig(vis);
+    if (e) { alert("Non salvato: " + e); setSaving(false); return; }
     localStorage.setItem("pug_visibility", JSON.stringify(vis));
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -6385,8 +6395,8 @@ function VisibilityView() {
     <div>
       <div style={{fontSize:12.5,fontWeight:600,color:"#101010",background:"rgba(255,255,255,.82)",padding:"8px 12px",borderRadius:10,marginBottom:16}}>Controlla cosa vedono i giocatori nel loro profilo. Le modifiche sono immediate.</div>
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        <button className="btn btn-sm" style={{background:"#fff",color:"#101010",border:"2.5px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:800}} onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=true); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>✅ Mostra tutto</button>
-        <button className="btn btn-sm" style={{background:"#fff",color:"#101010",border:"2.5px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:800}} onClick={()=>{const all={}; sections.forEach(s=>all[s.key]=false); setVis(all); localStorage.setItem("pug_visibility",JSON.stringify(all));}}>🙈 Nascondi tutto</button>
+        <button className="btn btn-sm" style={{background:"#fff",color:"#101010",border:"2.5px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:800}} onClick={async()=>{const prev=vis; const all={...vis}; sections.forEach(s=>all[s.key]=true); setVis(all); const e=await writeAppConfig(all); if(e){setVis(prev); alert("Non salvato sui telefoni: "+e); return;} localStorage.setItem("pug_visibility",JSON.stringify(all));}}>✅ Mostra tutto</button>
+        <button className="btn btn-sm" style={{background:"#fff",color:"#101010",border:"2.5px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:800}} onClick={async()=>{const prev=vis; const all={...vis}; sections.forEach(s=>all[s.key]=false); setVis(all); const e=await writeAppConfig(all); if(e){setVis(prev); alert("Non salvato sui telefoni: "+e); return;} localStorage.setItem("pug_visibility",JSON.stringify(all));}}>🙈 Nascondi tutto</button>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {sections.map(s => {
@@ -7415,9 +7425,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     };
     const refetch = async () => {
       try {
-        const { data } = await sb.from("profiles").select("app_config")
-          .eq("id", "00000000-0000-0000-0000-000000000099").single();
-        applyCfg(data?.app_config);
+        applyCfg(await readAppConfig());
       } catch(_) {}
     };
     fetchVisibilityConfig().then(applyCfg).catch(() => {}).finally(() => { if (alive) setVisReady(true); });
@@ -7978,7 +7986,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b57</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b58</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
