@@ -2265,8 +2265,7 @@ function AvatarPicker({ selected, onSelect, squadFilter }) {
 const ANIMATED_STICKERS = [
   { id:"happy", label:"😊 Felice!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}.b{animation:bounce .7s ease-in-out infinite}@keyframes blink{0%,90%,100%{scaleY:1}95%{transform:scaleY(0.1)}}</style><g class="b"><ellipse cx="50" cy="70" rx="32" ry="36" fill="#4caf50"/><ellipse cx="28" cy="45" rx="14" ry="7" fill="var(--verde)" transform="rotate(-40,28,45)"/><ellipse cx="72" cy="45" rx="14" ry="7" fill="var(--verde)" transform="rotate(40,72,45)"/><circle cx="50" cy="32" r="8" fill="var(--verde)"/><circle cx="39" cy="65" r="8" fill="white"/><circle cx="61" cy="65" r="8" fill="white"/><circle cx="41" cy="66" r="5" fill="#1a237e"/><circle cx="63" cy="66" r="5" fill="#1a237e"/><circle cx="43" cy="64" r="2" fill="white"/><circle cx="65" cy="64" r="2" fill="white"/><path d="M 36 78 Q 50 92 64 78" stroke="#1b5e20" stroke-width="3.5" fill="none" stroke-linecap="round"/></g></svg>` },
   { id:"thumbsup", label:"👍 Grande!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes pop{0%{transform:scale(1)}30%{transform:scale(1.2)}100%{transform:scale(1)}}.p{animation:pop .6s ease-out infinite}</style><g class="p"><ellipse cx="50" cy="75" rx="28" ry="30" fill="#66bb6a"/><circle cx="50" cy="28" r="7" fill="var(--verde)"/><rect x="30" y="35" width="10" height="25" rx="5" fill="var(--verde)"/><rect x="60" y="35" width="10" height="25" rx="5" fill="var(--verde)"/><rect x="38" y="55" width="24" height="18" rx="4" fill="#4caf50"/><rect x="35" y="45" width="30" height="14" rx="7" fill="#81c784"/><rect x="44" y="38" width="12" height="12" rx="6" fill="#66bb6a"/><circle cx="40" cy="72" r="7" fill="white"/><circle cx="60" cy="72" r="7" fill="white"/><circle cx="42" cy="73" r="4" fill="#1b5e20"/><circle cx="62" cy="73" r="4" fill="#1b5e20"/><path d="M 40 83 Q 50 90 60 83" stroke="#1b5e20" stroke-width="3" fill="none" stroke-linecap="round"/></g></svg>` },
-  { id:"thumbsdown", label:"👎 Boh...", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes wilt{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-5deg)}}.w{animation:wilt 1s ease-in-out infinite;transform-origin:50% 80%}</style><g class="w"><ellipse cx="50" cy="65" rx="28" ry="30" fill="#78909c"/><ellipse cx="30" cy="42" rx="12" ry="6" fill="var(--argento)" transform="rotate(-20,30,42)"/><ellipse cx="70" cy="42" rx="12" ry="6" fill="var(--argento)" transform="rotate(20,70,42)"/><circle cx="50" cy="30" r="7" fill="var(--argento)"/><circle cx="40" cy="62" r="7" fill="white"/><circle cx="60" cy="62" r="7" fill="white"/><circle cx="42" cy="63" r="4" fill="#263238"/><circle cx="62" cy="63" r="4" fill="#263238"/><path d="M 38 76 Q 50 70 62 76" stroke="#263238" stroke-width="3" fill="none" stroke-linecap="round"/><rect x="35" y="75" width="30" height="14" rx="7" fill="#607d8b" transform="rotate(180,50,82)"/><rect x="44" y="82" width="12" height="12" rx="6" fill="#78909c" transform="rotate(180,50,88)"/></g></svg>` },
-  { id:"kiss", label:"💋 Bacio!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes kiss{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}.k{animation:kiss .8s ease-in-out infinite}@keyframes heart{0%,100%{transform:scale(1) translate(0,0);opacity:1}100%{transform:scale(0) translate(10px,-20px);opacity:0}}.h{animation:heart 1.2s ease-out infinite}</style><g class="k"><ellipse cx="50" cy="68" rx="30" ry="34" fill="#f48fb1"/><ellipse cx="28" cy="44" rx="13" ry="7" fill="#e91e63" transform="rotate(-35,28,44)"/><ellipse cx="72" cy="44" rx="13" ry="7" fill="#e91e63" transform="rotate(35,72,44)"/><circle cx="50" cy="30" r="7" fill="#e91e63"/><circle cx="39" cy="63" r="7" fill="white"/><circle cx="61" cy="63" r="7" fill="white"/><circle cx="41" cy="64" r="4" fill="#880e4f"/><circle cx="63" cy="64" r="4" fill="#880e4f"/><circle cx="50" cy="78" r="7" fill="#e91e63"/><text x="68" y="55" font-size="14" class="h">❤️</text><text x="72" y="45" font-size="10" class="h" style="animation-delay:.4s">💕</text></g></svg>` },
+    { id:"kiss", label:"💋 Bacio!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes kiss{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}.k{animation:kiss .8s ease-in-out infinite}@keyframes heart{0%,100%{transform:scale(1) translate(0,0);opacity:1}100%{transform:scale(0) translate(10px,-20px);opacity:0}}.h{animation:heart 1.2s ease-out infinite}</style><g class="k"><ellipse cx="50" cy="68" rx="30" ry="34" fill="#f48fb1"/><ellipse cx="28" cy="44" rx="13" ry="7" fill="#e91e63" transform="rotate(-35,28,44)"/><ellipse cx="72" cy="44" rx="13" ry="7" fill="#e91e63" transform="rotate(35,72,44)"/><circle cx="50" cy="30" r="7" fill="#e91e63"/><circle cx="39" cy="63" r="7" fill="white"/><circle cx="61" cy="63" r="7" fill="white"/><circle cx="41" cy="64" r="4" fill="#880e4f"/><circle cx="63" cy="64" r="4" fill="#880e4f"/><circle cx="50" cy="78" r="7" fill="#e91e63"/><text x="68" y="55" font-size="14" class="h">❤️</text><text x="72" y="45" font-size="10" class="h" style="animation-delay:.4s">💕</text></g></svg>` },
   { id:"heart", label:"❤️ Cuore!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}.p{animation:pulse .6s ease-in-out infinite}</style><g class="p"><ellipse cx="50" cy="68" rx="30" ry="34" fill="#ef5350"/><ellipse cx="28" cy="44" rx="13" ry="7" fill="#b71c1c" transform="rotate(-35,28,44)"/><ellipse cx="72" cy="44" rx="13" ry="7" fill="#b71c1c" transform="rotate(35,72,44)"/><circle cx="50" cy="30" r="7" fill="#b71c1c"/><circle cx="39" cy="63" r="8" fill="white"/><circle cx="61" cy="63" r="8" fill="white"/><circle cx="41" cy="64" r="5" fill="#b71c1c"/><circle cx="63" cy="64" r="5" fill="#b71c1c"/><path d="M 35 77 Q 50 95 65 77" stroke="#7f0000" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M50 40 C45 35 35 35 35 43 C35 50 50 60 50 60 C50 60 65 50 65 43 C65 35 55 35 50 40Z" fill="#ff1744" opacity=".9" transform="translate(0,-10) scale(0.5) translate(50,0)"/></g></svg>` },
   { id:"laugh", label:"😂 Risata!", svg:`<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes shake{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}.s{animation:shake .3s ease-in-out infinite}</style><g class="s"><ellipse cx="50" cy="68" rx="32" ry="36" fill="#ffd54f"/><ellipse cx="28" cy="43" rx="14" ry="7" fill="var(--giallo)" transform="rotate(-35,28,43)"/><ellipse cx="72" cy="43" rx="14" ry="7" fill="var(--giallo)" transform="rotate(35,72,43)"/><circle cx="50" cy="30" r="7" fill="var(--giallo)"/><path d="M 32 60 Q 50 57 68 60" stroke="#D41323" stroke-width="3" fill="none"/><ellipse cx="50" cy="62" rx="18" ry="4" fill="#D41323"/><path d="M 32 62 Q 50 85 68 62" fill="#D41323"/><rect x="38" y="62" width="24" height="8" fill="white" rx="3"/><text x="26" y="58" font-size="14">😂</text><text x="62" y="58" font-size="14">😂</text></g></svg>` },
   { id:"rofl", label:"🤣 XDDD", svg:`<svg viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg"><style>@keyframes roll{0%{transform:rotate(0deg) translate(0,0)}25%{transform:rotate(-30deg) translate(-5px,5px)}75%{transform:rotate(30deg) translate(5px,5px)}100%{transform:rotate(0deg) translate(0,0)}}.r{animation:roll .5s ease-in-out infinite;transform-origin:55px 65px}</style><g class="r"><ellipse cx="55" cy="68" rx="32" ry="36" fill="#ffb300"/><ellipse cx="30" cy="43" rx="14" ry="7" fill="#ff8f00" transform="rotate(-35,30,43)"/><ellipse cx="80" cy="43" rx="14" ry="7" fill="#ff8f00" transform="rotate(35,80,43)"/><circle cx="55" cy="30" r="7" fill="#ff8f00"/><path d="M 35 60 Q 55 57 75 60" stroke="#D41323" stroke-width="3" fill="none"/><ellipse cx="55" cy="62" rx="20" ry="5" fill="#D41323"/><path d="M 35 62 Q 55 90 75 62" fill="#D41323"/><rect x="43" y="62" width="24" height="8" fill="white" rx="3"/><ellipse cx="30" cy="60" rx="10" ry="6" fill="#29b6f6" opacity=".7" transform="rotate(-20,30,60)"/><ellipse cx="80" cy="60" rx="10" ry="6" fill="#29b6f6" opacity=".7" transform="rotate(20,80,60)"/></g></svg>` }
@@ -3287,7 +3286,7 @@ function Login({ onLogin }) {
     setLoadingEdu(true); setErr("");
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) { setErr(error.message); setLoadingEdu(false); return; }
-    const { data: profile } = await sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", data.user.id).single();
+    const { data: profile } = await sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,limits,squads(name)").eq("id", data.user.id).single();
     onLogin(profile || { id: data.user.id, role: "educator", display_name: email.split("@")[0], xp: 0, coin: 100 });
     if (profile?.id) setTimeout(() => registerPush(profile.id), 2000);
     setLoadingEdu(false);
@@ -3445,7 +3444,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
     }, 8000);
     try {
       const [{ data }, { data: sq }, { data: pins }] = await Promise.all([
-        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,current_streak,role,squads(name,color)").eq("role", "player").order("xp", { ascending: false }),
+        sb.from("profiles").select("id,display_name,first_name,avatar_url,xp,coin,squad_id,current_streak,role,limits,squads(name,color)").eq("role", "player").order("xp", { ascending: false }),
         sb.from("squads").select("*"),
         sb.rpc("educator_player_pins"),
       ]);
@@ -3537,7 +3536,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
     const newXp = Number(p.xp) || 0;
     const newCoin = Number(p.coin) || 0;
     const deltaXp = newXp - (prev?.xp || 0);
-    await sb.from("profiles").update({ display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, avatar_url: p.avatar_url || null }).eq("id", p.id);
+    await sb.from("profiles").update({ limits: p.limits ?? null, display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, avatar_url: p.avatar_url || null }).eq("id", p.id);
     if ((p.pin || "1234") !== (prev?.pin || "1234")) {
       const r = await playerAdmin("set_pin", { player_id: p.id, pin: p.pin || "1234" });
       if (r?.error) { setMsg("⚠️ PIN non aggiornato: " + r.error); setTimeout(() => setMsg(""), 4000); }
@@ -3812,6 +3811,17 @@ function PlayersView({ sectionColors, setSectionColors }) {
               <div className="form-group"><label className="form-label">Coin</label><input className="form-input" type="number" value={editPlayer.coin} onChange={e => setEditPlayer(p => ({ ...p, coin: Number(e.target.value) }))} /></div>
               <div className="form-group"><label className="form-label">PIN</label><input className="form-input" type="text" maxLength={4} value={editPlayer.pin} onChange={e => setEditPlayer(p => ({ ...p, pin: e.target.value.replace(/\D/g, "").slice(0, 4) }))} style={{ textAlign: "center", fontFamily: "'Funnel Display'", fontSize: 20, letterSpacing: 4 }} /></div>
             </div>
+            <div className="form-group" style={{ marginTop: 6 }}>
+              <label className="form-label">🛡️ Restrizioni (tutela)</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {[["no_reaction_send","Non può lasciare reaction"],["no_reaction_receive","Non può riceverne"],["no_games","Niente giochi e sfide"]].map(([k,lab])=>{
+                  const on = !!(editPlayer.limits && editPlayer.limits[k]);
+                  return <button key={k} type="button" className="btn btn-xs"
+                    style={{ background: on?"#D41423":"transparent", color: on?"#fff":"var(--text2)", border:"1px solid var(--border)", padding:"6px 10px", fontSize:11 }}
+                    onClick={()=>setEditPlayer(p=>({ ...p, limits:{ ...(p.limits||{}), [k]: !on } }))}>{on?"✓ ":""}{lab}</button>;
+                })}
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => savePlayer(editPlayer)}>Salva</button>
               <button className="btn btn-ghost btn-sm" onClick={() => setEditPlayer(null)}>Annulla</button>
@@ -3865,7 +3875,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 
   const loadData = useCallback(async () => {
     const [{ data: p }, { data: badges }, { data: att }, { data: notifs }] = await Promise.all([
-      sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", playerId).single(),
+      sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,limits,squads(name)").eq("id", playerId).single(),
       sb.from("player_badges").select("*, badges(name,image_url)").eq("player_id", playerId).order("assigned_at", { ascending: false }),
       sb.from("attendances").select("*").eq("player_id", playerId).order("date", { ascending: false }).limit(30),
       sb.from("notifications").select("*").eq("user_id", playerId).order("created_at", { ascending: false }).limit(40),
@@ -6673,7 +6683,7 @@ function XoxoGame({ myId }) {
     } catch(_){}
   }
   async function loadOpp() {
-    try { const { data } = await sb.from("profiles").select("id,display_name,role,avatar_url").in("role", ["player","educator","admin"]).neq("id", myId).order("display_name"); setOpp(data || []); } catch(_){}
+    try { const { data } = await sb.from("profiles").select("id,display_name,role,avatar_url").in("role", ["player","educator","admin"]).neq("id", myId).or("limits->>no_games.is.null,limits->>no_games.eq.false").order("display_name"); setOpp(data || []); } catch(_){}
   }
   async function challenge(toId) {
     setPicking(false);
@@ -6849,7 +6859,9 @@ function OwnReactions({ myId }) {
     </div>
   );
 }
-function ProfileReactions({ targetId, myId, myName }) {
+function ProfileReactions({ targetId, myId, myName, myLimits, targetLimits }) {
+  if (myLimits?.no_reaction_send) return <div style={{fontSize:12,opacity:.7,textAlign:"center"}}>Le reaction sono disattivate per il tuo profilo.</div>;
+  if (targetLimits?.no_reaction_receive) return <div style={{fontSize:12,opacity:.7,textAlign:"center"}}>Questo profilo non riceve reaction.</div>;
   const REACTS = ["❤️","🔥","👏","🤩","💪"];
   const [counts, setCounts] = useState({});
   const [mine, setMine] = useState(null);
@@ -6986,7 +6998,7 @@ function CommunityTab({ players, myId, myProfile }) {
             </div>
           )}
           {/* Profile reactions */}
-          {selected.id === myId ? <OwnReactions myId={myId}/> : <ProfileReactions targetId={selected.id} myId={myId} myName={myProfile?.display_name}/>}
+          {selected.id === myId ? <OwnReactions myId={myId}/> : <ProfileReactions targetId={selected.id} myId={myId} myName={myProfile?.display_name} myLimits={myProfile?.limits} targetLimits={selected?.limits}/>}
         </div>
 
         {loadingProfile ? <div className="loading">⏳</div> : (
@@ -7965,7 +7977,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b50</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b51</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -8185,7 +8197,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               </div>
             )}
 
-            {visConfig.giochi !== false && <div style={{padding:"0 14px",marginBottom:12}}><button className="btn" style={{width:"100%",background:"#FF6DEC",color:"#101010",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:900,fontSize:16,padding:"14px"}} onClick={()=>{setGamesTab("pong");setShowGames(true);}}>🎮 Giochi</button></div>}
+            {visConfig.giochi !== false && !fullProfile?.limits?.no_games && <div style={{padding:"0 14px",marginBottom:12}}><button className="btn" style={{width:"100%",background:"#FF6DEC",color:"#101010",border:"3px solid #101010",boxShadow:"3px 3px 0 #101010",fontWeight:900,fontSize:16,padding:"14px"}} onClick={()=>{setGamesTab("pong");setShowGames(true);}}>🎮 Giochi</button></div>}
             {showGames && <div className="modal-bg" onClick={()=>setShowGames(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:410}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:900,fontSize:18}}>🎮 Giochi</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowGames(false)}>✕</button></div><GamesHub myId={fullProfile.id} initialTab={gamesTab}/></div></div>}
 
             <InstallPWAButton/>
@@ -10790,7 +10802,7 @@ export default function App() {
               }
               if (session) {
                 const { data: p } = await sb.from("profiles")
-                  .select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", session.user.id).single();
+                  .select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,limits,squads(name)").eq("id", session.user.id).single();
                 if (p) {
                   setProfile(p);
                   localStorage.setItem("pug_edu", JSON.stringify(p));
@@ -10803,7 +10815,7 @@ export default function App() {
           // Ascolta solo il logout ESPLICITO
           const { data: { subscription: sub1 } } = sb.auth.onAuthStateChange((event, session) => {
             if (event === "SIGNED_IN" && session) {
-              sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", session.user.id).single()
+              sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,limits,squads(name)").eq("id", session.user.id).single()
                 .then(({ data: p }) => {
                   if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
                 });
@@ -10819,7 +10831,7 @@ export default function App() {
     setChecking(false);
     const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,squads(name)").eq("id", session.user.id).single()
+        sb.from("profiles").select("id,display_name,role,avatar_url,squad_id,xp,coin,level_id,created_at,updated_at,first_name,current_streak,longest_streak,last_checkin_date,app_config,xp_goal,perms,limits,squads(name)").eq("id", session.user.id).single()
           .then(({ data: p }) => {
             if (p) { setProfile(p); localStorage.setItem("pug_edu", JSON.stringify(p)); }
           });
