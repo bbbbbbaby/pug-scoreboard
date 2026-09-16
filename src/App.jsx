@@ -103,11 +103,8 @@ function printQrOnePerPage(list) {
   if (!w) { alert("Consenti le finestre pop-up per scaricare i QR."); return; }
   const pages = list.map(p =>
     '<section class="pg"><div class="card">'
-    + '<div class="brand">PER-YOU GARDEN</div>'
     + '<img src="' + qrImgFor(p, 600) + '">'
     + '<div class="n">' + qrEsc(p.display_name) + '</div>'
-    + (p.first_name ? '<div class="r">' + qrEsc(p.first_name) + '</div>' : '')
-    + '<div class="h">Inquadra con il telefono per entrare</div>'
     + '</div></section>'
   ).join("");
   w.document.write('<html><head><meta charset="utf-8"><title>QR giocatori - una pagina per profilo</title><style>'
@@ -115,12 +112,9 @@ function printQrOnePerPage(list) {
     + 'body{font-family:Arial,Helvetica,sans-serif;margin:0}'
     + '.pg{height:136mm;display:flex;align-items:center;justify-content:center;page-break-after:always;break-after:page}'
     + '.pg:last-child{page-break-after:auto;break-after:auto}'
-    + '.card{width:88mm;border:1.6mm solid #101010;border-radius:5mm;padding:5mm 4mm;text-align:center;box-sizing:border-box}'
-    + '.brand{font-weight:900;font-size:10pt;letter-spacing:.08em;margin-bottom:2mm}'
-    + '.card img{width:66mm;height:66mm;display:block;margin:0 auto}'
-    + '.n{font-weight:900;font-size:17pt;margin-top:3mm;word-break:break-word;text-transform:uppercase}'
-    + '.r{font-size:11pt;color:#444;margin-top:1mm}'
-    + '.h{font-size:8.5pt;color:#555;margin-top:3mm}'
+    + '.card{width:88mm;text-align:center}'
+    + '.card img{width:80mm;height:80mm;display:block;margin:0 auto}'
+    + '.n{font-weight:900;font-size:18pt;margin-top:4mm;word-break:break-word;text-transform:uppercase}'
     + '@media screen{body{background:#eee}.pg{background:#fff;width:105mm;margin:8mm auto;box-shadow:0 1px 6px rgba(0,0,0,.2)}}'
     + '</style></head><body>' + pages + '</body></html>');
   w.document.close();
@@ -8077,7 +8071,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b64</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b65</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
