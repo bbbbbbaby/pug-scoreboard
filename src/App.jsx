@@ -133,6 +133,16 @@ async function registerPush(playerId) {
   }
 }
 
+async function logGardener(actor, type, summary, payload) {
+  try {
+    await sb.from("gardener_actions").insert({
+      actor_id: actor?.id || null,
+      actor_name: actor?.display_name || "Giardiniere",
+      type, summary, payload: payload || {},
+    });
+  } catch(_) {}
+}
+
 async function sendPush(playerId, title, body) {
   try {
     // Cerca subscription su player_id (compatibile con educatori e giocatori)
@@ -3496,6 +3506,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
   async function applyBatch() {
     if (!selected.size) return;
+    if (!confirm("Assegnare " + batchXp + " XP e " + batchCoin + " Coin a " + selected.size + " giocatori selezionati?")) return;
     await Promise.all([...selected].map(async (id) => {
       const p = players.find(x => x.id === id);
       if (!p) return;
@@ -3514,6 +3525,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
         sendPush(id, "⭐ Hai ricevuto XP!", `+${batchXp} XP e +${batchCoin} Coin!`).catch(()=>{});
       }
     }));
+    logGardener(profile, "punti", "+" + batchXp + " XP e +" + batchCoin + " Coin a " + selected.size + " giocatori", { ids: [...selected], xp: Number(batchXp), coin: Number(batchCoin) });
     setMsg(`+${batchXp} XP e +${batchCoin} coin assegnati a ${selected.size} giocatori`);
     setSelected(new Set()); load();
     setTimeout(() => setMsg(""), 3000);
@@ -4502,7 +4514,13 @@ function AttendanceView({ sectionColors, setSectionColors }) {
       <div className="filter-bar">
         <input type="date" value={date} onChange={e=>setDate(e.target.value)}
           style={{padding:10,background:"var(--surface2)",border:"1.5px solid var(--border2)",borderRadius:10,color:"var(--text)",fontSize:14,flex:1}}/>
-        {presTab==="daily" && <button className="btn btn-yellow btn-sm" onClick={async()=>{ for(const p of visible) await setStatus(p.id,"full"); }}>✓ Tutti</button>}
+        {presTab==="daily" && <button className="btn btn-yellow btn-sm" onClick={async()=>{ if(!confirm("Segnare presenti tutti i "+visible.length+" giocatori mostrati?")) return; const _ids=visible.map(p=>p.id); for(const p of visible) await setStatus(p.id,"full"); logGardener(profile, "presenze", "Presenze segnate per " + _ids.length + " giocatori (" + date + ")", { ids:_ids, date }); }}>✓ Tutti</button>}
+        {presTab==="daily" && <button className="btn btn-ghost btn-sm" style={{color:"#D41323"}} title="Annulla le presenze dei giocatori mostrati" onClick={async()=>{
+          const da = visible.filter(p => (attendances[p.id]?.status || "none") !== "none");
+          if (!da.length) { setErr(""); return; }
+          if (!confirm("Annullare la presenza di "+da.length+" giocatori?\n\nI punti assegnati verranno restituiti.")) return;
+          for (const p of da) await setStatus(p.id, "none");
+        }}>↩️ Annulla tutti</button>}
       </div>
 
       {err && <div style={{color:"var(--danger)",padding:"10px",background:"rgba(255,34,68,.08)",borderRadius:10,marginBottom:10,fontSize:13}}>{err}</div>}
@@ -5064,6 +5082,8 @@ function BadgesView({ sectionColors, setSectionColors }) {
   async function assignBadge() {
     if (!assignTarget || !showAssign) return;
     const badge = badges.find(b => b.id === showAssign);
+    if (!confirm("Assegnare il badge \u201c" + (badge?.name || badge?.title || "") + "\u201d con " + assignXp + " XP?")) return;
+    logGardener(profile, "badge", "Badge \u201c" + (badge?.name || badge?.title || "") + "\u201d assegnato (+" + assignXp + " XP)", { ids: [assignTarget], badge_id: showAssign, xp: Number(assignXp) });
     // 1. Registra il badge — se fallisce, lo dice (prima falliva in silenzio)
     const { error: insErr } = await sb.from("player_badges").insert({ player_id: assignTarget, badge_id: showAssign, xp_awarded: Number(assignXp), coin_awarded: Number(assignCoin) });
     if (insErr) { addToast("❌ Badge non assegnato: " + insErr.message, "error"); return; }
@@ -5528,6 +5548,8 @@ function MessagesView({ profile }) {
 
   async function sendMessage() {
     if (!body.trim()) return;
+    { const _n = (typeof recipients !== "undefined" && Array.isArray(recipients)) ? recipients.length : null;
+      if (!confirm("Inviare il messaggio" + (_n ? " a " + _n + " destinatari" : "") + "?")) return; }
     setSending(true);
     const senderName = profile?.display_name || "Giardiniere";
     const expiresAt = expiry ? new Date(expiry + "T23:59:59").toISOString() : null;
@@ -7943,7 +7965,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b47</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b50</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -8934,6 +8956,95 @@ function AdminAccountCard({ profile }) {
 
 // ─── ADMIN VIEW ──────────────────────────────────────────
 
+function AzioniView({ profile }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [filtro, setFiltro] = useState("tutte");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await sb.from("gardener_actions").select("*").order("created_at", { ascending: false }).limit(150);
+    setItems(data || []); setLoading(false);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function annulla(a) {
+    if (a.undone) return;
+    if (!confirm("Annullare questa azione?\n\n" + a.summary)) return;
+    setBusy(a.id); setMsg("");
+    const p = a.payload || {}; const ids = p.ids || [];
+    try {
+      if (a.type === "punti") {
+        for (const id of ids) {
+          await sb.rpc("award_xp", { p_player_id: id, p_xp: -Number(p.xp||0), p_coin: -Number(p.coin||0), p_reason: "undo", p_log_title: "Annullamento azione" });
+        }
+      } else if (a.type === "badge") {
+        for (const id of ids) {
+          await sb.from("player_badges").delete().eq("player_id", id).eq("badge_id", p.badge_id);
+          if (p.xp) await sb.rpc("award_xp", { p_player_id: id, p_xp: -Number(p.xp), p_coin: 0, p_reason: "undo", p_log_title: "Annullamento badge" });
+        }
+      } else if (a.type === "presenze") {
+        const { data: rows } = await sb.from("attendances").select("id,player_id,xp_awarded,coin_awarded").eq("date", p.date).in("player_id", ids);
+        for (const r of (rows || [])) {
+          await sb.rpc("award_xp", { p_player_id: r.player_id, p_xp: -Number(r.xp_awarded||0), p_coin: -Number(r.coin_awarded||0), p_reason: "undo", p_log_title: "Annullamento presenza" });
+          await sb.from("attendances").delete().eq("id", r.id);
+        }
+      } else if (a.type === "messaggio") {
+        if (p.message_id) await sb.from("messages").delete().eq("id", p.message_id);
+      }
+      await sb.from("gardener_actions").update({ undone: true, undone_at: new Date().toISOString(), undone_by: profile?.display_name || "Giardiniere" }).eq("id", a.id);
+      setMsg("\u21a9\ufe0f Azione annullata");
+      load();
+    } catch (e) { setMsg("\u274c " + (e.message || "Errore")); }
+    setBusy(null);
+  }
+
+  const ICONE = { punti: "\u2b50", badge: "\ud83c\udf96\ufe0f", presenze: "\u2705", messaggio: "\ud83d\udcac" };
+  const visti = items.filter(a => filtro === "tutte" || a.type === filtro);
+
+  return (
+    <div>
+      <div className="section-head"><h2 className="section-title">\ud83d\udd50 Cronologia azioni</h2></div>
+      <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>
+        Le azioni dei Giardinieri, con la possibilit\u00e0 di tornare indietro. I punti vengono restituiti.
+      </div>
+      <div className="filter-bar" style={{ gap: 6, flexWrap: "wrap" }}>
+        {["tutte","punti","badge","presenze","messaggio"].map(f => (
+          <button key={f} className="btn btn-xs" onClick={() => setFiltro(f)}
+            style={{ background: filtro===f ? "#101010" : "transparent", color: filtro===f ? "#fff" : "var(--text2)", border: "1px solid var(--border)", padding: "6px 10px" }}>
+            {f === "tutte" ? "Tutte" : (ICONE[f] + " " + f)}
+          </button>
+        ))}
+        <button className="btn btn-ghost btn-xs" onClick={load}>\u21bb Aggiorna</button>
+      </div>
+      {msg && <div style={{ fontWeight: 700, fontSize: 13, margin: "8px 0" }}>{msg}</div>}
+      {loading ? <div style={{ opacity: .6, fontSize: 13 }}>Caricamento\u2026</div> :
+        visti.length === 0 ? <div style={{ opacity: .6, fontSize: 13 }}>Nessuna azione registrata.</div> :
+        visti.map(a => (
+          <div key={a.id} className="card-sm" style={{ marginBottom: 8, opacity: a.undone ? .55 : 1 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ fontSize: 20 }}>{ICONE[a.type] || "\u2022"}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 13 }}>{a.summary}</div>
+                <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
+                  {a.actor_name} \u00b7 {new Date(a.created_at).toLocaleString("it-IT", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}
+                  {a.undone && <span style={{ color: "#D41423", fontWeight: 700 }}> \u00b7 annullata da {a.undone_by}</span>}
+                </div>
+              </div>
+              {!a.undone && a.type !== "messaggio" && (
+                <button className="btn btn-ghost btn-xs" style={{ color: "#D41423" }} disabled={busy===a.id} onClick={() => annulla(a)}>
+                  {busy===a.id ? "\u2026" : "\u21a9\ufe0f Annulla"}
+                </button>
+              )}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  );
+}
 function AdminNotifiche({ profile }) {
   const [items, setItems] = useState([]);
   const [openN, setOpenN] = useState(true);
@@ -9854,7 +9965,7 @@ const EDUCATOR_TABS = [
   ["dashboard","📊","Dashboard"], ["giocatori","👤","Giocatori"], ["classifica","🏆","Classifica"], ["squadre","🛡️","Squadre"],
   ["presenze","✅","Presenze"], ["attivita","⚡","Lab"], ["bigtop","🎪","BIG TOP"], ["sfida","🔥","Sfida"],
   ["badge","🎖️","Badge"], ["streak","🔥","Streak"], ["prenotazioni","📋","Prenotazioni"], ["messaggi","💬","Messaggi"],
-  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["notifiche","🔔","Notifiche"], ["admin","⚙️","Admin"],
+  ["diario","📜","Diario"], ["qr","📍","QR"], ["annunci","📢","Annunci"], ["bacheca","📌","Bacheca"], ["social_edu","🌍","Social"], ["export","📤","Export"], ["pulizia","🧹","Pulizia"], ["visibilita","👁️","Vista"], ["notifiche","🔔","Notifiche"], ["azioni","🕐","Cronologia"],["admin","⚙️","Admin"],
 ]
 
 // Macro-cartelle per la sidebar giardiniere
@@ -9866,7 +9977,7 @@ const EDUCATOR_GROUPS = [
   { id:"comunicazione", icon:"💬", label:"Comunicazione",
     tabs:["messaggi","annunci","bacheca","social_edu"] },
   { id:"gestione", icon:"📊", label:"Gestione",
-    tabs:["diario","export","pulizia","visibilita","notifiche","admin"] },
+    tabs:["diario","export","pulizia","visibilita","notifiche","azioni","admin"] },
 ];
 const MOB_TABS_IDS = ["giocatori", "presenze", "classifica", "sfida", "qr"];
 
@@ -10469,6 +10580,7 @@ function EducatorShell({ profile, onLogout }) {
           {tab === "visibilita"   && <VisibilityView />}
           {tab === "notifiche"    && <NotificheTab profile={profile} />}
           {tab === "admin"        && <AdminView profile={profile} />}
+          {tab === "azioni"       && <AzioniView profile={profile} />}
           {tab === "giocatori"    && <PlayersView {...sharedProps} />}
           {tab === "classifica"   && <LeaderboardView {...sharedProps} />}
           {tab === "squadre"      && <SquadsView />}
