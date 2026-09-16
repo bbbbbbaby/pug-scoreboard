@@ -91,6 +91,79 @@ function localDateStr(d) {
 }
 
 
+
+// ─── QR PERSONALI: una pagina per profilo / immagine singola ─────
+const qrEsc = (t) => String(t || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function qrLinkFor(p) { return window.location.origin + window.location.pathname + "?u=" + p.id; }
+function qrImgFor(p, size) { return "https://api.qrserver.com/v1/create-qr-code/?size=" + size + "x" + size + "&margin=10&data=" + encodeURIComponent(qrLinkFor(p)); }
+
+function printQrOnePerPage(list) {
+  if (!list || !list.length) return;
+  const w = window.open("", "_blank");
+  if (!w) { alert("Consenti le finestre pop-up per scaricare i QR."); return; }
+  const pages = list.map(p =>
+    '<section class="pg"><div class="card">'
+    + '<div class="brand">PER-YOU GARDEN</div>'
+    + '<img src="' + qrImgFor(p, 600) + '">'
+    + '<div class="n">' + qrEsc(p.display_name) + '</div>'
+    + (p.first_name ? '<div class="r">' + qrEsc(p.first_name) + '</div>' : '')
+    + '<div class="h">Inquadra con il telefono per entrare</div>'
+    + '</div></section>'
+  ).join("");
+  w.document.write('<html><head><meta charset="utf-8"><title>QR giocatori - una pagina per profilo</title><style>'
+    + '@page{size:A6 portrait;margin:6mm}'
+    + 'body{font-family:Arial,Helvetica,sans-serif;margin:0}'
+    + '.pg{height:136mm;display:flex;align-items:center;justify-content:center;page-break-after:always;break-after:page}'
+    + '.pg:last-child{page-break-after:auto;break-after:auto}'
+    + '.card{width:88mm;border:1.6mm solid #101010;border-radius:5mm;padding:5mm 4mm;text-align:center;box-sizing:border-box}'
+    + '.brand{font-weight:900;font-size:10pt;letter-spacing:.08em;margin-bottom:2mm}'
+    + '.card img{width:66mm;height:66mm;display:block;margin:0 auto}'
+    + '.n{font-weight:900;font-size:17pt;margin-top:3mm;word-break:break-word;text-transform:uppercase}'
+    + '.r{font-size:11pt;color:#444;margin-top:1mm}'
+    + '.h{font-size:8.5pt;color:#555;margin-top:3mm}'
+    + '@media screen{body{background:#eee}.pg{background:#fff;width:105mm;margin:8mm auto;box-shadow:0 1px 6px rgba(0,0,0,.2)}}'
+    + '</style></head><body>' + pages + '</body></html>');
+  w.document.close();
+  const imgs = Array.from(w.document.images);
+  let left = imgs.length;
+  const go = () => { try { w.focus(); w.print(); } catch (_) {} };
+  if (!left) { go(); return; }
+  let fired = false;
+  const done = () => { if (--left <= 0 && !fired) { fired = true; setTimeout(go, 300); } };
+  imgs.forEach(im => { if (im.complete) done(); else { im.onload = done; im.onerror = done; } });
+  setTimeout(() => { if (!fired) { fired = true; go(); } }, 12000);
+}
+
+async function downloadQrPng(p) {
+  const fileName = "QR-" + String(p.display_name || "giocatore").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") + ".png";
+  try {
+    const res = await fetch(qrImgFor(p, 600));
+    if (!res.ok) throw new Error("qr");
+    const bmp = await createImageBitmap(await res.blob());
+    const W = 800, H = 1100;
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d");
+    x.fillStyle = "#ffffff"; x.fillRect(0, 0, W, H);
+    x.strokeStyle = "#101010"; x.lineWidth = 16;
+    if (x.roundRect) { x.beginPath(); x.roundRect(28, 28, W - 56, H - 56, 40); x.stroke(); } else x.strokeRect(28, 28, W - 56, H - 56);
+    x.fillStyle = "#101010"; x.textAlign = "center";
+    x.font = "900 34px Arial, Helvetica, sans-serif"; x.fillText("PER-YOU GARDEN", W / 2, 120);
+    x.drawImage(bmp, 100, 160, 600, 600);
+    let fs = 64; const name = String(p.display_name || "").toUpperCase();
+    do { x.font = "900 " + fs + "px Arial, Helvetica, sans-serif"; fs -= 4; } while (x.measureText(name).width > W - 120 && fs > 24);
+    x.fillText(name, W / 2, 860);
+    if (p.first_name) { x.fillStyle = "#444"; x.font = "400 38px Arial, Helvetica, sans-serif"; x.fillText(String(p.first_name), W / 2, 920); }
+    x.fillStyle = "#555"; x.font = "400 28px Arial, Helvetica, sans-serif"; x.fillText("Inquadra con il telefono per entrare", W / 2, 1010);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (_) {
+    printQrOnePerPage([p]);
+  }
+}
+
 async function registerPush(playerId) {
   const log = (m) => { try { addToast(m, 'ok'); } catch(_) {} };
   const err = (m) => { try { addToast(m, 'error'); } catch(_) {} };
@@ -3672,6 +3745,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
           w.document.close();
           setTimeout(() => w.print(), 1500);
         }}>🖨️ Stampa QR ({visible.length})</button>
+        <button className="btn btn-ghost btn-sm" title="Un QR per pagina: dalla finestra di stampa scegli Salva come PDF" onClick={() => printQrOnePerPage(selected.size ? visible.filter(p => selected.has(p.id)) : visible)}>📄 QR una per pagina ({selected.size || visible.length})</button>
         <button className="btn btn-ghost btn-sm" onClick={resetAllPins}>🔑 Reset PIN</button>
       </div>
 
@@ -3806,6 +3880,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
                 w.document.write('<html><head><title>QR ' + qrPlayer.display_name + '</title></head><body style="font-family:sans-serif;text-align:center;padding:40px"><img src="' + img + '" style="width:340px;height:340px"><h2 style="margin-top:12px">' + qrPlayer.display_name + '</h2></body></html>');
                 w.document.close(); setTimeout(() => w.print(), 600);
               }}>🖨️ Stampa</button>
+              <button className="btn btn-yellow" style={{ flex: 1 }} onClick={() => downloadQrPng(qrPlayer)}>⬇️ Scarica</button>
               <button className="btn btn-ghost btn-sm" onClick={() => setQrPlayer(null)}>Chiudi</button>
             </div>
           </div>
@@ -8002,7 +8077,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b63</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b64</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
