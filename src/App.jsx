@@ -1464,6 +1464,14 @@ body:not(.light){--pt-empty-bg:#17181c;--pt-empty-color:rgba(255,255,255,.55);--
 .player-wrap.bg-rosso .pd-topbar{background:#D41423}
 .player-wrap .pd-topbar{height:auto!important;min-height:calc(56px + env(safe-area-inset-top,0px));box-sizing:border-box;padding-bottom:8px!important}
 .player-wrap .pd-scroll{padding-top:calc(72px + env(safe-area-inset-top,0px))!important}
+.player-wrap{overflow-x:clip}
+.pd-topbar .pd-topright{min-width:0;flex-shrink:1}
+@media (max-width:520px){
+  .pd-topbar .pd-squadchip{display:none!important}
+  .pd-topbar .pd-theme-label{display:none!important}
+  .pd-topbar .pd-topright{gap:6px!important}
+  .pd-topbar{padding-left:10px!important;padding-right:10px!important}
+}
 .light .player-wrap[class*="bg-"]:not(.bg-notte) .pd-topbar{border-bottom:none!important}
 .light .player-wrap.bg-azzurro .pd-topbar{background:#A3CFFF!important}
 .light .player-wrap.bg-rosa .pd-topbar{background:#FF6DEC!important}
@@ -7561,12 +7569,9 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
         } catch(_) {}
         let ene = 100;
         try {
-          let r = await sb.from("profiles").select("energia,energia_at,game_started_at").eq("id", fullProfile.id).single();
-          if (r.error) r = await sb.from("profiles").select("energia,energia_at").eq("id", fullProfile.id).single();
-          let me = r.data;
-          if (me && "game_started_at" in me && !me.game_started_at) {
-            try { const st = await sb.rpc("pug_start_game"); if (!st.error && st.data?.ok) me = { ...me, energia: 100, energia_at: st.data.started_at, game_started_at: st.data.started_at }; } catch(_) {}
-          }
+          let me = null;
+          try { const gs = await sb.rpc("pug_game_state", { p_player_id: fullProfile.id }); if (!gs.error && gs.data && !gs.data.error) me = gs.data; } catch(_) {}
+          if (!me) { const r = await sb.from("profiles").select("energia,energia_at").eq("id", fullProfile.id).single(); me = r.data; }
           if (me?.game_started_at) { const ds = daysAgo(me.game_started_at); fel += 95 * Math.pow(0.93, ds); soc += 95 * Math.pow(0.92, ds); }
           if (me?.energia != null) { ene = me.energia_at ? Math.max(5, Math.round(me.energia - 15 * ((Date.now()-new Date(me.energia_at).getTime())/86400000))) : me.energia; }
         } catch(_) {}
@@ -7992,18 +7997,18 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           <div className="pd-logo-img logo-b"/>
           <div className="pd-logo-img logo-w"/>
         </div>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        <div className="pd-topright" style={{display:'flex',gap:8,alignItems:'center'}}>
           {visConfig.squadre !== false && fullProfile?.squads?.name && (
-             <div style={{background:'#111',color:'var(--giallo)',fontSize:10,fontWeight:900,borderRadius:'var(--radius-sm)',padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em',display:'inline-flex',alignItems:'center',gap:5}}><PugIcon nome="presenze" dim={11}/> {fullProfile.squads.name}</div>
+             <div className="pd-squadchip" style={{background:'#111',color:'var(--giallo)',fontSize:10,fontWeight:900,borderRadius:'var(--radius-sm)',padding:'5px 10px',textTransform:'uppercase',letterSpacing:'.05em',display:'inline-flex',alignItems:'center',gap:5}}><PugIcon nome="presenze" dim={11}/> {fullProfile.squads.name}</div>
           )}
           <button onClick={()=>{ const next=!soundOn; setSoundOn(next); localStorage.setItem("pug_sound", next?"on":"off"); if(next) pugSound("coin"); }} title="Suoni" style={{background:'rgba(16,16,16,.9)',border:'1px solid rgba(255,255,255,.22)',borderRadius:'var(--r-s)',padding:'5px 9px',cursor:'pointer',fontSize:16}}>{soundOn?"🔊":"🔇"}</button>
           <button onClick={()=>setThemeChoice(c=>c==="auto"?"light":c==="light"?"dark":"auto")} style={{background:'rgba(16,16,16,.9)',border:'1px solid rgba(255,255,255,.22)',borderRadius:'var(--r-s)',padding:'5px 9px',cursor:'pointer',lineHeight:1,display:'flex',alignItems:'center',gap:5,color:'#fff'}} title={themeChoice==="auto"?"Tema: automatico":themeChoice==="light"?"Tema: chiaro":"Tema: scuro"}>
             {themeChoice==="auto"
               ? <PugIcon nome={sysDark?"luna":"sole"} dim={15} style={{opacity:.9}}/>
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
-            <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
+            <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b60</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b61</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
