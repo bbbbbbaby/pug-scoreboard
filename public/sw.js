@@ -1,53 +1,106 @@
-// PUG Service Worker — versione statica, nessun placeholder
-const CACHE = 'pug-v3';
+// PUG Service Worker — auto-aggiornante
+// Cambia SOLO questo numero a ogni rilascio importante: svuota le vecchie cache.
+const CACHE = 'pug-v4';
+const AVATARS = 'pug-avatars-v1';
 
-self.addEventListener('install', function(e) {
+// ─── INSTALL ──────────────────────────────────────────────
+self.addEventListener('install', function () {
+  // la nuova versione entra subito in servizio, senza aspettare
   self.skipWaiting();
 });
 
-self.addEventListener('activate', function(e) {
+// ─── ACTIVATE ─────────────────────────────────────────────
+self.addEventListener('activate', function (e) {
   e.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(keys.map(function(k) {
-        if (k !== CACHE && k !== 'pug-avatars') return caches.delete(k);
-      }));
-    }).then(function() {
-      return self.clients.claim();
-    })
+    caches.keys()
+      .then(function (keys) {
+        return Promise.all(keys.map(function (k) {
+          if (k !== CACHE && k !== AVATARS) return caches.delete(k);
+        }));
+      })
+      .then(function () { return self.clients.claim(); })
+      .then(function () {
+        // avvisa le schede aperte che c'e una versione nuova
+        return self.clients.matchAll({ type: 'window' }).then(function (cs) {
+          cs.forEach(function (c) { c.postMessage({ type: 'SW_UPDATED', cache: CACHE }); });
+        });
+      })
   );
 });
 
-self.addEventListener('fetch', function(e) {
-  var url = new URL(e.request.url);
-  if (e.request.method !== 'GET') return;
-  if (url.hostname.indexOf('supabase.co') !== -1) return;
-  if (url.hostname.indexOf('googleapis.com') !== -1) return;
-  if (url.hostname.indexOf('giphy.com') !== -1) return;
-  if (url.hostname.indexOf('qrserver.com') !== -1) return;
+// ─── FETCH ────────────────────────────────────────────────
+self.addEventListener('fetch', function (e) {
+  var req = e.request;
+  if (req.method !== 'GET') return;
 
+  var url;
+  try { url = new URL(req.url); } catch (err) { return; }
+
+  // mai intercettare i servizi esterni
+  var host = url.hostname;
+  if (host.indexOf('supabase.co') !== -1) return;
+  if (host.indexOf('googleapis.com') !== -1) return;
+  if (host.indexOf('gstatic.com') !== -1) return;
+  if (host.indexOf('giphy.com') !== -1) return;
+  if (host.indexOf('qrserver.com') !== -1) return;
+  if (url.origin !== self.location.origin) return;
+
+  // AVATAR: prima la cache (non cambiano quasi mai), con aggiornamento in sottofondo
   if (url.pathname.indexOf('/avatars/') === 0) {
     e.respondWith(
-      caches.match(e.request).then(function(c) {
-        return c || fetch(e.request).then(function(r) {
-          var clone = r.clone();
-          caches.open('pug-avatars').then(function(cache) { cache.put(e.request, clone); });
+      caches.match(req).then(function (hit) {
+        var net = fetch(req).then(function (r) {
+          if (r && r.ok) {
+            var clone = r.clone();
+            caches.open(AVATARS).then(function (c) { c.put(req, clone); });
+          }
           return r;
+        }).catch(function () { return hit; });
+        return hit || net;
+      })
+    );
+    return;
+  }
+
+  // NAVIGAZIONE (apertura dell'app): SEMPRE prima la rete.
+  // Cosi dopo un rilascio si vede subito la versione nuova.
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req).then(function (r) {
+        var clone = r.clone();
+        caches.open(CACHE).then(function (c) { c.put('/index.html', clone); });
+        return r;
+      }).catch(function () {
+        return caches.match('/index.html').then(function (c) {
+          return c || new Response(
+            '<h1 style="font-family:sans-serif;padding:40px">Sei offline</h1>' +
+            '<p style="font-family:sans-serif;padding:0 40px">Riprova quando torna la connessione.</p>',
+            { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          );
         });
       })
     );
     return;
   }
 
+  // TUTTO IL RESTO: prima la rete, la cache serve solo se sei offline
   e.respondWith(
-    fetch(e.request).catch(function() {
-      return caches.match(e.request).then(function(c) {
+    fetch(req).then(function (r) {
+      if (r && r.ok && (r.type === 'basic')) {
+        var clone = r.clone();
+        caches.open(CACHE).then(function (c) { c.put(req, clone); });
+      }
+      return r;
+    }).catch(function () {
+      return caches.match(req).then(function (c) {
         return c || caches.match('/index.html');
       });
     })
   );
 });
 
-self.addEventListener('push', function(e) {
+// ─── NOTIFICHE PUSH ───────────────────────────────────────
+self.addEventListener('push', function (e) {
   if (!e.data) return;
   var d = { title: 'PUG', body: '' };
   try { d = e.data.json(); } catch (err) { d.body = e.data.text(); }
@@ -57,24 +110,37 @@ self.addEventListener('push', function(e) {
       icon: '/icon-192x192.png',
       badge: '/icon-192x192.png',
       vibrate: [200, 100, 200],
-      tag: 'pug',
-      renotify: true
+      tag: d.tag || 'pug',
+      renotify: true,
+      data: { url: d.url || '/' }
     })
   );
 });
 
-self.addEventListener('notificationclick', function(e) {
+self.addEventListener('notificationclick', function (e) {
   e.notification.close();
+  var target = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(
-    clients.matchAll({ type: 'window' }).then(function(cs) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (cs) {
       for (var i = 0; i < cs.length; i++) {
-        if (cs[i].url.indexOf(self.location.origin) === 0) return cs[i].focus();
+        if (cs[i].url.indexOf(self.location.origin) === 0) {
+          cs[i].focus();
+          if ('navigate' in cs[i] && target !== '/') cs[i].navigate(target);
+          return;
+        }
       }
-      return clients.openWindow('/');
+      return clients.openWindow(target);
     })
   );
 });
 
-self.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+// ─── MESSAGGI DALL'APP ────────────────────────────────────
+self.addEventListener('message', function (e) {
+  if (!e.data) return;
+  if (e.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (e.data.type === 'CLEAR_CACHE') {
+    caches.keys().then(function (keys) {
+      keys.forEach(function (k) { if (k !== AVATARS) caches.delete(k); });
+    });
+  }
 });
