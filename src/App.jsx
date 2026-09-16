@@ -1462,6 +1462,14 @@ body:not(.light){--pt-empty-bg:#17181c;--pt-empty-color:rgba(255,255,255,.55);--
 .player-wrap.bg-giallo .pd-topbar{background:#FCEF25}
 .player-wrap.bg-verde .pd-topbar{background:#339967}
 .player-wrap.bg-rosso .pd-topbar{background:#D41423}
+.player-wrap .pd-topbar{height:auto!important;min-height:calc(56px + env(safe-area-inset-top,0px));box-sizing:border-box;padding-bottom:8px!important}
+.player-wrap .pd-scroll{padding-top:calc(72px + env(safe-area-inset-top,0px))!important}
+.light .player-wrap[class*="bg-"]:not(.bg-notte) .pd-topbar{border-bottom:none!important}
+.light .player-wrap.bg-azzurro .pd-topbar{background:#A3CFFF!important}
+.light .player-wrap.bg-rosa .pd-topbar{background:#FF6DEC!important}
+.light .player-wrap.bg-giallo .pd-topbar{background:#FCEF25!important}
+.light .player-wrap.bg-verde .pd-topbar{background:#339967!important}
+.light .player-wrap.bg-rosso .pd-topbar{background:#D41423!important}
 /* Big Top calendario — caselle e testo sempre pieni */
 .btcal-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 12px}
 .btcal-nav{width:40px;height:40px;border:3px solid #101010;border-radius:11px;background:#fff;box-shadow:3px 3px 0 #101010;font-weight:900;font-size:19px;color:#101010;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
@@ -7552,7 +7560,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
           pgSorted.forEach(r => { const sc = r.score||0; if (sc > bestSoFar) { bestSoFar = sc; fel += 5 * Math.pow(0.93, daysAgo(r.created_at)); } });
         } catch(_) {}
         let ene = 100;
-        try { const { data: me } = await sb.from("profiles").select("energia,energia_at").eq("id", fullProfile.id).single(); if (me?.energia != null) { ene = me.energia_at ? Math.max(5, Math.round(me.energia - 15 * ((Date.now()-new Date(me.energia_at).getTime())/86400000))) : me.energia; } } catch(_) {}
+        try {
+          let r = await sb.from("profiles").select("energia,energia_at,game_started_at").eq("id", fullProfile.id).single();
+          if (r.error) r = await sb.from("profiles").select("energia,energia_at").eq("id", fullProfile.id).single();
+          let me = r.data;
+          if (me && "game_started_at" in me && !me.game_started_at) {
+            try { const st = await sb.rpc("pug_start_game"); if (!st.error && st.data?.ok) me = { ...me, energia: 100, energia_at: st.data.started_at, game_started_at: st.data.started_at }; } catch(_) {}
+          }
+          if (me?.game_started_at) { const ds = daysAgo(me.game_started_at); fel += 95 * Math.pow(0.93, ds); soc += 95 * Math.pow(0.92, ds); }
+          if (me?.energia != null) { ene = me.energia_at ? Math.max(5, Math.round(me.energia - 15 * ((Date.now()-new Date(me.energia_at).getTime())/86400000))) : me.energia; }
+        } catch(_) {}
         if (alive) setCreatureBars({ felicita: clampV(fel), socialita: clampV(soc), energia: ene });
       } catch(_) {}
       try {
@@ -7986,7 +8003,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b58</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b59</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
