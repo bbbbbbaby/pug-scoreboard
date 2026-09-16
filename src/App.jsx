@@ -9013,14 +9013,14 @@ function AzioniView({ profile }) {
     setBusy(null);
   }
 
-  const ICONE = { punti: "\u2b50", badge: "\ud83c\udf96\ufe0f", presenze: "\u2705", messaggio: "\ud83d\udcac" };
+  const ICONE = { punti: "⭐", badge: "🎖️", presenze: "✅", messaggio: "💬" };
   const visti = items.filter(a => filtro === "tutte" || a.type === filtro);
 
   return (
     <div>
-      <div className="section-head"><h2 className="section-title">\ud83d\udd50 Cronologia azioni</h2></div>
+      <div className="section-head"><h2 className="section-title">🕐 Cronologia azioni</h2></div>
       <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>
-        Le azioni dei Giardinieri, con la possibilit\u00e0 di tornare indietro. I punti vengono restituiti.
+        Le azioni dei Giardinieri, con la possibilità di tornare indietro. I punti vengono restituiti.
       </div>
       <div className="filter-bar" style={{ gap: 6, flexWrap: "wrap" }}>
         {["tutte","punti","badge","presenze","messaggio"].map(f => (
@@ -9029,10 +9029,10 @@ function AzioniView({ profile }) {
             {f === "tutte" ? "Tutte" : (ICONE[f] + " " + f)}
           </button>
         ))}
-        <button className="btn btn-ghost btn-xs" onClick={load}>\u21bb Aggiorna</button>
+        <button className="btn btn-ghost btn-xs" onClick={load}>↻ Aggiorna</button>
       </div>
       {msg && <div style={{ fontWeight: 700, fontSize: 13, margin: "8px 0" }}>{msg}</div>}
-      {loading ? <div style={{ opacity: .6, fontSize: 13 }}>Caricamento\u2026</div> :
+      {loading ? <div style={{ opacity: .6, fontSize: 13 }}>Caricamento…</div> :
         visti.length === 0 ? <div style={{ opacity: .6, fontSize: 13 }}>Nessuna azione registrata.</div> :
         visti.map(a => (
           <div key={a.id} className="card-sm" style={{ marginBottom: 8, opacity: a.undone ? .55 : 1 }}>
@@ -9041,13 +9041,13 @@ function AzioniView({ profile }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 800, fontSize: 13 }}>{a.summary}</div>
                 <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
-                  {a.actor_name} \u00b7 {new Date(a.created_at).toLocaleString("it-IT", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}
-                  {a.undone && <span style={{ color: "#D41423", fontWeight: 700 }}> \u00b7 annullata da {a.undone_by}</span>}
+                  {a.actor_name} · {new Date(a.created_at).toLocaleString("it-IT", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}
+                  {a.undone && <span style={{ color: "#D41423", fontWeight: 700 }}> · annullata da {a.undone_by}</span>}
                 </div>
               </div>
               {!a.undone && a.type !== "messaggio" && (
                 <button className="btn btn-ghost btn-xs" style={{ color: "#D41423" }} disabled={busy===a.id} onClick={() => annulla(a)}>
-                  {busy===a.id ? "\u2026" : "\u21a9\ufe0f Annulla"}
+                  {busy===a.id ? "\u2026" : "↩️ Annulla"}
                 </button>
               )}
             </div>
@@ -9080,11 +9080,11 @@ function AdminNotifiche({ profile }) {
     await sb.from("notifications").delete().eq("user_id", profile.id); setItems([]);
   }
   const unread = items.filter(n => !n.read_at).length;
-  const icons = { booking: "\ud83d\udccb", booking_confirmed: "\u2705", educator_msg: "\ud83d\udcac", xoxo: "\ud83c\udd9a", reaction: "\ud83d\udca5", bigtop: "\ud83c\udfaa", badge_assigned: "\ud83c\udf96\ufe0f", level_up: "\ud83c\udd99", new_player: "\ud83c\udf31" };
+  const icons = { booking: "\ud83d\udccb", booking_confirmed: "✅", educator_msg: "💬", xoxo: "\ud83c\udd9a", reaction: "\ud83d\udca5", bigtop: "\ud83c\udfaa", badge_assigned: "🎖️", level_up: "\ud83c\udd99", new_player: "\ud83c\udf31" };
   return (
     <div className="card-sm" style={{ marginBottom: 16, border: "1px solid rgba(163,207,255,.4)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setOpenN(o => !o)}>
-        <div style={{ fontSize: 22 }}>\ud83d\udd14</div>
+        <div style={{ fontSize: 22 }}>🔔</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, color: "#A3CFFE" }}>Notifiche giardiniere {unread > 0 && <span style={{ background: "#FF6DEC", color: "#fff", borderRadius: 99, fontSize: 11, padding: "1px 7px", marginLeft: 6 }}>{unread}</span>}</div>
           <div style={{ fontSize: 12, color: "var(--text3)" }}>Prenotazioni, messaggi tra giardinieri, sfide</div>
@@ -9102,7 +9102,7 @@ function AdminNotifiche({ profile }) {
             </div>
           </div>
         ))}
-        {items.length > 0 && <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={clearAll}>\ud83d\uddd1\ufe0f Cancella tutte</button>}
+        {items.length > 0 && <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={clearAll}>🗑️ Cancella tutte</button>}
       </div>}
     </div>
   );
@@ -9775,7 +9775,7 @@ function BigTopEducatorView({ profile }) {
       const { data: r, error } = await sb.rpc("bigtop_checkin", { p_player_id: b.player_id, p_code: qr.code });
       if (error || r?.error) fail++; else done++;
     }
-    addToast(`\u2705 Presenti: ${done}${fail ? ` \u00b7 ${fail} non riusciti` : ""}`, done ? "ok" : "error");
+    addToast(`✅ Presenti: ${done}${fail ? ` \u00b7 ${fail} non riusciti` : ""}`, done ? "ok" : "error");
     load();
   }
 
@@ -9783,7 +9783,7 @@ function BigTopEducatorView({ profile }) {
     if (!confirm("Annullare le presenze del turno " + s.date.split("-").reverse().join("/") + " " + s.start_time.slice(0,5) + "?\n\nLe prenotazioni tornano confermate e i punti assegnati vengono restituiti.")) return;
     const { data: r, error } = await sb.rpc("bigtop_unmark_slot", { p_slot_id: s.id });
     if (error || r?.error) { addToast("\u274c " + (error?.message || r?.error || "Non riuscito"), "error"); return; }
-    addToast("\u21a9\ufe0f Annullate: " + (r?.presenze ?? 0) + " presenze \u00b7 " + (r?.prenotazioni ?? 0) + " prenotazioni ripristinate", "ok");
+    addToast("↩️ Annullate: " + (r?.presenze ?? 0) + " presenze \u00b7 " + (r?.prenotazioni ?? 0) + " prenotazioni ripristinate", "ok");
     load();
   }
 
@@ -10548,7 +10548,8 @@ function EducatorShell({ profile, onLogout }) {
           </div>
         </div>
         {/* Notification panel */}
-        {showNotifPanel && (
+        {showNotifPanel && (<>
+            <div onClick={()=>setShowNotifPanel(false)} style={{position:"fixed",inset:0,zIndex:80}}/>
           <div className="edu-notif-panel">
             <div className="edu-notif-header">🔔 Promemoria</div>
             {notifCounts.pendingBookings > 0 && (
@@ -10575,10 +10576,10 @@ function EducatorShell({ profile, onLogout }) {
               <div className="edu-notif-empty">✨ Tutto in ordine!</div>
             )}
             <div style={{padding:"8px 16px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
-              <button className="btn btn-ghost btn-xs" style={{width:"100%",fontSize:10}} onClick={()=>{loadNotifCounts();setShowNotifPanel(false);}}>Aggiorna</button>
+              <button className="btn btn-ghost btn-xs" style={{width:"100%",fontSize:10}} onClick={async()=>{await loadNotifCounts();setShowNotifPanel(false);}}>Aggiorna</button>
             </div>
           </div>
-        )}
+          </>)}
         <div className="content edu-content-wrap">
           {!["classifica","presenze","attivita","badge","sfida","bigtop"].includes(tab) && (
             <SectionBanner sectionKey={tab} title={`${cur?.[1]||""} ${cur?.[2]||""}`} sectionColors={sectionColors}/>
