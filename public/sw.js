@@ -1,6 +1,6 @@
 // PUG Service Worker — auto-aggiornante
 // Cambia SOLO questo numero a ogni rilascio importante: svuota le vecchie cache.
-const CACHE = 'pug-v5';
+const CACHE = 'pug-v6';
 const AVATARS = 'pug-avatars-v1';
 
 // ─── INSTALL ──────────────────────────────────────────────
@@ -21,8 +21,15 @@ self.addEventListener('activate', function (e) {
       .then(function () { return self.clients.claim(); })
       .then(function () {
         // avvisa le schede aperte che c'e una versione nuova
+        // ricarica da sola le schede aperte, cosi tutti passano alla versione nuova
         return self.clients.matchAll({ type: 'window' }).then(function (cs) {
-          cs.forEach(function (c) { c.postMessage({ type: 'SW_UPDATED', cache: CACHE }); });
+          cs.forEach(function (c) {
+            var avvisa = function () { try { c.postMessage({ type: 'SW_UPDATED', cache: CACHE }); } catch (err) {} };
+            try {
+              if (typeof c.navigate === 'function') c.navigate(c.url).catch(avvisa);
+              else avvisa();
+            } catch (err) { avvisa(); }
+          });
         });
       })
   );
