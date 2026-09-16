@@ -3191,6 +3191,29 @@ function Login({ onLogin }) {
       .then(({ data }) => setPlayers(data || []));
   }, []);
 
+  // QR personale: ?u=<id giocatore> apre direttamente l'inserimento del PIN
+  function qrPlayerId() {
+    try {
+      const q = new URLSearchParams(window.location.search).get("u");
+      if (q) return q;
+      const h = window.location.hash || "";
+      const m = h.match(/[?&]u=([^&]+)/);
+      return m ? decodeURIComponent(m[1]) : null;
+    } catch(_) { return null; }
+  }
+  useEffect(() => {
+    const uid = qrPlayerId();
+    if (!uid || selected) return;
+    // 1) se l'elenco e gia carico, prendi da li (non dipende dai permessi di lettura singola)
+    const found = players.find(p => p.id === uid);
+    if (found) { setSelected(found); return; }
+    // 2) altrimenti prova la lettura diretta
+    if (players.length === 0) return;
+    sb.from("profiles").select("id,display_name,first_name,avatar_url,squad_id,squads(name)")
+      .eq("id", uid).maybeSingle()
+      .then(({ data }) => { if (data) setSelected(data); }).catch(()=>{});
+  }, [players]);
+
   // Hidden educator access: tap 🌿 3 times
   function handleLeafTap() {
     const next = leafTaps + 1;
@@ -3393,6 +3416,13 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [showCreatePlayer, setShowCreatePlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
   const [createPlayerErr, setCreatePlayerErr] = useState("");
+  const [qrPlayer, setQrPlayer] = useState(null);
+  useEffect(() => {
+    try {
+      const uid = new URLSearchParams(window.location.search).get("u");
+      if (uid) { setExpandedPlayer(uid); setSearch(""); }
+    } catch(_) {}
+  }, []);
 
   const load = useCallback(async () => {
     if (loadingRef.current) return;
@@ -3581,6 +3611,29 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         <button className="btn btn-yellow btn-sm" onClick={() => setShowCreatePlayer(true)}>➕ Nuovo giocatore</button>
+        <button className="btn btn-ghost btn-sm" title="Stampa i QR dei giocatori mostrati" onClick={() => {
+          if (!visible.length) return;
+          const base = window.location.origin + window.location.pathname;
+          const cards = visible.map(p => {
+            const link = base + "?u=" + p.id;
+            const img = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=6&data=" + encodeURIComponent(link);
+            return '<div class="c"><img src="' + img + '"><div class="n">' + String(p.display_name||"").replace(/</g,"&lt;") + '</div>'
+                 + (p.first_name ? '<div class="r">' + String(p.first_name).replace(/</g,"&lt;") + '</div>' : '') + '</div>';
+          }).join("");
+          const w = window.open("", "_blank");
+          if (!w) { alert("Consenti le finestre pop-up per stampare."); return; }
+          w.document.write('<html><head><title>QR giocatori</title><style>'
+            + '@page{margin:10mm}'
+            + 'body{font-family:Arial,Helvetica,sans-serif;margin:0}'
+            + '.g{display:flex;flex-wrap:wrap;gap:8mm;justify-content:flex-start}'
+            + '.c{width:52mm;border:1.5mm solid #101010;border-radius:4mm;padding:4mm 2mm;text-align:center;page-break-inside:avoid}'
+            + '.c img{width:40mm;height:40mm;display:block;margin:0 auto}'
+            + '.n{font-weight:bold;font-size:11pt;margin-top:2mm;word-break:break-word}'
+            + '.r{font-size:9pt;color:#555}'
+            + '</style></head><body><div class="g">' + cards + '</div></body></html>');
+          w.document.close();
+          setTimeout(() => w.print(), 1500);
+        }}>🖨️ Stampa QR ({visible.length})</button>
         <button className="btn btn-ghost btn-sm" onClick={resetAllPins}>🔑 Reset PIN</button>
       </div>
 
@@ -3639,6 +3692,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
                     {expandedPlayer === p.id ? "▲ Chiudi" : "🔍 Dettagli"}
                   </button>
                   <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setEditPlayer({ ...p, pin: p.pin || "1234" }); }}>✏️ Modifica</button>
+                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setQrPlayer(p); }}>📱 QR personale</button>
 
                   <button className="btn btn-danger btn-xs" style={{ marginTop: 4, width: "100%", fontSize: 11 }} onClick={e => { e.stopPropagation(); deletePlayer(p.id, p.display_name); }}>🗑️ Elimina</button>
                 </div>
@@ -3690,6 +3744,35 @@ function PlayersView({ sectionColors, setSectionColors }) {
           </div>
         </div>
       )}
+
+      {qrPlayer && (() => {
+        const link = window.location.origin + window.location.pathname + "?u=" + qrPlayer.id;
+        const img = "https://api.qrserver.com/v1/create-qr-code/?size=420x420&margin=10&data=" + encodeURIComponent(link);
+        return (
+        <div className="modal-bg" onClick={() => setQrPlayer(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: "center" }}>
+            <div className="modal-title">📱 QR di {qrPlayer.display_name}</div>
+            <div style={{ background: "#fff", padding: 14, borderRadius: 14, border: "3px solid #101010", display: "inline-block", margin: "6px 0 10px" }}>
+              <img src={img} alt="QR" style={{ width: 220, height: 220, display: "block" }} />
+              <div style={{ fontWeight: 900, fontSize: 15, color: "#101010", marginTop: 8 }}>{qrPlayer.display_name}</div>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 8 }}>
+              Inquadrato da un <b>giocatore</b> apre direttamente l'inserimento del PIN.<br/>
+              Inquadrato da un <b>Giardiniere</b> apre la sua scheda per assegnare i punti.
+            </div>
+            <div style={{ fontSize: 10, color: "var(--text3)", wordBreak: "break-all", background: "rgba(0,0,0,.05)", padding: "6px 8px", borderRadius: 8, marginBottom: 10 }}>{link}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => {
+                const w = window.open("", "_blank");
+                if (!w) return;
+                w.document.write('<html><head><title>QR ' + qrPlayer.display_name + '</title></head><body style="font-family:sans-serif;text-align:center;padding:40px"><img src="' + img + '" style="width:340px;height:340px"><h2 style="margin-top:12px">' + qrPlayer.display_name + '</h2></body></html>');
+                w.document.close(); setTimeout(() => w.print(), 600);
+              }}>🖨️ Stampa</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setQrPlayer(null)}>Chiudi</button>
+            </div>
+          </div>
+        </div>);
+      })()}
 
       {editPlayer && (
         <div className="modal-bg" onClick={() => setEditPlayer(null)}>
@@ -7860,7 +7943,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b40</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b47</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9573,6 +9656,14 @@ function BigTopEducatorView({ profile }) {
     load();
   }
 
+  async function unmarkAllPresent(s) {
+    if (!confirm("Annullare le presenze del turno " + s.date.split("-").reverse().join("/") + " " + s.start_time.slice(0,5) + "?\n\nLe prenotazioni tornano confermate e i punti assegnati vengono restituiti.")) return;
+    const { data: r, error } = await sb.rpc("bigtop_unmark_slot", { p_slot_id: s.id });
+    if (error || r?.error) { addToast("\u274c " + (error?.message || r?.error || "Non riuscito"), "error"); return; }
+    addToast("\u21a9\ufe0f Annullate: " + (r?.presenze ?? 0) + " presenze \u00b7 " + (r?.prenotazioni ?? 0) + " prenotazioni ripristinate", "ok");
+    load();
+  }
+
   async function cancelSlot(s) {
     if (!confirm(`Annullare il turno del ${s.date.split("-").reverse().join("/")} ${s.start_time.slice(0,5)}?\n\nGli iscritti riceveranno una notifica.`)) return;
     const { data: r, error } = await sb.rpc("bigtop_cancel_slot", { p_slot_id: s.id });
@@ -9666,6 +9757,7 @@ function BigTopEducatorView({ profile }) {
               <button className="btn btn-ghost btn-xs" onClick={()=>setExpanded(expanded===s.id?null:s.id)}>👥</button>
               {!dead && isPast(s) === false && s.date === localToday() && null}
               {!dead && <button className="btn btn-ghost btn-xs" style={{color:"#339966"}} onClick={()=>markAllPresent(s)}>Presenti</button>}
+              {!dead && <button className="btn btn-ghost btn-xs" style={{color:"#D41323"}} title="Annulla le presenze del turno" onClick={()=>unmarkAllPresent(s)}>↩️ Annulla</button>}
               {!dead && s.date <= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#D41323"}} onClick={()=>markAbsents(s)}>Assenti</button>}
               {!dead && s.date >= localToday() && <button className="btn btn-ghost btn-xs" style={{color:"#D41323"}} onClick={()=>cancelSlot(s)}>🚫</button>}
             </div>
@@ -10061,7 +10153,7 @@ const EduTabColors = {
 };
 
 function EducatorShell({ profile, onLogout }) {
-  const [tab, setTab] = useState("dashboard");
+  const [tab, setTab] = useState(() => { try { return new URLSearchParams(window.location.search).get("u") ? "giocatori" : "dashboard"; } catch(_) { return "dashboard"; } });
   const [openGroup, setOpenGroup] = useState("gioco");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showGamesTop, setShowGamesTop] = useState(false);
