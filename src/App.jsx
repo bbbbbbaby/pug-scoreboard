@@ -7977,7 +7977,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b51</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b53</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9176,13 +9176,16 @@ function AdminView({ profile }) {
     // Notifiche: scrittura + realtime end-to-end (notifica di prova a se stessi, poi cancellata)
     try {
       let testId = null;
+      let meId = profile?.id || null;
+      try { const { data: au } = await sb.auth.getUser(); if (au?.user?.id) meId = au.user.id; } catch (_) {}
+      if (!meId) throw new Error("utente non riconosciuto: rifai il login");
       const okN = await new Promise((resolve) => {
         let done = false;
         const ch = sb.channel("diag-notif-" + Math.random().toString(36).slice(2))
-          .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + ADMIN_ID }, () => { if (!done) { done = true; resolve(true); } })
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + meId }, () => { if (!done) { done = true; resolve(true); } })
           .subscribe(async (status) => {
             if (status === "SUBSCRIBED") {
-              const { data, error } = await sb.from("notifications").insert({ user_id: ADMIN_ID, type: "diag", title: "DIAG", body: "test" }).select("id").single();
+              const { data, error } = await sb.from("notifications").insert({ user_id: meId, type: "diag", title: "DIAG", body: "test" }).select("id").single();
               if (error) { if (!done) { done = true; resolve("insert_fail:" + error.message); } } else { testId = data?.id; }
             }
           });
