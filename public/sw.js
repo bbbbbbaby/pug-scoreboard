@@ -1,6 +1,6 @@
 // PUG Service Worker — auto-aggiornante
 // Cambia SOLO questo numero a ogni rilascio importante: svuota le vecchie cache.
-const CACHE = 'pug-v4';
+const CACHE = 'pug-v5';
 const AVATARS = 'pug-avatars-v1';
 
 // ─── INSTALL ──────────────────────────────────────────────
