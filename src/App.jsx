@@ -62,9 +62,8 @@ let _visFetch = null;
 async function readAppConfig() {
   const r = await sb.rpc("get_app_config");
   if (!r.error && r.data && typeof r.data === "object") return r.data;
-  const { data } = await sb.from("profiles").select("app_config")
-    .eq("id", "00000000-0000-0000-0000-000000000099").single();
-  return data?.app_config || null;
+  const { data } = await sb.from("app_settings").select("config").eq("id", 1).maybeSingle();
+  return data?.config || null;
 }
 async function writeAppConfig(cfg) {
   const { data, error } = await sb.rpc("set_app_config", { p_cfg: cfg });
@@ -4456,10 +4455,9 @@ function AttendanceView({ sectionColors, setSectionColors }) {
         })));
 
         // Config: carica da profiles.app_config (sistema) — più affidabile di una tabella dedicata
-        const { data: sysProfile } = await sb.from("profiles").select("app_config")
-          .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
-        const labMult = sysProfile?.app_config?.lab_multiplier;
-        const stored = sysProfile?.app_config?.attendance_config;
+        const sysCfg = await readAppConfig().catch(() => null);
+        const labMult = sysCfg?.lab_multiplier;
+        const stored = sysCfg?.attendance_config;
         if (stored) {
           setConfig({
             lab_multiplier: labMult ?? 2,
@@ -4612,13 +4610,9 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                   badge_name: config.badge_name ?? "Badge mese",
                 };
                 // Leggi app_config esistente (per non sovrascrivere altre impostazioni)
-                const { data: existing } = await sb.from("profiles").select("app_config")
-                  .eq("id", "00000000-0000-0000-0000-000000000099").maybeSingle();
-                const newAppConfig = { ...(existing?.app_config || {}), attendance_config: payload };
-                const { error } = await sb.from("profiles").update({ app_config: newAppConfig })
-                  .eq("id", "00000000-0000-0000-0000-000000000099");
-                if (error) {
-                  if (typeof addToast === "function") addToast("❌ " + error.message, "error");
+                const saveErr = await writeAppConfig({ attendance_config: payload });
+                if (saveErr) {
+                  if (typeof addToast === "function") addToast("❌ Non salvato: " + saveErr, "error");
                   return;
                 }
                 setConfig(prev => ({ ...prev, ...payload }));
@@ -7446,8 +7440,8 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
     };
     fetchVisibilityConfig().then(applyCfg).catch(() => {}).finally(() => { if (alive) setVisReady(true); });
     const ch = sb.channel("vis-config-" + Math.random().toString(36).slice(2))
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: "id=eq.00000000-0000-0000-0000-000000000099" },
-        (payload) => applyCfg(payload?.new?.app_config))
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: "id=eq.1" },
+        (payload) => applyCfg(payload?.new?.config))
       .subscribe();
     const onFocus = () => { if (document.visibilityState === "visible") refetch(); };
     document.addEventListener("visibilitychange", onFocus);
@@ -8008,7 +8002,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b61</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b62</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9164,7 +9158,8 @@ function AdminView({ profile }) {
     };
     await col("Foto attività: si salvano? (migr. 020)", "activities", "image_data");
     await col("Sfide: luogo e autore si salvano? (migr. 021)", "activities", "location,author_name");
-    await col("Impostazioni visibilità: si salvano?", "profiles", "app_config");
+    try { const g = await sb.rpc("get_app_config"); if (g.error) throw new Error(g.error.message); const w = await writeAppConfig({}); if (w) throw new Error(w); push("Impostazioni (Vista, presenze): si salvano?", true, "sì"); }
+    catch (e) { push("Impostazioni (Vista, presenze): si salvano?", false, (e.message || String(e)) + " (migr. 040)"); }
     try { const { error } = await sb.rpc("bigtop_generate_month", { p_year: 2000, p_month: 1, p_days: [], p_times: ["16:00-17:00"] }); if (error) throw new Error(error.message); push("Big Top: generazione turni OK? (migr. 024)", true, "ok (prova a vuoto)"); }
     catch (e) { push("Big Top: generazione turni OK? (migr. 024)", false, e.message || String(e)); }
     try { const { error } = await sb.rpc("bigtop_cancel_slot", { p_slot_id: "00000000-0000-0000-0000-000000000000" }); if (error && /could not find|does not exist|schema cache/i.test(error.message)) throw new Error(error.message); push("Big Top: annullo turni OK?", true, "ok"); }
@@ -9194,16 +9189,15 @@ function AdminView({ profile }) {
     const _tn = { activities:"Attività", bigtop_slots:"Turni Big Top", bigtop_bookings:"Prenotazioni Big Top", profiles:"Giocatori", messages:"Messaggi", badges:"Badge", player_badges:"Badge assegnati", bookings:"Prenotazioni Lab", attendances:"Presenze", xp_history:"Storico punti", squads:"Squadre", notifications:"Notifiche" };
     for (const t of ["activities","bigtop_slots","bigtop_bookings","profiles","messages","badges","player_badges","bookings","attendances","xp_history","squads","notifications"]) { await col("Accesso ai dati: " + (_tn[t]||t), t, "id"); }
     try {
-      const { data: cur } = await sb.from("profiles").select("app_config").eq("id", ADMIN_ID).single();
       const okRT = await new Promise((resolve) => {
         let done = false;
         const ch = sb.channel("diag-rt-" + Math.random().toString(36).slice(2))
-          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: "id=eq." + ADMIN_ID }, () => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(true); } })
-          .subscribe(async (status) => { if (status === "SUBSCRIBED") { await sb.from("profiles").update({ app_config: cur?.app_config || {} }).eq("id", ADMIN_ID); } });
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.1" }, () => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(true); } })
+          .subscribe(async (status) => { if (status === "SUBSCRIBED") { await writeAppConfig({}); } });
         setTimeout(() => { if (!done) { done = true; try { sb.removeChannel(ch); } catch (_) {} resolve(false); } }, 5000);
       });
-      push("Aggiornamenti istantanei (visibilità) attivi?", okRT, okRT ? "sì, in tempo reale" : "no: abilita Realtime su 'profiles'");
-    } catch (e) { push("Realtime su profiles", false, e.message || String(e)); }
+      push("Aggiornamenti istantanei (visibilità) attivi?", okRT, okRT ? "sì, in tempo reale" : "no: esegui la migrazione 040");
+    } catch (e) { push("Realtime impostazioni", false, e.message || String(e)); }
     // Notifiche: scrittura + realtime end-to-end (notifica di prova a se stessi, poi cancellata)
     try {
       let testId = null;
