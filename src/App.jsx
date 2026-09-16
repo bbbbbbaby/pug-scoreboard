@@ -8003,7 +8003,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b59</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b60</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -10753,6 +10753,34 @@ function pugSound(type){
   }catch(_){}
 }
 export default function App() {
+
+  // Aggiornamento automatico: controlla se c'e una versione nuova
+  // all'apertura e ogni volta che l'app torna in primo piano.
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const reloadOnce = (tag) => {
+      try {
+        const k = "pug_sw_reload_" + tag;
+        if (sessionStorage.getItem(k)) return;
+        sessionStorage.setItem(k, "1");
+      } catch (_) {}
+      window.location.reload();
+    };
+    const onMsg = (ev) => { if (ev?.data?.type === "SW_UPDATED") reloadOnce(ev.data.cache || "x"); };
+    navigator.serviceWorker.addEventListener("message", onMsg);
+    const check = () => {
+      navigator.serviceWorker.register("/sw.js")
+        .then(reg => { try { reg.update(); } catch (_) {} })
+        .catch(() => {});
+    };
+    check();
+    const onVis = () => { if (document.visibilityState === "visible") check(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", onMsg);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
 
   const [profile, setProfile] = useState(null);
   const [checking, setChecking] = useState(true);
