@@ -241,6 +241,7 @@ const DEFAULT_SECTION_COLORS = {
   visibilita:   { color: "#A3CFFE", image: null },
   squadre:      { color: "#A3CFFE", image: null },
   diario:       { color: "#A3CFFE", image: null },
+  azioni:       { color: "#339966", image: null },
 };
 
 // ─── CSS ──────────────────────────────────────────────────
@@ -7977,7 +7978,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b53</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b54</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -10285,7 +10286,7 @@ function EducatorShell({ profile, onLogout }) {
   const [showGamesTop, setShowGamesTop] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
-  const [theme, setTheme] = useState(() => { try { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"; } catch(_) { return "light"; } });
+  const [theme, setTheme] = useState("light");
   const [sectionColors, setSectionColors] = useState(DEFAULT_SECTION_COLORS);
   const [showPresentation, setShowPresentation] = useState(false);
   const [showPresSettings, setShowPresSettings] = useState(false);
