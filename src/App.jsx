@@ -3508,6 +3508,9 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const searchDeb = useDebounce(search, 250);
   const [sortBy, setSortBy] = useState("alpha");
   const [squadFilter, setSquadFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all"); // all | oggi | settimana | lab | sfida | fermi
+  const [actFilter, setActFilter] = useState("all");       // id di un Lab/Sfida
+  const [activity, setActivity] = useState({ oggi: new Set(), settimana: new Set(), mese: new Set(), lab: new Set(), sfida: new Set(), perAct: {}, acts: [] });
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false);
@@ -3525,6 +3528,15 @@ function PlayersView({ sectionColors, setSectionColors }) {
       const uid = new URLSearchParams(window.location.search).get("u");
       if (uid) { setExpandedPlayer(uid); setSearch(""); }
     } catch(_) {}
+    if (PENDING_OPEN_PLAYER) { setExpandedPlayer(PENDING_OPEN_PLAYER); setSearch(""); setSquadFilter("all"); setStatusFilter("all"); setActFilter("all"); PENDING_OPEN_PLAYER = null; }
+    const apri = (ev) => {
+      const id = ev?.detail?.id; if (!id) return;
+      PENDING_OPEN_PLAYER = null;
+      setExpandedPlayer(id); setSearch(""); setSquadFilter("all"); setStatusFilter("all"); setActFilter("all");
+      setTimeout(() => { const el = document.getElementById("pl-" + id); if (el) el.scrollIntoView({ behavior: "smooth", block: "center" }); }, 250);
+    };
+    window.addEventListener("pug:openPlayer", apri);
+    return () => window.removeEventListener("pug:openPlayer", apri);
   }, []);
 
   const load = useCallback(async () => {
@@ -3545,6 +3557,33 @@ function PlayersView({ sectionColors, setSectionColors }) {
       const pinMap = Object.fromEntries((pins || []).map(r => [r.player_id, r.pin]));
       setPlayers((data || []).map(p => ({ ...p, pin: pinMap[p.id] || "1234" })));
       setSquads(sq || []);
+      try {
+        const oggiStr = new Date().toISOString().slice(0, 10);
+        const d7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+        const d30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+        const [{ data: att }, { data: bks }, { data: acts }] = await Promise.all([
+          sb.from("attendances").select("player_id,date,status").gte("date", d30),
+          sb.from("bookings").select("player_id,activity_id,status").in("status", ["pending", "confirmed"]),
+          sb.from("activities").select("id,name,description,is_active").eq("is_active", true).order("name"),
+        ]);
+        const isAssente = (a) => String(a.status || "").toLowerCase() === "absent";
+        const oggi = new Set(), settimana = new Set(), mese = new Set();
+        (att || []).forEach(a => {
+          if (isAssente(a)) return;
+          mese.add(a.player_id);
+          if (a.date >= d7) settimana.add(a.player_id);
+          if (a.date === oggiStr) oggi.add(a.player_id);
+        });
+        const actList = acts || [];
+        const sfidaIds = new Set(actList.filter(a => String(a.description || "").includes("SFIDA")).map(a => a.id));
+        const lab = new Set(), sfida = new Set(), perAct = {};
+        (bks || []).forEach(b => {
+          if (!b.activity_id) return;
+          (perAct[b.activity_id] = perAct[b.activity_id] || new Set()).add(b.player_id);
+          if (sfidaIds.has(b.activity_id)) sfida.add(b.player_id); else lab.add(b.player_id);
+        });
+        setActivity({ oggi, settimana, mese, lab, sfida, perAct, acts: actList.map(a => ({ id: a.id, name: a.name, sfida: sfidaIds.has(a.id) })) });
+      } catch (_) {}
     } finally {
       clearTimeout(safetyTimeout);
       loadingRef.current = false;
@@ -3562,7 +3601,14 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const visible = players.filter(p => {
     const sq = squadFilter === "all" || p.squads?.name === squadFilter;
     const sr = !searchDeb || p.display_name.toLowerCase().includes(searchDeb.toLowerCase()) || (p.first_name||"").toLowerCase().includes(searchDeb.toLowerCase());
-    return sq && sr;
+    let st = true;
+    if (statusFilter === "oggi")      st = activity.oggi.has(p.id);
+    else if (statusFilter === "settimana") st = activity.settimana.has(p.id);
+    else if (statusFilter === "lab")  st = activity.lab.has(p.id);
+    else if (statusFilter === "sfida") st = activity.sfida.has(p.id);
+    else if (statusFilter === "fermi") st = !activity.mese.has(p.id);
+    const ac = actFilter === "all" || (activity.perAct[actFilter] && activity.perAct[actFilter].has(p.id));
+    return sq && sr && st && ac;
   }).sort((a, b) => {
     switch (sortBy) {
       case "xp":     return (b.xp||0) - (a.xp||0);
@@ -3776,6 +3822,20 @@ function PlayersView({ sectionColors, setSectionColors }) {
           <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
           {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
         </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
+          {[["all","👥 Tutti"],["oggi","📍 Presenti oggi"],["settimana","⚡ Attivi 7 giorni"],["lab","🧪 Iscritti a un Lab"],["sfida","🔥 In sfida"],["fermi","💤 Fermi da 30 giorni"]].map(([k,etichetta]) => {
+            const n = k === "all" ? players.length
+              : k === "fermi" ? players.filter(p => !activity.mese.has(p.id)).length
+              : (activity[k] ? activity[k].size : 0);
+            return <button key={k} className={`chip ${statusFilter === k ? "active" : ""}`} onClick={() => { setStatusFilter(k); if (k !== "all") setActFilter("all"); }}>{etichetta} ({n})</button>;
+          })}
+          {activity.acts.length > 0 && (
+            <select className="form-input" style={{ width: "auto", minWidth: 150, padding: "4px 8px", fontSize: 12 }} value={actFilter} onChange={e => { setActFilter(e.target.value); if (e.target.value !== "all") setStatusFilter("all"); }}>
+              <option value="all">Lab/Sfida: tutti</option>
+              {activity.acts.map(a => <option key={a.id} value={a.id}>{(a.sfida ? "🔥 " : "🧪 ") + a.name + " (" + ((activity.perAct[a.id] && activity.perAct[a.id].size) || 0) + ")"}</option>)}
+            </select>
+          )}
+        </div>
       </div>
 
       {loading ? <div className="loading">⏳ Caricamento…</div> : (
@@ -3784,7 +3844,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
             {visible.map(p => {
               const lv = getLevel(p.xp);
               return (
-                <div key={p.id} className={`player-card ${selected.has(p.id) ? "selected" : ""}`} onClick={() => { const n = new Set(selected); n.has(p.id) ? n.delete(p.id) : n.add(p.id); setSelected(n); }}>
+                <div key={p.id} id={"pl-" + p.id} className={`player-card ${selected.has(p.id) ? "selected" : ""}`} onClick={() => { const n = new Set(selected); n.has(p.id) ? n.delete(p.id) : n.add(p.id); setSelected(n); }}>
                   <div className="avatar-wrap"><Avatar url={p.avatar_url} emoji={lv.emoji} /></div>
                   <div className="p-name">{p.display_name}</div>
                   {p.first_name && <div style={{fontSize:10,color:"var(--text3)",marginTop:-2,marginBottom:2}}>{p.first_name}</div>}
@@ -4481,6 +4541,9 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   const [sortBy, setSortBy]       = useState("name");
   const [squadFilter, setSquadFilter] = useState("all");
   const [presTab, setPresTab]     = useState("daily");
+  const annoCorrente = (() => { const d = new Date(); return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1; })();
+  const [anno, setAnno] = useState(annoCorrente);
+  const [storico, setStorico] = useState({ loading: false, righe: [], giorni: 0, tot: 0, totLab: 0, ragazzi: 0 });
   const [err, setErr]             = useState(null);
   const [editConfig, setEditConfig] = useState(false);
 
@@ -4547,6 +4610,42 @@ function AttendanceView({ sectionColors, setSectionColors }) {
     load();
   }, [date]);
 
+  useEffect(() => {
+    if (presTab !== "storico") return;
+    let vivo = true;
+    (async () => {
+      setStorico(st => ({ ...st, loading: true }));
+      const da = anno + "-09-01", a = (anno + 1) + "-08-31";
+      let tutte = [], from = 0;
+      for (let i = 0; i < 25; i++) {
+        const { data, error } = await sb.from("attendances")
+          .select("player_id,date,status,check_type")
+          .gte("date", da).lte("date", a)
+          .range(from, from + 999);
+        if (error || !data) break;
+        tutte = tutte.concat(data);
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      if (!vivo) return;
+      const valide = tutte.filter(r => String(r.status || "").toLowerCase() !== "absent");
+      const conteggi = {}, giorni = new Set();
+      let tot = 0, totLab = 0;
+      valide.forEach(r => {
+        const lab = r.check_type === "lab";
+        if (lab) totLab++; else { tot++; giorni.add(r.date); }
+        const c = conteggi[r.player_id] = conteggi[r.player_id] || { giorni: 0, lab: 0 };
+        if (lab) c.lab++; else c.giorni++;
+      });
+      const righe = Object.entries(conteggi).map(([id, c]) => {
+        const p = players.find(x => x.id === id);
+        return { id, nome: p?.display_name || "—", squadra: p?.squads?.name || "", ...c, totale: c.giorni + c.lab };
+      }).sort((x, y) => y.totale - x.totale);
+      setStorico({ loading: false, righe, giorni: giorni.size, tot, totLab, ragazzi: Object.keys(conteggi).length });
+    })();
+    return () => { vivo = false; };
+  }, [presTab, anno, players]);
+
   const visible = players
     .filter(p => {
       const matchSquad = squadFilter === "all" || p.squads?.name === squadFilter;
@@ -4600,7 +4699,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   return (
     <div>
       <SectionBanner sectionKey="presenze" title="✅ Presenze"
-        sub={presTab==="daily" ? `${presentCount}/${visible.length} presenti` : `${labAtts.length} check-in Lab`}
+        sub={presTab==="daily" ? `${presentCount}/${visible.length} presenti` : presTab==="lab" ? `${labAtts.length} check-in Lab` : `${storico.tot} presenze nell'anno`}
         sectionColors={sectionColors} onEdit={() => setCustomizing(true)} />
 
       {/* Tab switcher */}
@@ -4612,6 +4711,10 @@ function AttendanceView({ sectionColors, setSectionColors }) {
         <button className={`chip ${presTab==="lab"?"active":""}`} onClick={()=>setPresTab("lab")}
           style={presTab==="lab"?{background:"var(--surface3)",color:"#FDEF26",borderColor:"#FDEF26"}:{}}>
           ⚡ Lab {labAtts.length>0 && <span style={{background:"#FDEF26",color:"#111",borderRadius:99,fontSize:8,fontWeight:900,padding:"1px 5px",marginLeft:4}}>{labAtts.length}</span>}
+        </button>
+        <button className={`chip ${presTab==="storico"?"active":""}`} onClick={()=>setPresTab("storico")}
+          style={presTab==="storico"?{background:"var(--surface3)",color:"#FF6DEC",borderColor:"#FF6DEC"}:{}}>
+          📊 Storico
         </button>
       </div>
 
@@ -4730,6 +4833,65 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                 </tbody>
               </table>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STORICO ── */}
+      {presTab==="storico" && (
+        <div>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:12}}>
+            <select className="form-input" style={{width:"auto",padding:"6px 10px",fontSize:13}} value={anno} onChange={e=>setAnno(Number(e.target.value))}>
+              {[0,1,2].map(i => { const y = annoCorrente - i; return <option key={y} value={y}>{"Anno " + y + "/" + String(y+1).slice(2) + " (set–ago)"}</option>; })}
+            </select>
+            <button className="btn btn-ghost btn-sm" disabled={!storico.righe.length} onClick={()=>{
+              const righe = [["Nome","Squadra","Presenze","Check-in Lab","Totale"]]
+                .concat(storico.righe.map(r => [r.nome, r.squadra, r.giorni, r.lab, r.totale]));
+              const csv = righe.map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(";")).join("\n");
+              const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+              const a = document.createElement("a"); a.href = url; a.download = "presenze-" + anno + "-" + (anno+1) + ".csv";
+              document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 4000);
+            }}>⬇️ Scarica elenco (CSV)</button>
+          </div>
+
+          {storico.loading ? <div className="loading">⏳ Calcolo…</div> : (
+            <>
+              <div className="stats-grid">
+                <div className="stat-card"><div className="stat-label">Presenze</div><div className="stat-value">{storico.tot}</div></div>
+                <div className="stat-card"><div className="stat-label">Check-in Lab</div><div className="stat-value">{storico.totLab}</div></div>
+                <div className="stat-card"><div className="stat-label">Ragazzi</div><div className="stat-value">{storico.ragazzi}</div></div>
+                <div className="stat-card"><div className="stat-label">Giorni aperti</div><div className="stat-value">{storico.giorni}</div></div>
+                <div className="stat-card"><div className="stat-label">Media al giorno</div><div className="stat-value">{storico.giorni ? (storico.tot/storico.giorni).toFixed(1) : "0"}</div></div>
+              </div>
+
+              <div style={{fontWeight:900,fontSize:15,margin:"14px 0 8px"}}>🏅 Chi c'è stato di più</div>
+              {storico.righe.length === 0 ? <div className="empty">Nessuna presenza registrata in questo anno.</div> : (
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                    <thead><tr style={{textAlign:"left",color:"var(--text3)"}}>
+                      <th style={{padding:"6px 8px"}}>#</th><th style={{padding:"6px 8px"}}>Nome</th>
+                      <th style={{padding:"6px 8px"}}>Squadra</th>
+                      <th style={{padding:"6px 8px",textAlign:"right"}}>Presenze</th>
+                      <th style={{padding:"6px 8px",textAlign:"right"}}>Lab</th>
+                      <th style={{padding:"6px 8px",textAlign:"right"}}>Totale</th>
+                    </tr></thead>
+                    <tbody>
+                      {storico.righe.slice(0,20).map((r,i)=>(
+                        <tr key={r.id} style={{borderTop:"1px solid var(--border2)"}}>
+                          <td style={{padding:"6px 8px",color:"var(--text3)"}}>{i+1}</td>
+                          <td style={{padding:"6px 8px",fontWeight:700}}>{r.nome}</td>
+                          <td style={{padding:"6px 8px",color:"var(--text3)"}}>{r.squadra}</td>
+                          <td style={{padding:"6px 8px",textAlign:"right"}}>{r.giorni}</td>
+                          <td style={{padding:"6px 8px",textAlign:"right"}}>{r.lab}</td>
+                          <td style={{padding:"6px 8px",textAlign:"right",fontWeight:900}}>{r.totale}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {storico.righe.length > 20 && <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>Mostrati i primi 20 di {storico.righe.length}. L'elenco completo è nel CSV.</div>}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -7425,7 +7587,7 @@ function AnimatedLevelBar({ xp, lv }) {
     if (prevXp.current !== null && xp > prevXp.current) {
       setWidth(target); countTo(target);
       setBump(true);
-      try { playPixel("xp"); } catch(_){}
+      try { playPixel("checkin"); } catch(_){}
       const t = setTimeout(() => setBump(false), 900);
       return () => clearTimeout(t);
     }
@@ -8071,7 +8233,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b65</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b68</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -8588,7 +8750,186 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
 // ─── DASHBOARD VIEW ──────────────────────────────────────
 
-function DashboardView() {
+
+// ─── NAVIGAZIONE RAPIDA (ricerca globale, modalità ingresso) ─────
+let PENDING_OPEN_PLAYER = null;
+function vaiAlGiocatore(id) {
+  PENDING_OPEN_PLAYER = id;
+  window.dispatchEvent(new CustomEvent("pug:goTab", { detail: { tab: "giocatori" } }));
+  setTimeout(() => window.dispatchEvent(new CustomEvent("pug:openPlayer", { detail: { id } })), 80);
+}
+function vaiAllaSezione(tab) { window.dispatchEvent(new CustomEvent("pug:goTab", { detail: { tab } })); }
+function idDaQr(code) {
+  const t = String(code || "").trim();
+  const m = t.match(/[?&]u=([0-9a-fA-F-]{36})/) || t.match(/^([0-9a-fA-F-]{36})$/);
+  return m ? m[1].toLowerCase() : null;
+}
+
+function RicercaRapida({ onClose }) {
+  const [q, setQ] = useState("");
+  const [res, setRes] = useState([]);
+  const [cerco, setCerco] = useState(false);
+  const qd = useDebounce(q, 200);
+  useEffect(() => {
+    let vivo = true;
+    if (qd.trim().length < 2) { setRes([]); return; }
+    setCerco(true);
+    (async () => {
+      const t = qd.trim().replace(/[%,]/g, "");
+      const { data } = await sb.from("profiles")
+        .select("id,display_name,first_name,avatar_url,squads(name)")
+        .eq("role", "player")
+        .or(`display_name.ilike.%${t}%,first_name.ilike.%${t}%`)
+        .limit(10);
+      if (!vivo) return;
+      setRes(data || []); setCerco(false);
+    })();
+    return () => { vivo = false; };
+  }, [qd]);
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+        <div className="modal-title">🔍 Cerca un giocatore</div>
+        <input className="form-input" autoFocus placeholder="Nome di gioco o nome vero…" value={q}
+          onChange={e => setQ(e.target.value)} style={{ marginBottom: 10 }} />
+        {cerco && <div style={{ fontSize: 12, color: "var(--text3)" }}>⏳ Cerco…</div>}
+        {!cerco && qd.trim().length >= 2 && res.length === 0 && <div className="empty">Nessun giocatore trovato.</div>}
+        <div style={{ maxHeight: 340, overflowY: "auto" }}>
+          {res.map(p => (
+            <button key={p.id} className="btn btn-ghost" style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", justifyContent: "flex-start", marginBottom: 6 }}
+              onClick={() => { onClose(); vaiAlGiocatore(p.id); }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}><Avatar url={p.avatar_url} emoji="🌱" size={30} /></div>
+              <span style={{ fontWeight: 800 }}>{p.display_name}</span>
+              <span style={{ fontSize: 11, color: "var(--text3)" }}>{[p.first_name, p.squads?.name].filter(Boolean).join(" · ")}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>Scrivi almeno 2 lettere. Tocca un nome per aprire la sua scheda.</div>
+      </div>
+    </div>
+  );
+}
+
+function ModalitaIngresso({ onClose }) {
+  const [cfg, setCfg] = useState({ xp_daily_checkin: 10, coin_daily_checkin: 5 });
+  const [chiave, setChiave] = useState(0);
+  const [esito, setEsito] = useState(null);   // {ok, nome, testo}
+  const [fatti, setFatti] = useState([]);     // ultimi segnati
+  const lavoro = useRef(false);
+
+  useEffect(() => {
+    readAppConfig().then(c => {
+      const a = c?.attendance_config;
+      if (a) setCfg({ xp_daily_checkin: a.xp_daily_checkin ?? 10, coin_daily_checkin: a.coin_daily_checkin ?? 5 });
+    }).catch(() => {});
+  }, []);
+
+  const riprendi = () => { setTimeout(() => { setEsito(null); lavoro.current = false; setChiave(k => k + 1); }, 1600); };
+
+  async function segna(code) {
+    if (lavoro.current) return;
+    lavoro.current = true;
+    const id = idDaQr(code);
+    if (!id) { setEsito({ ok: false, testo: "QR non riconosciuto" }); playPixel("error"); riprendi(); return; }
+    try {
+      const oggi = localToday();
+      const { data: p } = await sb.from("profiles").select("id,display_name,xp,coin,role").eq("id", id).maybeSingle();
+      if (!p || p.role !== "player") { setEsito({ ok: false, testo: "Non è la tessera di un giocatore" }); playPixel("error"); riprendi(); return; }
+      const { data: gia } = await sb.from("attendances").select("id,status").eq("player_id", id).eq("date", oggi).eq("check_type", "daily").maybeSingle();
+      if (gia && gia.status !== "none") {
+        setEsito({ ok: true, nome: p.display_name, testo: "già segnato oggi" });
+        playPixel("msg"); riprendi(); return;
+      }
+      const xp = cfg.xp_daily_checkin || 10, coin = cfg.coin_daily_checkin || 5;
+      if (gia) await sb.from("attendances").update({ status: "full", xp_awarded: xp, coin_awarded: coin }).eq("id", gia.id);
+      else await sb.from("attendances").insert({ player_id: id, date: oggi, status: "full", xp_awarded: xp, coin_awarded: coin, check_type: "daily" });
+      const nuovoXp = Math.max(0, (p.xp || 0) + xp), nuovoCoin = Math.max(0, (p.coin || 0) + coin);
+      await sb.from("profiles").update({ xp: nuovoXp, coin: nuovoCoin }).eq("id", id);
+      logXPGain(id, xp, nuovoXp, "presenza").catch(() => {});
+      sendPush(id, "✅ Presenza registrata!", `+${xp} XP e +${coin} Coin`).catch(() => {});
+      setEsito({ ok: true, nome: p.display_name, testo: `+${xp} XP · +${coin} Coin` });
+      setFatti(f => [{ id, nome: p.display_name, ora: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) }, ...f].slice(0, 12));
+      playPixel("checkin");
+    } catch (e) {
+      setEsito({ ok: false, testo: "Errore: " + (e.message || "riprova") });
+    }
+    riprendi();
+  }
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div className="modal-title" style={{ margin: 0 }}>🚪 Modalità ingresso</div>
+          <button className="btn btn-ghost btn-xs" onClick={onClose}>Chiudi</button>
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 8 }}>
+          Inquadra una tessera dopo l'altra: ogni ragazzo viene segnato presente per oggi.
+        </div>
+
+        {esito ? (
+          <div style={{ textAlign: "center", padding: "26px 10px", borderRadius: 14, border: "3px solid #101010",
+            background: esito.ok ? "#339966" : "#D41323", color: "#fff", marginBottom: 10 }}>
+            <div style={{ fontSize: 40, lineHeight: 1 }}>{esito.ok ? "✅" : "⚠️"}</div>
+            {esito.nome && <div style={{ fontWeight: 900, fontSize: 22, marginTop: 6 }}>{esito.nome}</div>}
+            <div style={{ fontSize: 14, marginTop: 4 }}>{esito.testo}</div>
+          </div>
+        ) : (
+          <QRScanner key={chiave} onScan={segna} onClose={onClose} />
+        )}
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+          <div style={{ fontWeight: 900 }}>Segnati ora: {fatti.length}</div>
+          {fatti.length > 0 && <button className="btn btn-ghost btn-xs" onClick={() => vaiAllaSezione("presenze")}>Vai a Presenze</button>}
+        </div>
+        <div style={{ maxHeight: 160, overflowY: "auto", marginTop: 6 }}>
+          {fatti.map(f => (
+            <div key={f.id + f.ora} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0", borderTop: "1px solid var(--border2)" }}>
+              <span style={{ fontWeight: 700 }}>{f.nome}</span><span style={{ color: "var(--text3)" }}>{f.ora}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DaFareOggi({ onIngresso }) {
+  const [d, setD] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const oggi = localToday();
+        const [{ count: attese }, { data: att }, { count: tot }] = await Promise.all([
+          sb.from("bookings").select("id", { count: "exact", head: true }).eq("status", "pending"),
+          sb.from("attendances").select("player_id").eq("date", oggi).neq("status", "none"),
+          sb.from("profiles").select("id", { count: "exact", head: true }).eq("role", "player"),
+        ]);
+        if (!vivo) return;
+        setD({ attese: attese || 0, presenti: new Set((att || []).map(a => a.player_id)).size, tot: tot || 0 });
+      } catch (_) { if (vivo) setD({ attese: 0, presenti: 0, tot: 0 }); }
+    })();
+    return () => { vivo = false; };
+  }, []);
+  return (
+    <div className="card" style={{ marginBottom: 16, border: "3px solid #101010" }}>
+      <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 10 }}>📋 Da fare oggi</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button className="btn btn-yellow btn-sm" onClick={onIngresso}>🚪 Modalità ingresso</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => vaiAllaSezione("presenze")}>
+          ✅ Presenze oggi {d ? `(${d.presenti}/${d.tot})` : "…"}
+        </button>
+        <button className="btn btn-ghost btn-sm" style={d && d.attese > 0 ? { color: "#D41323", borderColor: "#D41323" } : {}} onClick={() => vaiAllaSezione("prenotazioni")}>
+          📋 Prenotazioni da controllare {d ? `(${d.attese})` : "…"}
+        </button>
+        <button className="btn btn-ghost btn-sm" onClick={() => vaiAllaSezione("qr")}>📱 QR del giorno</button>
+      </div>
+    </div>
+  );
+}
+
+function DashboardView({ onIngresso }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -8656,6 +8997,8 @@ function DashboardView() {
 
   return (
     <div>
+
+      <DaFareOggi onIngresso={onIngresso} />
 
       {/* Stat cards */}
       <div className="stats-grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",marginBottom:16}}>
@@ -10458,6 +10801,18 @@ function EducatorShell({ profile, onLogout }) {
     return () => { clearInterval(interval); sb.removeChannel(channel); };
   }, [loadNotifCounts]);
 
+  const [ricercaOpen, setRicercaOpen] = useState(false);
+  const [ingresso, setIngresso] = useState(false);
+  useEffect(() => {
+    const vai = (ev) => { const t = ev?.detail?.tab; if (t) { setTab(t); setDrawerOpen(false); setIngresso(false); } };
+    window.addEventListener("pug:goTab", vai);
+    const tasto = (e) => {
+      if (e.key === "/" && !/input|textarea|select/i.test(e.target?.tagName || "")) { e.preventDefault(); setRicercaOpen(true); }
+    };
+    window.addEventListener("keydown", tasto);
+    return () => { window.removeEventListener("pug:goTab", vai); window.removeEventListener("keydown", tasto); };
+  }, []);
+
   const cur = EDUCATOR_TABS.find(t => t[0] === tab);
   const lv = getLevel(profile.xp || 0);
   const mobTabs = EDUCATOR_TABS.filter(t => MOB_TABS_IDS.includes(t[0]) && permOk(profile.perms, t[0]));
@@ -10547,6 +10902,10 @@ function EducatorShell({ profile, onLogout }) {
               <div className="theme-toggle-knob" style={{background:theme==="light"?"#c08800":"rgba(255,255,255,.6)",transform:theme==="light"?"translateX(20px)":"translateX(0)"}}/>
             </button>
           </div>
+          <div style={{display:"flex",gap:6,marginBottom:6}}>
+            <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={()=>setRicercaOpen(true)} title="Cerca un giocatore (tasto /)">🔍 Cerca</button>
+            <button className="btn btn-yellow btn-sm" style={{flex:1}} onClick={()=>setIngresso(true)} title="Segna le presenze con le tessere">🚪 Ingresso</button>
+          </div>
           <InstallPWAButton/>
           <div style={{display:"flex",gap:6,marginTop:6}}>
             <button className="btn btn-ghost btn-sm" style={{flex:1,color:"rgba(255,255,255,.45)",border:"1px solid rgba(255,255,255,.1)"}} onClick={onLogout}>Esci</button>
@@ -10560,6 +10919,8 @@ function EducatorShell({ profile, onLogout }) {
         <button onClick={() => setDrawerOpen(true)} style={{background:"none",border:"none",color: theme==="light"?"#101010":"rgba(255,255,255,.6)",fontSize:22,cursor:"pointer",padding:4,lineHeight:1}}>☰</button>
         <span className="mob-header-title" style={{flex:1,marginLeft:8}}>{cur?.[2]}</span>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <button onClick={()=>setRicercaOpen(true)} title="Cerca un giocatore" style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,lineHeight:1}}>🔍</button>
+          <button onClick={()=>setIngresso(true)} title="Modalità ingresso" style={{background:"rgba(51,153,102,.2)",border:"1px solid rgba(51,153,102,.5)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,lineHeight:1}}>🚪</button>
           <button onClick={()=>setShowGamesTop(true)} title="Giochi" style={{background:"rgba(255,109,236,.18)",border:"1px solid rgba(255,109,236,.45)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:15,lineHeight:1}}>🎮</button>
           <button onClick={()=>setShowPresSettings(true)} style={{background:"rgba(253,239,38,.15)",border:"1px solid rgba(253,239,38,.3)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:"#FDEF26",lineHeight:1}} title="Presentazione">🎮</button>
           <button onClick={()=>setTheme(t=>t==="dark"?"light":"dark")} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,lineHeight:1}} title="Tema">
@@ -10570,6 +10931,9 @@ function EducatorShell({ profile, onLogout }) {
           </div>
         </div>
       </div>
+
+      {ricercaOpen && <RicercaRapida onClose={()=>setRicercaOpen(false)} />}
+      {ingresso && <ModalitaIngresso onClose={()=>setIngresso(false)} />}
 
       {showGamesTop && <div className="modal-bg" onClick={()=>setShowGamesTop(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:410}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:900,fontSize:18}}>🎮 Giochi</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowGamesTop(false)}>✕</button></div><GamesHub myId={profile.id}/></div></div>}
 
@@ -10690,7 +11054,7 @@ function EducatorShell({ profile, onLogout }) {
           {!["classifica","presenze","attivita","badge","sfida","bigtop"].includes(tab) && (
             <SectionBanner sectionKey={tab} title={`${cur?.[1]||""} ${cur?.[2]||""}`} sectionColors={sectionColors}/>
           )}
-          {tab === "dashboard"   && <DashboardView />}
+          {tab === "dashboard"   && <DashboardView onIngresso={() => setIngresso(true)} />}
           {tab === "export"       && <ExportView />}
           {tab === "pulizia"      && <PuliziaView />}
           {tab === "bacheca"      && <BachecaView profile={profile}/>}
