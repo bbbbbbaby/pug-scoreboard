@@ -3523,6 +3523,32 @@ function PlayersView({ sectionColors, setSectionColors }) {
   const [newPlayer, setNewPlayer] = useState({ display_name:"", first_name:"", pin:"1234", squad_id:"", xp:0, coin:0, avatar_url:"" });
   const [createPlayerErr, setCreatePlayerErr] = useState("");
   const [qrPlayer, setQrPlayer] = useState(null);
+  const [presOggi, setPresOggi] = useState(new Set());   // chi è già segnato oggi
+  const [xpTarget, setXpTarget] = useState(null);        // giocatore per il bonus XP
+  const [azione, setAzione] = useState("");              // messaggio breve
+  const [recenti, setRecenti] = useState(leggiRecenti());
+  useEffect(() => {
+    const agg = () => setRecenti(leggiRecenti());
+    window.addEventListener("pug:recentiCambiati", agg);
+    return () => window.removeEventListener("pug:recentiCambiati", agg);
+  }, []);
+  useEffect(() => {
+    let vivo = true;
+    sb.from("attendances").select("player_id,status").eq("date", localToday()).eq("check_type", "daily")
+      .then(({ data }) => { if (vivo) setPresOggi(new Set((data || []).filter(a => a.status !== "none").map(a => a.player_id))); });
+    return () => { vivo = false; };
+  }, []);
+
+  async function presenzaRapida(p) {
+    setAzione("⏳ " + p.display_name + "…");
+    const r = await presenzaOggi(p.id).catch(e => ({ errore: e.message }));
+    if (r.errore) { setAzione("❌ " + r.errore); return; }
+    setPresOggi(prev => new Set(prev).add(p.id));
+    if (r.gia) { setAzione("ℹ️ " + p.display_name + ": era già segnato oggi"); return; }
+    setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, xp: r.nuovoXp, coin: r.nuovoCoin } : x));
+    setAzione("✅ " + p.display_name + " presente · +" + r.xp + " XP");
+    playPixel("checkin");
+  }
   useEffect(() => {
     try {
       const uid = new URLSearchParams(window.location.search).get("u");
@@ -3818,6 +3844,13 @@ function PlayersView({ sectionColors, setSectionColors }) {
             <option value="recent">Aggiunti di recente</option>
           </select>
         </div>
+        {recenti.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 11, color: "var(--text3)" }}>🕘 Ultimi visti:</span>
+            {recenti.map(r => <button key={r.id} className="chip" onClick={() => { setExpandedPlayer(r.id); setSearch(""); setSquadFilter("all"); setStatusFilter("all"); setActFilter("all"); }}>{r.nome}</button>)}
+          </div>
+        )}
+        {azione && <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{azione}</div>}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <button className={`chip ${squadFilter === "all" ? "active" : ""}`} onClick={() => setSquadFilter("all")}>Tutti</button>
           {squads.map(s => <button key={s.id} className={`chip ${squadFilter === s.name ? "active" : ""}`} onClick={() => setSquadFilter(s.name)}>{s.name}</button>)}
@@ -3854,7 +3887,14 @@ function PlayersView({ sectionColors, setSectionColors }) {
                   {p.squads?.name && <SquadPill name={p.squads.name} />}
                   <div style={{ fontSize: 10, color: "var(--text3)", marginTop: 4 }}>PIN: <span style={{ color: "var(--azzurro)", fontWeight: 700 }}>{p.pin || "1234"}</span></div>
 
-                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 8, width: "100%" }} onClick={e => { e.stopPropagation(); setExpandedPlayer(expandedPlayer === p.id ? null : p.id); }}>
+                  <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
+                    <button className={`btn btn-xs ${presOggi.has(p.id) ? "btn-ghost" : "btn-primary"}`} style={{ flex: 1 }}
+                      title={presOggi.has(p.id) ? "Già segnato oggi" : "Segna presente oggi"}
+                      onClick={e => { e.stopPropagation(); presenzaRapida(p); }}>{presOggi.has(p.id) ? "✅ Oggi" : "✅ Presente"}</button>
+                    <button className="btn btn-yellow btn-xs" style={{ flex: 1 }} title="Bonus XP"
+                      onClick={e => { e.stopPropagation(); setXpTarget(p); }}>⭐ XP</button>
+                  </div>
+                  <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); segnaRecente(p); setExpandedPlayer(expandedPlayer === p.id ? null : p.id); }}>
                     {expandedPlayer === p.id ? "▲ Chiudi" : "🔍 Dettagli"}
                   </button>
                   <button className="btn btn-ghost btn-xs" style={{ marginTop: 4, width: "100%" }} onClick={e => { e.stopPropagation(); setEditPlayer({ ...p, pin: p.pin || "1234" }); }}>✏️ Modifica</button>
@@ -3907,6 +3947,26 @@ function PlayersView({ sectionColors, setSectionColors }) {
               <button className="btn btn-primary" style={{flex:1}} onClick={createPlayer} disabled={!newPlayer.display_name.trim()}>Crea giocatore</button>
               <button className="btn btn-ghost btn-sm" onClick={()=>setShowCreatePlayer(false)}>Annulla</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {xpTarget && (
+        <div className="modal-bg" onClick={() => setXpTarget(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 320, textAlign: "center" }}>
+            <div className="modal-title">⭐ Bonus XP a {xpTarget.display_name}</div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", margin: "10px 0" }}>
+              {[5, 10, 25].map(v => (
+                <button key={v} className="btn btn-yellow" style={{ flex: 1 }} onClick={async () => {
+                  const p = xpTarget; setXpTarget(null); setAzione("⏳ " + p.display_name + "…");
+                  const r = await xpRapido(p.id, v).catch(e => ({ errore: e.message }));
+                  if (r.errore) { setAzione("❌ " + r.errore); return; }
+                  setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, xp: r.nuovoXp } : x));
+                  setAzione("⭐ " + p.display_name + " · +" + v + " XP"); playPixel("xp");
+                }}>+{v}</button>
+              ))}
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setXpTarget(null)}>Annulla</button>
           </div>
         </div>
       )}
@@ -4541,6 +4601,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
   const [sortBy, setSortBy]       = useState("name");
   const [squadFilter, setSquadFilter] = useState("all");
   const [presTab, setPresTab]     = useState("daily");
+  const [presFiltro, setPresFiltro] = useState("tutti"); // tutti | presenti | mancanti
   const annoCorrente = (() => { const d = new Date(); return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1; })();
   const [anno, setAnno] = useState(annoCorrente);
   const [storico, setStorico] = useState({ loading: false, righe: [], giorni: 0, tot: 0, totLab: 0, ragazzi: 0 });
@@ -4650,7 +4711,9 @@ function AttendanceView({ sectionColors, setSectionColors }) {
     .filter(p => {
       const matchSquad = squadFilter === "all" || p.squads?.name === squadFilter;
       const matchSearch = !search || (p.display_name||"").toLowerCase().includes(search.toLowerCase()) || (p.first_name||"").toLowerCase().includes(search.toLowerCase());
-      return matchSquad && matchSearch;
+      const st = attendances[p.id]?.status || "none";
+      const matchPres = presFiltro === "tutti" || (presFiltro === "presenti" ? st !== "none" : st === "none");
+      return matchSquad && matchSearch && matchPres;
     })
     .sort((a,b) => {
       if (sortBy === "xp")    return (b.xp||0) - (a.xp||0);
@@ -4717,6 +4780,17 @@ function AttendanceView({ sectionColors, setSectionColors }) {
           📊 Storico
         </button>
       </div>
+
+      {presTab==="daily" && (
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+          {[["tutti","👥 Tutti"],["presenti","✅ Presenti oggi"],["mancanti","⬜ Non segnati"]].map(([k,etichetta])=>{
+            const n = k==="tutti" ? players.length
+              : k==="presenti" ? players.filter(p=>(attendances[p.id]?.status||"none")!=="none").length
+              : players.filter(p=>(attendances[p.id]?.status||"none")==="none").length;
+            return <button key={k} className={`chip ${presFiltro===k?"active":""}`} onClick={()=>setPresFiltro(k)}>{etichetta} ({n})</button>;
+          })}
+        </div>
+      )}
 
       {/* Date picker */}
       <div className="filter-bar">
@@ -8233,7 +8307,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b68</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b70</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -8765,6 +8839,46 @@ function idDaQr(code) {
   return m ? m[1].toLowerCase() : null;
 }
 
+const RECENTI_KEY = "pug_recent_players";
+function leggiRecenti() { try { return JSON.parse(localStorage.getItem(RECENTI_KEY) || "[]"); } catch (_) { return []; } }
+function segnaRecente(p) {
+  if (!p?.id) return;
+  try {
+    const lista = [{ id: p.id, nome: p.display_name || "—" }].concat(leggiRecenti().filter(x => x.id !== p.id)).slice(0, 6);
+    localStorage.setItem(RECENTI_KEY, JSON.stringify(lista));
+    window.dispatchEvent(new CustomEvent("pug:recentiCambiati"));
+  } catch (_) {}
+}
+
+// Segna la presenza di oggi (usata da Modalità ingresso e dalle azioni rapide)
+async function presenzaOggi(playerId) {
+  const oggi = localToday();
+  const cfg = (await readAppConfig().catch(() => null))?.attendance_config || {};
+  const xp = cfg.xp_daily_checkin ?? 10, coin = cfg.coin_daily_checkin ?? 5;
+  const { data: p } = await sb.from("profiles").select("id,display_name,xp,coin,role").eq("id", playerId).maybeSingle();
+  if (!p || p.role !== "player") return { errore: "Non è un giocatore" };
+  const { data: gia } = await sb.from("attendances").select("id,status").eq("player_id", playerId).eq("date", oggi).eq("check_type", "daily").maybeSingle();
+  if (gia && gia.status !== "none") return { gia: true, nome: p.display_name };
+  if (gia) await sb.from("attendances").update({ status: "full", xp_awarded: xp, coin_awarded: coin }).eq("id", gia.id);
+  else await sb.from("attendances").insert({ player_id: playerId, date: oggi, status: "full", xp_awarded: xp, coin_awarded: coin, check_type: "daily" });
+  const nuovoXp = Math.max(0, (p.xp || 0) + xp), nuovoCoin = Math.max(0, (p.coin || 0) + coin);
+  await sb.from("profiles").update({ xp: nuovoXp, coin: nuovoCoin }).eq("id", playerId);
+  logXPGain(playerId, xp, nuovoXp, "presenza").catch(() => {});
+  sendPush(playerId, "✅ Presenza registrata!", `+${xp} XP e +${coin} Coin`).catch(() => {});
+  return { ok: true, nome: p.display_name, xp, coin, nuovoXp, nuovoCoin };
+}
+
+async function xpRapido(playerId, xp) {
+  const { data: p } = await sb.from("profiles").select("id,display_name,xp").eq("id", playerId).maybeSingle();
+  if (!p) return { errore: "Giocatore non trovato" };
+  const nuovoXp = Math.max(0, (p.xp || 0) + xp);
+  const { error } = await sb.from("profiles").update({ xp: nuovoXp }).eq("id", playerId);
+  if (error) return { errore: error.message };
+  logXPGain(playerId, xp, nuovoXp, "bonus").catch(() => {});
+  sendPush(playerId, "⭐ Bonus!", `+${xp} XP dai Giardinieri`).catch(() => {});
+  return { ok: true, nuovoXp };
+}
+
 function RicercaRapida({ onClose }) {
   const [q, setQ] = useState("");
   const [res, setRes] = useState([]);
@@ -8797,7 +8911,7 @@ function RicercaRapida({ onClose }) {
         <div style={{ maxHeight: 340, overflowY: "auto" }}>
           {res.map(p => (
             <button key={p.id} className="btn btn-ghost" style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", justifyContent: "flex-start", marginBottom: 6 }}
-              onClick={() => { onClose(); vaiAlGiocatore(p.id); }}>
+              onClick={() => { onClose(); segnaRecente(p); vaiAlGiocatore(p.id); }}>
               <div style={{ width: 30, height: 30, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}><Avatar url={p.avatar_url} emoji="🌱" size={30} /></div>
               <span style={{ fontWeight: 800 }}>{p.display_name}</span>
               <span style={{ fontSize: 11, color: "var(--text3)" }}>{[p.first_name, p.squads?.name].filter(Boolean).join(" · ")}</span>
@@ -8832,23 +8946,11 @@ function ModalitaIngresso({ onClose }) {
     const id = idDaQr(code);
     if (!id) { setEsito({ ok: false, testo: "QR non riconosciuto" }); playPixel("error"); riprendi(); return; }
     try {
-      const oggi = localToday();
-      const { data: p } = await sb.from("profiles").select("id,display_name,xp,coin,role").eq("id", id).maybeSingle();
-      if (!p || p.role !== "player") { setEsito({ ok: false, testo: "Non è la tessera di un giocatore" }); playPixel("error"); riprendi(); return; }
-      const { data: gia } = await sb.from("attendances").select("id,status").eq("player_id", id).eq("date", oggi).eq("check_type", "daily").maybeSingle();
-      if (gia && gia.status !== "none") {
-        setEsito({ ok: true, nome: p.display_name, testo: "già segnato oggi" });
-        playPixel("msg"); riprendi(); return;
-      }
-      const xp = cfg.xp_daily_checkin || 10, coin = cfg.coin_daily_checkin || 5;
-      if (gia) await sb.from("attendances").update({ status: "full", xp_awarded: xp, coin_awarded: coin }).eq("id", gia.id);
-      else await sb.from("attendances").insert({ player_id: id, date: oggi, status: "full", xp_awarded: xp, coin_awarded: coin, check_type: "daily" });
-      const nuovoXp = Math.max(0, (p.xp || 0) + xp), nuovoCoin = Math.max(0, (p.coin || 0) + coin);
-      await sb.from("profiles").update({ xp: nuovoXp, coin: nuovoCoin }).eq("id", id);
-      logXPGain(id, xp, nuovoXp, "presenza").catch(() => {});
-      sendPush(id, "✅ Presenza registrata!", `+${xp} XP e +${coin} Coin`).catch(() => {});
-      setEsito({ ok: true, nome: p.display_name, testo: `+${xp} XP · +${coin} Coin` });
-      setFatti(f => [{ id, nome: p.display_name, ora: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) }, ...f].slice(0, 12));
+      const r = await presenzaOggi(id);
+      if (r.errore) { setEsito({ ok: false, testo: r.errore }); playPixel("error"); riprendi(); return; }
+      if (r.gia) { setEsito({ ok: true, nome: r.nome, testo: "già segnato oggi" }); playPixel("msg"); riprendi(); return; }
+      setEsito({ ok: true, nome: r.nome, testo: `+${r.xp} XP · +${r.coin} Coin` });
+      setFatti(f => [{ id, nome: r.nome, ora: new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }) }, ...f].slice(0, 12));
       playPixel("checkin");
     } catch (e) {
       setEsito({ ok: false, testo: "Errore: " + (e.message || "riprova") });
@@ -8888,6 +8990,36 @@ function ModalitaIngresso({ onClose }) {
               <span style={{ fontWeight: 700 }}>{f.nome}</span><span style={{ color: "var(--text3)" }}>{f.ora}</span>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const FAV_KEY = "pug_edu_fav";
+function leggiPreferite() {
+  try { const v = JSON.parse(localStorage.getItem(FAV_KEY) || "null"); return Array.isArray(v) && v.length ? v.slice(0, 5) : null; } catch (_) { return null; }
+}
+function ScegliPreferite({ perms, valore, onSalva, onClose }) {
+  const [sel, setSel] = useState(valore);
+  const disponibili = EDUCATOR_TABS.filter(t => permOk(perms, t[0]));
+  const cambia = (id) => setSel(s => s.includes(id) ? s.filter(x => x !== id) : (s.length >= 5 ? s : s.concat(id)));
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 430 }}>
+        <div className="modal-title">⭐ Le tue sezioni</div>
+        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 10 }}>
+          Scegli fino a 5 sezioni: finiscono in cima al menù e, sul telefono, nella barra in basso. ({sel.length}/5)
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 300, overflowY: "auto" }}>
+          {disponibili.map(([id, icona, etichetta]) => (
+            <button key={id} className={`chip ${sel.includes(id) ? "active" : ""}`} onClick={() => cambia(id)}>{icona} {etichetta}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button className="btn btn-primary" style={{ flex: 1 }} disabled={sel.length === 0} onClick={() => { onSalva(sel); onClose(); }}>Salva</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { onSalva(MOB_TABS_IDS.slice()); onClose(); }}>Ripristina</button>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>Annulla</button>
         </div>
       </div>
     </div>
@@ -9644,6 +9776,64 @@ function AdminView({ profile }) {
       });
       push("Canale messaggi attivo?", okM, okM ? "sì (la consegna al telefono va provata sul dispositivo)" : "no: canale non connesso");
     } catch (e) { push("Canale realtime 'messages'", false, e.message || String(e)); }
+
+    // ── Funzioni nuove (b61-b69) ─────────────────────────────
+    const NESSUNO = "00000000-0000-0000-0000-000000000000";
+    const mancaFunzione = (m) => /could not find|does not exist|schema cache/i.test(m || "");
+
+    try { const { error } = await sb.from("profiles").select("id,display_name").eq("role","player").or("display_name.ilike.%a%,first_name.ilike.%a%").limit(1); if (error) throw new Error(error.message); push("Ricerca rapida giocatori", true, "ok"); }
+    catch (e) { push("Ricerca rapida giocatori", false, e.message || String(e)); }
+
+    try { const { error } = await sb.from("attendances").select("id,player_id,date,status,check_type").eq("date", localToday()).limit(1); if (error) throw new Error(error.message); push("Presenze: lettura di oggi", true, "ok"); }
+    catch (e) { push("Presenze: lettura di oggi", false, e.message || String(e)); }
+
+    try { const { error } = await sb.from("attendances").update({ status: "full" }).eq("id", NESSUNO); if (error) throw new Error(error.message); push("Presenze: permesso di scrittura", true, "ok (prova a vuoto)"); }
+    catch (e) { push("Presenze: permesso di scrittura", false, e.message || String(e)); }
+
+    try { const { error } = await sb.from("profiles").update({ xp: 0 }).eq("id", NESSUNO); if (error) throw new Error(error.message); push("Bonus XP: permesso di scrittura", true, "ok (prova a vuoto)"); }
+    catch (e) { push("Bonus XP: permesso di scrittura", false, e.message || String(e)); }
+
+    try { const { error } = await sb.rpc("pug_game_state", { p_player_id: NESSUNO }); if (error) throw new Error(error.message); push("Barre al 100 a inizio gioco (migr. 039)", true, "ok"); }
+    catch (e) { push("Barre al 100 a inizio gioco (migr. 039)", false, (e.message || String(e)) + (mancaFunzione(e.message) ? " (esegui la 039)" : "")); }
+
+    try { const { error } = await sb.rpc("can_manage_staff"); if (error) throw new Error(error.message); push("Gestione Giardinieri (migr. 036)", true, "ok"); }
+    catch (e) { push("Gestione Giardinieri (migr. 036)", false, (e.message || String(e)) + (mancaFunzione(e.message) ? " (esegui la 036)" : "")); }
+
+    try {
+      const anno = (() => { const d = new Date(); return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1; })();
+      const { error } = await sb.from("attendances").select("player_id,date").gte("date", anno + "-09-01").limit(1);
+      if (error) throw new Error(error.message);
+      push("Storico presenze dell'anno", true, "ok");
+    } catch (e) { push("Storico presenze dell'anno", false, e.message || String(e)); }
+
+    try {
+      const [b, a] = await Promise.all([
+        sb.from("bookings").select("player_id,activity_id,status").limit(1),
+        sb.from("activities").select("id,name,description,is_active").limit(1),
+      ]);
+      if (b.error) throw new Error(b.error.message);
+      if (a.error) throw new Error(a.error.message);
+      push("Filtri Lab e sfide", true, "ok");
+    } catch (e) { push("Filtri Lab e sfide", false, e.message || String(e)); }
+
+    try {
+      const camera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+      const sicuro = window.isSecureContext !== false;
+      const libreria = !!window.jsQR;
+      const okIng = camera && sicuro && libreria;
+      push("Modalità ingresso: camera e lettore QR", okIng,
+        okIng ? "ok (il permesso camera va dato sul dispositivo)"
+              : [!camera && "camera non disponibile", !sicuro && "serve https", !libreria && "lettore QR non caricato"].filter(Boolean).join(", "));
+    } catch (e) { push("Modalità ingresso: camera e lettore QR", false, e.message || String(e)); }
+
+    try {
+      localStorage.setItem("pug_diag", "1"); localStorage.removeItem("pug_diag");
+      push("Le tue sezioni e ultimi visti (memoria del dispositivo)", true, "ok");
+    } catch (e) { push("Le tue sezioni e ultimi visti (memoria del dispositivo)", false, "questo dispositivo non salva le preferenze"); }
+
+    try { const r = await fetch("https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=pug", { cache: "no-store" }); if (!r.ok) throw new Error("HTTP " + r.status); push("QR personali: generazione immagini", true, "ok"); }
+    catch (e) { push("QR personali: generazione immagini", false, (e.message || String(e)) + " (serve internet)"); }
+
     setDiagRunning(false);
   }
 
@@ -10803,6 +10993,9 @@ function EducatorShell({ profile, onLogout }) {
 
   const [ricercaOpen, setRicercaOpen] = useState(false);
   const [ingresso, setIngresso] = useState(false);
+  const [preferite, setPreferite] = useState(() => leggiPreferite() || MOB_TABS_IDS.slice());
+  const [scegliFav, setScegliFav] = useState(false);
+  const salvaPreferite = (v) => { setPreferite(v); try { localStorage.setItem(FAV_KEY, JSON.stringify(v)); } catch (_) {} };
   useEffect(() => {
     const vai = (ev) => { const t = ev?.detail?.tab; if (t) { setTab(t); setDrawerOpen(false); setIngresso(false); } };
     window.addEventListener("pug:goTab", vai);
@@ -10815,7 +11008,9 @@ function EducatorShell({ profile, onLogout }) {
 
   const cur = EDUCATOR_TABS.find(t => t[0] === tab);
   const lv = getLevel(profile.xp || 0);
-  const mobTabs = EDUCATOR_TABS.filter(t => MOB_TABS_IDS.includes(t[0]) && permOk(profile.perms, t[0]));
+  const favTabs = preferite.map(id => EDUCATOR_TABS.find(t => t[0] === id)).filter(Boolean)
+    .filter(t => permOk(profile.perms, t[0]) && (t[0] !== "admin" || profile.role === "admin" || (Array.isArray(profile.perms) && profile.perms.includes("admin"))));
+  const mobTabs = favTabs.length ? favTabs : EDUCATOR_TABS.filter(t => MOB_TABS_IDS.includes(t[0]) && permOk(profile.perms, t[0]));
 
   useEffect(() => { document.body.classList.toggle("light", theme === "light"); }, [theme]);
 
@@ -10835,6 +11030,19 @@ function EducatorShell({ profile, onLogout }) {
           </div>
         </div>
         <nav className="nav">
+          {favTabs.length > 0 && (
+            <div style={{marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 14px"}}>
+                <span style={{fontSize:10,fontWeight:900,letterSpacing:".08em",color:"rgba(255,255,255,.35)"}}>⭐ LE TUE SEZIONI</span>
+                <button onClick={()=>setScegliFav(true)} title="Scegli le tue sezioni" style={{background:"none",border:"none",color:"rgba(253,239,38,.7)",cursor:"pointer",fontSize:12}}>✏️</button>
+              </div>
+              {favTabs.map(([tid, icona, etichetta]) => (
+                <div key={"fav-"+tid} className={`nav-item ${tab===tid?"active":""}`} onClick={()=>setTab(tid)}>
+                  <span className="nav-icon">{icona}</span><span className="nav-label">{etichetta}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {EDUCATOR_GROUPS.map(group => {
             // Voci del gruppo (Admin solo per ruolo admin)
             const groupTabs = group.tabs
@@ -10933,6 +11141,7 @@ function EducatorShell({ profile, onLogout }) {
       </div>
 
       {ricercaOpen && <RicercaRapida onClose={()=>setRicercaOpen(false)} />}
+      {scegliFav && <ScegliPreferite perms={profile.perms} valore={preferite} onSalva={salvaPreferite} onClose={()=>setScegliFav(false)} />}
       {ingresso && <ModalitaIngresso onClose={()=>setIngresso(false)} />}
 
       {showGamesTop && <div className="modal-bg" onClick={()=>setShowGamesTop(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:410}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:900,fontSize:18}}>🎮 Giochi</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowGamesTop(false)}>✕</button></div><GamesHub myId={profile.id}/></div></div>}
@@ -10951,6 +11160,19 @@ function EducatorShell({ profile, onLogout }) {
           <div style={{display:"inline-block",background:"#FDEF26",color:"#101010",fontFamily:"'Funnel Display',sans-serif",fontWeight:800,fontSize:13,padding:"5px 12px",border:"2px solid #101010",borderRadius:8,boxShadow:"2px 2px 0 #101010",transform:"rotate(-1.5deg)"}}>{isSuperPerms(profile.perms) ? "👑" : "🌱"} {profile.display_name||"Giardiniere"}</div>
         </div>
         <nav style={{flex:1,padding:"8px 0",overflowY:"auto"}}>
+          {favTabs.length > 0 && (
+            <div style={{marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 14px"}}>
+                <span style={{fontSize:10,fontWeight:900,letterSpacing:".08em",color:"rgba(255,255,255,.35)"}}>⭐ LE TUE SEZIONI</span>
+                <button onClick={()=>{setDrawerOpen(false);setScegliFav(true);}} style={{background:"none",border:"none",color:"rgba(253,239,38,.7)",cursor:"pointer",fontSize:12}}>✏️</button>
+              </div>
+              {favTabs.map(([tid, icona, etichetta]) => (
+                <div key={"favm-"+tid} className={`nav-item ${tab===tid?"active":""}`} onClick={()=>{setTab(tid);setDrawerOpen(false);}}>
+                  <span className="nav-icon">{icona}</span><span className="nav-label">{etichetta}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {EDUCATOR_GROUPS.map(group => {
             const groupTabs = group.tabs
               .filter(tid => tid !== "admin" || profile.role === "admin" || (Array.isArray(profile.perms) && profile.perms.includes("admin")))
@@ -11089,7 +11311,7 @@ function EducatorShell({ profile, onLogout }) {
               <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase" }}>{label}</span>
             </button>
           ))}
-          <button className={`mob-nav-btn ${!MOB_TABS_IDS.includes(tab) ? "active" : ""}`} onClick={() => setDrawerOpen(true)}>
+          <button className={`mob-nav-btn ${!mobTabs.some(([id]) => id === tab) ? "active" : ""}`} onClick={() => setDrawerOpen(true)}>
             <span style={{ fontSize: 22 }}>⋯</span>
             <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase" }}>Altro</span>
           </button>
