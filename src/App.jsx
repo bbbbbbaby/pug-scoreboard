@@ -3501,7 +3501,7 @@ function Login({ onLogin }) {
 
 // ─── EDUCATOR VIEWS ───────────────────────────────────────
 
-function PlayersView({ sectionColors, setSectionColors }) {
+function PlayersView({ sectionColors, setSectionColors, profile }) {
     const [players, setPlayers] = useState([]);
   const [squads, setSquads] = useState([]);
   const [search, setSearch] = useState("");
@@ -3541,7 +3541,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
 
   async function presenzaRapida(p) {
     setAzione("⏳ " + p.display_name + "…");
-    const r = await presenzaOggi(p.id).catch(e => ({ errore: e.message }));
+    const r = await presenzaOggi(p.id, profile).catch(e => ({ errore: e.message }));
     if (r.errore) { setAzione("❌ " + r.errore); return; }
     setPresOggi(prev => new Set(prev).add(p.id));
     if (r.gia) { setAzione("ℹ️ " + p.display_name + ": era già segnato oggi"); return; }
@@ -3959,7 +3959,7 @@ function PlayersView({ sectionColors, setSectionColors }) {
               {[5, 10, 25].map(v => (
                 <button key={v} className="btn btn-yellow" style={{ flex: 1 }} onClick={async () => {
                   const p = xpTarget; setXpTarget(null); setAzione("⏳ " + p.display_name + "…");
-                  const r = await xpRapido(p.id, v).catch(e => ({ errore: e.message }));
+                  const r = await xpRapido(p.id, v, profile).catch(e => ({ errore: e.message }));
                   if (r.errore) { setAzione("❌ " + r.errore); return; }
                   setPlayers(prev => prev.map(x => x.id === p.id ? { ...x, xp: r.nuovoXp } : x));
                   setAzione("⭐ " + p.display_name + " · +" + v + " XP"); playPixel("xp");
@@ -4588,7 +4588,7 @@ function SquadsView() {
   );
 }
 
-function AttendanceView({ sectionColors, setSectionColors }) {
+function AttendanceView({ sectionColors, setSectionColors, profile }) {
   const [players, setPlayers]     = useState([]);
   const [squads, setSquads]       = useState([]);
   const [attendances, setAttendances] = useState({});
@@ -4757,6 +4757,10 @@ function AttendanceView({ sectionColors, setSectionColors }) {
       }
     }
     setAttendances(prev => ({ ...prev, [playerId]: { ...(existing||{}), player_id:playerId, status, xp_awarded:xp, coin_awarded:coin } }));
+    if (status !== "none") {
+      const nome = players.find(pl => pl.id === playerId)?.display_name || "un giocatore";
+      logGardener(profile, "presenze", "Presenza di " + nome + " (" + today + ")", { ids: [playerId], date: today });
+    }
   }
 
   return (
@@ -4938,7 +4942,8 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                 <div className="stat-card"><div className="stat-label">Media al giorno</div><div className="stat-value">{storico.giorni ? (storico.tot/storico.giorni).toFixed(1) : "0"}</div></div>
               </div>
 
-              <div style={{fontWeight:900,fontSize:15,margin:"14px 0 8px"}}>🏅 Chi c'è stato di più</div>
+              <div className="card" style={{marginTop:14}}>
+              <div style={{fontWeight:900,fontSize:15,marginBottom:8,color:"var(--text)"}}>🏅 Chi c'è stato di più</div>
               {storico.righe.length === 0 ? <div className="empty">Nessuna presenza registrata in questo anno.</div> : (
                 <div style={{overflowX:"auto"}}>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
@@ -4951,10 +4956,10 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                     </tr></thead>
                     <tbody>
                       {storico.righe.slice(0,20).map((r,i)=>(
-                        <tr key={r.id} style={{borderTop:"1px solid var(--border2)"}}>
+                        <tr key={r.id} style={{borderTop:"1px solid var(--border2)",color:"var(--text)"}}>
                           <td style={{padding:"6px 8px",color:"var(--text3)"}}>{i+1}</td>
-                          <td style={{padding:"6px 8px",fontWeight:700}}>{r.nome}</td>
-                          <td style={{padding:"6px 8px",color:"var(--text3)"}}>{r.squadra}</td>
+                          <td style={{padding:"6px 8px",fontWeight:700,color:"var(--text)"}}>{r.nome}</td>
+                          <td style={{padding:"6px 8px",color:"var(--text2)"}}>{r.squadra}</td>
                           <td style={{padding:"6px 8px",textAlign:"right"}}>{r.giorni}</td>
                           <td style={{padding:"6px 8px",textAlign:"right"}}>{r.lab}</td>
                           <td style={{padding:"6px 8px",textAlign:"right",fontWeight:900}}>{r.totale}</td>
@@ -4965,6 +4970,7 @@ function AttendanceView({ sectionColors, setSectionColors }) {
                   {storico.righe.length > 20 && <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>Mostrati i primi 20 di {storico.righe.length}. L'elenco completo è nel CSV.</div>}
                 </div>
               )}
+              </div>
             </>
           )}
         </div>
@@ -8307,7 +8313,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b70</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b71</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -8851,7 +8857,7 @@ function segnaRecente(p) {
 }
 
 // Segna la presenza di oggi (usata da Modalità ingresso e dalle azioni rapide)
-async function presenzaOggi(playerId) {
+async function presenzaOggi(playerId, attore) {
   const oggi = localToday();
   const cfg = (await readAppConfig().catch(() => null))?.attendance_config || {};
   const xp = cfg.xp_daily_checkin ?? 10, coin = cfg.coin_daily_checkin ?? 5;
@@ -8864,17 +8870,19 @@ async function presenzaOggi(playerId) {
   const nuovoXp = Math.max(0, (p.xp || 0) + xp), nuovoCoin = Math.max(0, (p.coin || 0) + coin);
   await sb.from("profiles").update({ xp: nuovoXp, coin: nuovoCoin }).eq("id", playerId);
   logXPGain(playerId, xp, nuovoXp, "presenza").catch(() => {});
+  logGardener(attore, "presenze", "Presenza di " + (p.display_name || "un giocatore") + " (" + oggi + ")", { ids: [playerId], date: oggi });
   sendPush(playerId, "✅ Presenza registrata!", `+${xp} XP e +${coin} Coin`).catch(() => {});
   return { ok: true, nome: p.display_name, xp, coin, nuovoXp, nuovoCoin };
 }
 
-async function xpRapido(playerId, xp) {
+async function xpRapido(playerId, xp, attore) {
   const { data: p } = await sb.from("profiles").select("id,display_name,xp").eq("id", playerId).maybeSingle();
   if (!p) return { errore: "Giocatore non trovato" };
   const nuovoXp = Math.max(0, (p.xp || 0) + xp);
   const { error } = await sb.from("profiles").update({ xp: nuovoXp }).eq("id", playerId);
   if (error) return { errore: error.message };
   logXPGain(playerId, xp, nuovoXp, "bonus").catch(() => {});
+  logGardener(attore, "punti", "+" + xp + " XP a " + (p.display_name || "un giocatore"), { ids: [playerId], xp: Number(xp), coin: 0 });
   sendPush(playerId, "⭐ Bonus!", `+${xp} XP dai Giardinieri`).catch(() => {});
   return { ok: true, nuovoXp };
 }
@@ -8924,7 +8932,7 @@ function RicercaRapida({ onClose }) {
   );
 }
 
-function ModalitaIngresso({ onClose }) {
+function ModalitaIngresso({ onClose, profile }) {
   const [cfg, setCfg] = useState({ xp_daily_checkin: 10, coin_daily_checkin: 5 });
   const [chiave, setChiave] = useState(0);
   const [esito, setEsito] = useState(null);   // {ok, nome, testo}
@@ -8946,7 +8954,7 @@ function ModalitaIngresso({ onClose }) {
     const id = idDaQr(code);
     if (!id) { setEsito({ ok: false, testo: "QR non riconosciuto" }); playPixel("error"); riprendi(); return; }
     try {
-      const r = await presenzaOggi(id);
+      const r = await presenzaOggi(id, profile);
       if (r.errore) { setEsito({ ok: false, testo: r.errore }); playPixel("error"); riprendi(); return; }
       if (r.gia) { setEsito({ ok: true, nome: r.nome, testo: "già segnato oggi" }); playPixel("msg"); riprendi(); return; }
       setEsito({ ok: true, nome: r.nome, testo: `+${r.xp} XP · +${r.coin} Coin` });
@@ -9543,12 +9551,20 @@ function AzioniView({ profile }) {
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState("");
   const [filtro, setFiltro] = useState("tutte");
+  const [giorno, setGiorno] = useState("");
+  const [cerca, setCerca] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await sb.from("gardener_actions").select("*").order("created_at", { ascending: false }).limit(150);
+    let q = sb.from("gardener_actions").select("*").order("created_at", { ascending: false });
+    if (giorno) {
+      const dopo = new Date(giorno + "T00:00:00");
+      const prima = new Date(dopo.getTime() + 86400000);
+      q = q.gte("created_at", dopo.toISOString()).lt("created_at", prima.toISOString()).limit(500);
+    } else q = q.limit(150);
+    const { data } = await q;
     setItems(data || []); setLoading(false);
-  }, []);
+  }, [giorno]);
   useEffect(() => { load(); }, [load]);
 
   async function annulla(a) {
@@ -9583,13 +9599,21 @@ function AzioniView({ profile }) {
   }
 
   const ICONE = { punti: "⭐", badge: "🎖️", presenze: "✅", messaggio: "💬" };
-  const visti = items.filter(a => filtro === "tutte" || a.type === filtro);
+  const visti = items.filter(a => (filtro === "tutte" || a.type === filtro)
+    && (!cerca.trim() || ((a.summary || "") + " " + (a.actor_name || "")).toLowerCase().includes(cerca.trim().toLowerCase())));
 
   return (
     <div>
       <div className="section-head"><h2 className="section-title">🕐 Cronologia azioni</h2></div>
-      <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>
+      <div className="card" style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 10 }}>
         Le azioni dei Giardinieri, con la possibilità di tornare indietro. I punti vengono restituiti.
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+        <input type="date" className="form-input" style={{ width: "auto", padding: "6px 10px", fontSize: 13 }} value={giorno} onChange={e => setGiorno(e.target.value)} />
+        {giorno && <button className="btn btn-ghost btn-xs" onClick={() => setGiorno("")}>✕ Tutti i giorni</button>}
+        <button className="btn btn-ghost btn-xs" onClick={() => setGiorno(localToday())}>Oggi</button>
+        <input className="form-input" placeholder="Cerca nome o Giardiniere…" style={{ flex: 1, minWidth: 160, padding: "6px 10px", fontSize: 13 }} value={cerca} onChange={e => setCerca(e.target.value)} />
       </div>
       <div className="filter-bar" style={{ gap: 6, flexWrap: "wrap" }}>
         {["tutte","punti","badge","presenze","messaggio"].map(f => (
@@ -9600,9 +9624,13 @@ function AzioniView({ profile }) {
         ))}
         <button className="btn btn-ghost btn-xs" onClick={load}>↻ Aggiorna</button>
       </div>
+      <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>
+        {giorno ? "Azioni del " + giorno.split("-").reverse().join("/") : "Ultime 150 azioni"} · mostrate {visti.length}
+      </div>
+      </div>
       {msg && <div style={{ fontWeight: 700, fontSize: 13, margin: "8px 0" }}>{msg}</div>}
       {loading ? <div style={{ opacity: .6, fontSize: 13 }}>Caricamento…</div> :
-        visti.length === 0 ? <div style={{ opacity: .6, fontSize: 13 }}>Nessuna azione registrata.</div> :
+        visti.length === 0 ? <div className="card" style={{ fontSize: 13 }}>{giorno ? "Nessuna azione in questo giorno." : "Nessuna azione registrata."}</div> :
         visti.map(a => (
           <div key={a.id} className="card-sm" style={{ marginBottom: 8, opacity: a.undone ? .55 : 1 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -11142,7 +11170,7 @@ function EducatorShell({ profile, onLogout }) {
 
       {ricercaOpen && <RicercaRapida onClose={()=>setRicercaOpen(false)} />}
       {scegliFav && <ScegliPreferite perms={profile.perms} valore={preferite} onSalva={salvaPreferite} onClose={()=>setScegliFav(false)} />}
-      {ingresso && <ModalitaIngresso onClose={()=>setIngresso(false)} />}
+      {ingresso && <ModalitaIngresso onClose={()=>setIngresso(false)} profile={profile} />}
 
       {showGamesTop && <div className="modal-bg" onClick={()=>setShowGamesTop(false)}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:410}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{fontWeight:900,fontSize:18}}>🎮 Giochi</div><button className="btn btn-ghost btn-sm" onClick={()=>setShowGamesTop(false)}>✕</button></div><GamesHub myId={profile.id}/></div></div>}
 
