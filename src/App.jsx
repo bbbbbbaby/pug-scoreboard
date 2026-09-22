@@ -693,8 +693,10 @@ body:not(.light){--pt-empty-bg:#17181c;--pt-empty-color:rgba(255,255,255,.55);--
   .diary-pts { font-family:'Funnel Display',sans-serif; font-size:18px; font-weight:900; color:var(--neon-blue); flex-shrink:0; }
 
   /* ═══ MODAL ═══ */
-  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:100; display:flex; align-items:flex-end; justify-content:center; backdrop-filter:blur(8px); }
-  .modal { background:#ffffff; border:3px solid #101010; border-radius:18px 22px 16px 24px; box-shadow:6px 6px 0 #101010; padding:22px; width:100%; max-width:460px; max-height:88vh; overflow-y:auto; color:#101010; }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:200; display:flex; align-items:flex-end; justify-content:center; backdrop-filter:blur(8px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  .modal { background:#ffffff; border:3px solid #101010; border-radius:18px 22px 16px 24px; box-shadow:6px 6px 0 #101010; padding:22px; width:100%; max-width:460px; max-height:88vh; max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; color:#101010; }
+/* la riga con il pulsante principale resta sempre visibile in fondo al riquadro */
+.modal > div:last-child:has(> .btn-primary){ position:sticky; bottom:-22px; margin:0 -22px -22px; padding:12px 22px calc(14px + env(safe-area-inset-bottom,0px)); background:inherit; border-top:1px solid rgba(128,128,128,.25); z-index:3; }
   body:not(.light) .modal { background:#17181c; border-color:#33353c; box-shadow:6px 6px 0 #000; color:#f0f0f0; }
   .modal::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--azzurro); border-radius:20px 20px 0 0; }
   .modal-title { font-family:'Funnel Display',sans-serif; font-size:30px; font-weight:900; text-transform:uppercase; color:var(--text); margin-bottom:18px; letter-spacing:.04em; }
@@ -8313,7 +8315,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b71</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b72</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9948,8 +9950,56 @@ function AdminView({ profile }) {
       {err && <div style={{background:"rgba(255,34,68,.1)",border:"1px solid rgba(255,34,68,.3)",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:"var(--danger)"}}>{err}</div>}
 
       <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
-        <button className="btn btn-yellow btn-sm" onClick={()=>{setShowCreate(true);setErr("");setMsg("");}}>+ Nuovo giardiniere</button>
+        <button className="btn btn-yellow btn-sm" onClick={()=>{ if (showCreate) { setShowCreate(false); return; } setShowCreate(true);setErr("");setMsg(""); setTimeout(()=>{ const el=document.getElementById("form-nuovo-giardiniere"); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); },60); }}>{showCreate ? "✕ Chiudi" : "+ Nuovo giardiniere"}</button>
       </div>
+
+      {/* Form crea */}
+      {showCreate && (
+        <div id="form-nuovo-giardiniere" className="card" style={{border:"1px solid rgba(253,239,38,.25)",marginBottom:16}}>
+          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:22,fontWeight:900,color:"#FDEF26",marginBottom:14}}>Nuovo giardiniere</div>
+          <div className="form-group"><label className="form-label">Nome visualizzato *</label><input className="form-input" value={form.display_name} onChange={e=>setForm(f=>({...f,display_name:e.target.value}))} placeholder="es. Massi"/></div>
+          <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="giardiniere@email.com"/></div>
+          <div className="form-group"><label className="form-label">Password * (min 6 caratteri)</label><input className="form-input" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="es. pug2026!"/></div>
+          <div className="form-group">
+            <label className="form-label">Avatar</label>
+            {form.avatar_url && (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(253,239,38,.06)",border:"1px solid rgba(253,239,38,.2)",borderRadius:10}}>
+                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt=""/>
+                <div style={{flex:1,fontSize:12,color:"#FDEF26"}}>{form.avatar_url.split("/").pop().replace(".webp","")}</div>
+                <button className="btn btn-ghost btn-xs" onClick={()=>setForm(f=>({...f,avatar_url:""}))}>✕</button>
+              </div>
+            )}
+            <AvatarPicker selected={form.avatar_url} onSelect={url=>setForm(f=>({...f,avatar_url:url}))} squadFilter="Giardinieri"/>
+            <div style={{height:1,background:"var(--border)",margin:"8px 0"}}/>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Oppure carica una foto:</div>
+            <InlineAvatarUpload playerId={"new_edu_" + Date.now()} onUploaded={url=>setForm(f=>({...f,avatar_url:url}))}/>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Tipo di account</label>
+            <div style={{display:"flex",gap:8,marginBottom:8}}>
+              <button className="btn btn-sm" style={{flex:1,background:form.perms===null?"#339966":"transparent",color:form.perms===null?"#fff":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setForm(f=>({...f,perms:null}))}>🌱 Giardiniere</button>
+              <button className="btn btn-sm" style={{flex:1,background:isSuperPerms(form.perms)?"#D41323":"transparent",color:isSuperPerms(form.perms)?"#fff":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setForm(f=>({...f,perms:SUPER_PERMS}))}>👑 Super</button>
+              <button className="btn btn-sm" style={{flex:1,background:(Array.isArray(form.perms) && !isSuperPerms(form.perms))?"#FDEF26":"transparent",color:(Array.isArray(form.perms) && !isSuperPerms(form.perms))?"#101010":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setForm(f=>({...f,perms:(Array.isArray(f.perms)&&!isSuperPerms(f.perms))?f.perms:["dashboard","presenze","qr"]}))}>🌿 Apprendista</button>
+            </div>
+            {Array.isArray(form.perms) && !isSuperPerms(form.perms) && (<>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:6}}>Spunta le sezioni che l'apprendista potrà vedere:</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:180,overflowY:"auto"}}>
+                {EDUCATOR_TABS.map(t=>{
+                  const on = form.perms.includes(t[0]);
+                  const lab = t[0]==="admin" ? "🔑 Gestione Giardinieri" : (t[1]+" "+t[2]);
+                  return <button key={t[0]} className="btn btn-xs" onClick={()=>setForm(f=>({...f,perms: on ? f.perms.filter(x=>x!==t[0]) : [...f.perms,t[0]]}))}
+                    style={{background:on?(t[0]==="admin"?"#D41323":"#339966"):"transparent",color:on?"#fff":"var(--text2)",border:"1px solid var(--border)",padding:"5px 9px",fontSize:11}}>{on?"✓ ":""}{lab}</button>;
+                })}
+              </div>
+            </>)}
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button className="btn btn-primary" style={{flex:1}} onClick={createEducator} disabled={creating}>{creating?"⏳ Creazione…":"Crea giardiniere"}</button>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setShowCreate(false)}>Annulla</button>
+          </div>
+          <div style={{fontSize:11,color:"var(--text3)",marginTop:10}}>💡 Comunica email e password al giardiniere. Accede dal tab "Giardiniere" nel login.</div>
+        </div>
+      )}
 
       {/* Lista educators */}
       {loading ? <div className="loading">⏳</div> : (
@@ -10054,53 +10104,6 @@ function AdminView({ profile }) {
         </div>
       )}
 
-      {/* Form crea */}
-      {showCreate && (
-        <div className="card" style={{border:"1px solid rgba(253,239,38,.25)"}}>
-          <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:22,fontWeight:900,color:"#FDEF26",marginBottom:14}}>Nuovo giardiniere</div>
-          <div className="form-group"><label className="form-label">Nome visualizzato *</label><input className="form-input" value={form.display_name} onChange={e=>setForm(f=>({...f,display_name:e.target.value}))} placeholder="es. Massi"/></div>
-          <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="giardiniere@email.com"/></div>
-          <div className="form-group"><label className="form-label">Password * (min 6 caratteri)</label><input className="form-input" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} placeholder="es. pug2026!"/></div>
-          <div className="form-group">
-            <label className="form-label">Avatar</label>
-            {form.avatar_url && (
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px",background:"rgba(253,239,38,.06)",border:"1px solid rgba(253,239,38,.2)",borderRadius:10}}>
-                <img src={form.avatar_url} style={{width:44,height:44,objectFit:"contain",borderRadius:8}} alt=""/>
-                <div style={{flex:1,fontSize:12,color:"#FDEF26"}}>{form.avatar_url.split("/").pop().replace(".webp","")}</div>
-                <button className="btn btn-ghost btn-xs" onClick={()=>setForm(f=>({...f,avatar_url:""}))}>✕</button>
-              </div>
-            )}
-            <AvatarPicker selected={form.avatar_url} onSelect={url=>setForm(f=>({...f,avatar_url:url}))} squadFilter="Giardinieri"/>
-            <div style={{height:1,background:"var(--border)",margin:"8px 0"}}/>
-            <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Oppure carica una foto:</div>
-            <InlineAvatarUpload playerId={"new_edu_" + Date.now()} onUploaded={url=>setForm(f=>({...f,avatar_url:url}))}/>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Tipo di account</label>
-            <div style={{display:"flex",gap:8,marginBottom:8}}>
-              <button className="btn btn-sm" style={{flex:1,background:form.perms===null?"#339966":"transparent",color:form.perms===null?"#fff":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setForm(f=>({...f,perms:null}))}>🌱 Giardiniere</button>
-              <button className="btn btn-sm" style={{flex:1,background:isSuperPerms(form.perms)?"#D41323":"transparent",color:isSuperPerms(form.perms)?"#fff":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setForm(f=>({...f,perms:SUPER_PERMS}))}>👑 Super</button>
-              <button className="btn btn-sm" style={{flex:1,background:(Array.isArray(form.perms) && !isSuperPerms(form.perms))?"#FDEF26":"transparent",color:(Array.isArray(form.perms) && !isSuperPerms(form.perms))?"#101010":"var(--text2)",border:"1px solid var(--border)"}} onClick={()=>setForm(f=>({...f,perms:(Array.isArray(f.perms)&&!isSuperPerms(f.perms))?f.perms:["dashboard","presenze","qr"]}))}>🌿 Apprendista</button>
-            </div>
-            {Array.isArray(form.perms) && !isSuperPerms(form.perms) && (<>
-              <div style={{fontSize:11,color:"var(--text3)",marginBottom:6}}>Spunta le sezioni che l'apprendista potrà vedere:</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:180,overflowY:"auto"}}>
-                {EDUCATOR_TABS.map(t=>{
-                  const on = form.perms.includes(t[0]);
-                  const lab = t[0]==="admin" ? "🔑 Gestione Giardinieri" : (t[1]+" "+t[2]);
-                  return <button key={t[0]} className="btn btn-xs" onClick={()=>setForm(f=>({...f,perms: on ? f.perms.filter(x=>x!==t[0]) : [...f.perms,t[0]]}))}
-                    style={{background:on?(t[0]==="admin"?"#D41323":"#339966"):"transparent",color:on?"#fff":"var(--text2)",border:"1px solid var(--border)",padding:"5px 9px",fontSize:11}}>{on?"✓ ":""}{lab}</button>;
-                })}
-              </div>
-            </>)}
-          </div>
-          <div style={{display:"flex",gap:8,marginTop:4}}>
-            <button className="btn btn-primary" style={{flex:1}} onClick={createEducator} disabled={creating}>{creating?"⏳ Creazione…":"Crea giardiniere"}</button>
-            <button className="btn btn-ghost btn-sm" onClick={()=>setShowCreate(false)}>Annulla</button>
-          </div>
-          <div style={{fontSize:11,color:"var(--text3)",marginTop:10}}>💡 Comunica email e password al giardiniere. Accede dal tab "Giardiniere" nel login.</div>
-        </div>
-      )}
     </div>
   );
 }
