@@ -3709,7 +3709,16 @@ function PlayersView({ sectionColors, setSectionColors, profile }) {
     const newXp = Number(p.xp) || 0;
     const newCoin = Number(p.coin) || 0;
     const deltaXp = newXp - (prev?.xp || 0);
-    await sb.from("profiles").update({ limits: p.limits ?? null, display_name: p.display_name, first_name: p.first_name || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, avatar_url: p.avatar_url || null }).eq("id", p.id);
+    const nome = String(p.display_name || "").trim();
+    if (!nome) { setMsg("❌ Il nome non può essere vuoto."); setTimeout(() => setMsg(""), 4000); return; }
+    const campi = { display_name: nome, first_name: (p.first_name || "").trim() || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, avatar_url: p.avatar_url || null };
+    let { data: salvato, error: errSalva } = await sb.from("profiles").update({ ...campi, limits: p.limits ?? null }).eq("id", p.id).select("id");
+    if (errSalva && /limits/i.test(errSalva.message || "")) ({ data: salvato, error: errSalva } = await sb.from("profiles").update(campi).eq("id", p.id).select("id"));
+    if (errSalva || !salvato || !salvato.length) {
+      const m = errSalva ? (/duplicate|unique/i.test(errSalva.message || "") ? "questo nome è già usato da un altro giocatore" : errSalva.message) : "il database non ha accettato la modifica";
+      setMsg("❌ Non salvato: " + m); setTimeout(() => setMsg(""), 6000);
+      return;
+    }
     if ((p.pin || "1234") !== (prev?.pin || "1234")) {
       const r = await playerAdmin("set_pin", { player_id: p.id, pin: p.pin || "1234" });
       if (r?.error) { setMsg("⚠️ PIN non aggiornato: " + r.error); setTimeout(() => setMsg(""), 4000); }
@@ -4117,7 +4126,7 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
         const { data: pins } = await sb.rpc("educator_player_pins");
         curPin = (pins || []).find(r => r.player_id === playerId)?.pin || "1234";
       } catch(_) {}
-      setEditing({ xp: p.xp, coin: p.coin, pin: curPin, _origPin: curPin, display_name: p.display_name, squad_id: p.squad_id, avatar_url: p.avatar_url || "" });
+      setEditing({ xp: p.xp, coin: p.coin, _origXp: Number(p.xp) || 0, pin: curPin, _origPin: curPin, display_name: p.display_name, squad_id: p.squad_id, avatar_url: p.avatar_url || "" });
     }
   }, [playerId]);
 
@@ -4125,12 +4134,20 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
 
   async function saveEdits() {
     if (!editing) return;
-    await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), display_name: editing.display_name, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId);
+    const nomeEd = String(editing.display_name || "").trim();
+    if (!nomeEd) { setSaveMsg("❌ Il nome non può essere vuoto."); setTimeout(() => setSaveMsg(""), 4000); return; }
+    const { data: okEd, error: errEd } = await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), display_name: nomeEd, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId).select("id");
+    if (errEd || !okEd || !okEd.length) {
+      const m = errEd ? (/duplicate|unique/i.test(errEd.message || "") ? "questo nome è già usato da un altro giocatore" : errEd.message) : "il database non ha accettato la modifica";
+      setSaveMsg("❌ Non salvato: " + m); setTimeout(() => setSaveMsg(""), 6000);
+      return;
+    }
     if ((editing.pin || "1234") !== (editing._origPin || "1234")) {
       const r = await playerAdmin("set_pin", { player_id: playerId, pin: editing.pin || "1234" });
       if (r?.error) { setSaveMsg("⚠️ PIN non salvato: " + r.error); setTimeout(() => setSaveMsg(""), 4000); }
     }
-    if (deltaXp !== 0) await logXPGain(playerId, deltaXp, Number(editing.xp), "modifica_dettagli");
+    const deltaXp = (Number(editing.xp) || 0) - (Number(editing._origXp) || 0);
+    if (deltaXp !== 0) await logXPGain(playerId, deltaXp, Number(editing.xp), "modifica_dettagli").catch(() => {});
     setSaveMsg("Salvato ✅"); setTimeout(() => setSaveMsg(""), 2000);
     loadData();
   }
@@ -8163,7 +8180,16 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
 
   async function saveFirstName() {
     const v = newFirstName.trim().slice(0, 30);
-    await sb.from("profiles").update({ first_name: v }).eq("id", profile.id);
+    let salvato = false;
+    try {
+      const r = await sb.rpc("pug_set_first_name", { p_player_id: profile.id, p_name: v });
+      if (!r.error && r.data && r.data.ok) salvato = true;
+    } catch (_) {}
+    if (!salvato) {
+      const { data, error } = await sb.from("profiles").update({ first_name: v }).eq("id", profile.id).select("id");
+      salvato = !error && data && data.length > 0;
+    }
+    if (!salvato) { alert("Nome non salvato. Riprova tra poco o chiedi a un Giardiniere."); return; }
     setFullProfile(prev => ({ ...prev, first_name: v }));
     setEditingFirstName(false);
   }
@@ -8320,7 +8346,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b73</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b74</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
