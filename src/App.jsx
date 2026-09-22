@@ -158,6 +158,20 @@ async function downloadQrPng(p) {
   }
 }
 
+// Salvataggio dei dati di un giocatore dal pannello Giardinieri (migr. 042)
+async function aggiornaGiocatore(id, campi) {
+  try {
+    const r = await sb.rpc("admin_update_player", { p_id: id, p_fields: campi });
+    if (!r.error) return r.data && r.data.error ? { errore: r.data.error } : { ok: true };
+    if (!/could not find|does not exist|schema cache/i.test(r.error.message || "")) return { errore: r.error.message };
+  } catch (_) {}
+  // riserva se la migrazione 042 non c'è
+  const { data, error } = await sb.from("profiles").update(campi).eq("id", id).select("id");
+  if (error) return { errore: /duplicate|unique/i.test(error.message || "") ? "questo nome è già usato da un altro giocatore" : error.message };
+  if (!data || !data.length) return { errore: "il database non ha accettato la modifica (esegui la migrazione 042)" };
+  return { ok: true };
+}
+
 async function registerPush(playerId) {
   const log = (m) => { try { addToast(m, 'ok'); } catch(_) {} };
   const err = (m) => { try { addToast(m, 'error'); } catch(_) {} };
@@ -3710,15 +3724,11 @@ function PlayersView({ sectionColors, setSectionColors, profile }) {
     const newCoin = Number(p.coin) || 0;
     const deltaXp = newXp - (prev?.xp || 0);
     const nome = String(p.display_name || "").trim();
-    if (!nome) { setMsg("❌ Il nome non può essere vuoto."); setTimeout(() => setMsg(""), 4000); return; }
-    const campi = { display_name: nome, first_name: (p.first_name || "").trim() || null, squad_id: p.squad_id, xp: newXp, coin: newCoin, avatar_url: p.avatar_url || null };
-    let { data: salvato, error: errSalva } = await sb.from("profiles").update({ ...campi, limits: p.limits ?? null }).eq("id", p.id).select("id");
-    if (errSalva && /limits/i.test(errSalva.message || "")) ({ data: salvato, error: errSalva } = await sb.from("profiles").update(campi).eq("id", p.id).select("id"));
-    if (errSalva || !salvato || !salvato.length) {
-      const m = errSalva ? (/duplicate|unique/i.test(errSalva.message || "") ? "questo nome è già usato da un altro giocatore" : errSalva.message) : "il database non ha accettato la modifica";
-      setMsg("❌ Non salvato: " + m); setTimeout(() => setMsg(""), 6000);
-      return;
-    }
+    if (!nome) { alert("Il nome non può essere vuoto."); return; }
+    const campi = { display_name: nome, first_name: (p.first_name || "").trim() || null, squad_id: p.squad_id || null, xp: newXp, coin: newCoin, avatar_url: p.avatar_url || null };
+    if (p.limits !== undefined) campi.limits = p.limits ?? null;
+    const esito = await aggiornaGiocatore(p.id, campi);
+    if (esito.errore) { alert("Non salvato: " + esito.errore); return; }
     if ((p.pin || "1234") !== (prev?.pin || "1234")) {
       const r = await playerAdmin("set_pin", { player_id: p.id, pin: p.pin || "1234" });
       if (r?.error) { setMsg("⚠️ PIN non aggiornato: " + r.error); setTimeout(() => setMsg(""), 4000); }
@@ -4136,12 +4146,8 @@ function PlayerDetailPanel({ playerId, squads, onClose }) {
     if (!editing) return;
     const nomeEd = String(editing.display_name || "").trim();
     if (!nomeEd) { setSaveMsg("❌ Il nome non può essere vuoto."); setTimeout(() => setSaveMsg(""), 4000); return; }
-    const { data: okEd, error: errEd } = await sb.from("profiles").update({ xp: Number(editing.xp), coin: Number(editing.coin), display_name: nomeEd, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal||0), avatar_url: editing.avatar_url || null }).eq("id", playerId).select("id");
-    if (errEd || !okEd || !okEd.length) {
-      const m = errEd ? (/duplicate|unique/i.test(errEd.message || "") ? "questo nome è già usato da un altro giocatore" : errEd.message) : "il database non ha accettato la modifica";
-      setSaveMsg("❌ Non salvato: " + m); setTimeout(() => setSaveMsg(""), 6000);
-      return;
-    }
+    const esitoEd = await aggiornaGiocatore(playerId, { xp: Number(editing.xp) || 0, coin: Number(editing.coin) || 0, display_name: nomeEd, squad_id: editing.squad_id || null, xp_goal: Number(editing.xp_goal || 0), avatar_url: editing.avatar_url || null });
+    if (esitoEd.errore) { setSaveMsg("❌ Non salvato: " + esitoEd.errore); alert("Non salvato: " + esitoEd.errore); return; }
     if ((editing.pin || "1234") !== (editing._origPin || "1234")) {
       const r = await playerAdmin("set_pin", { player_id: playerId, pin: editing.pin || "1234" });
       if (r?.error) { setSaveMsg("⚠️ PIN non salvato: " + r.error); setTimeout(() => setSaveMsg(""), 4000); }
@@ -8346,7 +8352,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b74</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b75</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
