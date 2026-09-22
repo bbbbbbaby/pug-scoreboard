@@ -1763,6 +1763,11 @@ body:not(.light) .edu-main{background:#0d0d0d url(/public/sfondi/sfondo-notte-wi
 body:not(.light) .edu-main{background:transparent!important}
 .edu-main::before{content:"";position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none}
 .edu-main>*{position:relative;z-index:1}
+/* un riquadro aperto deve stare sopra barra in alto e barra in basso */
+.edu-main>*:has(.modal-bg){z-index:300!important}
+body:has(.modal-bg) .mob-bottom-nav{visibility:hidden}
+/* barra in alto: niente spazio doppio sotto, pulsanti centrati nella fascia */
+.mob-header{padding-bottom:0!important;box-sizing:border-box}
 .edu-main.ebg-azzurro::before{background-color:#A3CFFF;background-image:url(/public/sfondi/sfondo-azzurro-tel2.webp)}
 .edu-main.ebg-rosa::before{background-color:#FF6DEC;background-image:url(/public/sfondi/sfondo-rosa-tel2.webp)}
 .edu-main.ebg-giallo::before{background-color:#FCEF25;background-image:url(/public/sfondi/sfondo-giallo-tel2.webp)}
@@ -8315,7 +8320,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b72</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b73</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
