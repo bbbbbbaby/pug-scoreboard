@@ -58,6 +58,28 @@ function localToday() {
 
 // Fetch della config di visibilità con dedupe: chiamate concorrenti
 // condividono la stessa richiesta (evita doppio fetch al mount).
+// Versione installata su questo dispositivo
+const BUILD = "b77";
+
+// Pulizia totale: scarta il gestore della cache e le copie salvate, poi ricarica.
+async function aggiornaOra() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister().catch(() => {})));
+    }
+  } catch (_) {}
+  try {
+    if (window.caches) {
+      const nomi = await caches.keys();
+      await Promise.all(nomi.map(n => caches.delete(n).catch(() => {})));
+    }
+  } catch (_) {}
+  const u = new URL(window.location.href);
+  u.searchParams.set("v", String(Date.now()));
+  window.location.replace(u.toString());
+}
+
 let _visFetch = null;
 async function readAppConfig() {
   const r = await sb.rpc("get_app_config");
@@ -3605,18 +3627,31 @@ function PlayersView({ sectionColors, setSectionColors, profile }) {
       setPlayers((data || []).map(p => ({ ...p, pin: pinMap[p.id] || "1234" })));
       setSquads(sq || []);
       try {
-        const oggiStr = new Date().toISOString().slice(0, 10);
-        const d7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-        const d30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-        const [{ data: att }, { data: bks }, { data: acts }] = await Promise.all([
-          sb.from("attendances").select("player_id,date,status").gte("date", d30),
+        const giorno = (scarto) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() - scarto); return d.toISOString().slice(0,10); };
+        const oggiStr = localToday(), d7 = giorno(7), d30 = giorno(30);
+        // le presenze possono essere molte: si leggono a blocchi, altrimenti il database ne manda solo una parte
+        const leggiPresenze = async (daQuando) => {
+          let tutte = [], da = 0;
+          for (let i = 0; i < 20; i++) {
+            const { data, error } = await sb.from("attendances").select("player_id,date,status").gte("date", daQuando).range(da, da + 999);
+            if (error || !data) break;
+            tutte = tutte.concat(data);
+            if (data.length < 1000) break;
+            da += 1000;
+          }
+          return tutte;
+        };
+        const [att, { data: attOggi }, { data: bks }, { data: acts }] = await Promise.all([
+          leggiPresenze(d30),
+          sb.from("attendances").select("player_id,status").eq("date", oggiStr),
           sb.from("bookings").select("player_id,activity_id,status").in("status", ["pending", "confirmed"]),
           sb.from("activities").select("id,name,description,is_active").eq("is_active", true).order("name"),
         ]);
-        const isAssente = (a) => String(a.status || "").toLowerCase() === "absent";
+        const vale = (a) => { const st = String(a.status || "").toLowerCase(); return st !== "absent" && st !== "none"; };
         const oggi = new Set(), settimana = new Set(), mese = new Set();
+        (attOggi || []).forEach(a => { if (vale(a)) oggi.add(a.player_id); });
         (att || []).forEach(a => {
-          if (isAssente(a)) return;
+          if (!vale(a)) return;
           mese.add(a.player_id);
           if (a.date >= d7) settimana.add(a.player_id);
           if (a.date === oggiStr) oggi.add(a.player_id);
@@ -8227,6 +8262,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   }
 
   async function saveNewPin() {
+    setPinChangeErr("");
     if (newPin1.length < 4) { setPinChangeErr("Il PIN deve avere 4 cifre"); return; }
     if (newPin1 !== newPin2) { setPinChangeErr("I PIN non coincidono"); return; }
     if (newPin1 === "1234") { setPinChangeErr("Scegli un PIN diverso da 1234"); return; }
@@ -8262,25 +8298,29 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
   );
 
   if (mustChangePin) return (
-    <div style={{background:'#000',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{background:'rgba(0,0,0,.7)',border:'1px solid rgba(255,255,255,.15)',borderRadius:20,padding:'32px 24px',width:'100%',maxWidth:360,backdropFilter:'blur(20px)'}}>
+    <>
+    <style>{css}</style>
+    <div style={{background:'#000',minHeight:'100vh',minHeight:'100dvh',display:'flex',alignItems:'center',justifyContent:'center',padding:20,overflowY:'auto',boxSizing:'border-box'}}>
+      <div style={{background:'rgba(0,0,0,.7)',border:'1px solid rgba(255,255,255,.15)',borderRadius:20,padding:'32px 24px',width:'100%',maxWidth:360,backdropFilter:'blur(20px)',margin:'auto'}}>
         <div style={{textAlign:'center',marginBottom:24}}>
           <div style={{fontSize:48,marginBottom:8}}>🔐</div>
           <div style={{fontFamily:"'Funnel Display',sans-serif",fontSize:28,fontWeight:900,textTransform:'uppercase',color:'#fff',marginBottom:8}}>Imposta il tuo PIN</div>
           <div style={{fontSize:13,color:'rgba(255,255,255,.5)',lineHeight:1.5}}>Stai usando il PIN predefinito 1234. Scegli un PIN personale per proteggere il tuo account.</div>
         </div>
         <div style={{marginBottom:12}}>
-          <label className="form-label">Nuovo PIN (4 cifre)</label>
-          <input className="form-input pin-input" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={newPin1} onChange={e=>{setNewPin1(e.target.value.replace(/\D/g,""));setPinChangeErr("");}} placeholder="••••" autoFocus/>
+          <label className="form-label" style={{display:'block',color:'rgba(255,255,255,.75)',fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:6}}>Nuovo PIN (4 cifre)</label>
+          <input className="form-input pin-input" style={{width:'100%',boxSizing:'border-box',background:'#fff',color:'#101010',border:'2px solid #101010',borderRadius:12,padding:'12px 14px',fontSize:20,letterSpacing:'.3em',textAlign:'center'}} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={newPin1} onChange={e=>{setNewPin1(e.target.value.replace(/\D/g,""));setPinChangeErr("");}} placeholder="••••" autoFocus/>
         </div>
         <div style={{marginBottom:16}}>
-          <label className="form-label">Conferma PIN</label>
-          <input className="form-input pin-input" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={newPin2} onChange={e=>{setNewPin2(e.target.value.replace(/\D/g,""));setPinChangeErr("");}} onKeyDown={e=>e.key==="Enter"&&saveNewPin()} placeholder="••••"/>
+          <label className="form-label" style={{display:'block',color:'rgba(255,255,255,.75)',fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',marginBottom:6}}>Conferma PIN</label>
+          <input className="form-input pin-input" style={{width:'100%',boxSizing:'border-box',background:'#fff',color:'#101010',border:'2px solid #101010',borderRadius:12,padding:'12px 14px',fontSize:20,letterSpacing:'.3em',textAlign:'center'}} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={newPin2} onChange={e=>{setNewPin2(e.target.value.replace(/\D/g,""));setPinChangeErr("");}} onKeyDown={e=>e.key==="Enter"&&saveNewPin()} placeholder="••••"/>
         </div>
         {pinChangeErr && <div style={{color:'var(--rosso)',fontSize:12,fontWeight:700,textAlign:'center',marginBottom:10}}>{pinChangeErr}</div>}
-        <button className="btn btn-primary" onClick={saveNewPin} disabled={newPin1.length<4||newPin2.length<4}>Salva PIN</button>
+        <button className="btn btn-primary" onClick={saveNewPin} disabled={newPin1.length<4||newPin2.length<4}
+          style={{width:'100%',background:'#FDEF26',color:'#101010',border:'3px solid #101010',borderRadius:12,padding:'14px 18px',fontFamily:"'Funnel Display',sans-serif",fontSize:16,fontWeight:900,textTransform:'uppercase',cursor:'pointer',opacity:(newPin1.length<4||newPin2.length<4)?.5:1}}>Salva PIN</button>
       </div>
     </div>
+    </>
   );
 
   if (loading) return (
@@ -8352,7 +8392,7 @@ function PlayerDashboard({ profile, onLogout, sectionColors }) {
               : themeChoice==="light" ? <PugIcon nome="sole" dim={15}/> : <PugIcon nome="luna" dim={15}/>}
             <span className="pd-theme-label" style={{fontSize:9,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',opacity:.7}}>{themeChoice==="auto"?"Auto":themeChoice==="light"?"Giorno":"Notte"}</span>
           </button>
-          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>b75</span>
+          <span style={{fontSize:7,fontWeight:600,color:"rgba(120,120,120,.45)",marginRight:4,letterSpacing:0}}>{BUILD}</span>
           <button className="btn btn-ghost btn-sm" onClick={onLogout} style={{fontSize:11}}>Esci</button>
         </div>
       </div>
@@ -9082,7 +9122,7 @@ function DaFareOggi({ onIngresso }) {
         const oggi = localToday();
         const [{ count: attese }, { data: att }, { count: tot }] = await Promise.all([
           sb.from("bookings").select("id", { count: "exact", head: true }).eq("status", "pending"),
-          sb.from("attendances").select("player_id").eq("date", oggi).neq("status", "none"),
+          sb.from("attendances").select("player_id,status").eq("date", oggi).neq("status", "none").neq("status", "absent"),
           sb.from("profiles").select("id", { count: "exact", head: true }).eq("role", "player"),
         ]);
         if (!vivo) return;
@@ -9748,6 +9788,7 @@ function AdminView({ profile }) {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
+  const [aggMsg, setAggMsg] = useState("");
   const [form, setForm] = useState({ display_name:"", email:"", password:"", avatar_url:"", perms:null });
   const [permsTarget, setPermsTarget] = useState(null);
   const [msg, setMsg] = useState("");
@@ -9958,7 +9999,7 @@ function AdminView({ profile }) {
     <div>
       <div className="card" style={{ marginBottom: 16, border: "3px solid #101010" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: diag.length ? 10 : 0 }}>
-          <div style={{ fontWeight: 900, fontSize: 15 }}>🔧 Diagnostica</div>
+          <div style={{ fontWeight: 900, fontSize: 15 }}>🔧 Diagnostica · versione {BUILD}</div>
           <button className="btn btn-sm" style={{ background: "#FDEF26", color: "#101010", border: "2.5px solid #101010", boxShadow: "3px 3px 0 #101010", fontWeight: 800 }} disabled={diagRunning} onClick={runDiagnostics}>{diagRunning ? "⏳ Test in corso…" : "▶️ Esegui test"}</button>
         </div>
         {diag.length > 0 && (
@@ -9973,6 +10014,22 @@ function AdminView({ profile }) {
           </div>
         )}
       </div>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 6 }}>🔄 Aggiornamento dell'app</div>
+        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 10 }}>
+          Questo dispositivo ha la versione <strong>{BUILD}</strong>. {aggMsg}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => { if (confirm("Aggiornare l'app su questo dispositivo? Si chiuderà e riaprirà da sola.")) aggiornaOra(); }}>Aggiorna questo dispositivo</button>
+          <button className="btn btn-yellow btn-sm" onClick={async () => {
+            if (!confirm("Mandare l'aggiornamento a tutti i telefoni? Ogni dispositivo con una versione diversa dalla " + BUILD + " si ricarica da solo alla prima apertura.")) return;
+            setAggMsg("⏳ Invio…");
+            const e = await writeAppConfig({ force_build: BUILD, force_at: Date.now() });
+            setAggMsg(e ? "❌ Non inviato: " + e : "✅ Richiesta inviata: i dispositivi si aggiornano alla prima apertura.");
+          }}>Aggiorna tutti i dispositivi</button>
+        </div>
+      </div>
+
       {resetTarget && (
         <div className="modal-bg" onClick={()=>setResetTarget(null)}>
           <div className="modal" onClick={e=>e.stopPropagation()}>
@@ -11495,8 +11552,22 @@ export default function App() {
         .then(reg => { try { reg.update(); } catch (_) {} })
         .catch(() => {});
     };
+    // Aggiornamento richiesto dai Giardinieri: se la versione chiesta è diversa
+    // da quella installata qui, si pulisce tutto e si ricarica (una volta sola).
+    const controllaVersioneRichiesta = async () => {
+      try {
+        const cfg = await readAppConfig();
+        const chiesta = cfg && cfg.force_build, quando = cfg && cfg.force_at;
+        if (!chiesta || !quando || chiesta === BUILD) return;
+        const k = "pug_forzato_" + quando;
+        if (localStorage.getItem(k)) return;
+        localStorage.setItem(k, "1");
+        await aggiornaOra();
+      } catch (_) {}
+    };
     check();
-    const onVis = () => { if (document.visibilityState === "visible") check(); };
+    controllaVersioneRichiesta();
+    const onVis = () => { if (document.visibilityState === "visible") { check(); controllaVersioneRichiesta(); } };
     document.addEventListener("visibilitychange", onVis);
     return () => {
       navigator.serviceWorker.removeEventListener("message", onMsg);
