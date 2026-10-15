@@ -1,12 +1,23 @@
 // PUG Service Worker — auto-aggiornante
-// Cambia SOLO questo numero a ogni rilascio importante: svuota le vecchie cache.
-const CACHE = 'pug-v6';
+//
+// COME FORZARE L'AGGIORNAMENTO SU TUTTI I DISPOSITIVI, ANCHE VECCHI:
+// cambia il numero qui sotto (pug-v7 -> pug-v8) e ripubblica.
+// Alla prima apertura ogni dispositivo scarica questo file, butta via le
+// copie vecchie e si ricarica da solo. Funziona anche sui telefoni fermi
+// a versioni precedenti dell'app, perche questo file non dipende da quelle.
+const CACHE = 'pug-v7';
 const AVATARS = 'pug-avatars-v1';
 
 // ─── INSTALL ──────────────────────────────────────────────
-self.addEventListener('install', function () {
-  // la nuova versione entra subito in servizio, senza aspettare
+self.addEventListener('install', function (e) {
+  // la nuova versione entra subito in servizio, senza aspettare che l'app venga chiusa
   self.skipWaiting();
+  // scarica subito la pagina aggiornata, cosi al riavvio e gia pronta
+  e.waitUntil(
+    fetch('/index.html', { cache: 'reload' })
+      .then(function (r) { if (r && r.ok) return caches.open(CACHE).then(function (c) { return c.put('/index.html', r.clone()); }); })
+      .catch(function () {})
+  );
 });
 
 // ─── ACTIVATE ─────────────────────────────────────────────
