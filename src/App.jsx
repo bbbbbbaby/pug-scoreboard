@@ -59,7 +59,7 @@ function localToday() {
 // Fetch della config di visibilità con dedupe: chiamate concorrenti
 // condividono la stessa richiesta (evita doppio fetch al mount).
 // Versione installata su questo dispositivo
-const BUILD = "b77";
+const BUILD = "b80";
 
 // Pulizia totale: scarta il gestore della cache e le copie salvate, poi ricarica.
 async function aggiornaOra() {
@@ -78,6 +78,68 @@ async function aggiornaOra() {
   const u = new URL(window.location.href);
   u.searchParams.set("v", String(Date.now()));
   window.location.replace(u.toString());
+}
+
+// Registro errori: ogni problema sul dispositivo finisce in Admin (migr. 043)
+let _ultimoErrore = { testo: "", quando: 0 };
+async function segnalaErrore(messaggio, dettaglio) {
+  try {
+    const testo = String(messaggio || "").slice(0, 500);
+    if (!testo) return;
+    const ora = Date.now();
+    if (testo === _ultimoErrore.testo && ora - _ultimoErrore.quando < 60000) return;
+    _ultimoErrore = { testo, quando: ora };
+    let chi = null;
+    try { chi = JSON.parse(localStorage.getItem("pug_player") || "{}").id || null; } catch (_) {}
+    try { const { data } = await sb.auth.getUser(); if (data?.user?.id) chi = data.user.id; } catch (_) {}
+    await sb.rpc("pug_log_error", {
+      p_player_id: chi,
+      p_build: BUILD,
+      p_dispositivo: String(navigator.userAgent || "").slice(0, 200),
+      p_pagina: String(window.location.pathname + window.location.search).slice(0, 300),
+      p_messaggio: testo,
+      p_dettaglio: String(dettaglio || "").slice(0, 2000),
+    });
+  } catch (_) {}
+}
+if (typeof window !== "undefined" && !window.__pugErroriAttivi) {
+  window.__pugErroriAttivi = true;
+  window.addEventListener("error", (ev) => {
+    if (ev?.message) segnalaErrore(ev.message, (ev.filename || "") + ":" + (ev.lineno || "") + "\n" + (ev.error?.stack || ""));
+  });
+  window.addEventListener("unhandledrejection", (ev) => {
+    const r = ev?.reason;
+    segnalaErrore(r?.message || String(r || "promessa rifiutata"), r?.stack || "");
+  });
+}
+
+// Registro dispositivi: ogni apertura dice quale versione gira su questo dispositivo (migr. 044)
+function idDispositivo() {
+  try {
+    let v = localStorage.getItem("pug_device_id");
+    if (!v) {
+      v = (crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+          });
+      localStorage.setItem("pug_device_id", v);
+    }
+    return v;
+  } catch (_) { return null; }
+}
+async function registraDispositivo() {
+  try {
+    const dev = idDispositivo();
+    if (!dev) return;
+    let chi = null;
+    try { chi = JSON.parse(localStorage.getItem("pug_player") || "{}").id || null; } catch (_) {}
+    try { const { data } = await sb.auth.getUser(); if (data?.user?.id) chi = data.user.id; } catch (_) {}
+    const installata = !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+    await sb.rpc("pug_ping_device", {
+      p_device: dev, p_player_id: chi, p_build: BUILD,
+      p_dispositivo: String(navigator.userAgent || "").slice(0, 200), p_installata: installata,
+    });
+  } catch (_) {}
 }
 
 let _visFetch = null;
@@ -6223,7 +6285,7 @@ function MessagesView({ profile }) {
                 )}
                 <div style={{fontSize:13,color:"var(--text)"}}>{m.body}</div>
               {m.media_data&&<img src={m.media_data} style={{maxWidth:"100%",maxHeight:180,borderRadius:10,marginTop:4}} alt=""/>}
-              <MsgReactions msgId={m.id} myId={profile.id}/>
+              <MsgReactions msgId={m.id} myId={profile.id} gestore/>
               </div>
             );
           })}
@@ -6958,74 +7020,129 @@ function SocialTab({ players, myId, myProfile }) {
 
 
 // ─── MSG REACTIONS ───────────────────────────────────────
-function MsgReactions({ msgId, myId }) {
+function MsgReactions({ msgId, myId, gestore }) {
   const EMOJIS = ["❤️","😂","😮","👏","🔥"];
   const [counts, setCounts] = useState({});
   const [mine, setMine] = useState(null);
+  const [chi, setChi] = useState(null);
+  const [msg, setMsg] = useState("");
 
-  useEffect(() => {
-    sb.from("reactions")
-      .select("type").eq("badge_id", null).eq("target_player_id", msgId)
-      .then(({data}) => {
-        const c = {};
-        (data||[]).forEach(r => { c[r.type]=(c[r.type]||0)+1; });
-        setCounts(c);
-      }).catch(()=>{});
-    sb.from("reactions").select("type")
-      .eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null)
-      .maybeSingle().then(({data})=>{ if(data) setMine(data.type); }).catch(()=>{});
+  const carica = useCallback(async () => {
+    try {
+      const r = await sb.rpc("pug_msg_react_state", { p_ids: [msgId], p_player_id: myId });
+      if (!r.error && r.data) {
+        const d = r.data[msgId] || {};
+        setCounts(d.counts || {});
+        setMine(d.mine || null);
+        return;
+      }
+    } catch (_) {}
+    // riserva se manca la migrazione 045
+    try {
+      const { data } = await sb.from("reactions").select("type,player_id").is("badge_id", null).eq("target_player_id", msgId);
+      const c = {};
+      (data || []).forEach(x => { c[x.type] = (c[x.type] || 0) + 1; });
+      setCounts(c);
+      const mia = (data || []).find(x => x.player_id === myId);
+      setMine(mia ? mia.type : null);
+    } catch (_) {}
   }, [msgId, myId]);
 
+  useEffect(() => { carica(); }, [carica]);
+
   async function react(emoji) {
+    const primaC = counts, primaM = mine;
+    // aggiornamento immediato a schermo
     if (mine === emoji) {
-      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null);
-      setCounts(p=>({...p,[emoji]:Math.max(0,(p[emoji]||1)-1)}));
+      setCounts(p => ({ ...p, [emoji]: Math.max(0, (p[emoji] || 1) - 1) }));
       setMine(null);
     } else {
-      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null);
-      await sb.from("reactions").insert({player_id:myId,target_player_id:msgId,badge_id:null,type:emoji});
-      if(mine) setCounts(p=>({...p,[mine]:Math.max(0,(p[mine]||1)-1)}));
-      setCounts(p=>({...p,[emoji]:(p[emoji]||0)+1}));
+      setCounts(p => {
+        const n = { ...p, [emoji]: (p[emoji] || 0) + 1 };
+        if (primaM) n[primaM] = Math.max(0, (n[primaM] || 1) - 1);
+        return n;
+      });
       setMine(emoji);
-      if(navigator.vibrate) navigator.vibrate(20);
+      if (navigator.vibrate) navigator.vibrate(20);
+    }
+    try {
+      const r = await sb.rpc("pug_msg_react", { p_message_id: msgId, p_player_id: myId, p_tipo: emoji });
+      if (r.error || (r.data && r.data.error)) throw new Error(r.error?.message || r.data.error);
+      carica();
+      if (chi) mostraChi();
+      return;
+    } catch (e) {
+      if (!/could not find|does not exist|schema cache/i.test(e.message || "")) {
+        setCounts(primaC); setMine(primaM);
+        setMsg("Non salvata: " + (e.message || "riprova"));
+        setTimeout(() => setMsg(""), 4000);
+        return;
+      }
+    }
+    // riserva: vecchio sistema
+    try {
+      await sb.from("reactions").delete().eq("player_id", myId).eq("target_player_id", msgId).is("badge_id", null);
+      if (primaM !== emoji) await sb.from("reactions").insert({ player_id: myId, target_player_id: msgId, badge_id: null, type: emoji });
+    } catch (_) {
+      setCounts(primaC); setMine(primaM);
+      setMsg("Non salvata: esegui la migrazione 045");
+      setTimeout(() => setMsg(""), 5000);
     }
   }
 
-  const total = Object.values(counts).reduce((a,b)=>a+b,0);
-  if (total === 0 && !mine) {
-    return (
-      <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
-        {EMOJIS.map(e=>(
-          <button key={e} onClick={()=>react(e)}
-            style={{background:mine===e?"#FDEF26":"#fff",border:"2px solid #101010",fontSize:20,cursor:"pointer",padding:"3px 9px",borderRadius:9,boxShadow:"2px 2px 0 #101010",lineHeight:1}}>
+  async function mostraChi() {
+    try {
+      const r = await sb.rpc("pug_msg_react_who", { p_message_id: msgId });
+      if (r.error) throw new Error(r.error.message);
+      if (r.data && r.data.error) throw new Error(r.data.error);
+      setChi(r.data?.righe || []);
+    } catch (e) {
+      setMsg(/could not find|does not exist|schema cache/i.test(e.message || "") ? "Manca la migrazione 045." : e.message);
+      setTimeout(() => setMsg(""), 5000);
+    }
+  }
+
+  const total = Object.values(counts).reduce((a, b) => a + (Number(b) || 0), 0);
+  const usati = EMOJIS.filter(e => (counts[e] || 0) > 0 || mine === e);
+  const liberi = EMOJIS.filter(e => !usati.includes(e));
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+        {usati.map(e => (
+          <button key={e} onClick={() => react(e)} title={mine === e ? "Togli la tua risposta" : "Rispondi"}
+            style={{ background: mine === e ? "#FDEF26" : "#fff", color: "#101010", border: "2px solid #101010",
+              borderRadius: 9, boxShadow: "2px 2px 0 #101010", cursor: "pointer", padding: "3px 9px",
+              fontSize: 16, lineHeight: 1, display: "flex", alignItems: "center", gap: 5, fontWeight: 900 }}>
+            {e}{(counts[e] || 0) > 0 && <span style={{ fontSize: 12 }}>{counts[e]}</span>}
+          </button>
+        ))}
+        {liberi.map(e => (
+          <button key={e} onClick={() => react(e)} title="Rispondi"
+            style={{ background: "transparent", border: "2px solid rgba(128,128,128,.35)", borderRadius: 9,
+              cursor: "pointer", padding: "3px 9px", fontSize: 16, lineHeight: 1, opacity: .55 }}>
             {e}
           </button>
         ))}
+        {gestore && total > 0 && (
+          <button className="btn btn-ghost btn-xs" onClick={() => { if (chi) setChi(null); else mostraChi(); }}>
+            {chi ? "Nascondi" : "👥 " + total + (total === 1 ? " risposta" : " risposte")}
+          </button>
+        )}
       </div>
-    );
-  }
-
-  return (
-    <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
-      {EMOJIS.filter(e=>counts[e]||mine===e).map(e=>(
-        <button key={e} onClick={()=>react(e)}
-          style={{
-            background:mine===e?"rgba(163,207,254,.15)":"rgba(255,255,255,.06)",
-            border:`1px solid ${mine===e?"var(--neon-blue)":"rgba(255,255,255,.1)"}`,
-            borderRadius:99,fontSize:12,cursor:"pointer",
-            padding:"3px 8px",display:"flex",alignItems:"center",gap:3,
-            color:"var(--text2)",fontWeight:mine===e?700:400,
-          }}>
-          {e}{counts[e]>0&&<span style={{fontSize:10}}>{counts[e]}</span>}
-        </button>
-      ))}
-      {EMOJIS.filter(e=>!counts[e]&&mine!==e).map(e=>(
-        <button key={e} onClick={()=>react(e)}
-          style={{background:"none",border:"none",fontSize:14,cursor:"pointer",
-            padding:"2px 4px",borderRadius:6,opacity:0.4}}>
-          {e}
-        </button>
-      ))}
+      {msg && <div style={{ fontSize: 11, color: "#D41323", fontWeight: 700, marginTop: 4 }}>{msg}</div>}
+      {gestore && chi && (
+        <div style={{ marginTop: 6, borderTop: "1px solid var(--border2)", paddingTop: 6 }}>
+          {chi.length === 0 ? <div style={{ fontSize: 12, color: "var(--text3)" }}>Nessuna risposta.</div> :
+            EMOJIS.filter(e => chi.some(r => r.tipo === e)).map(e => (
+              <div key={e} style={{ fontSize: 12, marginBottom: 3, lineHeight: 1.45 }}>
+                <span style={{ fontSize: 15 }}>{e}</span>{" "}
+                <strong>{chi.filter(r => r.tipo === e).length}</strong>{" · "}
+                <span style={{ color: "var(--text3)" }}>{chi.filter(r => r.tipo === e).map(r => r.nome).join(", ")}</span>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -9539,6 +9656,181 @@ function AdminResetPwdForm({ educator, onClose }) {
 // ─── ACCOUNT ADMIN (cessione account) ────────────────────
 // Permette all'admin di cambiare nome visualizzato ed email di accesso,
 // così l'account capo può essere ceduto a un'altra persona.
+function RegistroDispositivi() {
+  const [righe, setRighe] = useState([]);
+  const [aperto, setAperto] = useState(false);
+  const [caricando, setCaricando] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [soloVecchi, setSoloVecchi] = useState(false);
+
+  const carica = useCallback(async () => {
+    setCaricando(true); setMsg("");
+    const { data, error } = await sb.from("pug_devices").select("*").order("ultimo_accesso", { ascending: false }).limit(400);
+    setCaricando(false);
+    if (error) { setMsg(/does not exist|schema cache/i.test(error.message || "") ? "Manca la migrazione 044 nel database." : error.message); return; }
+    setRighe(data || []);
+  }, []);
+  useEffect(() => { if (aperto) carica(); }, [aperto, carica]);
+
+  const quando = (d) => { try { return new Date(d).toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch (_) { return ""; } };
+  const tipo = (ua) => {
+    const t = String(ua || "");
+    if (/iPad/i.test(t)) return "iPad";
+    if (/iPhone/i.test(t)) return "iPhone";
+    if (/Android/i.test(t)) return "Android";
+    if (/Macintosh/i.test(t)) return "Mac";
+    if (/Windows/i.test(t)) return "Windows";
+    return "altro";
+  };
+  const numero = (b) => { const m = String(b || "").match(/\d+/); return m ? Number(m[0]) : -1; };
+  const vecchio = (r) => r.build !== BUILD;
+  const indietro = righe.filter(vecchio).length;
+
+  const perVersione = {};
+  righe.forEach(r => { const b = r.build || "?"; perVersione[b] = (perVersione[b] || 0) + 1; });
+  const versioni = Object.entries(perVersione).sort((a, b) => numero(b[0]) - numero(a[0]));
+  const viste = soloVecchi ? righe.filter(vecchio) : righe;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontWeight: 900, fontSize: 15 }}>
+          📱 Dispositivi e versioni{righe.length ? " · " + righe.length : ""}
+          {aperto && indietro > 0 && <span style={{ color: "#D41323" }}> · {indietro} da aggiornare</span>}
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {aperto && <button className="btn btn-ghost btn-xs" onClick={carica}>↻ Aggiorna</button>}
+          <button className="btn btn-ghost btn-sm" onClick={() => setAperto(a => !a)}>{aperto ? "Chiudi" : "Apri"}</button>
+        </div>
+      </div>
+      {aperto && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 8 }}>
+            Ogni dispositivo si registra quando apre l'app. La versione di riferimento è la <strong>{BUILD}</strong>.
+          </div>
+          {msg && <div style={{ fontSize: 12, color: "#D41323", fontWeight: 700, marginBottom: 8 }}>{msg}</div>}
+          {caricando ? <div style={{ fontSize: 13, opacity: .6 }}>⏳ Caricamento…</div> :
+            righe.length === 0 ? <div className="empty">Nessun dispositivo registrato ancora.</div> : (
+              <>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                  {versioni.map(([b, n]) => (
+                    <span key={b} className="chip" style={b === BUILD ? { background: "#339966", color: "#fff" } : { background: "#D41323", color: "#fff" }}>{b} · {n}</span>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                  <button className={`chip ${!soloVecchi ? "active" : ""}`} onClick={() => setSoloVecchi(false)}>Tutti ({righe.length})</button>
+                  <button className={`chip ${soloVecchi ? "active" : ""}`} onClick={() => setSoloVecchi(true)}>Da aggiornare ({indietro})</button>
+                </div>
+                <div style={{ overflowX: "auto", maxHeight: 420, overflowY: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead><tr style={{ textAlign: "left", color: "var(--text3)" }}>
+                      <th style={{ padding: "6px 8px" }}>Chi</th>
+                      <th style={{ padding: "6px 8px" }}>Dispositivo</th>
+                      <th style={{ padding: "6px 8px" }}>Versione</th>
+                      <th style={{ padding: "6px 8px" }}>Ultimo accesso</th>
+                    </tr></thead>
+                    <tbody>
+                      {viste.map(r => (
+                        <tr key={r.id} style={{ borderTop: "1px solid var(--border2)" }}>
+                          <td style={{ padding: "6px 8px", fontWeight: 700 }}>{r.nome || "—"}{r.ruolo && r.ruolo !== "player" ? " 🌱" : ""}</td>
+                          <td style={{ padding: "6px 8px", color: "var(--text3)" }}>{tipo(r.dispositivo)}{r.installata ? " · app" : " · browser"}</td>
+                          <td style={{ padding: "6px 8px", fontWeight: 900, color: vecchio(r) ? "#D41323" : "#339966" }}>{r.build || "?"}</td>
+                          <td style={{ padding: "6px 8px", color: "var(--text3)" }}>{quando(r.ultimo_accesso)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                  <button className="btn btn-ghost btn-xs" onClick={async () => {
+                    if (!confirm("Togliere dall'elenco i dispositivi non visti da 60 giorni?")) return;
+                    const { data } = await sb.rpc("pug_clear_devices", { p_giorni: 60 });
+                    setMsg(data?.error ? data.error : "Tolti " + (data?.cancellati ?? 0)); carica();
+                  }}>Pulisci non visti da 60 giorni</button>
+                </div>
+              </>
+            )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RegistroErrori() {
+  const [righe, setRighe] = useState([]);
+  const [aperto, setAperto] = useState(false);
+  const [caricando, setCaricando] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const carica = useCallback(async () => {
+    setCaricando(true); setMsg("");
+    const { data, error } = await sb.from("pug_errors").select("*").order("created_at", { ascending: false }).limit(50);
+    setCaricando(false);
+    if (error) { setMsg(/does not exist|schema cache/i.test(error.message || "") ? "Manca la migrazione 043 nel database." : error.message); return; }
+    setRighe(data || []);
+  }, []);
+  useEffect(() => { if (aperto) carica(); }, [aperto, carica]);
+
+  const quando = (d) => { try { return new Date(d).toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch (_) { return ""; } };
+  const dispositivo = (ua) => {
+    const t = String(ua || "");
+    if (/iPad/i.test(t)) return "iPad";
+    if (/iPhone/i.test(t)) return "iPhone";
+    if (/Android/i.test(t)) return "Android";
+    if (/Macintosh/i.test(t)) return "Mac";
+    if (/Windows/i.test(t)) return "Windows";
+    return "altro";
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontWeight: 900, fontSize: 15 }}>🐞 Errori sui dispositivi{righe.length ? " · " + righe.length : ""}</div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {aperto && <button className="btn btn-ghost btn-xs" onClick={carica}>↻ Aggiorna</button>}
+          <button className="btn btn-ghost btn-sm" onClick={() => setAperto(a => !a)}>{aperto ? "Chiudi" : "Apri"}</button>
+        </div>
+      </div>
+      {aperto && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 8 }}>
+            Gli ultimi 50 errori capitati nell'app, sul telefono dei ragazzi e dei Giardinieri.
+          </div>
+          {msg && <div style={{ fontSize: 12, color: "#D41323", fontWeight: 700, marginBottom: 8 }}>{msg}</div>}
+          {caricando ? <div style={{ fontSize: 13, opacity: .6 }}>⏳ Caricamento…</div> :
+            righe.length === 0 ? <div className="empty">Nessun errore registrato. 🎉</div> : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 420, overflowY: "auto" }}>
+                {righe.map(r => (
+                  <div key={r.id} style={{ borderTop: "1px solid var(--border2)", paddingTop: 6 }}>
+                    <div style={{ fontSize: 11, color: "var(--text3)" }}>
+                      {quando(r.created_at)} · {r.nome || "sconosciuto"} · {dispositivo(r.dispositivo)} · {r.build || "?"}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, wordBreak: "break-word" }}>{r.messaggio}</div>
+                    {r.dettaglio && <div style={{ fontSize: 10, color: "var(--text3)", whiteSpace: "pre-wrap", maxHeight: 54, overflow: "hidden" }}>{r.dettaglio}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          {righe.length > 0 && (
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <button className="btn btn-ghost btn-xs" onClick={async () => {
+                if (!confirm("Cancellare gli errori più vecchi di 30 giorni?")) return;
+                const { data } = await sb.rpc("pug_clear_errors", { p_giorni: 30 });
+                setMsg(data?.error ? data.error : "Cancellati " + (data?.cancellati ?? 0)); carica();
+              }}>Pulisci oltre 30 giorni</button>
+              <button className="btn btn-ghost btn-xs" onClick={async () => {
+                if (!confirm("Cancellare tutti gli errori registrati?")) return;
+                const { data } = await sb.rpc("pug_clear_errors", { p_giorni: 0 });
+                setMsg(data?.error ? data.error : "Cancellati " + (data?.cancellati ?? 0)); carica();
+              }}>Svuota tutto</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminAccountCard({ profile }) {
   const [open, setOpen] = useState(false);
   const [showGames, setShowGames] = useState(false);
@@ -10014,6 +10306,10 @@ function AdminView({ profile }) {
           </div>
         )}
       </div>
+      <RegistroDispositivi />
+
+      <RegistroErrori />
+
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 6 }}>🔄 Aggiornamento dell'app</div>
         <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 10 }}>
@@ -11567,7 +11863,8 @@ export default function App() {
     };
     check();
     controllaVersioneRichiesta();
-    const onVis = () => { if (document.visibilityState === "visible") { check(); controllaVersioneRichiesta(); } };
+    registraDispositivo();
+    const onVis = () => { if (document.visibilityState === "visible") { check(); controllaVersioneRichiesta(); registraDispositivo(); } };
     document.addEventListener("visibilitychange", onVis);
     return () => {
       navigator.serviceWorker.removeEventListener("message", onMsg);
